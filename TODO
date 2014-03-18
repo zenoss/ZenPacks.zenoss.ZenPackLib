@@ -1,0 +1,20 @@
+1. Documentation
+   a. General
+       * The Model, DeviceComponents/Components
+       * Relationships
+       * Parameters
+   b. Things this wont help with, limitations
+   c. Overriding a Class
+   d. javascript extensions
+   e. rrd locations
+   f. custom performance templates
+   g. icons.
+
+2. Features
+3. Reorg into reusable subcomponents
+4. Unit tests 
+
+
+
+
+
