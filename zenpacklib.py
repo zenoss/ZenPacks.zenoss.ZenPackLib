@@ -819,7 +819,7 @@ class ZenPackSpec(object):
                 '    weight="{weight}"'
                 '    manager="Products.ZenUI3.browser.interfaces.IJavaScriptSrcManager"'
                 '    class="Products.ZenUI3.browser.javascript.JavaScriptSrcBundleViewlet"'
-                '    permission="zope2.Public"'
+                '    permission="zope.Public"'
                 '    />'
                 .format(
                     name=name,
@@ -843,6 +843,7 @@ class ZenPackSpec(object):
             zcml.load_string(
                 '<configure xmlns="http://namespaces.zope.org/browser">'
                 '<include package="Products.Five" file="meta.zcml"/>'
+                '<include package="Products.Five.viewlet" file="meta.zcml"/>'
                 '{directives}'
                 '</configure>'
                 .format(
