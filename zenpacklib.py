@@ -1658,7 +1658,10 @@ class ClassPropertySpec(object):
             }
 
         if self.type_ not in schema_map:
-            return None
+            return {}
+
+        if self.details_display is False:
+            return {}
 
         return {
             self.name: schema_map[self.type_](
@@ -1676,11 +1679,19 @@ class ClassPropertySpec(object):
     @property
     def js_fields(self):
         """Return list of JavaScript fields."""
-        return ["{{name: '{}'}}".format(self.name)]
+
+        if self.grid_display is False:
+            return []
+        else:
+            return ["{{name: '{}'}}".format(self.name)]
 
     @property
     def js_columns(self):
         """Return list of JavaScript columns."""
+
+        if self.grid_display is False:
+            return []
+
         width = max(
             self.content_width + 14,
             self.label_width + 20)
