@@ -471,6 +471,13 @@ class ComponentBase(ModelBase):
                 templates.append(addition)
 
         return templates
+        
+    def setUserCreateFlag(self):
+        """
+        Sets self.isUserCreatedFlag to True.  This indicated that the
+        component was created by a user rather than via modelling.
+        """
+        self.isUserCreatedFlag = True
 
 
 class DeviceIndexableWrapper(BaseDeviceWrapper):
