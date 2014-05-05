@@ -1599,13 +1599,13 @@ class ClassPropertySpec(object):
             short_label=None,
             index_type=None,
             label_width=80,
-            editable=False,
             content_width=None,
             display=True,
             details_display=True,
             grid_display=True,
             renderer=None,
             order=None,
+            editable=False,
             ):
         """TODO."""
         self.class_spec = class_spec
@@ -1620,10 +1620,7 @@ class ClassPropertySpec(object):
         self.details_display = details_display
         self.grid_display = grid_display
         self.renderer = renderer
-        if editable == True:
-            self.editable=True
-        else:
-            self.editable=False
+        self.editable = bool(editable)
 
         # Force properties into the 4.0 - 4.9 order range.
         if not order:
@@ -1671,19 +1668,12 @@ class ClassPropertySpec(object):
         if self.details_display is False:
             return {}
 
-        if self.editable:
-            return {
-                self.name: schema_map[self.type_](
-                    title=_t(self.label),
-                    alwaysEditable=True,
-                    order=self.order)
-                }
-        else:
-            return {
-                self.name: schema_map[self.type_](
-                    title=_t(self.label),
-                    order=self.order)
-                }
+        return {
+            self.name: schema_map[self.type_](
+                title=_t(self.label),
+                alwaysEditable=self.editable,
+                order=self.order)
+            }
 
     @property
     def info_properties(self):
