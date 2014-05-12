@@ -1266,14 +1266,20 @@ class ClassSpec(object):
 
     def create_iinfo_class(self):
         """Create and return IInfo subclass."""
-        if self.is_device:
-            base = IBaseDeviceInfo
-        elif self.is_component:
-            base = IBaseComponentInfo
-        elif self.is_hardware_component:
-            base = IHardwareComponentInfo
-        else:
-            base = IInfo
+        bases = []        
+        for base_classname in self.zenpack.classes[self.name].bases:
+            if base_classname in self.zenpack.classes:
+                bases.append(self.zenpack.classes[base_classname].iinfo_class)
+
+        if not bases:
+            if self.is_device:
+                bases = [IBaseDeviceInfo]
+            elif self.is_component:
+                bases = [IBaseComponentInfo]
+            elif self.is_hardware_component:
+                bases = [IHardwareComponentInfo]
+            else:
+                bases = [IInfo]
 
         attributes = {}
 
@@ -1294,7 +1300,7 @@ class ClassSpec(object):
             get_symbol_name(self.zenpack.name, self.name),
             get_symbol_name(self.zenpack.name, 'schema'),
             'I{}Info'.format(self.name),
-            (base,),
+            tuple(bases),
             attributes)
 
     @property
@@ -1304,14 +1310,20 @@ class ClassSpec(object):
 
     def create_info_class(self):
         """Create and return Info subclass."""
-        if self.is_device:
-            base = BaseDeviceInfo
-        elif self.is_component:
-            base = BaseComponentInfo
-        elif self.is_hardware_component:
-            base = HardwareComponentInfo
-        else:
-            base = InfoBase
+        bases = []        
+        for base_classname in self.zenpack.classes[self.name].bases:
+            if base_classname in self.zenpack.classes:
+                bases.append(self.zenpack.classes[base_classname].info_class)
+
+        if not bases:
+            if self.is_device:
+                bases = [BaseDeviceInfo]
+            elif self.is_component:
+                bases = [BaseComponentInfo]
+            elif self.is_hardware_component:
+                bases = [HardwareComponentInfo]
+            else:
+                bases = [InfoBase]
 
         attributes = {}
 
@@ -1329,7 +1341,7 @@ class ClassSpec(object):
             get_symbol_name(self.zenpack.name, self.name),
             get_symbol_name(self.zenpack.name, 'schema'),
             '{}Info'.format(self.name),
-            (base,),
+            tuple(bases),
             attributes)
 
         classImplements(info_class, self.iinfo_class)
@@ -2242,9 +2254,10 @@ def create_class(module, schema_module, classname, bases, attributes):
     else:
         class_factory = type
 
-    schema_class = class_factory(classname, tuple(bases), attributes)
-    schema_class.__module__ = schema_module.__name__
-    setattr(schema_module, classname, schema_class)
+    if not hasattr(schema_module, classname):
+        schema_class = class_factory(classname, tuple(bases), attributes)
+        schema_class.__module__ = schema_module.__name__
+        setattr(schema_module, classname, schema_class)
 
     if isinstance(module, basestring):
         module = create_module(module)
