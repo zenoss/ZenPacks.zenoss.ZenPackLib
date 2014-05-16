@@ -442,6 +442,13 @@ class ComponentBase(ModelBase):
         """
         return os.path.join('Devices', self.device().id, self.id)
 
+    def getRRDTemplateName(self):
+        """Return name of primary template to bind to this component."""
+        if self._templates:
+            return self._templates[0]
+
+        return ''
+
     def getRRDTemplates(self):
         """Return list of templates to bind to this component.
 
