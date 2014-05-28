@@ -1217,7 +1217,9 @@ class ClassSpec(object):
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
             attributes[name] = None
-            properties.append(spec.ofs_dict)
+
+            if spec.ofs_dict:
+                properties.append(spec.ofs_dict)
 
             pindexes = spec.catalog_indexes
             if pindexes:
@@ -1619,6 +1621,8 @@ class ClassPropertySpec(object):
             renderer=None,
             order=None,
             editable=False,
+            api_only=False,
+            api_backendtype='property',
             ):
         """TODO."""
         self.class_spec = class_spec
@@ -1634,6 +1638,13 @@ class ClassPropertySpec(object):
         self.grid_display = grid_display
         self.renderer = renderer
         self.editable = bool(editable)
+        self.api_only = bool(api_only)
+        self.api_backendtype = api_backendtype
+
+        if self.api_backendtype not in ('property', 'method'):
+            raise TypeError(
+                "Property '%s': api_backendtype must be 'property' or 'method', not '%s'"
+                    % (name, self.api_backendtype))
 
         # Force properties into the 4.0 - 4.9 order range.
         if not order:
@@ -1644,6 +1655,10 @@ class ClassPropertySpec(object):
     @property
     def ofs_dict(self):
         """Return OFS _properties dictionary."""
+
+        if self.api_only:
+            return None
+
         return {
             'id': self.name,
             'label': self.label,
@@ -1673,6 +1688,7 @@ class ClassPropertySpec(object):
             'lines': schema.Text,
             'string': schema.TextLine,
             'password': schema.Password,
+            'entity': schema.Entity
             }
 
         if self.type_ not in schema_map:
@@ -1691,9 +1707,14 @@ class ClassPropertySpec(object):
     @property
     def info_properties(self):
         """Return Info properties dict."""
-        return {
-            self.name: ProxyProperty(self.name),
-            }
+        if self.api_backendtype == 'method':
+            return {
+                self.name: MethodInfoProperty(self.name),
+                }
+        else:
+            return {
+                self.name: ProxyProperty(self.name),
+                }
 
     @property
     def js_fields(self):
@@ -2044,6 +2065,16 @@ def relationships_from_yuml(yuml):
 
     return classes
 
+def MethodInfoProperty(method_name):
+    """Return a property with the Infos for object(s) returned by a method.
+
+    A list of Info objects is returned for methods returning a list, or a single 
+    one for those returning a single value.
+    """
+    def getter(self):
+        return Zuul.info(getattr(self._object, method_name)())
+
+    return property(getter)  
 
 def RelationshipInfoProperty(relationship_name):
     """Return a property with the Infos for object(s) in the relationship.
