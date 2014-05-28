@@ -1952,17 +1952,17 @@ def relationships_from_yuml(yuml):
     (http://yuml.me). See the following example:
 
         // Containing relationships.
-        [APIC]++-[FabricPod]
-        [APIC]++-[FvTenant]
-        [FvTenant]++-[VzBrCP]
-        [FvTenant]++-[FvAp]
-        [FvAp]++-[FvAEPg]
-        [FvAEPg]++-[FvRsProv]
-        [FvAEPg]++-[FvRsCons]
+        [APIC]++ -[FabricPod]
+        [APIC]++ -[FvTenant]
+        [FvTenant]++ -[VzBrCP]
+        [FvTenant]++ -[FvAp]
+        [FvAp]++ -[FvAEPg]
+        [FvAEPg]++ -[FvRsProv]
+        [FvAEPg]++ -[FvRsCons]
         // Non-containing relationships.
-        [FvBD]1-.-*[FvAEPg]
-        [VzBrCP]1-.-*[FvRsProv]
-        [VzBrCP]1-.-*[FvRsCons]
+        [FvBD]1 -.- *[FvAEPg]
+        [VzBrCP]1 -.- *[FvRsProv]
+        [VzBrCP]1 -.- *[FvRsCons]
 
     The created relationships are given default names that orginarily
     should be used. However, in some cases such as when one class has
@@ -1970,9 +1970,9 @@ def relationships_from_yuml(yuml):
     explicitly named. That would be done as in the following example:
 
         // Explicitly-Named Relationships
-        [Pool]default_sr *-default_for_pools 1[SR]
-        [Pool]suspend_image_sr *-suspend_image_for_pools[SR]
-        [Pool]crash_dump_sr *-crash_dump_for_pools[SR]
+        [Pool]*default_sr -.-default_for_pools 0..1[SR]
+        [Pool]*suspend_image_sr -.-suspend_image_for_pools *[SR]
+        [Pool]*crash_dump_sr -.-crash_dump_for_pools *[SR]
 
     The yuml parameter can be specified either as a newline-delimited
     string, or as a tuple or list of relationships.
