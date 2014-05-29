@@ -1187,7 +1187,7 @@ class ClassSpec(object):
         return tuple(resolved_bases)
 
     def base_class_specs(self, recursive=False):
-        """Return tuple of base ClassesSpecs.
+        """Return tuple of base ClassSpecs.
 
         Iterates over ClassSpec.bases (possibly recursively) and returns
         instances of the ClassSpec objects for them.
