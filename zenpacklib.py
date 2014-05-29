@@ -59,8 +59,10 @@ from Products.Zuul.catalog.interfaces import IIndexableWrapper, IPathReporter
 from Products.Zuul.catalog.paths import DefaultPathReporter, relPath
 from Products.Zuul.decorators import info, memoize
 from Products.Zuul.form import schema
+from Products.Zuul.form.interfaces import IFormBuilder
 from Products.Zuul.infos import InfoBase, ProxyProperty
 from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
+from Products.Zuul.infos.component import ComponentFormBuilder as BaseComponentFormBuilder
 from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
 from Products.Zuul.interfaces import IInfo
 from Products.Zuul.interfaces.component import IComponentInfo as IBaseComponentInfo
@@ -561,6 +563,35 @@ class ComponentPathReporter(DefaultPathReporter):
 
 
 GSM.registerAdapter(ComponentPathReporter, (ComponentBase,), IPathReporter)
+
+
+class ComponentFormBuilder(BaseComponentFormBuilder):
+    """
+    Base class for all custom FormBuilders.   Adds support for renderers in the Component
+    Details form.
+    """
+
+    implements(IFormBuilder)
+    adapts(IInfo)
+
+    def render(self, **kwargs):
+        rendered = super(ComponentFormBuilder, self).render(kwargs)
+        self.zpl_decorate(rendered)    
+        return rendered
+
+    def zpl_decorate(self, item):
+        if 'items' in item:
+            for item in item['items']:
+                self.zpl_decorate(item)
+            return
+
+        if 'xtype' in item and 'name' in item:
+            if item['name'] in self.renderer:
+                renderer = self.renderer[item['name']]
+
+                if renderer:
+                    item['xtype'] = 'ZPLRenderableDisplayField'
+                    item['renderer'] = renderer
 
 
 def DeviceTypeFactory(name, bases):
@@ -1132,6 +1163,8 @@ class ClassSpec(object):
         self.create_model_class()
         self.create_iinfo_class()
         self.create_info_class()
+        if self.is_component:
+            self.create_formbuilder_class()            
         self.register_impact_adapters()
 
     @property
@@ -1152,6 +1185,28 @@ class ClassSpec(object):
                 resolved_bases.append(base_spec.model_class)
 
         return tuple(resolved_bases)
+
+    def base_class_specs(self, recursive=False):
+        """Return tuple of base ClassesSpecs.
+
+        Iterates over ClassSpec.bases (possibly recursively) and returns
+        instances of the ClassSpec objects for them.
+        """
+        base_specs = []
+        for base in self.bases:
+            if isinstance(base, type):
+                # bases will contain classes rather than class names when referring
+                # to a class outside of this zenpack specification.  Ignore
+                # these.
+                continue
+
+            class_spec = self.zenpack.classes[base]
+            base_specs.append(class_spec)
+
+            if recursive:
+                base_specs.extend(class_spec.base_class_specs())
+
+        return tuple(base_specs)
 
     def is_a(self, type_):
         """Return True if this class is a subclass of type_."""
@@ -1357,6 +1412,37 @@ class ClassSpec(object):
         GSM.registerAdapter(info_class, (self.model_class,), self.iinfo_class)
 
         return info_class
+
+    @property
+    def formbuilder_class(self):
+        """Return FormBuilder subclass."""
+        return self.create_formbuilder_class()
+
+    def create_formbuilder_class(self):
+        """Create and return FormBuilder subclass with rendering hints for ComponentFormBuilder."""
+
+        bases = (ComponentFormBuilder,)
+        attributes = {}
+
+        renderer = {}
+        for class_spec in self.base_class_specs(recursive=True):
+            for propname, spec in self.properties.iteritems():
+                renderer[propname] = spec.renderer
+
+        attributes['renderer'] = renderer
+
+        formbuilder = create_class(
+            get_symbol_name(self.zenpack.name, self.name),
+            get_symbol_name(self.zenpack.name, 'schema'),
+            '{}FormBuilder'.format(self.name),
+            tuple(bases),
+            attributes)
+
+        classImplements(formbuilder, IFormBuilder)
+        GSM.registerAdapter(formbuilder, (self.info_class,), IFormBuilder)
+
+        return formbuilder
+
 
     def register_impact_adapters(self):
         """Register Impact adapters."""
@@ -2486,4 +2572,16 @@ Ext.define("Zenoss.component.ZPLComponentGridPanel", {
         }
     }
 });
+
+Ext.define("Zenoss.ZPLRenderableDisplayField", {
+    extend: "Ext.form.DisplayField",
+    alias: ['widget.ZPLRenderableDisplayField'],
+    constructor: function(config) {   
+        if (typeof(config.renderer) == 'string') {
+          config.renderer = eval(config.renderer)
+        }
+        Zenoss.ZPLRenderableDisplayField.superclass.constructor.call(this, config);
+    }
+});
+
 """.strip()
