@@ -412,8 +412,12 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def get_facets(self):
+    def get_facets(self, seen=None):
         """Generate non-containing related objects for faceting."""
+
+        if seen is None:
+            seen = set()
+
         for relname in self.get_faceting_relnames():
             rel = getattr(self, relname, None)
             if not rel or not callable(rel):
@@ -425,10 +429,17 @@ class ComponentBase(ModelBase):
 
             if isinstance(rel, ToOneRelationship):
                 # This is really a single object.
-                yield relobjs
-            else:
-                for obj in relobjs:
-                    yield obj
+                relobjs = [relobjs]
+
+            for obj in relobjs:
+                if obj in seen:
+                    continue
+
+                yield obj
+                seen.add(obj)
+                for facet in obj.get_facets(seen=seen):
+                    yield facet
+
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
