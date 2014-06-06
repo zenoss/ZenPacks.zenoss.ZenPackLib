@@ -1208,6 +1208,15 @@ class ClassSpec(object):
 
         return tuple(base_specs)
 
+    def subclass_specs(self):
+        subclass_specs = []
+        for class_spec in self.zenpack.classes.values():
+            if self in class_spec.base_class_specs(recursive=True):
+                subclass_specs.append(class_spec)
+
+        return subclass_specs
+
+
     def inherited_properties(self):
         properties = {}
         for base in self.bases:
@@ -1513,11 +1522,11 @@ class ClassSpec(object):
                 continue
 
             remote_classname = relschema.remoteClass.split('.')[-1]
-            remote_spec = self.zenpack.classes.get(remote_classname)        
-            if not remote_spec or remote_spec.is_device:                
-                continue
-
-            faceting_specs.append(remote_spec)
+            remote_spec = self.zenpack.classes.get(remote_classname)
+            if remote_spec:
+                for class_spec in [ remote_spec ] + remote_spec.subclass_specs():                    
+                    if class_spec and not class_spec.is_device:
+                        faceting_specs.append(class_spec)
 
         return faceting_specs
 
