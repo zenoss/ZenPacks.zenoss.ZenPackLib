@@ -412,8 +412,12 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def get_facets(self):
+    def get_facets(self, seen=None):
         """Generate non-containing related objects for faceting."""
+
+        if seen is None:
+            seen = set()
+
         for relname in self.get_faceting_relnames():
             rel = getattr(self, relname, None)
             if not rel or not callable(rel):
@@ -425,10 +429,17 @@ class ComponentBase(ModelBase):
 
             if isinstance(rel, ToOneRelationship):
                 # This is really a single object.
-                yield relobjs
-            else:
-                for obj in relobjs:
-                    yield obj
+                relobjs = [relobjs]
+
+            for obj in relobjs:
+                if obj in seen:
+                    continue
+
+                yield obj
+                seen.add(obj)
+                for facet in obj.get_facets(seen=seen):
+                    yield facet
+
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
@@ -1076,6 +1087,7 @@ class ClassSpec(object):
             impacts=None,
             impacted_by=None,
             monitoring_templates=None,
+            filter_display=True,
             ):
         """TODO."""
         self.zenpack = zenpack
@@ -1158,6 +1170,9 @@ class ClassSpec(object):
         else:
             self.monitoring_templates = list(monitoring_templates)
 
+        self.filter_display = filter_display
+
+
     def create(self):
         """Implement specification."""
         self.create_model_class()
@@ -1207,6 +1222,37 @@ class ClassSpec(object):
                 base_specs.extend(class_spec.base_class_specs())
 
         return tuple(base_specs)
+
+    def subclass_specs(self):
+        subclass_specs = []
+        for class_spec in self.zenpack.classes.values():
+            if self in class_spec.base_class_specs(recursive=True):
+                subclass_specs.append(class_spec)
+
+        return subclass_specs
+
+
+    def inherited_properties(self):
+        properties = {}
+        for base in self.bases:
+            if not isinstance(base, type):
+                class_spec = self.zenpack.classes[base]
+                properties.update(class_spec.properties)
+
+        properties.update(self.properties)
+
+        return properties
+
+    def inherited_relationships(self):
+        relationships = {}
+        for base in self.bases:
+            if not isinstance(base, type):
+                class_spec = self.zenpack.classes[base]
+                relationships.update(class_spec.relationships)
+
+        relationships.update(self.relationships)
+
+        return relationships
 
     def is_a(self, type_):
         """Return True if this class is a subclass of type_."""
@@ -1347,7 +1393,7 @@ class ClassSpec(object):
 
         attributes = {}
 
-        for spec in self.properties.itervalues():
+        for spec in self.inherited_properties().itervalues():
             attributes.update(spec.iinfo_schemas)
 
         for i, spec in enumerate(self.containing_components):
@@ -1357,7 +1403,7 @@ class ClassSpec(object):
                 group="Relationships",
                 order=3 + i / 100.0)
 
-        for spec in self.relationships.itervalues():
+        for spec in self.inherited_relationships().itervalues():
             attributes.update(spec.iinfo_schemas)
 
         return create_class(
@@ -1395,10 +1441,10 @@ class ClassSpec(object):
             attr = relname_from_classname(spec.name)
             attributes[attr] = RelationshipInfoProperty(attr)
 
-        for spec in self.properties.itervalues():
+        for spec in self.inherited_properties().itervalues():
             attributes.update(spec.info_properties)
 
-        for spec in self.relationships.itervalues():
+        for spec in self.inherited_relationships().itervalues():
             attributes.update(spec.info_properties)
 
         info_class = create_class(
@@ -1492,16 +1538,19 @@ class ClassSpec(object):
 
             remote_classname = relschema.remoteClass.split('.')[-1]
             remote_spec = self.zenpack.classes.get(remote_classname)
-            if not remote_spec or remote_spec.is_device:
-                continue
-
-            faceting_specs.append(remote_spec)
+            if remote_spec:
+                for class_spec in [ remote_spec ] + remote_spec.subclass_specs():                    
+                    if class_spec and not class_spec.is_device:
+                        faceting_specs.append(class_spec)
 
         return faceting_specs
 
     @property
     def filterable_by(self):
         """Return meta_types by which this class can be filtered."""
+        if not self.filter_display:
+            return []
+
         containing = {x.meta_type for x in self.containing_components}
         faceting = {x.meta_type for x in self.faceting_components}
         return list(containing | faceting)
@@ -1608,11 +1657,11 @@ class ClassSpec(object):
         fields = []
         ordered_columns = []
 
-        for spec in self.properties.itervalues():
+        for spec in self.inherited_properties().itervalues():
             fields.extend(spec.js_fields)
             ordered_columns.extend(spec.js_columns)
 
-        for spec in self.relationships.itervalues():
+        for spec in self.inherited_relationships().itervalues():
             fields.extend(spec.js_fields)
             ordered_columns.extend(spec.js_columns)
 
