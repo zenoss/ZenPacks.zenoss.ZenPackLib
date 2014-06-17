@@ -59,8 +59,10 @@ from Products.Zuul.catalog.interfaces import IIndexableWrapper, IPathReporter
 from Products.Zuul.catalog.paths import DefaultPathReporter, relPath
 from Products.Zuul.decorators import info, memoize
 from Products.Zuul.form import schema
+from Products.Zuul.form.interfaces import IFormBuilder
 from Products.Zuul.infos import InfoBase, ProxyProperty
 from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
+from Products.Zuul.infos.component import ComponentFormBuilder as BaseComponentFormBuilder
 from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
 from Products.Zuul.interfaces import IInfo
 from Products.Zuul.interfaces.component import IComponentInfo as IBaseComponentInfo
@@ -410,8 +412,12 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def get_facets(self):
+    def get_facets(self, seen=None):
         """Generate non-containing related objects for faceting."""
+
+        if seen is None:
+            seen = set()
+
         for relname in self.get_faceting_relnames():
             rel = getattr(self, relname, None)
             if not rel or not callable(rel):
@@ -423,10 +429,17 @@ class ComponentBase(ModelBase):
 
             if isinstance(rel, ToOneRelationship):
                 # This is really a single object.
-                yield relobjs
-            else:
-                for obj in relobjs:
-                    yield obj
+                relobjs = [relobjs]
+
+            for obj in relobjs:
+                if obj in seen:
+                    continue
+
+                yield obj
+                seen.add(obj)
+                for facet in obj.get_facets(seen=seen):
+                    yield facet
+
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
@@ -441,6 +454,13 @@ class ComponentBase(ModelBase):
 
         """
         return os.path.join('Devices', self.device().id, self.id)
+
+    def getRRDTemplateName(self):
+        """Return name of primary template to bind to this component."""
+        if self._templates:
+            return self._templates[0]
+
+        return ''
 
     def getRRDTemplates(self):
         """Return list of templates to bind to this component.
@@ -554,6 +574,35 @@ class ComponentPathReporter(DefaultPathReporter):
 
 
 GSM.registerAdapter(ComponentPathReporter, (ComponentBase,), IPathReporter)
+
+
+class ComponentFormBuilder(BaseComponentFormBuilder):
+    """
+    Base class for all custom FormBuilders.   Adds support for renderers in the Component
+    Details form.
+    """
+
+    implements(IFormBuilder)
+    adapts(IInfo)
+
+    def render(self, **kwargs):
+        rendered = super(ComponentFormBuilder, self).render(kwargs)
+        self.zpl_decorate(rendered)    
+        return rendered
+
+    def zpl_decorate(self, item):
+        if 'items' in item:
+            for item in item['items']:
+                self.zpl_decorate(item)
+            return
+
+        if 'xtype' in item and 'name' in item:
+            if item['name'] in self.renderer:
+                renderer = self.renderer[item['name']]
+
+                if renderer:
+                    item['xtype'] = 'ZPLRenderableDisplayField'
+                    item['renderer'] = renderer
 
 
 def DeviceTypeFactory(name, bases):
@@ -730,7 +779,8 @@ class ZenPackSpec(object):
 
             # Merge class_relationships.
             if class_relationships:
-                classdata['relationships'].update(
+                update(
+                    classdata['relationships'],
                     class_relationships.get(classname, {}))
 
             self.classes[classname] = ClassSpec(self, classname, **classdata)
@@ -819,7 +869,7 @@ class ZenPackSpec(object):
                 '    weight="{weight}"'
                 '    manager="Products.ZenUI3.browser.interfaces.IJavaScriptSrcManager"'
                 '    class="Products.ZenUI3.browser.javascript.JavaScriptSrcBundleViewlet"'
-                '    permission="zope2.Public"'
+                '    permission="zope.Public"'
                 '    />'
                 .format(
                     name=name,
@@ -843,6 +893,7 @@ class ZenPackSpec(object):
             zcml.load_string(
                 '<configure xmlns="http://namespaces.zope.org/browser">'
                 '<include package="Products.Five" file="meta.zcml"/>'
+                '<include package="Products.Five.viewlet" file="meta.zcml"/>'
                 '{directives}'
                 '</configure>'
                 .format(
@@ -1036,6 +1087,7 @@ class ClassSpec(object):
             impacts=None,
             impacted_by=None,
             monitoring_templates=None,
+            filter_display=True,
             ):
         """TODO."""
         self.zenpack = zenpack
@@ -1102,8 +1154,9 @@ class ClassSpec(object):
 
         self.relationships = {}
 
-        for name, schema in relationships.iteritems():
-            self.relationships[name] = ClassRelationshipSpec(self, name, schema)
+        for name, reldata in relationships.iteritems():
+            self.relationships[name] = ClassRelationshipSpec(
+                self, name, **reldata)
 
         # Impact.
         self.impacts = impacts
@@ -1117,11 +1170,16 @@ class ClassSpec(object):
         else:
             self.monitoring_templates = list(monitoring_templates)
 
+        self.filter_display = filter_display
+
+
     def create(self):
         """Implement specification."""
         self.create_model_class()
         self.create_iinfo_class()
         self.create_info_class()
+        if self.is_component:
+            self.create_formbuilder_class()            
         self.register_impact_adapters()
 
     @property
@@ -1142,6 +1200,59 @@ class ClassSpec(object):
                 resolved_bases.append(base_spec.model_class)
 
         return tuple(resolved_bases)
+
+    def base_class_specs(self, recursive=False):
+        """Return tuple of base ClassSpecs.
+
+        Iterates over ClassSpec.bases (possibly recursively) and returns
+        instances of the ClassSpec objects for them.
+        """
+        base_specs = []
+        for base in self.bases:
+            if isinstance(base, type):
+                # bases will contain classes rather than class names when referring
+                # to a class outside of this zenpack specification.  Ignore
+                # these.
+                continue
+
+            class_spec = self.zenpack.classes[base]
+            base_specs.append(class_spec)
+
+            if recursive:
+                base_specs.extend(class_spec.base_class_specs())
+
+        return tuple(base_specs)
+
+    def subclass_specs(self):
+        subclass_specs = []
+        for class_spec in self.zenpack.classes.values():
+            if self in class_spec.base_class_specs(recursive=True):
+                subclass_specs.append(class_spec)
+
+        return subclass_specs
+
+
+    def inherited_properties(self):
+        properties = {}
+        for base in self.bases:
+            if not isinstance(base, type):
+                class_spec = self.zenpack.classes[base]
+                properties.update(class_spec.properties)
+
+        properties.update(self.properties)
+
+        return properties
+
+    def inherited_relationships(self):
+        relationships = {}
+        for base in self.bases:
+            if not isinstance(base, type):
+                class_spec = self.zenpack.classes[base]
+                relationships.update(class_spec.relationships)
+
+        relationships.update(self.relationships)
+
+        return relationships
 
     def is_a(self, type_):
         """Return True if this class is a subclass of type_."""
@@ -1214,7 +1325,9 @@ class ClassSpec(object):
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
             attributes[name] = None
-            properties.append(spec.ofs_dict)
+
+            if spec.ofs_dict:
+                properties.append(spec.ofs_dict)
 
             pindexes = spec.catalog_indexes
             if pindexes:
@@ -1263,18 +1376,24 @@ class ClassSpec(object):
 
     def create_iinfo_class(self):
         """Create and return IInfo subclass."""
-        if self.is_device:
-            base = IBaseDeviceInfo
-        elif self.is_component:
-            base = IBaseComponentInfo
-        elif self.is_hardware_component:
-            base = IHardwareComponentInfo
-        else:
-            base = IInfo
+        bases = []        
+        for base_classname in self.zenpack.classes[self.name].bases:
+            if base_classname in self.zenpack.classes:
+                bases.append(self.zenpack.classes[base_classname].iinfo_class)
+
+        if not bases:
+            if self.is_device:
+                bases = [IBaseDeviceInfo]
+            elif self.is_component:
+                bases = [IBaseComponentInfo]
+            elif self.is_hardware_component:
+                bases = [IHardwareComponentInfo]
+            else:
+                bases = [IInfo]
 
         attributes = {}
 
-        for spec in self.properties.itervalues():
+        for spec in self.inherited_properties().itervalues():
             attributes.update(spec.iinfo_schemas)
 
         for i, spec in enumerate(self.containing_components):
@@ -1284,14 +1403,14 @@ class ClassSpec(object):
                 group="Relationships",
                 order=3 + i / 100.0)
 
-        for spec in self.relationships.itervalues():
+        for spec in self.inherited_relationships().itervalues():
             attributes.update(spec.iinfo_schemas)
 
         return create_class(
             get_symbol_name(self.zenpack.name, self.name),
             get_symbol_name(self.zenpack.name, 'schema'),
             'I{}Info'.format(self.name),
-            (base,),
+            tuple(bases),
             attributes)
 
     @property
@@ -1301,14 +1420,20 @@ class ClassSpec(object):
 
     def create_info_class(self):
         """Create and return Info subclass."""
-        if self.is_device:
-            base = BaseDeviceInfo
-        elif self.is_component:
-            base = BaseComponentInfo
-        elif self.is_hardware_component:
-            base = HardwareComponentInfo
-        else:
-            base = InfoBase
+        bases = []        
+        for base_classname in self.zenpack.classes[self.name].bases:
+            if base_classname in self.zenpack.classes:
+                bases.append(self.zenpack.classes[base_classname].info_class)
+
+        if not bases:
+            if self.is_device:
+                bases = [BaseDeviceInfo]
+            elif self.is_component:
+                bases = [BaseComponentInfo]
+            elif self.is_hardware_component:
+                bases = [HardwareComponentInfo]
+            else:
+                bases = [InfoBase]
 
         attributes = {}
 
@@ -1316,23 +1441,54 @@ class ClassSpec(object):
             attr = relname_from_classname(spec.name)
             attributes[attr] = RelationshipInfoProperty(attr)
 
-        for spec in self.properties.itervalues():
+        for spec in self.inherited_properties().itervalues():
             attributes.update(spec.info_properties)
 
-        for spec in self.relationships.itervalues():
+        for spec in self.inherited_relationships().itervalues():
             attributes.update(spec.info_properties)
 
         info_class = create_class(
             get_symbol_name(self.zenpack.name, self.name),
             get_symbol_name(self.zenpack.name, 'schema'),
             '{}Info'.format(self.name),
-            (base,),
+            tuple(bases),
             attributes)
 
         classImplements(info_class, self.iinfo_class)
         GSM.registerAdapter(info_class, (self.model_class,), self.iinfo_class)
 
         return info_class
+
+    @property
+    def formbuilder_class(self):
+        """Return FormBuilder subclass."""
+        return self.create_formbuilder_class()
+
+    def create_formbuilder_class(self):
+        """Create and return FormBuilder subclass with rendering hints for ComponentFormBuilder."""
+
+        bases = (ComponentFormBuilder,)
+        attributes = {}
+
+        renderer = {}
+        for class_spec in self.base_class_specs(recursive=True):
+            for propname, spec in self.properties.iteritems():
+                renderer[propname] = spec.renderer
+
+        attributes['renderer'] = renderer
+
+        formbuilder = create_class(
+            get_symbol_name(self.zenpack.name, self.name),
+            get_symbol_name(self.zenpack.name, 'schema'),
+            '{}FormBuilder'.format(self.name),
+            tuple(bases),
+            attributes)
+
+        classImplements(formbuilder, IFormBuilder)
+        GSM.registerAdapter(formbuilder, (self.info_class,), IFormBuilder)
+
+        return formbuilder
+
 
     def register_impact_adapters(self):
         """Register Impact adapters."""
@@ -1382,16 +1538,19 @@ class ClassSpec(object):
 
             remote_classname = relschema.remoteClass.split('.')[-1]
             remote_spec = self.zenpack.classes.get(remote_classname)
-            if not remote_spec or remote_spec.is_device:
-                continue
-
-            faceting_specs.append(remote_spec)
+            if remote_spec:
+                for class_spec in [ remote_spec ] + remote_spec.subclass_specs():                    
+                    if class_spec and not class_spec.is_device:
+                        faceting_specs.append(class_spec)
 
         return faceting_specs
 
     @property
     def filterable_by(self):
         """Return meta_types by which this class can be filtered."""
+        if not self.filter_display:
+            return []
+
         containing = {x.meta_type for x in self.containing_components}
         faceting = {x.meta_type for x in self.faceting_components}
         return list(containing | faceting)
@@ -1498,16 +1657,18 @@ class ClassSpec(object):
         fields = []
         ordered_columns = []
 
-        for spec in self.properties.itervalues():
+        for spec in self.inherited_properties().itervalues():
             fields.extend(spec.js_fields)
             ordered_columns.extend(spec.js_columns)
 
-        for spec in self.relationships.itervalues():
+        for spec in self.inherited_relationships().itervalues():
             fields.extend(spec.js_fields)
             ordered_columns.extend(spec.js_columns)
 
         return (
-            "ZC.{meta_type}Panel = Ext.extend(ZC.ZPLComponentGridPanel, {{\n"
+            "Ext.define('Zenoss.component.{meta_type}Panel', {{\n"
+            "    alias: ['widget.{meta_type}Panel'],\n"
+            "    extend: 'Zenoss.component.ZPLComponentGridPanel',\n"
             "    constructor: function(config) {{\n"
             "        config = Ext.applyIf(config||{{}}, {{\n"
             "            componentType: '{meta_type}',\n"
@@ -1518,7 +1679,6 @@ class ClassSpec(object):
             "        ZC.{meta_type}Panel.superclass.constructor.call(this, config);\n"
             "    }}\n"
             "}});\n"
-            "Ext.reg('{meta_type}Panel', ZC.{meta_type}Panel);\n"
             .format(
                 meta_type=self.meta_type,
                 auto_expand_column=self.auto_expand_column,
@@ -1602,6 +1762,9 @@ class ClassPropertySpec(object):
             grid_display=True,
             renderer=None,
             order=None,
+            editable=False,
+            api_only=False,
+            api_backendtype='property',
             ):
         """TODO."""
         self.class_spec = class_spec
@@ -1616,6 +1779,14 @@ class ClassPropertySpec(object):
         self.details_display = details_display
         self.grid_display = grid_display
         self.renderer = renderer
+        self.editable = bool(editable)
+        self.api_only = bool(api_only)
+        self.api_backendtype = api_backendtype
+
+        if self.api_backendtype not in ('property', 'method'):
+            raise TypeError(
+                "Property '%s': api_backendtype must be 'property' or 'method', not '%s'"
+                    % (name, self.api_backendtype))
 
         # Force properties into the 4.0 - 4.9 order range.
         if not order:
@@ -1626,6 +1797,10 @@ class ClassPropertySpec(object):
     @property
     def ofs_dict(self):
         """Return OFS _properties dictionary."""
+
+        if self.api_only:
+            return None
+
         return {
             'id': self.name,
             'label': self.label,
@@ -1655,32 +1830,50 @@ class ClassPropertySpec(object):
             'lines': schema.Text,
             'string': schema.TextLine,
             'password': schema.Password,
+            'entity': schema.Entity
             }
 
         if self.type_ not in schema_map:
-            return None
+            return {}
+
+        if self.details_display is False:
+            return {}
 
         return {
             self.name: schema_map[self.type_](
                 title=_t(self.label),
+                alwaysEditable=self.editable,
                 order=self.order)
             }
 
     @property
     def info_properties(self):
         """Return Info properties dict."""
-        return {
-            self.name: ProxyProperty(self.name),
-            }
+        if self.api_backendtype == 'method':
+            return {
+                self.name: MethodInfoProperty(self.name),
+                }
+        else:
+            return {
+                self.name: ProxyProperty(self.name),
+                }
 
     @property
     def js_fields(self):
         """Return list of JavaScript fields."""
-        return ["{{name: '{}'}}".format(self.name)]
+
+        if self.grid_display is False:
+            return []
+        else:
+            return ["{{name: '{}'}}".format(self.name)]
 
     @property
     def js_columns(self):
         """Return list of JavaScript columns."""
+
+        if self.grid_display is False:
+            return []
+
         width = max(
             self.content_width + 14,
             self.label_width + 20)
@@ -1710,11 +1903,28 @@ class ClassRelationshipSpec(object):
             self,
             class_,
             name,
-            schema,
+            schema=None,
+            label=None,
+            short_label=None,
+            label_width=None,
+            content_width=None,
+            display=True,
+            details_display=True,
+            grid_display=True,
+            renderer=None,
+            order=None,
             ):
         """TODO."""
         self.class_ = class_
         self.name = name
+
+        # Schema
+        if not schema:
+            LOG.error(
+                "no schema specified for %s relationship on %s",
+                class_.name, name)
+
+            return
 
         # Qualify unqualified classnames.
         if '.' not in schema.remoteClass:
@@ -1722,6 +1932,15 @@ class ClassRelationshipSpec(object):
                 self.class_.zenpack.name, schema.remoteClass)
 
         self.schema = schema
+        self.label = label
+        self.short_label = short_label
+        self.label_width = label_width
+        self.content_width = content_width
+        self.display = display
+        self.details_display = details_display
+        self.grid_display = grid_display
+        self.renderer = renderer
+        self.order = order
 
     @property
     def zenrelations_tuple(self):
@@ -1739,15 +1958,15 @@ class ClassRelationshipSpec(object):
 
         if isinstance(self.schema, (ToOne)):
             schemas[self.name] = schema.Entity(
-                title=_t(remote_spec.label),
+                title=_t(self.label or remote_spec.label),
                 group="Relationships",
-                order=3.0)
+                order=self.order or 3.0)
         else:
             relname_count = '{}_count'.format(self.name)
             schemas[relname_count] = schema.Int(
-                title=_t(u'Number of {}'.format(remote_spec.plural_label)),
+                title=_t(u'Number of {}'.format(self.label or remote_spec.plural_label)),
                 group="Relationships",
-                order=6.0)
+                order=self.order or 6.0)
 
         return schemas
 
@@ -1805,16 +2024,16 @@ class ClassRelationshipSpec(object):
 
         if isinstance(self.schema, ToOne):
             fieldname = self.name
-            header = remote_spec.short_label
-            renderer = 'Zenoss.render.zenpacklib_entityLinkFromGrid'
+            header = self.short_label or self.label or remote_spec.short_label
+            renderer = self.renderer or 'Zenoss.render.zenpacklib_entityLinkFromGrid'
             width = max(
-                remote_spec.content_width + 14,
-                remote_spec.label_width + 20)
+                (self.content_width or remote_spec.content_width) + 14,
+                (self.label_width or remote_spec.label_width) + 20)
         else:
             fieldname = '{}_count'.format(self.name)
-            header = remote_spec.plural_short_label
-            renderer = None
-            width = remote_spec.plural_label_width + 20
+            header = self.short_label or self.label or remote_spec.plural_short_label
+            renderer = self.renderer or None
+            width = (self.label_width or remote_spec.plural_label_width) + 20
 
         column_fields = [
             "id: '{}'".format(fieldname),
@@ -1828,7 +2047,7 @@ class ClassRelationshipSpec(object):
 
         return [
             OrderAndValue(
-                order=remote_spec.order,
+                order=self.order or remote_spec.order,
                 value='{{{}}}'.format(','.join(column_fields))),
             ]
 
@@ -1862,7 +2081,14 @@ def enableTesting():
 
             zenpack_module_name = '.'.join(self.__module__.split('.')[:-2])
             zenpack_module = importlib.import_module(zenpack_module_name)
-            zenpack_module.CFG.test_setup()
+
+            zenpackspec = getattr(zenpack_module, 'CFG', None)
+            if not zenpackspec:
+                raise NameError(
+                    "name {!r} is not defined"
+                    .format('.'.join((zenpack_module_name, 'CFG'))))
+
+            zenpackspec.test_setup()
 
 
 def ucfirst(text):
@@ -1894,17 +2120,17 @@ def relationships_from_yuml(yuml):
     (http://yuml.me). See the following example:
 
         // Containing relationships.
-        [APIC]++-[FabricPod]
-        [APIC]++-[FvTenant]
-        [FvTenant]++-[VzBrCP]
-        [FvTenant]++-[FvAp]
-        [FvAp]++-[FvAEPg]
-        [FvAEPg]++-[FvRsProv]
-        [FvAEPg]++-[FvRsCons]
+        [APIC]++ -[FabricPod]
+        [APIC]++ -[FvTenant]
+        [FvTenant]++ -[VzBrCP]
+        [FvTenant]++ -[FvAp]
+        [FvAp]++ -[FvAEPg]
+        [FvAEPg]++ -[FvRsProv]
+        [FvAEPg]++ -[FvRsCons]
         // Non-containing relationships.
-        [FvBD]1-.-*[FvAEPg]
-        [VzBrCP]1-.-*[FvRsProv]
-        [VzBrCP]1-.-*[FvRsCons]
+        [FvBD]1 -.- *[FvAEPg]
+        [VzBrCP]1 -.- *[FvRsProv]
+        [VzBrCP]1 -.- *[FvRsCons]
 
     The created relationships are given default names that orginarily
     should be used. However, in some cases such as when one class has
@@ -1912,21 +2138,26 @@ def relationships_from_yuml(yuml):
     explicitly named. That would be done as in the following example:
 
         // Explicitly-Named Relationships
-        [Pool]default_sr *-default_for_pools 1[SR]
-        [Pool]suspend_image_sr *-suspend_image_for_pools[SR]
-        [Pool]crash_dump_sr *-crash_dump_for_pools[SR]
+        [Pool]*default_sr -.-default_for_pools 0..1[SR]
+        [Pool]*suspend_image_sr -.-suspend_image_for_pools *[SR]
+        [Pool]*crash_dump_sr -.-crash_dump_for_pools *[SR]
 
     The yuml parameter can be specified either as a newline-delimited
     string, or as a tuple or list of relationships.
 
     """
     classes = collections.defaultdict(dict)
+    match_comment = re.compile(r'^\s*//').search
 
     match_line = re.compile(
         r'\[(?P<left_classname>[^\]]+)\]'
-        r'(?P<left_relationship>[^\-]*)'
+        r'(?P<left_cardinality>[\.\*\+\d]*)'
+        r'(?P<left_relname>[a-zA-Z_]*)'
+        r'\s*?'
         r'(?P<relationship_separator>[\-\.]+)'
-        r'(?P<right_relationship>[^\[]*)'
+        r'(?P<right_relname>[a-zA-Z_]*)'
+        r'\s*?'
+        r'(?P<right_cardinality>[\.\*\+\d]*)'
         r'\[(?P<right_classname>[^\]]+)\]'
         ).search
 
@@ -1934,48 +2165,63 @@ def relationships_from_yuml(yuml):
         yuml_lines = yuml.strip().splitlines()
 
     for line in yuml_lines:
+        if match_comment(line):
+            continue
+
         match = match_line(line)
         if not match:
+            LOG.error("parse error in relationships_from_yuml at %s" % line)
             continue
 
         left_class = match.group('left_classname')
         right_class = match.group('right_classname')
-        left_relationship = match.group('left_relationship')
-        right_relationship = match.group('right_relationship')
+        left_relname = match.group('left_relname')
+        left_cardinality = match.group('left_cardinality')
+        right_relname = match.group('right_relname')
+        right_cardinality = match.group('right_cardinality')
 
-        if '++' in left_relationship:
+        if '++' in left_cardinality:
             left_type = ToManyCont
-        elif '*' in right_relationship:
+        elif '*' in right_cardinality:
             left_type = ToMany
         else:
             left_type = ToOne
 
-        if '++' in right_relationship:
+        if '++' in right_cardinality:
             right_type = ToManyCont
-        elif '*' in left_relationship:
+        elif '*' in left_cardinality:
             right_type = ToMany
         else:
             right_type = ToOne
 
-        left_parts = left_relationship.split(' ', 1)
-        if len(left_parts) > 1:
-            left_name = left_parts[0]
-        else:
-            left_name = relname_from_classname(
+        if not left_relname:
+            left_relname = relname_from_classname(
                 right_class, plural=left_type != ToOne)
 
-        right_parts = right_relationship.split(' ', 1)
-        if len(right_parts) > 1:
-            right_name = right_parts[0]
-        else:
-            right_name = relname_from_classname(
+        if not right_relname:
+            right_relname = relname_from_classname(
                 left_class, plural=right_type != ToOne)
 
-        classes[left_class][left_name] = left_type(right_type, right_class, right_name)
-        classes[right_class][right_name] = right_type(left_type, left_class, left_name)
+        classes[left_class][left_relname] = {
+            'schema': left_type(right_type, right_class, right_relname),
+            }
+
+        classes[right_class][right_relname] = {
+            'schema': right_type(left_type, left_class, left_relname),
+            }
 
     return classes
 
+def MethodInfoProperty(method_name):
+    """Return a property with the Infos for object(s) returned by a method.
+
+    A list of Info objects is returned for methods returning a list, or a single 
+    one for those returning a single value.
+    """
+    def getter(self):
+        return Zuul.info(getattr(self._object, method_name)())
+
+    return property(getter)  
 
 def RelationshipInfoProperty(relationship_name):
     """Return a property with the Infos for object(s) in the relationship.
@@ -2081,6 +2327,17 @@ def fix_kwargs(kwargs):
     return new_kwargs
 
 
+def update(d, u):
+    """Return dict d updated with nested data from dict u."""
+    for k, v in u.iteritems():
+        if isinstance(v, collections.Mapping):
+            r = update(d.get(k, {}), v)
+            d[k] = r
+        else:
+            d[k] = u[k]
+    return d
+
+
 def apply_defaults(dictionary, default_defaults=None):
     """Modify dictionary to put values from DEFAULTS key into other keys.
 
@@ -2175,9 +2432,10 @@ def create_class(module, schema_module, classname, bases, attributes):
     else:
         class_factory = type
 
-    schema_class = class_factory(classname, tuple(bases), attributes)
-    schema_class.__module__ = schema_module.__name__
-    setattr(schema_module, classname, schema_class)
+    if not hasattr(schema_module, classname):
+        schema_class = class_factory(classname, tuple(bases), attributes)
+        schema_class.__module__ = schema_module.__name__
+        setattr(schema_module, classname, schema_class)
 
     if isinstance(module, basestring):
         module = create_module(module)
@@ -2281,7 +2539,7 @@ if IMPACT_INSTALLED:
 
 JS_LINK_FROM_GRID = """
 Ext.apply(Zenoss.render, {
-    zenpacklib_entityLinkFromGrid: function(obj, col, record) {
+    zenpacklib_entityLinkFromGrid: function(obj, metaData, record, rowIndex, colIndex) {
         if (!obj)
             return;
 
@@ -2295,7 +2553,7 @@ Ext.apply(Zenoss.render, {
 
         if (this.refName == 'componentgrid') {
             // Zenoss >= 4.2 / ExtJS4
-            if (this.subComponentGridPanel || this.componentType != obj.meta_type)
+            if (colIndex != 1 || this.subComponentGridPanel)
                 isLink = true;
         } else {
             // Zenoss < 4.2 / ExtJS3
@@ -2311,7 +2569,10 @@ Ext.apply(Zenoss.render, {
     }
 });
 
-ZC.ZPLComponentGridPanel = Ext.extend(ZC.ComponentGridPanel, {
+Ext.define("Zenoss.component.ZPLComponentGridPanel", {
+    alias: ["widget.ZPLComponentGridPanel"],
+    extend: "Zenoss.component.ComponentGridPanel",
+
     subComponentGridPanel: false,
 
     jumpToEntity: function(uid, meta_type) {
@@ -2360,4 +2621,16 @@ ZC.ZPLComponentGridPanel = Ext.extend(ZC.ComponentGridPanel, {
         }
     }
 });
+
+Ext.define("Zenoss.ZPLRenderableDisplayField", {
+    extend: "Ext.form.DisplayField",
+    alias: ['widget.ZPLRenderableDisplayField'],
+    constructor: function(config) {   
+        if (typeof(config.renderer) == 'string') {
+          config.renderer = eval(config.renderer)
+        }
+        Zenoss.ZPLRenderableDisplayField.superclass.constructor.call(this, config);
+    }
+});
+
 """.strip()
