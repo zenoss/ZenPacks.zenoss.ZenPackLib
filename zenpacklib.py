@@ -318,7 +318,7 @@ class ComponentBase(ModelBase):
             new_obj.index_object()
             return
 
-        LOG.error("setIdForRelationship: No target found matching id=%s", id_)
+        LOG.error("setIdForRelationship (%s): No target found matching id=%s", relationship,id_)
 
     def getIdsInRelationship(self, relationship):
         """Return a list of object ids in relationship.
@@ -356,8 +356,8 @@ class ComponentBase(ModelBase):
             obj = obj_map.get(id_)
             if not obj:
                 LOG.error(
-                    "setIdsInRelationship: No targets found matching "
-                    "id=%s", id_)
+                    "setIdsInRelationship (%s): No targets found matching "
+                    "id=%s", relationship, id_)
 
                 continue
 
