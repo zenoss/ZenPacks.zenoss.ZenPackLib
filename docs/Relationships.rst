@@ -108,6 +108,17 @@ is equivalent to::
 
     [NetBotzDevice]++temperature_sensors-.-sensor_device1[TemperatureSensor]
 
+Example 4:
+---------------------------------------------------------------------
+
+::
+
+    [EtherCard]0..1 switches -.-ecards 0..1 [Switch]
+
+* The endpoint relationships are now named
+* Named relationships can have their properties changes (GUI, order, etc)
+* Each side can handle 0 or 1 connections
+
 
 TODO: Examples of illegal yUML statements.
 ------------------------------------------
