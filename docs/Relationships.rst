@@ -29,6 +29,7 @@ A relationship is expressed via a yUML statement in ZenPack's __init__.py.
 * If there is no ‘++’ on the left AND no ‘*’ on the right, the left is ToOne.
 * If there is no ‘++’ on the right AND no ‘*’ on the left, the right is ToOne.
 
+* You can specify a number for a fixed quantify for a non-containing
 * You can also specify a numerical range (0..2) on ends of non-containing 
   relationships.
 
