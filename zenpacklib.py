@@ -754,7 +754,7 @@ class ZenPackSpec(object):
 
         # Configuration Properties (zProperties).
         if zProperties is None:
-            self.zProperties = {}
+            zProperties = {}
         elif not isinstance(zProperties, dict):
             raise TypeError(
                 "zenpack zProperties argument must be dict or None, not {!r}"
