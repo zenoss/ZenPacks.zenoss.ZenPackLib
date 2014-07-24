@@ -926,14 +926,15 @@ class ZenPackSpec(object):
 
         target_name = 'global' if classes[0] is None else 'device'
 
-        GSM.registerAdapter(
-            snippet_class,
-            classes + (IDefaultBrowserLayer, IBrowserView, IMainSnippetManager),
-            IViewlet,
-            'js-snippet-{name}-{target_name}'
-            .format(
-                name=self.name,
-                target_name=target_name))
+        for klass in classes:
+            GSM.registerAdapter(
+                snippet_class,
+                (klass,) + (IDefaultBrowserLayer, IBrowserView, IMainSnippetManager),
+                IViewlet,
+                'js-snippet-{name}-{target_name}'
+                .format(
+                    name=self.name,
+                    target_name=target_name))
 
         return snippet_class
 
