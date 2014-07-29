@@ -1782,6 +1782,7 @@ class ClassPropertySpec(object):
             editable=False,
             api_only=False,
             api_backendtype='property',
+            enum=None,
             ):
         """TODO."""
         self.class_spec = class_spec
@@ -1804,6 +1805,7 @@ class ClassPropertySpec(object):
         self.editable = bool(editable)
         self.api_only = bool(api_only)
         self.api_backendtype = api_backendtype
+        self.enum = enum
 
         if self.api_backendtype not in ('property', 'method'):
             raise TypeError(
@@ -1877,9 +1879,11 @@ class ClassPropertySpec(object):
                 self.name: MethodInfoProperty(self.name),
                 }
         else:
-            return {
-                self.name: ProxyProperty(self.name),
-                }
+            if not self.enum:
+                return { self.name: ProxyProperty(self.name), }
+            else:
+                return { self.name: EnumInfoProperty(self.name, self.enum), }
+
 
     @property
     def js_fields(self):
@@ -2251,6 +2255,24 @@ def MethodInfoProperty(method_name):
         return Zuul.info(getattr(self._object, method_name)())
 
     return property(getter)  
+
+def EnumInfoProperty(data, enum):
+    """Return a property filtered via an enum.
+    """
+    def getter(self, data, enum): 
+        if not enum:
+            return ProxyProperty(data)
+        else:
+            data = getattr(self._object, data, None) 
+            try:
+                if isinstance(enum, (set,list,tuple)):
+                    enum = dict(enumerate(enum))
+                data = int(data)
+                return Zuul.info(enum[data])
+            except Exception:
+                return Zuul.info(data)
+            return Zuul.info(getattr(self._object, method_name))
+    return property(lambda x: getter(x, data, enum))  
 
 def RelationshipInfoProperty(relationship_name):
     """Return a property with the Infos for object(s) in the relationship.
