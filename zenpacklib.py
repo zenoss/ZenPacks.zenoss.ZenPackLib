@@ -414,7 +414,6 @@ class ComponentBase(ModelBase):
 
     def get_facets(self, seen=None):
         """Generate non-containing related objects for faceting."""
-
         if seen is None:
             seen = set()
 
@@ -577,9 +576,11 @@ GSM.registerAdapter(ComponentPathReporter, (ComponentBase,), IPathReporter)
 
 
 class ComponentFormBuilder(BaseComponentFormBuilder):
-    """
-    Base class for all custom FormBuilders.   Adds support for renderers in the Component
-    Details form.
+
+    """Base class for all custom FormBuilders.
+
+    Adds support for renderers in the Component Details form.
+
     """
 
     implements(IFormBuilder)
@@ -1498,8 +1499,11 @@ class ClassSpec(object):
         return self.create_formbuilder_class()
 
     def create_formbuilder_class(self):
-        """Create and return FormBuilder subclass with rendering hints for ComponentFormBuilder."""
+        """Create and return FormBuilder subclass.
 
+        Includes rendering hints for ComponentFormBuilder.
+
+        """
         bases = (ComponentFormBuilder,)
         attributes = {}
         renderer = {}
@@ -1803,6 +1807,7 @@ class ClassPropertySpec(object):
             editable=False,
             api_only=False,
             api_backendtype='property',
+            enum=None,
             datapoint=None,
             datapoint_default=None,
             cached=None
@@ -1828,6 +1833,7 @@ class ClassPropertySpec(object):
         self.editable = bool(editable)
         self.api_only = bool(api_only)
         self.api_backendtype = api_backendtype
+        self.enum = enum
         self.datapoint = datapoint
         self.datapoint_default = datapoint_default
         self.cached = bool(cached)
@@ -1849,7 +1855,6 @@ class ClassPropertySpec(object):
     @property
     def ofs_dict(self):
         """Return OFS _properties dictionary."""
-
         if self.api_only:
             return None
 
@@ -1907,14 +1912,15 @@ class ClassPropertySpec(object):
                 self.name: MethodInfoProperty(self.name),
                 }
         else:
-            return {
-                self.name: ProxyProperty(self.name),
-                }
+            if not self.enum:
+                return { self.name: ProxyProperty(self.name), }
+            else:
+                return { self.name: EnumInfoProperty(self.name, self.enum), }
+
 
     @property
     def js_fields(self):
         """Return list of JavaScript fields."""
-
         if self.grid_display is False:
             return []
         else:
@@ -1923,7 +1929,6 @@ class ClassPropertySpec(object):
     @property
     def js_columns(self):
         """Return list of JavaScript columns."""
-
         if self.grid_display is False:
             return []
 
@@ -2281,6 +2286,25 @@ def MethodInfoProperty(method_name):
         return Zuul.info(getattr(self._object, method_name)())
 
     return property(getter)  
+
+
+def EnumInfoProperty(data, enum):
+    """Return a property filtered via an enum."""
+    def getter(self, data, enum): 
+        if not enum:
+            return ProxyProperty(data)
+        else:
+            data = getattr(self._object, data, None) 
+            try:
+                if isinstance(enum, (set,list,tuple)):
+                    enum = dict(enumerate(enum))
+                data = int(data)
+                return Zuul.info(enum[data])
+            except Exception:
+                return Zuul.info(data)
+            return Zuul.info(getattr(self._object, method_name))
+    return property(lambda x: getter(x, data, enum))  
+
 
 def RelationshipInfoProperty(relationship_name):
     """Return a property with the Infos for object(s) in the relationship.
