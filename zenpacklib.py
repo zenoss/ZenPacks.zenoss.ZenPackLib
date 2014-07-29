@@ -1431,7 +1431,7 @@ class ClassSpec(object):
                     attributes[name] = datapoint_method
                 else:
                     attributes[name] = datapoint_method
-                
+
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
 
@@ -1990,10 +1990,9 @@ class ClassPropertySpec(object):
                 }
         else:
             if not self.enum:
-                return { self.name: ProxyProperty(self.name), }
+                return {self.name: ProxyProperty(self.name), }
             else:
-                return { self.name: EnumInfoProperty(self.name, self.enum), }
-
+                return {self.name: EnumInfoProperty(self.name, self.enum), }
 
     @property
     def js_fields(self):
@@ -2377,23 +2376,22 @@ def MethodInfoProperty(method_name):
     return property(getter)
 
 
-
 def EnumInfoProperty(data, enum):
     """Return a property filtered via an enum."""
-    def getter(self, data, enum): 
+    def getter(self, data, enum):
         if not enum:
             return ProxyProperty(data)
         else:
-            data = getattr(self._object, data, None) 
+            data = getattr(self._object, data, None)
             try:
-                if isinstance(enum, (set,list,tuple)):
+                if isinstance(enum, (set, list, tuple)):
                     enum = dict(enumerate(enum))
                 data = int(data)
                 return Zuul.info(enum[data])
             except Exception:
                 return Zuul.info(data)
             return Zuul.info(getattr(self._object, method_name))
-    return property(lambda x: getter(x, data, enum))  
+    return property(lambda x: getter(x, data, enum))
 
 
 def RelationshipInfoProperty(relationship_name):
