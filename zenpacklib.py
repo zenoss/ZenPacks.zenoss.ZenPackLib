@@ -40,7 +40,7 @@ from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceCompo
 from Products.ZenModel.HWComponent import HWComponent as BaseHWComponent
 from Products.ZenModel.ManagedEntity import ManagedEntity as BaseManagedEntity
 from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
-from Products.ZenModel.ZenPack import ZenPack
+from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
 from Products.ZenRelations.ToManyRelationship import ToManyRelationship
@@ -50,7 +50,7 @@ from Products.ZenUI3.browser.interfaces import IMainSnippetManager
 from Products.ZenUI3.utils.javascript import JavaScriptSnippet
 from Products.ZenUtils.guid.interfaces import IGlobalIdentifier
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
-from Products.ZenUtils.Utils import monkeypatch
+from Products.ZenUtils.Utils import monkeypatch, importClass
 
 from Products import Zuul
 from Products.Zuul.catalog.events import IndexingEvent
@@ -100,7 +100,48 @@ TestCase = None
 GSM = getGlobalSiteManager()
 
 
-## Public Classes ############################################################
+# Public Classes ############################################################
+
+class ZenPack(ZenPackBase):
+    """
+    ZenPack loader that handles custom installation and removal tasks.
+    """
+
+    # NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in
+    # via zenpacklib when this class is instantiated.
+
+    def _buildDeviceRelations(self):
+        for d in self.dmd.Devices.getSubDevicesGen():
+            d.buildRelations()
+
+    def install(self, app):
+        super(ZenPack, self).install(app)
+        if self.NEW_COMPONENT_TYPES:
+            LOG.info('Adding %s relationships to existing devices' % self.id)
+            self._buildDeviceRelations()
+
+    def remove(self, app, leaveObjects=False):
+        from Products.Zuul.interfaces import ICatalogTool
+        if not leaveObjects:
+            if self.NEW_COMPONENT_TYPES:
+                LOG.info('Removing %s components' % self.id)
+                cat = ICatalogTool(app.zport.dmd)
+                for brain in cat.search(types=self.NEW_COMPONENT_TYPES):
+                    component = brain.getObject()
+                    component.getPrimaryParent()._delObject(component.id)
+
+                # Remove our Device relations additions.
+                from Products.ZenUtils.Utils import importClass
+                for device_module_id in self.NEW_RELATIONS:
+                    Device = importClass(device_module_id)
+                    Device._relations = tuple([x for x in Device._relations
+                                               if x[0] not in self.NEW_RELATIONS[device_module_id]])
+
+                LOG.info('Removing %s relationships from existing devices.' % self.id)
+                self._buildDeviceRelations()
+
+        super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
+
 
 class ModelBase(object):
 
@@ -319,7 +360,7 @@ class ComponentBase(ModelBase):
             new_obj.index_object()
             return
 
-        LOG.error("setIdForRelationship (%s): No target found matching id=%s", relationship,id_)
+        LOG.error("setIdForRelationship (%s): No target found matching id=%s", relationship, id_)
 
     def getIdsInRelationship(self, relationship):
         """Return a list of object ids in relationship.
@@ -439,7 +480,6 @@ class ComponentBase(ModelBase):
                 seen.add(obj)
                 for facet in obj.get_facets(seen=seen):
                     yield facet
-
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
@@ -572,7 +612,6 @@ class ComponentPathReporter(DefaultPathReporter):
 
         return paths
 
-
 GSM.registerAdapter(ComponentPathReporter, (ComponentBase,), IPathReporter)
 
 
@@ -687,7 +726,7 @@ class HardwareComponentInfo(BaseComponentInfo):
         return self._object.productClass()
 
 
-## ZenPack Configuration #####################################################
+# ZenPack Configuration #####################################################
 
 FACET_BLACKLIST = (
     'dependencies',
@@ -753,6 +792,8 @@ class ZenPackSpec(object):
             class_relationships=None):
         """TODO."""
         self.name = name
+        self.NEW_COMPONENT_TYPES = []
+        self.NEW_RELATIONS = collections.defaultdict(list)
 
         # Configuration Properties (zProperties).
         if zProperties is None:
@@ -772,7 +813,7 @@ class ZenPackSpec(object):
 
         # Classes.
         self.classes = {}
-
+        self.imported_classes = {}
         apply_defaults(classes)
 
         for classname, classdata in classes.iteritems():
@@ -786,6 +827,40 @@ class ZenPackSpec(object):
                     class_relationships.get(classname, {}))
 
             self.classes[classname] = ClassSpec(self, classname, **classdata)
+
+            relationships = classdata['relationships']
+            for relationship in relationships:
+                try:
+                    className = relationships[relationship]['schema'].remoteClass
+                    if '.' in className:
+                        module = '.'.join(className.split('.')[0:-1])
+                        kls = importClass(module)
+                        self.imported_classes[className] = kls
+                except ImportError:
+                    pass
+
+        for class_ in self.classes.values():
+            for relationship in class_.relationships.values():
+                if relationship.schema.remoteClass in self.imported_classes.keys():
+                    remoteClass = relationship.schema.remoteClass  # Products.ZenModel.Device.Device
+                    relname = relationship.schema.remoteName  # coolingFans
+                    modname = relationship.class_.model_class.__module__  # ZenPacks.zenoss.HP.Proliant.CoolingFan
+                    className = relationship.class_.model_class.__name__  # CoolingFan
+                    remoteClassObj = self.imported_classes[remoteClass]  # Device_obj
+                    remoteType = relationship.schema.remoteType  # ToManyCont
+                    localType = relationship.schema.__class__  # ToOne
+                    remote_relname = relationship.zenrelations_tuple[0]  # products_zenmodel_device_device
+
+                    if relname not in (x[0] for x in remoteClassObj._relations):
+                        remoteClassObj._relations += ((relname, remoteType(localType, modname, remote_relname)),)
+
+                    remote_module_id = remoteClassObj.__module__
+                    if relname not in self.NEW_RELATIONS[remote_module_id]:
+                        self.NEW_RELATIONS[remote_module_id].append(relname)
+
+                    component_type = '.'.join((modname, className))
+                    if component_type not in self.NEW_COMPONENT_TYPES:
+                        self.NEW_COMPONENT_TYPES.append(component_type)
 
     @property
     def ordered_classes(self):
@@ -1004,12 +1079,14 @@ class ZenPackSpec(object):
             'packZProperties': packZProperties
             }
 
-        return create_class(
-            get_symbol_name(self.name),
-            get_symbol_name(self.name, 'schema'),
-            'ZenPack',
-            (ZenPack,),
-            attributes)
+        attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
+        attributes['NEW_RELATIONS'] = self.NEW_RELATIONS
+
+        return create_class(get_symbol_name(self.name),
+                            get_symbol_name(self.name, 'schema'),
+                            'ZenPack',
+                            (ZenPack,),
+                            attributes)
 
     def test_setup(self):
         """Execute from a test suite's afterSetUp method.
@@ -1176,14 +1253,13 @@ class ClassSpec(object):
 
         self.filter_display = filter_display
 
-
     def create(self):
         """Implement specification."""
         self.create_model_class()
         self.create_iinfo_class()
         self.create_info_class()
         if self.is_component:
-            self.create_formbuilder_class()            
+            self.create_formbuilder_class()
         self.register_impact_adapters()
 
     @property
@@ -1234,7 +1310,6 @@ class ClassSpec(object):
                 subclass_specs.append(class_spec)
 
         return subclass_specs
-
 
     def inherited_properties(self):
         properties = {}
@@ -1356,7 +1431,7 @@ class ClassSpec(object):
                     attributes[name] = datapoint_method
                 else:
                     attributes[name] = datapoint_method
-                
+
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
 
@@ -1407,7 +1482,7 @@ class ClassSpec(object):
 
     def create_iinfo_class(self):
         """Create and return IInfo subclass."""
-        bases = []        
+        bases = []
         for base_classname in self.zenpack.classes[self.name].bases:
             if base_classname in self.zenpack.classes:
                 bases.append(self.zenpack.classes[base_classname].iinfo_class)
@@ -1451,7 +1526,7 @@ class ClassSpec(object):
 
     def create_info_class(self):
         """Create and return Info subclass."""
-        bases = []        
+        bases = []
         for base_classname in self.zenpack.classes[self.name].bases:
             if base_classname in self.zenpack.classes:
                 bases.append(self.zenpack.classes[base_classname].info_class)
@@ -1534,7 +1609,6 @@ class ClassSpec(object):
 
         return formbuilder
 
-
     def register_impact_adapters(self):
         """Register Impact adapters."""
         if not IMPACT_INSTALLED:
@@ -1584,7 +1658,7 @@ class ClassSpec(object):
             remote_classname = relschema.remoteClass.split('.')[-1]
             remote_spec = self.zenpack.classes.get(remote_classname)
             if remote_spec:
-                for class_spec in [ remote_spec ] + remote_spec.subclass_specs():                    
+                for class_spec in [remote_spec] + remote_spec.subclass_specs():
                     if class_spec and not class_spec.is_device:
                         faceting_specs.append(class_spec)
 
@@ -1847,7 +1921,7 @@ class ClassPropertySpec(object):
         if self.api_backendtype not in ('property', 'method'):
             raise TypeError(
                 "Property '%s': api_backendtype must be 'property' or 'method', not '%s'"
-                    % (name, self.api_backendtype))
+                % (name, self.api_backendtype))
 
         # Force properties into the 4.0 - 4.9 order range.
         if not order:
@@ -1916,10 +1990,9 @@ class ClassPropertySpec(object):
                 }
         else:
             if not self.enum:
-                return { self.name: ProxyProperty(self.name), }
+                return {self.name: ProxyProperty(self.name), }
             else:
-                return { self.name: EnumInfoProperty(self.name, self.enum), }
-
+                return {self.name: EnumInfoProperty(self.name, self.enum), }
 
     @property
     def js_fields(self):
@@ -2014,14 +2087,22 @@ class ClassRelationshipSpec(object):
         return (self.name, self.schema)
 
     @property
+    def remote_classname(self):
+        return self.schema.remoteClass.split('.')[-1]
+
+    @property
     def iinfo_schemas(self):
         """Return IInfo attribute schema dict."""
-        remote_classname = self.schema.remoteClass.split('.')[-1]
-        remote_spec = self.class_.zenpack.classes.get(remote_classname)
-        if not remote_spec:
+        remote_spec = self.class_.zenpack.classes.get(self.remote_classname)
+        imported_class = self.class_.zenpack.imported_classes.get(self.schema.remoteClass)
+        if not (remote_spec or imported_class):
             return {}
 
         schemas = {}
+
+        if imported_class:
+            remote_spec = imported_class
+            remote_spec.label = remote_spec.meta_type
 
         if isinstance(self.schema, (ToOne)):
             schemas[self.name] = schema.Entity(
@@ -2053,8 +2134,7 @@ class ClassRelationshipSpec(object):
     @property
     def js_fields(self):
         """Return list of JavaScript fields."""
-        remote_classname = self.schema.remoteClass.split('.')[-1]
-        remote_spec = self.class_.zenpack.classes.get(remote_classname)
+        remote_spec = self.class_.zenpack.classes.get(self.remote_classname)
 
         # No reason to show a column for the device since we're already
         # looking at the device.
@@ -2119,7 +2199,7 @@ class ClassRelationshipSpec(object):
             ]
 
 
-## Public Functions ##########################################################
+# Public Functions ##########################################################
 
 def enableTesting():
     """Enable test mode. Only call from code under tests/.
@@ -2170,6 +2250,10 @@ def ucfirst(text):
 
 def relname_from_classname(classname, plural=False):
     """Return relationship name given classname and plural flag."""
+
+    if '.' in classname:
+        classname = classname.replace('.', '_').lower()
+
     relname = list(classname)
     for i, c in enumerate(classname):
         if relname[i].isupper():
@@ -2279,34 +2363,35 @@ def relationships_from_yuml(yuml):
 
     return classes
 
+
 def MethodInfoProperty(method_name):
     """Return a property with the Infos for object(s) returned by a method.
 
-    A list of Info objects is returned for methods returning a list, or a single 
+    A list of Info objects is returned for methods returning a list, or a single
     one for those returning a single value.
     """
     def getter(self):
         return Zuul.info(getattr(self._object, method_name)())
 
-    return property(getter)  
+    return property(getter)
 
 
 def EnumInfoProperty(data, enum):
     """Return a property filtered via an enum."""
-    def getter(self, data, enum): 
+    def getter(self, data, enum):
         if not enum:
             return ProxyProperty(data)
         else:
-            data = getattr(self._object, data, None) 
+            data = getattr(self._object, data, None)
             try:
-                if isinstance(enum, (set,list,tuple)):
+                if isinstance(enum, (set, list, tuple)):
                     enum = dict(enumerate(enum))
                 data = int(data)
                 return Zuul.info(enum[data])
             except Exception:
                 return Zuul.info(data)
             return Zuul.info(getattr(self._object, method_name))
-    return property(lambda x: getter(x, data, enum))  
+    return property(lambda x: getter(x, data, enum))
 
 
 def RelationshipInfoProperty(relationship_name):
@@ -2370,12 +2455,12 @@ def RelationshipSetter(relationship_name):
     return setter
 
 
-## Private Types #############################################################
+# Private Types #############################################################
 
 OrderAndValue = collections.namedtuple('OrderAndValue', ['order', 'value'])
 
 
-## Private Functions #########################################################
+# Private Functions #########################################################
 
 def get_zenpack_path(zenpack_name):
     """Return filesystem path for given ZenPack."""
@@ -2537,7 +2622,7 @@ def create_class(module, schema_module, classname, bases, attributes):
     return concrete_class
 
 
-## Impact Stuff ##############################################################
+# Impact Stuff ##############################################################
 
 try:
     from ZenPacks.zenoss.Impact.impactd.relations import ImpactEdge
@@ -2621,7 +2706,7 @@ if IMPACT_INSTALLED:
                 yield IGlobalIdentifier(r).getGUID()
 
 
-## Templates #################################################################
+# Templates #################################################################
 
 JS_LINK_FROM_GRID = """
 Ext.apply(Zenoss.render, {
@@ -2741,7 +2826,7 @@ Ext.define("Zenoss.component.ZPLComponentGridPanel", {
 Ext.define("Zenoss.ZPLRenderableDisplayField", {
     extend: "Ext.form.DisplayField",
     alias: ['widget.ZPLRenderableDisplayField'],
-    constructor: function(config) {   
+    constructor: function(config) {
         if (typeof(config.renderer) == 'string') {
           config.renderer = eval(config.renderer)
         }
