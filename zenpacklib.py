@@ -2071,20 +2071,17 @@ class ClassRelationshipSpec(object):
             remote_spec = imported_class
             remote_spec.label = remote_spec.meta_type
 
-        try:
-            if isinstance(self.schema, (ToOne)):
-                schemas[self.name] = schema.Entity(
-                    title=_t(self.label or remote_spec.label),
-                    group="Relationships",
-                    order=self.order or 3.0)
-            else:
-                relname_count = '{}_count'.format(self.name)
-                schemas[relname_count] = schema.Int(
-                    title=_t(u'Number of {}'.format(self.label or remote_spec.plural_label)),
-                    group="Relationships",
-                    order=self.order or 6.0)
-        except Exception:
-            pass
+        if isinstance(self.schema, (ToOne)):
+            schemas[self.name] = schema.Entity(
+                title=_t(self.label or remote_spec.label),
+                group="Relationships",
+                order=self.order or 3.0)
+        else:
+            relname_count = '{}_count'.format(self.name)
+            schemas[relname_count] = schema.Int(
+                title=_t(u'Number of {}'.format(self.label or remote_spec.plural_label)),
+                group="Relationships",
+                order=self.order or 6.0)
 
         return schemas
 
