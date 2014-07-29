@@ -133,8 +133,8 @@ class ZenPack(ZenPackBase):
                 from Products.ZenUtils.Utils import importClass
                 for device_module_id in self.NEW_RELATIONS:
                     Device = importClass(device_module_id)
-                    Device._relations = tuple([x for x in Device._relations \
-                        if x[0] not in self.NEW_RELATIONS[device_module_id]])
+                    Device._relations = tuple([x for x in Device._relations
+                        if x[0] not in NEW_RELATIONS[device_module_id]])
 
                 LOG.info('Removing %s relationships from existing devices.' % self.id)
                 self._buildDeviceRelations()
@@ -1084,6 +1084,7 @@ class ZenPackSpec(object):
         attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
         attributes['NEW_RELATIONS'] = self.NEW_RELATIONS
 
+        attributes = {
         return create_class(
             get_symbol_name(self.name),
             get_symbol_name(self.name, 'schema'),
