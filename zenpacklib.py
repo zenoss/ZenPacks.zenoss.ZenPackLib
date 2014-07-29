@@ -106,32 +106,35 @@ class ZenPack(ZenPackBase):
     ZenPack loader that handles custom installation and removal tasks.
     """
 
+    # NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in 
+    # via zenpacklib when this class is instantiated.
+
     def _buildDeviceRelations(self):
         for d in self.dmd.Devices.getSubDevicesGen():
             d.buildRelations()
 
     def install(self, app):
         super(ZenPack, self).install(app)
-        if NEW_COMPONENT_TYPES:
+        if self.NEW_COMPONENT_TYPES:
             LOG.info('Adding %s relationships to existing devices' % self.id)
             self._buildDeviceRelations()
 
     def remove(self, app, leaveObjects=False):
         from Products.Zuul.interfaces import ICatalogTool
         if not leaveObjects:
-            if NEW_COMPONENT_TYPES:
+            if self.NEW_COMPONENT_TYPES:
                 LOG.info('Removing %s components' % self.id)
                 cat = ICatalogTool(app.zport.dmd)
-                for brain in cat.search(types=NEW_COMPONENT_TYPES):
+                for brain in cat.search(types=self.NEW_COMPONENT_TYPES):
                     component = brain.getObject()
                     component.getPrimaryParent()._delObject(component.id)
 
                 # Remove our Device relations additions.
                 from Products.ZenUtils.Utils import importClass
-                for device_module_id in NEW_RELATIONS:
+                for device_module_id in self.NEW_RELATIONS:
                     Device = importClass(device_module_id)
                     Device._relations = tuple([x for x in Device._relations \
-                        if x[0] not in NEW_RELATIONS[device_module_id]])
+                        if x[0] not in self.NEW_RELATIONS[device_module_id]])
 
                 LOG.info('Removing %s relationships from existing devices.' % self.id)
                 self._buildDeviceRelations()
@@ -781,10 +784,6 @@ class ZenPackSpec(object):
 
     """
 
-    global NEW_COMPONENT_TYPES
-    global NEW_RELATIONS
-    NEW_COMPONENT_TYPES = []
-    NEW_RELATIONS = collections.defaultdict(list)
 
     def __init__(
             self,
@@ -794,6 +793,8 @@ class ZenPackSpec(object):
             class_relationships=None):
         """TODO."""
         self.name = name
+        self.NEW_COMPONENT_TYPES = []
+        self.NEW_RELATIONS = collections.defaultdict(list)
 
         # Configuration Properties (zProperties).
         if zProperties is None:
@@ -855,12 +856,12 @@ class ZenPackSpec(object):
                          remoteClassObj._relations += ((relname, remoteType(localType, modname, remote_relname)),)
                      
                      remote_module_id = remoteClassObj.__module__
-                     if relname not in NEW_RELATIONS[remote_module_id]:
-                         NEW_RELATIONS[remote_module_id].append(relname)
+                     if relname not in self.NEW_RELATIONS[remote_module_id]:
+                         self.NEW_RELATIONS[remote_module_id].append(relname)
 
                      component_type ='.'.join((modname, className)) 
-                     if component_type not in NEW_COMPONENT_TYPES:
-                         NEW_COMPONENT_TYPES.append(component_type)
+                     if component_type not in self.NEW_COMPONENT_TYPES:
+                         self.NEW_COMPONENT_TYPES.append(component_type)
 
 
     @property
@@ -1079,6 +1080,9 @@ class ZenPackSpec(object):
         attributes = {
             'packZProperties': packZProperties
             }
+ 
+        attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
+        attributes['NEW_RELATIONS'] = self.NEW_RELATIONS
 
         return create_class(
             get_symbol_name(self.name),
