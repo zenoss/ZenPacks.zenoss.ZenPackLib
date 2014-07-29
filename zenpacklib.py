@@ -1330,8 +1330,23 @@ class ClassSpec(object):
 
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
-            attributes[name] = None
+            if not spec.datapoint:
+                attributes[name] = None
+            else:
+                # Lookup the datapoint and get the value from rrd
+                def datapoint_method(self, default=spec.datapoint_default, cached=spec.cached, datapoint=spec.datapoint):
+                    if cached:
+                        r = self.cacheRRDValue(datapoint, default=default)
+                        if r is not None:
+                            return r
+                    else:
+                        r = self.getRRDValue(datapoint, default=default)
+                        if r is not None:
+                            return r
 
+                    return default
+                attributes[name] = datapoint_method
+                
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
 
@@ -1782,6 +1797,9 @@ class ClassPropertySpec(object):
             editable=False,
             api_only=False,
             api_backendtype='property',
+            datapoint=None,
+            datapoint_default=None,
+            cached=None
             ):
         """TODO."""
         self.class_spec = class_spec
@@ -1804,6 +1822,13 @@ class ClassPropertySpec(object):
         self.editable = bool(editable)
         self.api_only = bool(api_only)
         self.api_backendtype = api_backendtype
+        self.datapoint = datapoint
+        self.datapoint_default = datapoint_default
+        self.cached = cached
+        # Force api mode when a datapoint is supplied
+        if self.datapoint:
+            self.api_only = True
+            self.api_backendtype = 'method'
 
         if self.api_backendtype not in ('property', 'method'):
             raise TypeError(
