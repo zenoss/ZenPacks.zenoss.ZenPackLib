@@ -121,20 +121,20 @@ class ZenPack(ZenPackBase):
         if not leaveObjects:
             if NEW_COMPONENT_TYPES:
                 LOG.info('Removing %s components' % self.id)
-            cat = ICatalogTool(app.zport.dmd)
-            for brain in cat.search(types=NEW_COMPONENT_TYPES):
-                component = brain.getObject()
-                component.getPrimaryParent()._delObject(component.id)
+                cat = ICatalogTool(app.zport.dmd)
+                for brain in cat.search(types=NEW_COMPONENT_TYPES):
+                    component = brain.getObject()
+                    component.getPrimaryParent()._delObject(component.id)
 
-            # Remove our Device relations additions.
-            from Products.ZenUtils.Utils import importClass
-            for device_module_id in NEW_RELATIONS:
-                Device = importClass(device_module_id)
-                Device._relations = tuple([x for x in Device._relations \
-                    if x[0] not in NEW_RELATIONS[device_module_id]])
+                # Remove our Device relations additions.
+                from Products.ZenUtils.Utils import importClass
+                for device_module_id in NEW_RELATIONS:
+                    Device = importClass(device_module_id)
+                    Device._relations = tuple([x for x in Device._relations \
+                        if x[0] not in NEW_RELATIONS[device_module_id]])
 
-            LOG.info('Removing %s relationships from existing devices.' % self.id)
-            self._buildDeviceRelations()
+                LOG.info('Removing %s relationships from existing devices.' % self.id)
+                self._buildDeviceRelations()
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
