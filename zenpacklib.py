@@ -1824,7 +1824,7 @@ class ClassPropertySpec(object):
         self.api_backendtype = api_backendtype
         self.datapoint = datapoint
         self.datapoint_default = datapoint_default
-        self.cached = cached
+        self.cached = bool(cached)
         # Force api mode when a datapoint is supplied
         if self.datapoint:
             self.api_only = True
