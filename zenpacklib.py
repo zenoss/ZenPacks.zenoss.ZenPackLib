@@ -23,6 +23,7 @@ import operator
 import os
 import re
 import sys
+import math
 
 from zope.browser.interfaces import IBrowserView
 from zope.component import adapts, getGlobalSiteManager
@@ -1335,15 +1336,17 @@ class ClassSpec(object):
                 attributes[name] = None
             else:
                 # Lookup the datapoint and get the value from rrd
-                def datapoint_method(self, default=spec.datapoint_default, cached=spec.cached, datapoint=spec.datapoint):
+                def datapoint_method(self, default=spec.datapoint_default, cached=spec.datapoint_cached, datapoint=spec.datapoint):
                     if cached:
                         r = self.cacheRRDValue(datapoint, default=default)
                         if r is not None:
-                            return r
+                            if not math.isnan(float(r)):
+                                return r
                     else:
                         r = self.getRRDValue(datapoint, default=default)
                         if r is not None:
-                            return r
+                            if not math.isnan(float(r)):
+                                return r
 
                     return default
 
@@ -1810,7 +1813,7 @@ class ClassPropertySpec(object):
             enum=None,
             datapoint=None,
             datapoint_default=None,
-            cached=None
+            datapoint_cached=True
             ):
         """TODO."""
         self.class_spec = class_spec
@@ -1836,7 +1839,7 @@ class ClassPropertySpec(object):
         self.enum = enum
         self.datapoint = datapoint
         self.datapoint_default = datapoint_default
-        self.cached = bool(cached)
+        self.datapoint_cached = bool(datapoint_cached)
         # Force api mode when a datapoint is supplied
         if self.datapoint:
             self.api_only = True
