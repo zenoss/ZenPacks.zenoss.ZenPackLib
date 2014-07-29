@@ -49,7 +49,7 @@ from Products.ZenUI3.browser.interfaces import IMainSnippetManager
 from Products.ZenUI3.utils.javascript import JavaScriptSnippet
 from Products.ZenUtils.guid.interfaces import IGlobalIdentifier
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
-from Products.ZenUtils.Utils import monkeypatch
+from Products.ZenUtils.Utils import monkeypatch, importClass
 
 from Products import Zuul
 from Products.Zuul.catalog.events import IndexingEvent
@@ -72,8 +72,6 @@ from Products.Zuul.utils import ZuulMessageFactory as _t
 
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
 from zope.viewlet.interfaces import IViewlet
-
-from Products.ZenUtils.Utils import importClass 
 
 # Exported symbols. These are the only symbols imported by wildcard.
 __all__ = (
@@ -102,6 +100,7 @@ GSM = getGlobalSiteManager()
 
 
 ## Public Classes ############################################################
+
 class ZenPack(ZenPackBase):
     """
     ZenPack loader that handles custom installation and removal tasks.
@@ -113,13 +112,15 @@ class ZenPack(ZenPackBase):
 
     def install(self, app):
         super(ZenPack, self).install(app)
-        LOG.info('Adding %s relationships to existing devices' % self.id)
-        self._buildDeviceRelations()
+        if NEW_COMPONENT_TYPES:
+            LOG.info('Adding %s relationships to existing devices' % self.id)
+            self._buildDeviceRelations()
 
     def remove(self, app, leaveObjects=False):
         from Products.Zuul.interfaces import ICatalogTool
         if not leaveObjects:
-            LOG.info('Removing %s components' % self.id)
+            if NEW_COMPONENT_TYPES:
+                LOG.info('Removing %s components' % self.id)
             cat = ICatalogTool(app.zport.dmd)
             for brain in cat.search(types=NEW_COMPONENT_TYPES):
                 component = brain.getObject()
@@ -814,7 +815,6 @@ class ZenPackSpec(object):
         self.classes = {}
         self.imported_classes = {}
         apply_defaults(classes)
-
  
         for classname, classdata in classes.iteritems():
             if 'relationships' not in classdata:
@@ -1041,7 +1041,7 @@ class ZenPackSpec(object):
         # Don't register the snippet if there's nothing in it.
         if not [x for x in snippets if x]:
             return
-       
+
         snippet = (
             "(function(){{\n"
             "var ZC = Ext.ns('Zenoss.component');\n"
