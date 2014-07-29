@@ -2144,7 +2144,10 @@ def relname_from_classname(classname, plural=False):
         else:
             break
 
-    return ''.join((''.join(relname), 's' if plural else ''))
+    if plural:
+        return pluralize(''.join(relname))
+    else:
+        return ''.join(relname)
 
 
 def relationships_from_yuml(yuml):
