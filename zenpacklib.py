@@ -23,6 +23,7 @@ import operator
 import os
 import re
 import sys
+import math
 
 from zope.browser.interfaces import IBrowserView
 from zope.component import adapts, getGlobalSiteManager
@@ -455,7 +456,6 @@ class ComponentBase(ModelBase):
 
     def get_facets(self, seen=None):
         """Generate non-containing related objects for faceting."""
-
         if seen is None:
             seen = set()
 
@@ -616,9 +616,11 @@ GSM.registerAdapter(ComponentPathReporter, (ComponentBase,), IPathReporter)
 
 
 class ComponentFormBuilder(BaseComponentFormBuilder):
-    """
-    Base class for all custom FormBuilders.   Adds support for renderers in the Component
-    Details form.
+
+    """Base class for all custom FormBuilders.
+
+    Adds support for renderers in the Component Details form.
+
     """
 
     implements(IFormBuilder)
@@ -1405,8 +1407,31 @@ class ClassSpec(object):
 
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
-            attributes[name] = None
+            if not spec.datapoint:
+                attributes[name] = None
+            else:
+                # Lookup the datapoint and get the value from rrd
+                def datapoint_method(self, default=spec.datapoint_default, cached=spec.datapoint_cached, datapoint=spec.datapoint):
+                    if cached:
+                        r = self.cacheRRDValue(datapoint, default=default)
+                        if r is not None:
+                            if not math.isnan(float(r)):
+                                return r
+                    else:
+                        r = self.getRRDValue(datapoint, default=default)
+                        if r is not None:
+                            if not math.isnan(float(r)):
+                                return r
 
+                    return default
+
+                if self.api_backendtype == 'property':
+                    attributes[name] = property(datapoint_method)
+                elif self.api_backendtype == 'method':
+                    attributes[name] = datapoint_method
+                else:
+                    attributes[name] = datapoint_method
+                
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
 
@@ -1552,8 +1577,11 @@ class ClassSpec(object):
         return self.create_formbuilder_class()
 
     def create_formbuilder_class(self):
-        """Create and return FormBuilder subclass with rendering hints for ComponentFormBuilder."""
+        """Create and return FormBuilder subclass.
 
+        Includes rendering hints for ComponentFormBuilder.
+
+        """
         bases = (ComponentFormBuilder,)
         attributes = {}
         renderer = {}
@@ -1856,6 +1884,10 @@ class ClassPropertySpec(object):
             editable=False,
             api_only=False,
             api_backendtype='property',
+            enum=None,
+            datapoint=None,
+            datapoint_default=None,
+            datapoint_cached=True
             ):
         """TODO."""
         self.class_spec = class_spec
@@ -1878,6 +1910,13 @@ class ClassPropertySpec(object):
         self.editable = bool(editable)
         self.api_only = bool(api_only)
         self.api_backendtype = api_backendtype
+        self.enum = enum
+        self.datapoint = datapoint
+        self.datapoint_default = datapoint_default
+        self.datapoint_cached = bool(datapoint_cached)
+        # Force api mode when a datapoint is supplied
+        if self.datapoint:
+            self.api_only = True
 
         if self.api_backendtype not in ('property', 'method'):
             raise TypeError(
@@ -1893,7 +1932,6 @@ class ClassPropertySpec(object):
     @property
     def ofs_dict(self):
         """Return OFS _properties dictionary."""
-
         if self.api_only:
             return None
 
@@ -1951,14 +1989,15 @@ class ClassPropertySpec(object):
                 self.name: MethodInfoProperty(self.name),
                 }
         else:
-            return {
-                self.name: ProxyProperty(self.name),
-                }
+            if not self.enum:
+                return { self.name: ProxyProperty(self.name), }
+            else:
+                return { self.name: EnumInfoProperty(self.name, self.enum), }
+
 
     @property
     def js_fields(self):
         """Return list of JavaScript fields."""
-
         if self.grid_display is False:
             return []
         else:
@@ -1967,7 +2006,6 @@ class ClassPropertySpec(object):
     @property
     def js_columns(self):
         """Return list of JavaScript columns."""
-
         if self.grid_display is False:
             return []
 
@@ -2337,6 +2375,25 @@ def MethodInfoProperty(method_name):
         return Zuul.info(getattr(self._object, method_name)())
 
     return property(getter)
+
+
+
+def EnumInfoProperty(data, enum):
+    """Return a property filtered via an enum."""
+    def getter(self, data, enum): 
+        if not enum:
+            return ProxyProperty(data)
+        else:
+            data = getattr(self._object, data, None) 
+            try:
+                if isinstance(enum, (set,list,tuple)):
+                    enum = dict(enumerate(enum))
+                data = int(data)
+                return Zuul.info(enum[data])
+            except Exception:
+                return Zuul.info(data)
+            return Zuul.info(getattr(self._object, method_name))
+    return property(lambda x: getter(x, data, enum))  
 
 
 def RelationshipInfoProperty(relationship_name):
