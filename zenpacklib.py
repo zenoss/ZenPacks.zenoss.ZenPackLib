@@ -1345,7 +1345,13 @@ class ClassSpec(object):
                             return r
 
                     return default
-                attributes[name] = datapoint_method
+
+                if self.api_backendtype == 'property':
+                    attributes[name] = property(datapoint_method)
+                elif self.api_backendtype == 'method':
+                    attributes[name] = datapoint_method
+                else:
+                    attributes[name] = datapoint_method
                 
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
@@ -1828,7 +1834,6 @@ class ClassPropertySpec(object):
         # Force api mode when a datapoint is supplied
         if self.datapoint:
             self.api_only = True
-            self.api_backendtype = 'method'
 
         if self.api_backendtype not in ('property', 'method'):
             raise TypeError(
