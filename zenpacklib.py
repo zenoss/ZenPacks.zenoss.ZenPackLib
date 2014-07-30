@@ -19,6 +19,7 @@ LOG = logging.getLogger('zen.zenpacklib')
 import collections
 import imp
 import importlib
+import json
 import operator
 import os
 import re
@@ -493,7 +494,16 @@ class ComponentBase(ModelBase):
         device's namespace.
 
         """
-        return os.path.join('Devices', self.device().id, self.id)
+        original = super(ComponentBase, self).rrdPath()
+
+        try:
+            # Zenoss 5 returns a JSONified dict from rrdPath.
+            json.loads(original)
+        except ValueError:
+            # Zenoss 4 and earlier return a string that starts with "Devices/"
+            return os.path.join('Devices', self.device().id, self.id)
+        else:
+            return original
 
     def getRRDTemplateName(self):
         """Return name of primary template to bind to this component."""
