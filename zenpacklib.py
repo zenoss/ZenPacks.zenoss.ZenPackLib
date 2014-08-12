@@ -1870,6 +1870,7 @@ class ClassSpec(object):
         """
         self.create_iinfo_class()
         self.create_info_class()
+        self.register_impact_adapters()
 
 
 class ClassPropertySpec(object):
