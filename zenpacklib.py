@@ -1790,13 +1790,25 @@ class ClassSpec(object):
         fields = []
         ordered_columns = []
 
+        # Keep track of pixel width of custom fields. Exceeding a
+        # certain width causes horizontal scrolling of the component
+        # grid panel.
+        width = 0
+
         for spec in self.inherited_properties().itervalues():
             fields.extend(spec.js_fields)
             ordered_columns.extend(spec.js_columns)
+            width += spec.js_columns_width
 
         for spec in self.inherited_relationships().itervalues():
             fields.extend(spec.js_fields)
             ordered_columns.extend(spec.js_columns)
+            width += spec.js_columns_width
+
+        if width > 750:
+            LOG.warning(
+                "%s: %s custom columns exceed 750 pixels (%s)",
+                self.zenpack.name, self.name, width)
 
         return (
             "Ext.define('Zenoss.component.{meta_type}Panel', {{\n"
@@ -2018,20 +2030,25 @@ class ClassPropertySpec(object):
             return ["{{name: '{}'}}".format(self.name)]
 
     @property
+    def js_columns_width(self):
+        """Return integer pixel width of JavaScript columns."""
+        if self.grid_display:
+            return max(self.content_width + 14, self.label_width + 20)
+        else:
+            return 0
+
+    @property
     def js_columns(self):
         """Return list of JavaScript columns."""
+
         if self.grid_display is False:
             return []
-
-        width = max(
-            self.content_width + 14,
-            self.label_width + 20)
 
         column_fields = [
             "id: '{}'".format(self.name),
             "dataIndex: '{}'".format(self.name),
             "header: _t('{}')".format(self.short_label),
-            "width: {}".format(width),
+            "width: {}".format(self.js_columns_width),
             ]
 
         if self.renderer:
@@ -2169,10 +2186,26 @@ class ClassRelationshipSpec(object):
         return ["{{name: '{}'}}".format(fieldname)]
 
     @property
+    def js_columns_width(self):
+        """Return integer pixel width of JavaScript columns."""
+        remote_spec = self.class_.zenpack.classes.get(self.remote_classname)
+
+        # No reason to show a column for the device since we're already
+        # looking at the device.
+        if not remote_spec or remote_spec.is_device:
+            return 0
+
+        if isinstance(self.schema, ToOne):
+            return max(
+                (self.content_width or remote_spec.content_width) + 14,
+                (self.label_width or remote_spec.label_width) + 20)
+        else:
+            return (self.label_width or remote_spec.plural_label_width) + 20
+
+    @property
     def js_columns(self):
         """Return list of JavaScript columns."""
-        remote_classname = self.schema.remoteClass.split('.')[-1]
-        remote_spec = self.class_.zenpack.classes.get(remote_classname)
+        remote_spec = self.class_.zenpack.classes.get(self.remote_classname)
 
         # No reason to show a column for the device since we're already
         # looking at the device.
@@ -2188,20 +2221,16 @@ class ClassRelationshipSpec(object):
             fieldname = self.name
             header = self.short_label or self.label or remote_spec.short_label
             renderer = self.renderer
-            width = max(
-                (self.content_width or remote_spec.content_width) + 14,
-                (self.label_width or remote_spec.label_width) + 20)
         else:
             fieldname = '{}_count'.format(self.name)
             header = self.short_label or self.label or remote_spec.plural_short_label
             renderer = None
-            width = (self.label_width or remote_spec.plural_label_width) + 20
 
         column_fields = [
             "id: '{}'".format(fieldname),
             "dataIndex: '{}'".format(fieldname),
             "header: _t('{}')".format(header),
-            "width: {}".format(width),
+            "width: {}".format(self.js_columns_width),
             ]
 
         if renderer:
