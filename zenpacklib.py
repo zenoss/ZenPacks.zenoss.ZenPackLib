@@ -2707,6 +2707,11 @@ if IMPACT_INSTALLED:
             """Generate object GUIDs returned by adapted.methodname()."""
             method = getattr(self.adapted, methodname, None)
             if not method or not callable(method):
+                LOG.warning(
+                    "no %r relationship or method for %r",
+                    methodname,
+                    self.adapted.meta_type)
+
                 return
 
             r = method()
