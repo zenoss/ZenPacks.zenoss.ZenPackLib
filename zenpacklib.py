@@ -16,6 +16,10 @@ This module provides a single integration point for common ZenPacks.
 import logging
 LOG = logging.getLogger('zen.zenpacklib')
 
+# Suppresses "No handlers could be found for logger" errors if logging
+# hasn't been configured.
+LOG.addHandler(logging.NullHandler())
+
 import collections
 import imp
 import importlib
