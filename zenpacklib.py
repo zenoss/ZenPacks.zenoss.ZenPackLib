@@ -2188,6 +2188,9 @@ class ClassRelationshipSpec(object):
     @property
     def js_columns_width(self):
         """Return integer pixel width of JavaScript columns."""
+        if not self.grid_display:
+            return 0
+
         remote_spec = self.class_.zenpack.classes.get(self.remote_classname)
 
         # No reason to show a column for the device since we're already
@@ -2205,6 +2208,9 @@ class ClassRelationshipSpec(object):
     @property
     def js_columns(self):
         """Return list of JavaScript columns."""
+        if not self.grid_display:
+            return []
+
         remote_spec = self.class_.zenpack.classes.get(self.remote_classname)
 
         # No reason to show a column for the device since we're already
