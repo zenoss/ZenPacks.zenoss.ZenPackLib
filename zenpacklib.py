@@ -1274,6 +1274,8 @@ class ClassSpec(object):
         self.create_info_class()
         if self.is_component:
             self.create_formbuilder_class()
+        if self.is_hardware_component:
+            self.create_formbuilder_class()
         self.register_impact_adapters()
 
     @property
