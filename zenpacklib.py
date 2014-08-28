@@ -1430,23 +1430,15 @@ class ClassSpec(object):
                 def datapoint_method(self, default=spec.datapoint_default, cached=spec.datapoint_cached, datapoint=spec.datapoint):
                     if cached:
                         r = self.cacheRRDValue(datapoint, default=default)
-                        if r is not None:
-                            if not math.isnan(float(r)):
-                                return r
                     else:
                         r = self.getRRDValue(datapoint, default=default)
-                        if r is not None:
-                            if not math.isnan(float(r)):
-                                return r
 
+                    if r is not None:
+                        if not math.isnan(float(r)):
+                            return r
                     return default
 
-                if self.api_backendtype == 'property':
-                    attributes[name] = property(datapoint_method)
-                elif self.api_backendtype == 'method':
-                    attributes[name] = datapoint_method
-                else:
-                    attributes[name] = datapoint_method
+                attributes[name] = datapoint_method
 
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
