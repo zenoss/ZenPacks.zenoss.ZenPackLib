@@ -1424,7 +1424,7 @@ class ClassSpec(object):
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
             if not spec.datapoint:
-                attributes[name] = None
+                attributes[name] = spec.default  # defaults to None
             else:
                 # Lookup the datapoint and get the value from rrd
                 def datapoint_method(self, default=spec.datapoint_default, cached=spec.datapoint_cached, datapoint=spec.datapoint):
@@ -1904,6 +1904,7 @@ class ClassPropertySpec(object):
             short_label=None,
             index_type=None,
             label_width=80,
+            default=None,
             content_width=None,
             display=True,
             details_display=True,
@@ -1921,6 +1922,7 @@ class ClassPropertySpec(object):
         """TODO."""
         self.class_spec = class_spec
         self.name = name
+        self.default = default
         self.type_ = type_
         self.label = label or self.name
         self.short_label = short_label or self.label
