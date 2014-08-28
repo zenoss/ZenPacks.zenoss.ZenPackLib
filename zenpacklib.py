@@ -177,23 +177,7 @@ class DeviceBase(ModelBase):
     """
 
     def search(self, name, *args, **kwargs):
-        """Return iterable of matching brains in named catalog."""
-        catalog = getattr(self, '{}Search'.format(name), None)
-        if not catalog:
-            return []
-
-        if args:
-            if isinstance(args[0], BaseQuery):
-                return catalog.evalAdvancedQuery(args[0])
-            elif isinstance(args[0], dict):
-                return catalog(args[0])
-            else:
-                raise TypeError(
-                    "search() argument must be a BaseQuery or a dict, "
-                    "not {0!r}"
-                    .format(type(args[0]).__name__))
-
-        return catalog(**kwargs)
+        return catalog_search(self, name, args, kwargs)
 
 
 class ComponentBase(ModelBase):
@@ -2657,16 +2641,24 @@ def update(d, u):
     return d
 
 
-def catalog_search(dmd, catalog_name, **kwargs):
-    '''
-    Generate instances of this object that match keyword arguments.
-    '''
-    catalog = getattr(dmd, catalog_name, None)
+def catalog_search(scope, name, *args, **kwargs):
+    """Return iterable of matching brains in named catalog."""
+    catalog = getattr(scope, '{}Search'.format(name), None)
     if not catalog:
-        return
+	return []
 
-    for brain in catalog(**kwargs):
-        yield brain.getObject()
+    if args:
+	if isinstance(args[0], BaseQuery):
+	    return catalog.evalAdvancedQuery(args[0])
+	elif isinstance(args[0], dict):
+	    return catalog(args[0])
+	else:
+	    raise TypeError(
+		"search() argument must be a BaseQuery or a dict, "
+		"not {0!r}"
+		.format(type(args[0]).__name__))
+
+    return catalog(**kwargs)
 
 
 def apply_defaults(dictionary, default_defaults=None):
