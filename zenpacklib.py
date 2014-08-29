@@ -2464,7 +2464,11 @@ def MethodInfoProperty(method_name):
     one for those returning a single value.
     """
     def getter(self):
-        return Zuul.info(getattr(self._object, method_name)())
+        try:
+            return Zuul.info(getattr(self._object, method_name)())
+        except TypeError:
+            # If not callable avoid the traceback and send the property
+            return Zuul.info(getattr(self._object, method_name))
 
     return property(getter)
 
