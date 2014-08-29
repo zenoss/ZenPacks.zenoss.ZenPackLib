@@ -1950,6 +1950,8 @@ class ClassPropertySpec(object):
         self.editable = bool(editable)
         self.api_only = bool(api_only)
         self.api_backendtype = api_backendtype
+        if isinstance(enum, (set, list, tuple)):
+            enum = dict(enumerate(enum))
         self.enum = enum
         self.datapoint = datapoint
         self.datapoint_default = datapoint_default
@@ -2459,8 +2461,6 @@ def EnumInfoProperty(data, enum):
         else:
             data = getattr(self._object, data, None)
             try:
-                if isinstance(enum, (set, list, tuple)):
-                    enum = dict(enumerate(enum))
                 data = int(data)
                 return Zuul.info(enum[data])
             except Exception:
