@@ -2314,6 +2314,22 @@ def enableTesting():
 
             zenpackspec.test_setup()
 
+            import Products.ZenEvents
+            zcml.load_config('meta.zcml', Products.ZenEvents)
+
+            try:
+                import ZenPacks.zenoss.DynamicView
+                zcml.load_config('configure.zcml', ZenPacks.zenoss.DynamicView)
+            except ImportError:
+                return
+
+            try:
+                import ZenPacks.zenoss.Impact
+                zcml.load_config('meta.zcml', ZenPacks.zenoss.Impact)
+                zcml.load_config('configure.zcml', ZenPacks.zenoss.Impact)
+            except ImportError:
+                return
+
 
 def ucfirst(text):
     """Return text with the first letter uppercased.
