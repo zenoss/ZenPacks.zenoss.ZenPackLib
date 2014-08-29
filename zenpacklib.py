@@ -1070,6 +1070,11 @@ class ZenPackSpec(object):
             for x in self.classes.itervalues()
             if Device in x.resolved_bases]
 
+        # Add imported device objects
+        for kls in self.imported_classes.itervalues():
+            if 'deviceClass' in [x[0] for x in kls._relations]:
+                device_classes.append(kls)
+
         return self.create_js_snippet(
             'device', snippet, classes=device_classes)
 
