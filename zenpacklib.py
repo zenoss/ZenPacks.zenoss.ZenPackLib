@@ -842,15 +842,19 @@ class ZenPackSpec(object):
 
             self.classes[classname] = ClassSpec(self, classname, **classdata)
 
+        for classname, classdata in classes.iteritems():
             relationships = classdata['relationships']
             for relationship in relationships:
                 try:
-                    className = relationships[relationship]['schema'].remoteClass
-                    if '.' in className:
-                        module = '.'.join(className.split('.')[0:-1])
-                        kls = importClass(module)
-                        self.imported_classes[className] = kls
-                except ImportError:
+                    if 'schema' in relationships[relationship]:
+                        className = relationships[relationship]['schema'].remoteClass
+                        if '.' in className and className.split('.')[-1] not in self.classes:
+                            module = ".".join(className.split('.')[0:-1])
+                            kls = importClass(module)
+                            self.imported_classes[className] = kls
+                    else:
+                        LOG.error('%s: relationship %s has no schema' % (self.name, relationship))
+                except ImportError as e:
                     pass
 
         for class_ in self.classes.values():
