@@ -854,7 +854,7 @@ class ZenPackSpec(object):
                             self.imported_classes[className] = kls
                     else:
                         LOG.error('%s: relationship %s has no schema' % (self.name, relationship))
-                except ImportError as e:
+                except ImportError:
                     pass
 
         for class_ in self.classes.values():

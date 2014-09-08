@@ -59,14 +59,14 @@ CFG = zenpacklib.ZenPackSpec(
     classes={
         'DEFAULTS': {'base': 'ManagedObject'},
 
-        ## Device Types ###############################################
+        # Device Types ###############################################
 
         'APIC': {
             'base': zenpacklib.Device,
             'meta_type': 'CiscoAPIC',
         },
 
-        ## Component Base Types #######################################
+        # Component Base Types #######################################
 
         'ManagedObjectBase': {
             'base': object,
@@ -93,9 +93,9 @@ CFG = zenpacklib.ZenPackSpec(
             'base': ('ManagedObjectBase', zenpacklib.HardwareComponent),
         },
 
-        ## Component Types ############################################
+        # Component Types ############################################
 
-        ### uni/... ###################################################
+        # uni/... ###################################################
 
         'FvTenant': {
             'meta_type': 'CiscoAPICTenant',
@@ -154,7 +154,7 @@ CFG = zenpacklib.ZenPackSpec(
             'impacted_by': ['fabricPods'],  # TODO: Only for demo.
         },
 
-        ### topology/... ##############################################
+        # topology/... ##############################################
 
         'FabricPod': {
             'meta_type': 'CiscoAPICFabricPod',
