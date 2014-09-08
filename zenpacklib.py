@@ -2347,8 +2347,17 @@ def enableTesting():
         return
 
     from Products.ZenTestCase.BaseTestCase import BaseTestCase
+    from transaction._transaction import Transaction
 
     class TestCase(BaseTestCase):
+
+        # As in BaseTestCase, the default behavior is to disable
+        # all logging from within a unit test.  To enable it,
+        # set disableLogging = False in your subclass.  This is
+        # recommended during active development, but is too noisy
+        # to leave as the default.
+        disableLogging = True
+
         def afterSetUp(self):
             super(TestCase, self).afterSetUp()
 
@@ -2368,6 +2377,15 @@ def enableTesting():
                     .format('.'.join((zenpack_module_name, 'CFG'))))
 
             zenpackspec.test_setup()
+
+            # BaseTestCast.afterSetUp already hides transaction.commit. So we also
+            # need to hide transaction.abort.
+            self._transaction_abort = Transaction.abort
+            Transaction.abort = lambda *x: None
+
+        def beforeTearDown(self):
+            if hasattr(self, '_transaction_abort'):
+                Transaction.abort = self._transaction_abort
 
 
 def ucfirst(text):
