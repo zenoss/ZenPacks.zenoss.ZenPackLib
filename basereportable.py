@@ -109,7 +109,7 @@ must install the ZenETL zenpack in order to even run this test!)
 If this data looks reasonable, you're done.   If you find that some of the
 reportables need tweaking, you may subclass the BaseReportable class provided
 in this file and extend the reportProperties method.   If you are unhappy with
-the naming of the entities or columns, you may modify the naming in 
+the naming of the entities or columns, you may modify the naming in
 entity_class_for_class, as follows:
 
 
