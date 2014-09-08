@@ -2225,10 +2225,6 @@ class ClassRelationshipSpec(object):
 
         remote_spec = self.class_.zenpack.classes.get(self.remote_classname)
 
-        # do not show if grid turned off
-        if self.grid_display is False:
-            return []
-
         # No reason to show a column for the device since we're already
         # looking at the device.
         if not remote_spec or remote_spec.is_device:
