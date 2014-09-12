@@ -177,7 +177,7 @@ class DeviceBase(ModelBase):
     """
 
     def search(self, name, *args, **kwargs):
-        return catalog_search(self, name, args, kwargs)
+        return catalog_search(self, name, *args, **kwargs)
 
 
 class ComponentBase(ModelBase):
