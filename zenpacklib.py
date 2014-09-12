@@ -121,7 +121,7 @@ class ZenPack(ZenPackBase):
             d.buildRelations()
 
     def install(self, app):
-        for dcname, dcspec in self.deviceClasses.iteritems():
+        for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
                 try:
                     self.dmd.getObjByPath(dcspec.path)
@@ -167,7 +167,7 @@ class ZenPack(ZenPackBase):
                 LOG.info('Removing %s relationships from existing devices.' % self.id)
                 self._buildDeviceRelations()
 
-            for dcname, dcspec in self.deviceClasses.iteritems():
+            for dcname, dcspec in self.device_classes.iteritems():
                 if dcspec.remove():
                     LOG.info('Removing DeviceClass %s' % dcspec.path)
                     app.dmd.Devices.manage_deleteOrganizer(dcspec.path)
@@ -817,7 +817,29 @@ FACET_BLACKLIST = (
     )
 
 
-class ZenPackSpec(object):
+class Spec(object):
+
+    """Abstract base class for specifications."""
+
+    def specs_from_param(self, spec_type, param_name, param_dict):
+        """Return a normalized dictionary of spec_type instances."""
+        if param_dict is None:
+            param_dict = {}
+        elif not isinstance(param_dict, dict):
+            raise TypeError(
+                "{!r} argument must be dict or None, not {!r}"
+                .format(
+                    '{}.{}'.format(spec_type.__name__, param_name),
+                    type(param_dict).__name__))
+        else:
+            apply_defaults(param_dict)
+
+        return {
+            k: spec_type(self, k, **(fix_kwargs(v)))
+            for k, v in param_dict.iteritems()}
+
+
+class ZenPackSpec(Spec):
 
     """Representation of a ZenPack's desired configuration.
 
@@ -876,44 +898,24 @@ class ZenPackSpec(object):
         self.NEW_COMPONENT_TYPES = []
         self.NEW_RELATIONS = collections.defaultdict(list)
 
-        # Configuration Properties (zProperties).
-        if zProperties is None:
-            zProperties = {}
-        elif not isinstance(zProperties, dict):
-            raise TypeError(
-                "zenpack zProperties argument must be dict or None, not {!r}"
-                .format(type(zProperties).__name__))
-        else:
-            apply_defaults(zProperties)
-
         # zProperties
-        self.zProperties = {}
-        for zpname, zpspecdict in zProperties.iteritems():
-            self.zProperties[zpname] = ZPropertySpec(
-                self, zpname, **(fix_kwargs(zpspecdict)))
+        self.zProperties = self.specs_from_param(
+            ZPropertySpec, 'zProperties', zProperties)
 
-        # Device Class
-        self.deviceClasses = {}
-        for dcname, dcspecdict in device_classes.iteritems():
-            self.deviceClasses[dcname] = DeviceClassSpec(
-                self, dcname, **(fix_kwargs(dcspecdict)))
+        # Classes
+        if classes:
+            for classname, classdata in classes.items():
+                if 'relationships' not in classdata:
+                    classdata['relationships'] = {}
 
-        # Classes.
-        self.classes = {}
+                # Merge class_relationships.
+                if class_relationships:
+                    update(
+                        classdata['relationships'],
+                        class_relationships.get(classname, {}))
+
+        self.classes = self.specs_from_param(ClassSpec, 'classes', classes)
         self.imported_classes = {}
-        apply_defaults(classes)
-
-        for classname, classdata in classes.iteritems():
-            if 'relationships' not in classdata:
-                classdata['relationships'] = {}
-
-            # Merge class_relationships.
-            if class_relationships:
-                update(
-                    classdata['relationships'],
-                    class_relationships.get(classname, {}))
-
-            self.classes[classname] = ClassSpec(self, classname, **classdata)
 
         for classname, classdata in classes.iteritems():
             relationships = classdata['relationships']
@@ -952,6 +954,10 @@ class ZenPackSpec(object):
                     component_type = '.'.join((modname, className))
                     if component_type not in self.NEW_COMPONENT_TYPES:
                         self.NEW_COMPONENT_TYPES.append(component_type)
+
+        # Device Classes
+        self.device_classes = self.specs_from_param(
+            DeviceClassSpec, 'device_classes', device_classes)
 
     @property
     def ordered_classes(self):
@@ -1178,7 +1184,7 @@ class ZenPackSpec(object):
             'packZProperties': packZProperties
             }
 
-        attributes['deviceClasses'] = self.deviceClasses
+        attributes['device_classes'] = self.device_classes
         attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
         attributes['NEW_RELATIONS'] = self.NEW_RELATIONS
         attributes['GLOBAL_CATALOGS'] = []
@@ -1213,17 +1219,22 @@ class ZenPackSpec(object):
         self.create_device_js_snippet()
 
 
-class DeviceClassSpec(object):
+class DeviceClassSpec(Spec):
+
     """Initialize a DeviceClass via Python at install time."""
 
     def __init__(self, zenpack_spec, path, create=True, zProperties=None):
         self.zenpack_spec = zenpack_spec
         self.path = path.lstrip('/')
         self.create = bool(create)
-        self.zProperties = {}
+
+        if zProperties is None:
+            self.zProperties = {}
+        else:
+            self.zProperties = zProperties
 
 
-class ZPropertySpec(object):
+class ZPropertySpec(Spec):
 
     """TODO."""
 
@@ -1262,7 +1273,7 @@ class ZPropertySpec(object):
         return (self.name, self.default, self.type_)
 
 
-class ClassSpec(object):
+class ClassSpec(Spec):
 
     """TODO."""
 
@@ -1327,37 +1338,12 @@ class ClassSpec(object):
             self.order = 5 + (max(0, min(100, order)) / 100.0)
 
         # Properties.
-        if properties is None:
-            properties = {}
-        elif not isinstance(properties, dict):
-            raise TypeError(
-                "class properties argument must be dict or None, not {!r}"
-                .format(type(properties).__name__))
-        else:
-            apply_defaults(properties)
-
-        self.properties = {}
-
-        for name, data in properties.iteritems():
-            self.properties[name] = ClassPropertySpec(
-                self, name, **(fix_kwargs(data)))
+        self.properties = self.specs_from_param(
+            ClassPropertySpec, 'properties', properties)
 
         # Relationships.
-        if relationships is None:
-            relationships = {}
-        elif not isinstance(relationships, dict):
-            raise TypeError(
-                "class relationships argument must be dict or None, not {!r}"
-                .format(
-                    type(relationships).__name__))
-        else:
-            apply_defaults(relationships)
-
-        self.relationships = {}
-
-        for name, reldata in relationships.iteritems():
-            self.relationships[name] = ClassRelationshipSpec(
-                self, name, **reldata)
+        self.relationships = self.specs_from_param(
+            ClassRelationshipSpec, 'relationships', relationships)
 
         # Impact.
         self.impacts = impacts
@@ -2020,7 +2006,7 @@ class ClassSpec(object):
         self.register_impact_adapters()
 
 
-class ClassPropertySpec(object):
+class ClassPropertySpec(Spec):
 
     """TODO."""
 
@@ -2205,7 +2191,7 @@ class ClassPropertySpec(object):
             ]
 
 
-class ClassRelationshipSpec(object):
+class ClassRelationshipSpec(Spec):
 
     """TODO."""
 
