@@ -121,6 +121,18 @@ class ZenPack(ZenPackBase):
             d.buildRelations()
 
     def install(self, app):
+        for dcname, dcspec in self.deviceClasses.iteritems():
+            if dcspec.create:
+                if not self.dmd.getObjByPath(dcspec.path):
+                    LOG.info('Creating DeviceClass %s' % dcspec.path)
+                    app.dmd.createOrganizer(dcspec.path)
+
+            dcObject = self.dmd.getObjByPath(dcspec.path)
+            for zprop, value in dcspec.zProperties.iteritems():
+                LOG.info('Setting zProperty %s on %s' % (zprop, dcspec.path))
+                dcObject.setZenProperty(zprop, value)
+
+        # Load objects.xml now
         super(ZenPack, self).install(app)
         if self.NEW_COMPONENT_TYPES:
             LOG.info('Adding %s relationships to existing devices' % self.id)
@@ -153,7 +165,10 @@ class ZenPack(ZenPackBase):
                 LOG.info('Removing %s relationships from existing devices.' % self.id)
                 self._buildDeviceRelations()
 
-            # Remove Zenpack create global catalogs
+            for dcname, dcspec in self.deviceClasses.iteritems():
+                if dcspec.remove():
+                    LOG.info('Removing DeviceClass %s' % dcspec.path)
+                    app.dmd.Devices.manage_deleteOrganizer(dcspec.path)
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
@@ -852,7 +867,8 @@ class ZenPackSpec(object):
             name,
             zProperties=None,
             classes=None,
-            class_relationships=None):
+            class_relationships=None,
+            device_classes=None):
         """TODO."""
         self.name = name
         self.NEW_COMPONENT_TYPES = []
@@ -868,11 +884,17 @@ class ZenPackSpec(object):
         else:
             apply_defaults(zProperties)
 
+        # zProperties
         self.zProperties = {}
-
         for zpname, zpspecdict in zProperties.iteritems():
             self.zProperties[zpname] = ZPropertySpec(
                 self, zpname, **(fix_kwargs(zpspecdict)))
+
+        # Device Class
+        self.deviceClasses = {}
+        for dcname, dcspecdict in device_classes.iteritems():
+            self.deviceClasses[dcname] = DeviceClassSpec(
+                self, dcname, **(fix_kwargs(dcspecdict)))
 
         # Classes.
         self.classes = {}
@@ -1154,6 +1176,7 @@ class ZenPackSpec(object):
             'packZProperties': packZProperties
             }
 
+        attributes['deviceClasses'] = self.deviceClasses
         attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
         attributes['NEW_RELATIONS'] = self.NEW_RELATIONS
         attributes['GLOBAL_CATALOGS'] = []
@@ -1186,6 +1209,16 @@ class ZenPackSpec(object):
 
         self.create_global_js_snippet()
         self.create_device_js_snippet()
+
+
+class DeviceClassSpec(object):
+    """Initialize a DeviceClass via Python at install time."""
+
+    def __init__(self, zenpack_spec, path, create=True, zProperties=None):
+        self.zenpack_spec = zenpack_spec
+        self.path = path.lstrip('/')
+        self.create = bool(create)
+        self.zProperties = {}
 
 
 class ZPropertySpec(object):
