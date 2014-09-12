@@ -123,9 +123,11 @@ class ZenPack(ZenPackBase):
     def install(self, app):
         for dcname, dcspec in self.deviceClasses.iteritems():
             if dcspec.create:
-                if not self.dmd.getObjByPath(dcspec.path):
+                try:
+                    self.dmd.getObjByPath(dcspec.path)
+                except KeyError:
                     LOG.info('Creating DeviceClass %s' % dcspec.path)
-                    app.dmd.createOrganizer(dcspec.path)
+                    app.dmd.Devices.createOrganizer(dcspec.path)
 
             dcObject = self.dmd.getObjByPath(dcspec.path)
             for zprop, value in dcspec.zProperties.iteritems():
