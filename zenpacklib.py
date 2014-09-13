@@ -124,12 +124,12 @@ class ZenPack(ZenPackBase):
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
                 try:
-                    self.dmd.getObjByPath(dcspec.path)
+                    self.dmd.Devices.getOrganizer(dcspec.path)
                 except KeyError:
                     LOG.info('Creating DeviceClass %s' % dcspec.path)
                     app.dmd.Devices.createOrganizer(dcspec.path)
 
-            dcObject = self.dmd.getObjByPath(dcspec.path)
+            dcObject = self.dmd.Devices.getOrganizer(dcspec.path)
             for zprop, value in dcspec.zProperties.iteritems():
                 LOG.info('Setting zProperty %s on %s' % (zprop, dcspec.path))
                 dcObject.setZenProperty(zprop, value)
