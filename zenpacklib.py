@@ -2477,8 +2477,18 @@ def enableTesting():
             Transaction.abort = lambda *x: None
 
         def beforeTearDown(self):
+            super(TestCase, self).beforeTearDown()
+
             if hasattr(self, '_transaction_abort'):
                 Transaction.abort = self._transaction_abort
+
+        # If the exception occurs during setUp, beforeTearDown is not called,
+        # so we also need to restore abort here as well:
+        def _close(self):
+            if hasattr(self, '_transaction_abort'):
+                Transaction.abort = self._transaction_abort
+
+            super(TestCase, self)._close()
 
 
 def ucfirst(text):
