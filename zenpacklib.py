@@ -168,7 +168,7 @@ class ZenPack(ZenPackBase):
                 self._buildDeviceRelations()
 
             for dcname, dcspec in self.device_classes.iteritems():
-                if dcspec.remove():
+                if dcspec.remove:
                     LOG.info('Removing DeviceClass %s' % dcspec.path)
                     app.dmd.Devices.manage_deleteOrganizer(dcspec.path)
 
@@ -1223,10 +1223,12 @@ class DeviceClassSpec(Spec):
 
     """Initialize a DeviceClass via Python at install time."""
 
-    def __init__(self, zenpack_spec, path, create=True, zProperties=None):
+    def __init__(self, zenpack_spec, path, create=True, zProperties=None,
+                 remove=False):
         self.zenpack_spec = zenpack_spec
         self.path = path.lstrip('/')
         self.create = bool(create)
+        self.remove = bool(remove)
 
         if zProperties is None:
             self.zProperties = {}
