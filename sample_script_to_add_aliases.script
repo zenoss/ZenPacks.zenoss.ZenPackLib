@@ -2,16 +2,19 @@ for x in dmd.Devices.Server.HP.getAllRRDTemplates():
     dp={}
     for y in x.getRRDDataSources():
          for z in y.getRRDDataPoints():
-             print 'storing %s' % z.name()
-             dp[z.name()] = z
+             dp[z.name()] = (z, y, x)
     for gd in x.getGraphDefs():
         for gp in gd.graphPoints():
             if gp.meta_type == 'DataPointGraphPoint':
-                print 'looking up %s' % gp.dpName
                 if gp.dpName in dp:
-                    dpobj = dp[gp.dpName]
+                    (dpobj, dsobj, tobj) = dp[gp.dpName]
                     if len(dpobj.aliases()) < 1:
-                        import pdb;pdb.set_trace()
-                        print 'Adding Alias to %s' % gp.dpName
-                        dpobj.addAlias(dpobj.id, '')
+                        print 't.id: %s ds.id: %s dp.id: %s ' % (tobj.id, dsobj.id, dpobj.id)
+                        userData = raw_input('New Alias Id : ')
+                        dpobj.addAlias(userData, '')
+                    else:
+                        for a in dpobj.aliases():
+                            if a.formula == '' and a.id == dpobj.id:
+                                dpobj.removeAlias(a.id)
+                                #import pdb;pdb.set_trace()
 commit()
