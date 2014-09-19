@@ -1,0 +1,17 @@
+for x in dmd.Devices.Server.HP.getAllRRDTemplates():
+    dp={}
+    for y in x.getRRDDataSources():
+         for z in y.getRRDDataPoints():
+             print 'storing %s' % z.name()
+             dp[z.name()] = z
+    for gd in x.getGraphDefs():
+        for gp in gd.graphPoints():
+            if gp.meta_type == 'DataPointGraphPoint':
+                print 'looking up %s' % gp.dpName
+                if gp.dpName in dp:
+                    dpobj = dp[gp.dpName]
+                    if len(dpobj.aliases()) < 1:
+                        import pdb;pdb.set_trace()
+                        print 'Adding Alias to %s' % gp.dpName
+                        dpobj.addAlias(dpobj.id, '')
+commit()
