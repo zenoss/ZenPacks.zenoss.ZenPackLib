@@ -1676,7 +1676,15 @@ class ClassSpec(Spec):
         })
 
         for spec in self.containing_components:
-            attr = relname_from_classname(spec.name)
+            attr = None
+            for rel,spec in self.relationships.items():
+               if spec.remote_classname == spec.name:
+                   attr = rel
+                   continue
+
+            if not attr:
+                attr = relname_from_classname(spec.name)
+
             attributes[attr] = RelationshipInfoProperty(attr)
 
         for spec in self.inherited_properties().itervalues():
@@ -2288,6 +2296,9 @@ class ClassRelationshipSpec(Spec):
             return {}
 
         schemas = {}
+
+        if not self.details_display:
+            return {}
 
         if imported_class:
             remote_spec = imported_class
