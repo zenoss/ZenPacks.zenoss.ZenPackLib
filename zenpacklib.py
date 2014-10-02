@@ -1959,9 +1959,7 @@ class ClassSpec(Spec):
                 self.zenpack.name, self.name, width)
 
         return (
-            "Ext.define('Zenoss.component.{meta_type}Panel', {{\n"
-            "    alias: ['widget.{meta_type}Panel'],\n"
-            "    extend: 'Zenoss.component.ZPLComponentGridPanel',\n"
+            "ZC.{meta_type}Panel = Ext.extend(ZC.ZPLComponentGridPanel, {{"
             "    constructor: function(config) {{\n"
             "        config = Ext.applyIf(config||{{}}, {{\n"
             "            componentType: '{meta_type}',\n"
@@ -1972,6 +1970,8 @@ class ClassSpec(Spec):
             "        ZC.{meta_type}Panel.superclass.constructor.call(this, config);\n"
             "    }}\n"
             "}});\n"
+            "\n"
+            "Ext.reg('{meta_type}Panel', ZC.{meta_type}Panel);\n"
             .format(
                 meta_type=self.meta_type,
                 auto_expand_column=self.auto_expand_column,
@@ -3083,10 +3083,7 @@ Ext.apply(Zenoss.render, {
 
 });
 
-Ext.define("Zenoss.component.ZPLComponentGridPanel", {
-    alias: ["widget.ZPLComponentGridPanel"],
-    extend: "Zenoss.component.ComponentGridPanel",
-
+ZC.ZPLComponentGridPanel = Ext.extend(ZC.ComponentGridPanel, {
     subComponentGridPanel: false,
 
     jumpToEntity: function(uid, meta_type) {
@@ -3136,9 +3133,9 @@ Ext.define("Zenoss.component.ZPLComponentGridPanel", {
     }
 });
 
-Ext.define("Zenoss.ZPLRenderableDisplayField", {
-    extend: "Ext.form.DisplayField",
-    alias: ['widget.ZPLRenderableDisplayField'],
+Ext.reg('ZPLComponentGridPanel', ZC.ZPLComponentGridPanel);
+
+Zenoss.ZPLRenderableDisplayField = Ext.extend(Zenoss.DisplayField, {
     constructor: function(config) {
         if (typeof(config.renderer) == 'string') {
           config.renderer = eval(config.renderer)
@@ -3146,5 +3143,7 @@ Ext.define("Zenoss.ZPLRenderableDisplayField", {
         Zenoss.ZPLRenderableDisplayField.superclass.constructor.call(this, config);
     }
 });
+
+Ext.reg('ZPLRenderableDisplayField', 'Zenoss.ZPLRenderableDisplayField');
 
 """.strip()
