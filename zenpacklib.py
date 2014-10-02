@@ -2658,7 +2658,7 @@ def EnumInfoProperty(data, enum):
                 return Zuul.info(enum[data])
             except Exception:
                 return Zuul.info(data)
-            return Zuul.info(getattr(self._object, method_name))
+
     return property(lambda x: getter(x, data, enum))
 
 
