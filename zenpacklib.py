@@ -1277,7 +1277,50 @@ class ZPropertySpec(Spec):
 
 class ClassSpec(Spec):
 
-    """TODO."""
+    """TODO.
+
+
+    'impacts' and 'impacted_by' will cause impact adapters to be registered, so the
+    relationship is shown in impact, but not in dynamicview. If you would like to
+    use dynamicview, you should change:
+
+        'MyComponent': {
+            'impacted_by': ['someRelationship']
+            'impacts': ['someThingElse']
+        }
+
+    To:
+
+        'MyComponent': {
+            'dynamicview_views': ['service_view'],
+            'dynamicview_relations': {
+                'impacted_by': ['someRelationship']
+                'impacts': ['someThingElse']
+            }
+        }
+
+    This will cause your impact relationship to show in both dynamicview and impact.
+
+    There is one important exception though.  Until ZEN-14579 is fixed, if your
+    relationship/method returns an object that is not itself part of service_view,
+    the dynamicview -> impact export will not include that object.
+
+    To fix this, you must use impacts/impact_by for such relationships:
+
+        'MyComponent': {
+            'dynamicview_views': ['service_view'],
+            'dynamicview_relations': {
+                'impacted_by': ['someRelationship']
+                'impacts': ['someThingElse']
+            }
+            impacted_by': ['someRelationToANonServiceViewThing']
+        }
+
+    If you need the object to appear in both DV and impact, include it in both lists.  If
+    it would already be exported to impact, because it is in service_view, only use
+    dynamicview_relations -> impacts/impacted_by, to avoid slowing down performance due
+    to double adapters doing the same thing.
+    """
 
     def __init__(
             self,
