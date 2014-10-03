@@ -402,6 +402,16 @@ def update_schema(schema, obj):
         'device_hw_serial_number': {'label': 'Hardware Serial Number'},
         }, **{x['id']: x for x in obj._properties})
 
+    # Match up reportable properties of the forms
+    # flavorId or openstack_flavor_id to their corresponding columns in _properties.
+    search_cmf_property_map = {}
+    for k, v in cmf_property_map.iteritems():
+        k = k.lower().replace("_", "")
+        prefixed_k = reportable.entity_class_name.replace("_", "") + k
+
+        search_cmf_property_map[k] = v
+        search_cmf_property_map[prefixed_k] = v
+
     for pid, ptype, _, _ in reportable.reportProperties():
         field = dim_table.add_field(
             Field(
@@ -414,7 +424,8 @@ def update_schema(schema, obj):
                 type=java_type_map[ptype]))
 
         if ptype != 'reference':
-            cmf_property = cmf_property_map.get(pid)
+
+            cmf_property = search_cmf_property_map.get(pid.lower().replace("_", ""))
             if not cmf_property:
                 continue
 
