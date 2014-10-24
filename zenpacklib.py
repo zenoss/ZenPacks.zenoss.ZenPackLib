@@ -175,72 +175,11 @@ class ZenPack(ZenPackBase):
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
 
-class ModelBase(object):
+class CatalogBase(object):
+    """Base class that implements cataloging a property"""
 
-    """Base class for ZenPack model classes."""
-
-    def getIconPath(self):
-        """Return relative URL path for class' icon."""
-        return getattr(self, 'icon_url', '/zport/dmd/img/icons/noicon.png')
-
-
-class DeviceBase(ModelBase):
-
-    """First superclass for zenpacklib types created by DeviceTypeFactory.
-
-    Contains attributes that should be standard on all ZenPack Device
-    types.
-
-    """
-
-    def search(self, name, *args, **kwargs):
-        return catalog_search(self, name, *args, **kwargs)
-
-
-class ComponentBase(ModelBase):
-
-    """First superclass for zenpacklib types created by ComponentTypeFactory.
-
-    Contains attributes that should be standard on all ZenPack Component
-    types.
-
-    """
-
-    factory_type_information = ({
-        'actions': ({
-            'id': 'perfConf',
-            'name': 'Template',
-            'action': 'objTemplates',
-            'permissions': (ZEN_CHANGE_DEVICE,),
-            },),
-        },)
-
-    _catalogs = {
-        'ComponentBase': {
-            'indexes': {
-                'id': {'type': 'field'},
-                }
-            }
-        }
-
-    def device(self):
-        """Return device under which this component/device is contained."""
-        obj = self
-
-        for i in xrange(200):
-            if isinstance(obj, BaseDevice):
-                return obj
-
-            try:
-                obj = obj.getPrimaryParent()
-            except AttributeError:
-                # While it is generally not normal to have devicecomponents
-                # that are not part of a device, it CAN occur in certain
-                # non-error situations, such as when it is in the process of
-                # being deleted.  In that case, the DeviceComponentProtobuf
-                # (Products.ZenMessaging.queuemessaging.adapters) implementation
-                # expects device() to return None, not to throw an exception.
-                return None
+    # By Default there is no default catalog created.
+    _catalogs = {}
 
     def get_catalog_name(self, name, scope):
         if scope == 'device':
@@ -391,6 +330,74 @@ class ComponentBase(ModelBase):
         for catalog in self.get_catalogs():
             if catalog:
                 catalog.uncatalog_object(self.getPrimaryId())
+
+
+class ModelBase(CatalogBase):
+
+    """Base class for ZenPack model classes."""
+
+    def getIconPath(self):
+        """Return relative URL path for class' icon."""
+        return getattr(self, 'icon_url', '/zport/dmd/img/icons/noicon.png')
+
+
+class DeviceBase(ModelBase):
+
+    """First superclass for zenpacklib types created by DeviceTypeFactory.
+
+    Contains attributes that should be standard on all ZenPack Device
+    types.
+
+    """
+
+    def search(self, name, *args, **kwargs):
+        return catalog_search(self, name, *args, **kwargs)
+
+
+class ComponentBase(ModelBase):
+
+    """First superclass for zenpacklib types created by ComponentTypeFactory.
+
+    Contains attributes that should be standard on all ZenPack Component
+    types.
+
+    """
+
+    factory_type_information = ({
+        'actions': ({
+            'id': 'perfConf',
+            'name': 'Template',
+            'action': 'objTemplates',
+            'permissions': (ZEN_CHANGE_DEVICE,),
+            },),
+        },)
+
+    _catalogs = {
+        'ComponentBase': {
+            'indexes': {
+                'id': {'type': 'field'},
+                }
+            }
+        }
+
+    def device(self):
+        """Return device under which this component/device is contained."""
+        obj = self
+
+        for i in xrange(200):
+            if isinstance(obj, BaseDevice):
+                return obj
+
+            try:
+                obj = obj.getPrimaryParent()
+            except AttributeError:
+                # While it is generally not normal to have devicecomponents
+                # that are not part of a device, it CAN occur in certain
+                # non-error situations, such as when it is in the process of
+                # being deleted.  In that case, the DeviceComponentProtobuf
+                # (Products.ZenMessaging.queuemessaging.adapters) implementation
+                # expects device() to return None, not to throw an exception.
+                return None
 
     def getIdForRelationship(self, relationship):
         """Return id in ToOne relationship or None."""
@@ -729,6 +736,24 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
 def DeviceTypeFactory(name, bases):
     """Return a "ZenPackified" device class given bases tuple."""
     all_bases = (DeviceBase,) + bases
+
+    def index_object(self, idxs=None, noips=False):
+        for base in all_bases:
+            if hasattr(base, 'index_object'):
+                try:
+                    base.index_object(self, idxs=idxs, noips=noips)
+                except TypeError:
+                    base.index_object(self)
+
+    def unindex_object(self):
+        for base in all_bases:
+            if hasattr(base, 'unindex_object'):
+                base.unindex_object(self)
+
+    attributes = {
+        'index_object': index_object,
+        'unindex_object': unindex_object,
+        }
 
     return type(name, all_bases, {})
 
