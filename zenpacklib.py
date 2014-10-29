@@ -755,7 +755,7 @@ def DeviceTypeFactory(name, bases):
         'unindex_object': unindex_object,
         }
 
-    return type(name, all_bases, {})
+    return type(name, all_bases, attributes)
 
 
 Device = DeviceTypeFactory(
