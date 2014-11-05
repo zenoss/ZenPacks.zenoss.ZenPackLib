@@ -197,10 +197,10 @@ def un_camel(text):
     return zenetl_un_camel(text).replace(" ", "")
 
 
-def refValue(rel):
+def refValue(context, rel):
     # Given a ToOne relationship, return a proper value for reportProperties()
     if rel():
-        return IReportable(rel()).sid
+        return IReportable(context, rel()).sid
     else:
         return None
 
@@ -443,7 +443,7 @@ class BaseReportable(ETLBaseReportable):
 
             if isinstance(relation, ToOne):
                 related = getattr(self.context, relName, None)
-                yield (propname + '_key', 'reference', refValue(related), MARKER_LENGTH)
+                yield (propname + '_key', 'reference', refValue(self.context, related), MARKER_LENGTH)
             else:
                 related = getattr(self.context, relName, None)
                 try:
