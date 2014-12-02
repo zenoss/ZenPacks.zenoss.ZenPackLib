@@ -918,7 +918,20 @@ class ZenPackSpec(Spec):
             classes=None,
             class_relationships=None,
             device_classes=None):
-        """TODO."""
+        """
+            Create a ZenPack Specification
+
+            :param name: Full name of the ZenPack (ZenPacks.zenoss.MyZenPack)
+            :type name: str
+            :param zProperties: zProperty Specs
+            :type zProperties: SpecsParameter(ZPropertySpec)
+            :param classes: Class Specs
+            :type classes: SpecsParameter(ClassSpec)
+            :param device_classes: DeviceClass Specs
+            :type device_classes: SpecsParameter(DeviceClassSpec)
+            :param class_relationships: Class Relationship Specs
+            :type class_relationships: dict(SpecsParameter(ClassRelationshipSpec))
+        """
         self.name = name
         self.NEW_COMPONENT_TYPES = []
         self.NEW_RELATIONS = collections.defaultdict(list)
@@ -1250,6 +1263,17 @@ class DeviceClassSpec(Spec):
 
     def __init__(self, zenpack_spec, path, create=True, zProperties=None,
                  remove=False):
+        """
+            Create a DeviceClass Specification
+
+            :param create: Create the DeviceClass with ZenPack installation, if it does not exist?
+            :type create: bool
+            :param remove: Remove the DeviceClass when ZenPack is removed?
+            :type remove: bool
+            :param zProperties: zProperty values to set upon this DeviceClass
+            :type zProperties: dict(str)
+        """
+
         self.zenpack_spec = zenpack_spec
         self.path = path.lstrip('/')
         self.create = bool(create)
@@ -1273,7 +1297,19 @@ class ZPropertySpec(Spec):
             default=None,
             category=None,
             ):
-        """TODO."""
+        """
+            Create a ZProperty Specification
+
+            :param type_: ZProperty Type (boolean, int, float, string, password, or lines)
+            :type type_: str
+            :param default: Default Value
+            :type default: ZPropertyDefaultValue
+            :param category: ZProperty Category.  This is used for display/sorting purposes.
+            :type category: str
+        """
+
+        #TODO custom yaml handing for type_ (call it type)
+
         self.zenpack_spec = zenpack_spec
         self.name = name
         self.type_ = type_
@@ -1373,7 +1409,54 @@ class ClassSpec(Spec):
             dynamicview_group=None,
             dynamicview_relations=None,
             ):
-        """TODO."""
+        """
+            Create a Class Specification
+
+            :param base: Base Class (defaults to Component)
+            :type base: list(class)
+            :param meta_type: meta_type (defaults to class name)
+            :type meta_type: str
+            :param label: TODO
+            :type label: str
+            :param plural_label: TODO
+            :type plural_label: str
+            :param short_label: TODO
+            :type short_label: str
+            :param plural_short_label: TODO
+            :type plural_short_label: str
+            :param auto_expand_column: TODO
+            :type auto_expand_column: str
+            :param label_width: TODO
+            :type label_width: int
+            :param plural_label_width: TODO
+            :type plural_label_width: int
+            :param content_width: TODO
+            :type content_width: int
+            :param icon: TODO
+            :type icon: str
+            :param order: TODO
+            :type order: float
+            :param properties: TODO
+            :type properties: SpecsParameter(ClassPropertySpec)
+            :param relationships: TODO
+            :type relationships: SpecsParameter(ClassRelationshipSpec)
+            :param impacts: TODO
+            :type impacts: list(str)
+            :param impacted_by: TODO
+            :type impacted_by: list(str)
+            :param monitoring_templates: TODO
+            :type monitoring_templates: list(str)
+            :param filter_display: TODO
+            :type filter_display: bool
+            :param dynamicview_views: TODO
+            :type dynamicview_views: list(str)
+            :param dynamicview_group: TODO
+            :type dynamicview_group: str
+            :param dynamicview_relations: TODO
+            :type dynamicview_relations: dict
+            # TODO: should make this a spec class, not a plain dict.
+        """
+
         self.zenpack = zenpack
         self.name = name
 
@@ -2217,7 +2300,54 @@ class ClassPropertySpec(Spec):
             datapoint_cached=True,
             index_scope='device'
             ):
-        """TODO."""
+        """
+        Create a Class Property Specification
+
+            :param type: Property Data Type (TODO (enum))
+            :type type: str
+            :param label: TODO
+            :type label: str
+            :param short_label: TODO
+            :type short_label: str
+            :param index_type: TODO (enum)
+            :type index_type: str
+            :param label_width: TODO
+            :type label_width: int
+            :param default: Default Value
+            :type default: str
+            :param content_width: TODO
+            :type content_width: int
+            :param display: TODO
+            :type display: bool
+            :param details_display: TODO
+            :type details_display: bool
+            :param grid_display: TODO
+            :type grid_display: bool
+            :param renderer: TODO
+            :type renderer: str
+            :param order: float
+            :type order: TODO
+            :param editable: TODO
+            :type editable: bool
+            :param api_only: TODO
+            :type api_only: bool
+            :param api_backendtype: TODO (enum)
+            :type api_backendtype: str
+            :param enum: TODO
+            :type enum: list(str)
+            :param datapoint: TODO (validate datapoint name)
+            :type datapoint: str
+            :param datapoint_default: TODO  - DEPRECATE (use default instead)
+            :type datapoint_default: str
+            :param datapoint_cached: TODO
+            :type datapoint_cached: bool
+            :param index_scope: TODO (enum)
+            :type index_scope: str
+
+        """
+        #TODO custom yaml handing for type_ (call it type)
+
+
         self.class_spec = class_spec
         self.name = name
         self.default = default
@@ -2393,7 +2523,33 @@ class ClassRelationshipSpec(Spec):
             render_with_type=False,
             order=None,
             ):
-        """TODO."""
+        """
+        Create a Class Relationship Specification
+
+            :param schema: TODO
+            :type schema: RelSchema
+            :param label: TODO
+            :type label: str
+            :param short_label: TODO
+            :type short_label: str
+            :param label_width: TODO
+            :type label_width: int
+            :param content_width: TODO
+            :type content_width: int
+            :param display: TODO
+            :type display: bool
+            :param details_display: TODO
+            :type details_display: bool
+            :param grid_display: TODO
+            :type grid_display: bool
+            :param renderer: TODO
+            :type renderer: str
+            :param render_with_type: TODO
+            :type render_with_type: bool
+            :param order: TODO
+            :type order: float
+        """
+
         self.class_ = class_
         self.name = name
 
