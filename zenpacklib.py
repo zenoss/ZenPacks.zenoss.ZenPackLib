@@ -79,6 +79,14 @@ from Products.Zuul.utils import ZuulMessageFactory as _t
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
 from zope.viewlet.interfaces import IViewlet
 
+try:
+    import yaml
+    import yaml.constructor
+    YAML_INSTALLED = True
+except ImportError:
+    YAML_INSTALLED = False
+
+
 # Exported symbols. These are the only symbols imported by wildcard.
 __all__ = (
     # Classes
@@ -121,6 +129,11 @@ class ZenPack(ZenPackBase):
             d.buildRelations()
 
     def install(self, app):
+
+        if not YAML_INSTALLED:
+            LOG.fatal('PyYAML is required by %s.  Try "easy_install PyYAML" first.' % self.id)
+            sys.exit(1)
+
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
                 try:
@@ -863,6 +876,26 @@ class Spec(object):
             k: spec_type(self, k, **(fix_kwargs(v)))
             for k, v in param_dict.iteritems()}
 
+    @classmethod
+    def init_params(cls):
+        """Return a dictionary describing the parameters accepted by __init__"""
+
+        params = {}
+        for op, param, value in re.findall(
+            "^\s*:(type|param)\s+(\S+):\s*(.*)$",
+            cls.__init__.__doc__,
+            flags=re.MULTILINE
+        ):
+            if param not in params:
+                params[param] = {'description': None,
+                                 'type': None}
+            if op == 'type':
+                params[param]['type'] = value
+            else:
+                params[param]['description'] = value
+
+        return params
+
 
 class ZenPackSpec(Spec):
 
@@ -951,6 +984,11 @@ class ZenPackSpec(Spec):
                     update(
                         classdata['relationships'],
                         class_relationships.get(classname, {}))
+
+        if class_relationships:
+            self.class_relationships = class_relationships
+        else:
+            self.class_relationships = {}
 
         self.classes = self.specs_from_param(ClassSpec, 'classes', classes)
         self.imported_classes = {}
@@ -1467,6 +1505,7 @@ class ClassSpec(Spec):
             bases = (base,)
 
         self.bases = bases
+        self.base = self.bases
 
         self.meta_type = meta_type or self.name
         self.label = label or self.meta_type
@@ -2726,6 +2765,317 @@ class ClassRelationshipSpec(Spec):
                 order=self.order or remote_spec.order,
                 value='{{{}}}'.format(','.join(column_fields))),
             ]
+
+# YAML Import/Export ########################################################
+
+if YAML_INSTALLED:
+    from yaml import Dumper, Loader
+
+    def relschema_to_str(schema):
+        return "%s(%s, %s, %s)" % (
+            schema.__class__.__name__,
+            schema.remoteType.__name__,
+            schema.remoteClass,
+            schema.remoteName
+        )
+
+    def str_to_relschema(schemastr):
+        m = re.match(r'^(ToOne|ToMany|ToManyCont)\((ToOne|ToMany|ToManyCont),\s*([^,]*),\s*([^,]*)\)', schemastr)
+        if m:
+            relClassName = m.group(1)
+            remoteType = m.group(2)
+            remoteClass = m.group(3)
+            remoteName = m.group(4)
+
+            relClasses = {
+                "ToOne": ToOne,
+                "ToMany": ToMany,
+                "ToManyCont": ToManyCont
+            }
+
+            relClass = relClasses.get(relClassName, None)
+            if not relClass:
+                raise ValueError("Unrecogznied Relationship Type '%s'" % relClassName)
+
+            remoteTypeClass = relClasses.get(remoteType, None)
+            if not remoteTypeClass:
+                raise ValueError("Unrecogznied Relationship Type '%s'" % remoteType)
+
+            return relClass(remoteTypeClass, remoteClass, remoteName)
+        else:
+            raise ValueError("Unrecogznied Relationship Schema '%s'" % schemastr)
+
+    def class_to_str(class_):
+        return class_.__module__ + "." + class_.__name__
+
+    def str_to_class(classstr):
+        if "." not in classstr:
+            # TODO: Support non qualfied class names, searching zenpack, zenpacklib,
+            # and ZenModel namespaces
+            raise ValueError("Class name '%s' not fully qualified")
+
+        modname, classname = classstr.rsplit(".", 1)
+
+        try:
+            class_ = getattr(importlib.import_module(modname), classname)
+        except Exception, e:
+            raise ValueError("Class '%s' is not valid: %s" % (classstr, e))
+
+        return class_
+
+    def construct_specsparameters(loader, node, spectype):
+        spec_class = {
+            'ZenPackSpec': ZenPackSpec,
+            'DeviceClassSpec': DeviceClassSpec,
+            'ZPropertySpec': ZPropertySpec,
+            'ClassSpec': ClassSpec,
+            'ClassPropertySpec': ClassPropertySpec,
+            'ClassRelationshipSpec': ClassRelationshipSpec,
+        }.get(spectype, None)
+
+        if not spec_class:
+            raise yaml.constructor.ConstructorError(
+                None, None,
+                "Unrecogznied Spec class %s" % spectype,
+                node.start_mark)
+
+        if not isinstance(node, yaml.MappingNode):
+            raise yaml.constructor.ConstructorError(
+                None, None,
+                "expected a mapping node, but found %s" % node.id,
+                node.start_mark)
+        specs = {}
+        for spec_key_node, spec_value_node in node.value:
+            spec_key = str(loader.construct_scalar(spec_key_node))
+
+            specs[spec_key] = construct_spec(spec_class, loader, spec_value_node)
+
+        return specs
+
+    def represent_relschema(dumper, data):
+        return dumper.represent_str(relschema_to_str(data))
+
+    def construct_relschema(loader, node):
+        schemastr = str(loader.construct_scalar(node))
+        return str_to_relschema(schemastr)
+
+    def represent_spec(dumper, obj, yaml_tag=u'tag:yaml.org,2002:map'):
+        """
+        Generic representer for serializing specs to YAML.  Rather than using
+        the default PyYAML representer for python objects, we very carefully
+        build up the YAML according to the parameter definitions in the __init__
+        of each spec class.  This same format is used by from_yaml (the YAML
+        constructor) to ensure that the spec objects are built consistently,
+        whether it is done via YAML or the API.
+        """
+
+        mapping = {}
+        cls = obj.__class__
+        param_defs = cls.init_params()
+        for param in param_defs:
+            type_ = param_defs[param]['type']
+
+            try:
+                value = getattr(obj, param)
+            except AttributeError:
+                LOG.error("Unable to serialize %s object: %s, a supported parameter, is not accessible as a property." %
+                          (cls.__name__, param))
+                continue
+
+            LOG.info("%s / %s [%s] = %s", cls.__name__, param, type_, value)
+
+            if value is None:
+                # When serializing to yaml, we can treat everything as optional.
+                # Validation would already have happened when the objects were
+                # created, so we can skip null properties.
+                continue
+
+            if type_ == 'ZPropertyDefaultValue':
+                # For zproperties, the actual data type of a default value
+                # depends on the defined type of the zProperty.
+                try:
+                    type_ = {
+                        'boolean': "bool",
+                        'int': "int",
+                        'float': "float",
+                        'string': "str",
+                        'password': "str",
+                        'lines': "list(str)"
+                    }.get(obj.type_, 'str')
+                except KeyError:
+                    type_ = "str"
+
+            try:
+                if type_ == "bool":
+                    mapping[dumper.represent_str(param)] = dumper.represent_bool(value)
+                elif type_.startswith("dict"):
+                    mapping[dumper.represent_str(param)] = dumper.represent_dict(value)
+                elif type_ == "float":
+                    mapping[dumper.represent_str(param)] = dumper.represent_float(value)
+                elif type_ == "int":
+                    mapping[dumper.represent_str(param)] = dumper.represent_int(value)
+                elif type_ == "list(class)":
+                    classes = [class_to_str(x) for x in value]
+                    mapping[dumper.represent_str(param)] = dumper.represent_list(classes)
+                elif type_.startswith("list"):
+                    mapping[dumper.represent_str(param)] = dumper.represent_list(value)
+                elif type_ == "str":
+                    mapping[dumper.represent_str(param)] = dumper.represent_str(value)
+                elif type_ == 'RelSchema':
+                    mapping[dumper.represent_str(param)] = dumper.represent_str(relschema_to_str(value))
+                else:
+                    m = re.match('^SpecsParameter\((.*)\)$', type_)
+                    if m:
+                        spectype = m.group(1)
+                        specmapping = {}
+                        for key in value:
+                            spec = value[key]
+                            if type(spec).__name__ != spectype:
+                                LOG.error("Unable to serialize %s object (%s):  Expected an object of type %s" %
+                                          (type(spec).__name__, key, spectype))
+                            else:
+                                specmapping[dumper.represent_str(key)] = represent_spec(dumper, spec)
+
+                        specmapping_value = []
+                        node = yaml.MappingNode(yaml_tag, specmapping_value)
+                        specmapping_value.extend(specmapping.items())
+                        mapping[dumper.represent_str(param)] = node
+
+                    else:
+                        LOG.error("Unable to serialize %s object: %s, a supported parameter, is of an unrecognized type (%s)." % (cls.__name__, param, type_))
+            except Exception, e:
+                LOG.error("Unable to serialize %s object (param %s, type %s, value %s): %s" % (cls.__name__, param, type_, value, e))
+
+        mapping_value = []
+        node = yaml.MappingNode(yaml_tag, mapping_value)
+        mapping_value.extend(mapping.items())
+
+        # Return a node describing the mapping (dictionary) of the params
+        # used to build this spec.
+        return node
+
+    def construct_spec(cls, loader, node):
+        param_defs = cls.init_params()
+        params = {}
+        if not isinstance(node, yaml.MappingNode):
+            raise yaml.constructor.ConstructorError(
+                None, None,
+                "expected a mapping node, but found %s" % node.id,
+                node.start_mark)
+
+        # TODO: When deserializing, we should check if required properties are present.
+
+        for key_node, value_node in node.value:
+            key = str(loader.construct_scalar(key_node))
+            if key not in param_defs:
+                raise yaml.constructor.ConstructorError(
+                    None, None,
+                    "Unrecognized parameter '%s' found while processing %s" % (key, cls.__name__),
+                    node.start_mark)
+
+            expected_type = param_defs[key]['type']
+
+            if expected_type == 'ZPropertyDefaultValue':
+                # For zproperties, the actual data type of a default value
+                # depends on the defined type of the zProperty.
+
+                try:
+                    zPropType = [x[1].value for x in node.value if x[0].value == 'type_'][0]
+                except Exception:
+                    raise yaml.constructor.ConstructorError(
+                        None, None,
+                        "zProperty type_ not specified for property %s found while processing %s" % (key, cls.__name__),
+                        node.start_mark)
+
+                try:
+                    expected_type = {
+                        'boolean': "bool",
+                        'int': "int",
+                        'float': "float",
+                        'string': "str",
+                        'password': "str",
+                        'lines': "list(str)"
+                    }.get(zPropType, 'str')
+                except KeyError:
+                    raise yaml.constructor.ConstructorError(
+                        None, None,
+                        "Invalid zProperty type_ '%s' for property %s found while processing %s" % (zPropType, key, cls.__name__),
+                        node.start_mark)
+
+            try:
+                if expected_type == "bool":
+                    params[key] = bool(loader.construct_scalar(value_node))
+                elif expected_type.startswith("dict(SpecsParameter("):
+                    m = re.match('^dict\(SpecsParameter\((.*)\)\)$', expected_type)
+                    if m:
+                        spectype = m.group(1)
+
+                        if not isinstance(node, yaml.MappingNode):
+                            raise yaml.constructor.ConstructorError(
+                                None, None,
+                                "expected a mapping node, but found %s" % node.id,
+                                node.start_mark)
+                        specs = {}
+                        for spec_key_node, spec_value_node in value_node.value:
+                            spec_key = str(loader.construct_scalar(spec_key_node))
+
+                            specs[spec_key] = construct_specsparameters(loader, spec_value_node, spectype)
+                        params[key] = specs
+                    else:
+                        raise Exception("Unable to determine specs parameter type in '%s'" % expected_type)
+                elif expected_type.startswith("dict"):
+                    params[key] = loader.construct_mapping(value_node)
+                elif expected_type == "float":
+                    params[key] = float(loader.construct_scalar(value_node))
+                elif expected_type == "int":
+                    params[key] = int(loader.construct_scalar(value_node))
+                elif expected_type == "list(class)":
+                    classnames = loader.construct_sequence(value_node)
+                    params[key] = [str_to_class(x) for x in classnames]
+                elif expected_type.startswith("list"):
+                    params[key] = loader.construct_sequence(value_node)
+                elif expected_type == "str":
+                    params[key] = str(loader.construct_scalar(value_node))
+                elif expected_type == 'RelSchema':
+                    schemastr = str(loader.construct_scalar(value_node))
+                    params[key] = str_to_relschema(schemastr)
+                else:
+                    m = re.match('^SpecsParameter\((.*)\)$', expected_type)
+                    if m:
+                        spectype = m.group(1)
+                        params[key] = construct_specsparameters(loader, value_node, spectype)
+                    else:
+                        raise Exception("Unhandled type '%s'" % expected_type)
+
+            except Exception, e:
+                raise yaml.constructor.ConstructorError(
+                    None, None,
+                    "Unable to deserialize %s object (param %s): %s" % (cls.__name__, key_node.value, e),
+                    value_node.start_mark)
+
+        return params
+
+    def represent_zenpackspec(dumper, obj):
+        return represent_spec(dumper, obj, yaml_tag=u'!ZenPackSpec')
+
+    def construct_zenpackspec(loader, node):
+        params = construct_spec(ZenPackSpec, loader, node)
+        name = params.pop("name")
+
+        spec = ZenPackSpec(name, **params)
+
+        return spec
+
+    Dumper.add_representer(ToManyCont, represent_relschema)
+    Dumper.add_representer(ToMany, represent_relschema)
+    Dumper.add_representer(ToOne, represent_relschema)
+    Dumper.add_representer(ZenPackSpec, represent_zenpackspec)
+    Dumper.add_representer(DeviceClassSpec, represent_spec)
+    Dumper.add_representer(ZPropertySpec, represent_spec)
+    Dumper.add_representer(ClassSpec, represent_spec)
+    Dumper.add_representer(ClassPropertySpec, represent_spec)
+    Dumper.add_representer(ClassRelationshipSpec, represent_spec)
+    Loader.add_constructor(u'!ZenPackSpec', construct_zenpackspec)
 
 
 # Public Functions ##########################################################
