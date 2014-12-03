@@ -23,6 +23,7 @@ LOG.addHandler(logging.NullHandler())
 import collections
 import imp
 import importlib
+import inspect
 import json
 import operator
 import os
@@ -880,6 +881,9 @@ class Spec(object):
     def init_params(cls):
         """Return a dictionary describing the parameters accepted by __init__"""
 
+        argspec = inspect.getargspec(cls.__init__)
+        defaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
+
         params = {}
         for op, param, value in re.findall(
             "^\s*:(type|param)\s+(\S+):\s*(.*)$",
@@ -889,6 +893,9 @@ class Spec(object):
             if param not in params:
                 params[param] = {'description': None,
                                  'type': None}
+                if param in defaults:
+                    params[param]['default'] = defaults[param]
+
             if op == 'type':
                 params[param]['type'] = value
             else:
@@ -2884,16 +2891,19 @@ if YAML_INSTALLED:
             try:
                 value = getattr(obj, param)
             except AttributeError:
-                raise yaml.representer.RepresenterError("Unable to serialize %s object: %s, a supported parameter, is not accessible as a property." %
-                          (cls.__name__, param))
+                raise yaml.representer.RepresenterError(
+                    "Unable to serialize %s object: %s, a supported parameter, is not accessible as a property." %
+                    (cls.__name__, param))
                 continue
-
-            LOG.info("%s / %s [%s] = %s", cls.__name__, param, type_, value)
 
             if value is None:
                 # When serializing to yaml, we can treat everything as optional.
                 # Validation would already have happened when the objects were
                 # created, so we can skip null properties.
+                continue
+
+            if 'default' in param_defs[param] and value == param_defs[param]['default']:
+                # If the value is a default value, we can omit it form the export.
                 continue
 
             if type_ == 'ZPropertyDefaultValue':
@@ -2993,10 +3003,8 @@ if YAML_INSTALLED:
                 try:
                     zPropType = [x[1].value for x in node.value if x[0].value == 'type_'][0]
                 except Exception:
-                    raise yaml.constructor.ConstructorError(
-                        None, None,
-                        "zProperty type_ not specified for property %s found while processing %s" % (key, cls.__name__),
-                        node.start_mark)
+                    # type was not specified, so we assume the default (string)
+                    zPropType = 'string'
 
                 try:
                     expected_type = {
