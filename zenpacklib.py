@@ -2342,8 +2342,8 @@ class ClassPropertySpec(Spec):
         """
         Create a Class Property Specification
 
-            :param type: Property Data Type (TODO (enum))
-            :type type: str
+            :param type_: Property Data Type (TODO (enum))
+            :type type_: str
             :param label: TODO
             :type label: str
             :param short_label: TODO
@@ -2364,8 +2364,8 @@ class ClassPropertySpec(Spec):
             :type grid_display: bool
             :param renderer: TODO
             :type renderer: str
-            :param order: float
-            :type order: TODO
+            :param order: TODO
+            :type order: float
             :param editable: TODO
             :type editable: bool
             :param api_only: TODO
