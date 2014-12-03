@@ -2887,7 +2887,7 @@ if YAML_INSTALLED:
             try:
                 value = getattr(obj, param)
             except AttributeError:
-                LOG.error("Unable to serialize %s object: %s, a supported parameter, is not accessible as a property." %
+                raise yaml.representer.RepresenterError("Unable to serialize %s object: %s, a supported parameter, is not accessible as a property." %
                           (cls.__name__, param))
                 continue
 
@@ -2943,7 +2943,7 @@ if YAML_INSTALLED:
                         for key in value:
                             spec = value[key]
                             if type(spec).__name__ != spectype:
-                                LOG.error("Unable to serialize %s object (%s):  Expected an object of type %s" %
+                                raise yaml.representer.RepresenterError("Unable to serialize %s object (%s):  Expected an object of type %s" %
                                           (type(spec).__name__, key, spectype))
                             else:
                                 specmapping[dumper.represent_str(key)] = represent_spec(dumper, spec)
@@ -2954,9 +2954,11 @@ if YAML_INSTALLED:
                         mapping[dumper.represent_str(param)] = node
 
                     else:
-                        LOG.error("Unable to serialize %s object: %s, a supported parameter, is of an unrecognized type (%s)." % (cls.__name__, param, type_))
+                        raise yaml.representer.RepresenterError("Unable to serialize %s object: %s, a supported parameter, is of an unrecognized type (%s)." % (cls.__name__, param, type_))
+            except yaml.representer.RepresenterError:
+                raise
             except Exception, e:
-                LOG.error("Unable to serialize %s object (param %s, type %s, value %s): %s" % (cls.__name__, param, type_, value, e))
+                raise yaml.representer.RepresenterError("Unable to serialize %s object (param %s, type %s, value %s): %s" % (cls.__name__, param, type_, value, e))
 
         mapping_value = []
         node = yaml.MappingNode(yaml_tag, mapping_value)
@@ -3073,6 +3075,8 @@ if YAML_INSTALLED:
                     else:
                         raise Exception("Unhandled type '%s'" % expected_type)
 
+            except yaml.constructor.ConstructorError:
+                raise
             except Exception, e:
                 raise yaml.constructor.ConstructorError(
                     None, None,
