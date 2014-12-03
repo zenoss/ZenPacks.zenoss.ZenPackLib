@@ -2950,8 +2950,9 @@ if YAML_INSTALLED:
                         for key in value:
                             spec = value[key]
                             if type(spec).__name__ != spectype:
-                                raise yaml.representer.RepresenterError("Unable to serialize %s object (%s):  Expected an object of type %s" %
-                                          (type(spec).__name__, key, spectype))
+                                raise yaml.representer.RepresenterError(
+                                    "Unable to serialize %s object (%s):  Expected an object of type %s" %
+                                    (type(spec).__name__, key, spectype))
                             else:
                                 specmapping[dumper.represent_str(key)] = represent_spec(dumper, spec)
 
@@ -2961,11 +2962,15 @@ if YAML_INSTALLED:
                         mapping[dumper.represent_str(param)] = node
 
                     else:
-                        raise yaml.representer.RepresenterError("Unable to serialize %s object: %s, a supported parameter, is of an unrecognized type (%s)." % (cls.__name__, param, type_))
+                        raise yaml.representer.RepresenterError(
+                            "Unable to serialize %s object: %s, a supported parameter, is of an unrecognized type (%s)." %
+                            (cls.__name__, param, type_))
             except yaml.representer.RepresenterError:
                 raise
             except Exception, e:
-                raise yaml.representer.RepresenterError("Unable to serialize %s object (param %s, type %s, value %s): %s" % (cls.__name__, param, type_, value, e))
+                raise yaml.representer.RepresenterError(
+                    "Unable to serialize %s object (param %s, type %s, value %s): %s" %
+                    (cls.__name__, param, type_, value, e))
 
         mapping_value = []
         node = yaml.MappingNode(yaml_tag, mapping_value)
