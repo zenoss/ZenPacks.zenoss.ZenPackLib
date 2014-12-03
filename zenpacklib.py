@@ -2815,7 +2815,13 @@ if YAML_INSTALLED:
         if "." not in classstr:
             # TODO: Support non qualfied class names, searching zenpack, zenpacklib,
             # and ZenModel namespaces
-            raise ValueError("Class name '%s' not fully qualified")
+
+            # An unqualified class name is assumed to be referring to one in
+            # the classes defined in this ZenPackSpec.   We can't validate this,
+            # or return a class object for it, if this is the case.  So we
+            # return no class object, and the caller will assume that it
+            # it referrs to a class being defined.
+            return None
 
         modname, classname = classstr.rsplit(".", 1)
 
@@ -2918,7 +2924,10 @@ if YAML_INSTALLED:
                 elif type_ == "int":
                     mapping[dumper.represent_str(param)] = dumper.represent_int(value)
                 elif type_ == "list(class)":
-                    classes = [class_to_str(x) for x in value]
+                    # We "class" in this context is either a class reference or
+                    # a class name (string) that refers to a class defined in
+                    # this ZenPackSpec.
+                    classes = [isinstance(x, type) and class_to_str(x) or x for x in value]
                     mapping[dumper.represent_str(param)] = dumper.represent_list(classes)
                 elif type_.startswith("list"):
                     mapping[dumper.represent_str(param)] = dumper.represent_list(value)
@@ -3034,7 +3043,21 @@ if YAML_INSTALLED:
                     params[key] = int(loader.construct_scalar(value_node))
                 elif expected_type == "list(class)":
                     classnames = loader.construct_sequence(value_node)
-                    params[key] = [str_to_class(x) for x in classnames]
+                    classes = []
+                    for c in classnames:
+                        class_ = str_to_class(c)
+                        if class_ is None:
+                            # local reference to a class being defined in
+                            # this zenpack.  (ideally we should verify that
+                            # the name is valid, but this is not possible
+                            # in a one-pass parsing of the yaml).
+                            classes.append(c)
+                        else:
+                            classes.append(class_)
+                    # ZPL defines "class" as either a string representing a
+                    # class in this definition, or a class object representing
+                    # an external class.
+                    params[key] = classes
                 elif expected_type.startswith("list"):
                     params[key] = loader.construct_sequence(value_node)
                 elif expected_type == "str":
