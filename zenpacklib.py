@@ -882,7 +882,10 @@ class Spec(object):
         """Return a dictionary describing the parameters accepted by __init__"""
 
         argspec = inspect.getargspec(cls.__init__)
-        defaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
+        if argspec.defaults:
+            defaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
+        else:
+            defaults = {}
 
         params = {}
         for op, param, value in re.findall(
@@ -898,6 +901,17 @@ class Spec(object):
 
             if op == 'type':
                 params[param]['type'] = value
+
+                if 'default' not in params[param] or \
+                   params[param]['default'] is None:
+                    # For certain types, we know that None doesn't really mean
+                    # None.
+                    if params[param]['type'].startswith("dict"):
+                        params[param]['default'] = {}
+                    elif params[param]['type'].startswith("list"):
+                        params[param]['default'] = []
+                    elif params[param]['type'].startswith("SpecsParameter("):
+                        params[param]['default'] = {}
             else:
                 params[param]['description'] = value
 
@@ -1353,7 +1367,7 @@ class ZPropertySpec(Spec):
             :type category: str
         """
 
-        #TODO custom yaml handing for type_ (call it type)
+        # TODO custom yaml handing for type_ (call it type)
 
         self.zenpack_spec = zenpack_spec
         self.name = name
@@ -1900,10 +1914,10 @@ class ClassSpec(Spec):
 
         for spec in self.containing_components:
             attr = None
-            for rel,spec in self.relationships.items():
-               if spec.remote_classname == spec.name:
-                   attr = rel
-                   continue
+            for rel, spec in self.relationships.items():
+                if spec.remote_classname == spec.name:
+                    attr = rel
+                    continue
 
             if not attr:
                 attr = relname_from_classname(spec.name)
@@ -2391,8 +2405,7 @@ class ClassPropertySpec(Spec):
             :type index_scope: str
 
         """
-        #TODO custom yaml handing for type_ (call it type)
-
+        # TODO custom yaml handing for type_ (call it type)
 
         self.class_spec = class_spec
         self.name = name
@@ -3116,6 +3129,89 @@ if YAML_INSTALLED:
     Dumper.add_representer(ClassPropertySpec, represent_spec)
     Dumper.add_representer(ClassRelationshipSpec, represent_spec)
     Loader.add_constructor(u'!ZenPackSpec', construct_zenpackspec)
+
+    class SpecParams(object):
+        def __init__(self, **kwargs):
+            # Initialize with default values
+            params = self.__class__.init_params()
+            for param in params:
+                if 'default' in params[param]:
+                    setattr(self, param, params[param]['default'])
+
+            # Overlay any named parameters
+            self.__dict__.update(kwargs)
+
+        @classmethod
+        def init_params(cls):
+            # Pull over the params for the underlying Spec class,
+            # correcting nested Specs to SpecsParams instead.
+            try:
+                spec_base = [x for x in cls.__bases__ if issubclass(x, Spec)][0]
+            except Exception:
+                raise Exception("Spec Base Not Found for %s" % cls.__name__)
+
+            params = spec_base.init_params()
+            for p in params:
+                params[p]['type'] = params[p]['type'].replace("Spec)", "SpecParams)")
+
+            return params
+
+    class ZenPackSpecParams(SpecParams, ZenPackSpec):
+        def __init__(self, name, zProperties=None, classes=None, device_classes=None, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+            self.zProperties = self.specs_from_param(
+                ZPropertySpecParams, 'zProperties', zProperties)
+
+            self.classes = self.specs_from_param(
+                ClassSpecParams, 'classes', classes)
+
+            self.device_classes = self.specs_from_param(
+                DeviceClassSpecParams, 'device_classes', device_classes)
+
+    class DeviceClassSpecParams(SpecParams, DeviceClassSpec):
+        def __init__(self, zenpack_spec, path, zProperties=None, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.path = path
+
+    class ZPropertySpecParams(SpecParams, ZPropertySpec):
+        def __init__(self, zenpack_spec, name, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+    class ClassSpecParams(SpecParams, ClassSpec):
+        def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+            if isinstance(base, (tuple, list, set)):
+                self.base = tuple(base)
+            else:
+                self.base = (base,)
+
+            self.properties = self.specs_from_param(
+                ClassPropertySpecParams, 'properties', properties)
+
+            self.relationships = self.specs_from_param(
+                ClassRelationshipSpecParams, 'relationships', relationships)
+
+    class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
+        def __init__(self, class_spec, name, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+    class ClassRelationshipSpecParams(SpecParams, ClassRelationshipSpec):
+        def __init__(self, class_spec, name, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+    Dumper.add_representer(ZenPackSpecParams, represent_zenpackspec)
+    Dumper.add_representer(DeviceClassSpecParams, represent_spec)
+    Dumper.add_representer(ZPropertySpecParams, represent_spec)
+    Dumper.add_representer(ClassSpecParams, represent_spec)
+    Dumper.add_representer(ClassPropertySpecParams, represent_spec)
+    Dumper.add_representer(ClassRelationshipSpecParams, represent_spec)
 
 
 # Public Functions ##########################################################
