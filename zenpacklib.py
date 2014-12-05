@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 ##############################################################################
 #
 # Copyright (C) Zenoss, Inc. 2013-2014, all rights reserved.
@@ -30,6 +32,11 @@ import os
 import re
 import sys
 import math
+
+if __name__ == '__main__':
+    import Globals
+    from Products.ZenUtils.Utils import unused
+    unused(Globals)
 
 from zope.browser.interfaces import IBrowserView
 from zope.component import adapts, getGlobalSiteManager
@@ -2852,7 +2859,31 @@ if YAML_INSTALLED:
 
         return class_
 
-    def construct_specsparameters(loader, node, spectype):
+    def yaml_error(e, fatal=True):
+        # Given a MarkedYAMLError exception, either log or raise
+        # the error, depending on the 'fatal' argument.
+        if fatal:
+            raise e
+
+        message = []
+
+        mark = e.context_mark or e.problem_mark
+        if mark:
+            position = "%s:%s:%s" % (mark.name, mark.line+1, mark.column+1)
+        else:
+            position = "[unknown]"
+        if e.context is not None:
+            message.append(e.context)
+
+        if e.problem is not None:
+            message.append(e.problem)
+
+        if e.note is not None:
+            message.append("(note: " + e.note + ")")
+
+        print "%s: %s" % (position, ",".join(message))
+
+    def construct_specsparameters(loader, node, spectype, fatal=True):
         spec_class = {
             'ZenPackSpec': ZenPackSpec,
             'DeviceClassSpec': DeviceClassSpec,
@@ -2863,21 +2894,24 @@ if YAML_INSTALLED:
         }.get(spectype, None)
 
         if not spec_class:
-            raise yaml.constructor.ConstructorError(
+            yaml_error(yaml.constructor.ConstructorError(
                 None, None,
                 "Unrecogznied Spec class %s" % spectype,
-                node.start_mark)
+                node.start_mark), fatal=fatal)
 
         if not isinstance(node, yaml.MappingNode):
-            raise yaml.constructor.ConstructorError(
+            yaml_error(yaml.constructor.ConstructorError(
                 None, None,
                 "expected a mapping node, but found %s" % node.id,
-                node.start_mark)
+                node.start_mark), fatal=fatal)
         specs = {}
         for spec_key_node, spec_value_node in node.value:
-            spec_key = str(loader.construct_scalar(spec_key_node))
+            try:
+                spec_key = str(loader.construct_scalar(spec_key_node))
+            except yaml.MarkedYAMLError, e:
+                yaml_error(e, fatal=fatal)
 
-            specs[spec_key] = construct_spec(spec_class, loader, spec_value_node)
+            specs[spec_key] = construct_spec(spec_class, loader, spec_value_node, fatal=fatal)
 
         return specs
 
@@ -2996,24 +3030,25 @@ if YAML_INSTALLED:
         # used to build this spec.
         return node
 
-    def construct_spec(cls, loader, node):
+    def construct_spec(cls, loader, node, fatal=True):
         param_defs = cls.init_params()
         params = {}
         if not isinstance(node, yaml.MappingNode):
-            raise yaml.constructor.ConstructorError(
+            yaml_error(yaml.constructor.ConstructorError(
                 None, None,
                 "expected a mapping node, but found %s" % node.id,
-                node.start_mark)
+                node.start_mark), fatal=fatal)
 
         # TODO: When deserializing, we should check if required properties are present.
 
         for key_node, value_node in node.value:
             key = str(loader.construct_scalar(key_node))
             if key not in param_defs:
-                raise yaml.constructor.ConstructorError(
+                yaml_error(yaml.constructor.ConstructorError(
                     None, None,
                     "Unrecognized parameter '%s' found while processing %s" % (key, cls.__name__),
-                    node.start_mark)
+                    key_node.start_mark), fatal=fatal)
+                continue
 
             expected_type = param_defs[key]['type']
 
@@ -3037,10 +3072,11 @@ if YAML_INSTALLED:
                         'lines': "list(str)"
                     }.get(zPropType, 'str')
                 except KeyError:
-                    raise yaml.constructor.ConstructorError(
+                    yaml_error(yaml.constructor.ConstructorError(
                         None, None,
                         "Invalid zProperty type_ '%s' for property %s found while processing %s" % (zPropType, key, cls.__name__),
-                        node.start_mark)
+                        key_node.start_mark), fatal=fatal)
+                    continue
 
             try:
                 if expected_type == "bool":
@@ -3051,15 +3087,16 @@ if YAML_INSTALLED:
                         spectype = m.group(1)
 
                         if not isinstance(node, yaml.MappingNode):
-                            raise yaml.constructor.ConstructorError(
+                            yaml_error(yaml.constructor.ConstructorError(
                                 None, None,
                                 "expected a mapping node, but found %s" % node.id,
-                                node.start_mark)
+                                node.start_mark), fatal=fatal)
+                            continue
                         specs = {}
                         for spec_key_node, spec_value_node in value_node.value:
                             spec_key = str(loader.construct_scalar(spec_key_node))
 
-                            specs[spec_key] = construct_specsparameters(loader, spec_value_node, spectype)
+                            specs[spec_key] = construct_specsparameters(loader, spec_value_node, spectype, fatal=fatal)
                         params[key] = specs
                     else:
                         raise Exception("Unable to determine specs parameter type in '%s'" % expected_type)
@@ -3097,17 +3134,17 @@ if YAML_INSTALLED:
                     m = re.match('^SpecsParameter\((.*)\)$', expected_type)
                     if m:
                         spectype = m.group(1)
-                        params[key] = construct_specsparameters(loader, value_node, spectype)
+                        params[key] = construct_specsparameters(loader, value_node, spectype, fatal=fatal)
                     else:
                         raise Exception("Unhandled type '%s'" % expected_type)
 
-            except yaml.constructor.ConstructorError:
-                raise
+            except yaml.constructor.ConstructorError, e:
+                yaml_error(e, fatal=fatal)
             except Exception, e:
-                raise yaml.constructor.ConstructorError(
+                yaml_error(yaml.constructor.ConstructorError(
                     None, None,
                     "Unable to deserialize %s object (param %s): %s" % (cls.__name__, key_node.value, e),
-                    value_node.start_mark)
+                    value_node.start_mark), fatal=fatal)
 
         return params
 
@@ -3115,12 +3152,16 @@ if YAML_INSTALLED:
         return represent_spec(dumper, obj, yaml_tag=u'!ZenPackSpec')
 
     def construct_zenpackspec(loader, node):
-        params = construct_spec(ZenPackSpec, loader, node)
+        fatal = not getattr(loader, 'warnings', False)
+        params = construct_spec(ZenPackSpec, loader, node, fatal=fatal)
         name = params.pop("name")
 
         spec = ZenPackSpec(name, **params)
 
         return spec
+
+    class WarningLoader(yaml.Loader):
+        warnings = True
 
     Dumper.add_representer(ToManyCont, represent_relschema)
     Dumper.add_representer(ToMany, represent_relschema)
@@ -4025,3 +4066,39 @@ Zenoss.ZPLRenderableDisplayField = Ext.extend(Zenoss.DisplayField, {
 Ext.reg('ZPLRenderableDisplayField', 'Zenoss.ZPLRenderableDisplayField');
 
 """.strip()
+
+
+if __name__ == '__main__':
+    from Products.ZenUtils.ZenScriptBase import ZenScriptBase
+
+    class ZPLCommand(ZenScriptBase):
+        def run(self):
+            args = sys.argv[1:]
+
+            if len(args) == 2 and args[0] == 'lint':
+                filename = args[1]
+
+                with open(filename, 'r') as file:
+                    linecount = len(file.readlines())
+
+                # Change our logging output format.
+                logging.getLogger().handlers = []
+                for logger in logging.Logger.manager.loggerDict.values():
+                    logger.handlers = []
+                handler = logging.StreamHandler(sys.stdout)
+                formatter = logging.Formatter(
+                    fmt='%s:%s:0: %%(message)s' % (filename, linecount))
+                handler.setFormatter(formatter)
+                logging.getLogger().addHandler(handler)
+
+                try:
+                    with open(filename, 'r') as stream:
+                        yaml.load(stream, Loader=WarningLoader)
+                except Exception, e:
+                    logging.getLogger("zen.zenpacklib").error(e)
+
+            else:
+                print "Usage: %s lint <file>" % sys.argv[0]
+
+    script = ZPLCommand()
+    script.run()
