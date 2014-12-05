@@ -895,15 +895,16 @@ class Spec(object):
         else:
             defaults = {}
 
-        params = {}
+        params = collections.OrderedDict()
         for op, param, value in re.findall(
-            "^\s*:(type|param)\s+(\S+):\s*(.*)$",
+            "^\s*:(type|param|yaml_param)\s+(\S+):\s*(.*)$",
             cls.__init__.__doc__,
             flags=re.MULTILINE
         ):
             if param not in params:
                 params[param] = {'description': None,
-                                 'type': None}
+                                 'type': None,
+                                 'yaml_param': param}
                 if param in defaults:
                     params[param]['default'] = defaults[param]
 
@@ -920,6 +921,8 @@ class Spec(object):
                         params[param]['default'] = []
                     elif params[param]['type'].startswith("SpecsParameter("):
                         params[param]['default'] = {}
+            elif op == 'yaml_param':
+                params[param]['yaml_param'] = value
             else:
                 params[param]['description'] = value
 
@@ -1371,6 +1374,7 @@ class ZPropertySpec(Spec):
             Create a ZProperty Specification
 
             :param type_: ZProperty Type (boolean, int, float, string, password, or lines)
+            :yaml_param type_: type
             :type type_: str
             :param default: Default Value
             :type default: ZPropertyDefaultValue
@@ -2375,6 +2379,7 @@ class ClassPropertySpec(Spec):
         Create a Class Property Specification
 
             :param type_: Property Data Type (TODO (enum))
+            :yaml_param type_: type
             :type type_: str
             :param label: TODO
             :type label: str
@@ -2972,27 +2977,28 @@ if YAML_INSTALLED:
                 except KeyError:
                     type_ = "str"
 
+            yaml_param = dumper.represent_str(param_defs[param]['yaml_param'])
             try:
                 if type_ == "bool":
-                    mapping[dumper.represent_str(param)] = dumper.represent_bool(value)
+                    mapping[yaml_param] = dumper.represent_bool(value)
                 elif type_.startswith("dict"):
-                    mapping[dumper.represent_str(param)] = dumper.represent_dict(value)
+                    mapping[yaml_param] = dumper.represent_dict(value)
                 elif type_ == "float":
-                    mapping[dumper.represent_str(param)] = dumper.represent_float(value)
+                    mapping[yaml_param] = dumper.represent_float(value)
                 elif type_ == "int":
-                    mapping[dumper.represent_str(param)] = dumper.represent_int(value)
+                    mapping[yaml_param] = dumper.represent_int(value)
                 elif type_ == "list(class)":
                     # We "class" in this context is either a class reference or
                     # a class name (string) that refers to a class defined in
                     # this ZenPackSpec.
                     classes = [isinstance(x, type) and class_to_str(x) or x for x in value]
-                    mapping[dumper.represent_str(param)] = dumper.represent_list(classes)
+                    mapping[yaml_param] = dumper.represent_list(classes)
                 elif type_.startswith("list"):
-                    mapping[dumper.represent_str(param)] = dumper.represent_list(value)
+                    mapping[yaml_param] = dumper.represent_list(value)
                 elif type_ == "str":
-                    mapping[dumper.represent_str(param)] = dumper.represent_str(value)
+                    mapping[yaml_param] = dumper.represent_str(value)
                 elif type_ == 'RelSchema':
-                    mapping[dumper.represent_str(param)] = dumper.represent_str(relschema_to_str(value))
+                    mapping[yaml_param] = dumper.represent_str(relschema_to_str(value))
                 else:
                     m = re.match('^SpecsParameter\((.*)\)$', type_)
                     if m:
@@ -3014,7 +3020,7 @@ if YAML_INSTALLED:
                         specmapping_value = []
                         node = yaml.MappingNode(yaml_tag, specmapping_value)
                         specmapping_value.extend(specmapping.items())
-                        mapping[dumper.represent_str(param)] = node
+                        mapping[yaml_param] = node
 
                     else:
                         raise yaml.representer.RepresenterError(
@@ -3046,8 +3052,13 @@ if YAML_INSTALLED:
 
         # TODO: When deserializing, we should check if required properties are present.
 
+        param_name_map = {}
+        for param in param_defs:
+            param_name_map[param_defs[param]['yaml_param']] = param
+
         for key_node, value_node in node.value:
-            key = str(loader.construct_scalar(key_node))
+            key = param_name_map[str(loader.construct_scalar(key_node))]
+
             if key not in param_defs:
                 yaml_error(yaml.constructor.ConstructorError(
                     None, None,
