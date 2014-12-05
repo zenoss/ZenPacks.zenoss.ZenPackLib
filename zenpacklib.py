@@ -867,7 +867,7 @@ class Spec(object):
 
     """Abstract base class for specifications."""
 
-    def specs_from_param(self, spec_type, param_name, param_dict):
+    def specs_from_param(self, spec_type, param_name, param_dict, leave_defaults=False):
         """Return a normalized dictionary of spec_type instances."""
         if param_dict is None:
             param_dict = {}
@@ -878,7 +878,8 @@ class Spec(object):
                     '{}.{}'.format(spec_type.__name__, param_name),
                     type(param_dict).__name__))
         else:
-            apply_defaults(param_dict)
+            if not leave_defaults:
+                apply_defaults(param_dict)
 
         return {
             k: spec_type(self, k, **(fix_kwargs(v)))
@@ -2927,7 +2928,7 @@ if YAML_INSTALLED:
         Generic representer for serializing specs to YAML.  Rather than using
         the default PyYAML representer for python objects, we very carefully
         build up the YAML according to the parameter definitions in the __init__
-        of each spec class.  This same format is used by from_yaml (the YAML
+        of each spec class.  This same format is used by construct_spec (the YAML
         constructor) to ensure that the spec objects are built consistently,
         whether it is done via YAML or the API.
         """
@@ -2996,8 +2997,12 @@ if YAML_INSTALLED:
                     m = re.match('^SpecsParameter\((.*)\)$', type_)
                     if m:
                         spectype = m.group(1)
-                        specmapping = {}
-                        for key in value:
+                        specmapping = collections.OrderedDict()
+                        keys = sorted(value)
+                        if 'DEFAULTS' in keys:
+                            keys.remove('DEFAULTS')
+                            keys.insert(0, 'DEFAULTS')
+                        for key in keys:
                             spec = value[key]
                             if type(spec).__name__ != spectype:
                                 raise yaml.representer.RepresenterError(
@@ -3206,18 +3211,19 @@ if YAML_INSTALLED:
             self.name = name
 
             self.zProperties = self.specs_from_param(
-                ZPropertySpecParams, 'zProperties', zProperties)
+                ZPropertySpecParams, 'zProperties', zProperties, leave_defaults=True)
 
             self.classes = self.specs_from_param(
-                ClassSpecParams, 'classes', classes)
+                ClassSpecParams, 'classes', classes, leave_defaults=True)
 
             self.device_classes = self.specs_from_param(
-                DeviceClassSpecParams, 'device_classes', device_classes)
+                DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True)
 
     class DeviceClassSpecParams(SpecParams, DeviceClassSpec):
         def __init__(self, zenpack_spec, path, zProperties=None, **kwargs):
             SpecParams.__init__(self, **kwargs)
             self.path = path
+            self.zProperties = zProperties
 
     class ZPropertySpecParams(SpecParams, ZPropertySpec):
         def __init__(self, zenpack_spec, name, **kwargs):
@@ -3235,10 +3241,10 @@ if YAML_INSTALLED:
                 self.base = (base,)
 
             self.properties = self.specs_from_param(
-                ClassPropertySpecParams, 'properties', properties)
+                ClassPropertySpecParams, 'properties', properties, leave_defaults=True)
 
             self.relationships = self.specs_from_param(
-                ClassRelationshipSpecParams, 'relationships', relationships)
+                ClassRelationshipSpecParams, 'relationships', relationships, leave_defaults=True)
 
     class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
         def __init__(self, class_spec, name, **kwargs):
