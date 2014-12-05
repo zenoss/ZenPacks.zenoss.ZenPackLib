@@ -1028,6 +1028,9 @@ class ZenPackSpec(Spec):
             for x in self.classes.itervalues()}
 
         def getComponentTree(self, uid=None, id=None, **kwargs):
+            # We do our own sorting.
+            kwargs.pop('sorting_dict', None)
+
             # original is injected by monkeypatch.
             result = original(self, uid=uid, id=id, **kwargs)
 
