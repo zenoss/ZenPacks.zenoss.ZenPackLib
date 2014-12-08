@@ -68,6 +68,7 @@ from Products.ZenModel.GraphDefinition import GraphDefinition
 from Products.ZenModel.GraphPoint import GraphPoint
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenModel.RRDDataPoint import RRDDataPoint
+from Products.ZenModel.RRDDataPointAlias import RRDDataPointAlias
 from Products.ZenModel.RRDDataSource import RRDDataSource
 from Products.ZenModel.RRDTemplate import RRDTemplate
 from Products.ZenModel.ThresholdClass import ThresholdClass
@@ -158,6 +159,13 @@ def log_for(obj, msg, level=logging.DEBUG):
             obj.datasource().rrdTemplate().deviceClass().getOrganizerName(),
             obj.datasource().rrdTemplate().id,
             obj.datasource().id,
+            obj.id)
+    elif isinstance(obj, RRDDataPointAlias):
+        parts = (
+            obj.datapoint().datasource().rrdTemplate().deviceClass().getOrganizerName(),
+            obj.datapoint().datasource().rrdTemplate().id,
+            obj.datapoint().datasource().id,
+            obj.datapoint().id,
             obj.id)
     elif isinstance(obj, GraphPoint):
         parts = (
@@ -339,6 +347,14 @@ def add_datapoint(datasource, id_, cfg):
             alias = datapoint.aliases._getOb(alias_id)
             log_for(alias, "adding alias".format(alias_id))
             log_for(alias, "formula = {}".format(formula))
+
+            if os.environ.get('ALIASES'):
+                print "%s|%s|%s|%s|%s" % (
+                    datapoint.deviceClass().getPrimaryUrlPath(),
+                    datapoint.rrdTemplate().id,
+                    datapoint.id,
+                    alias_id,
+                    formula)
 
     apply_properties(datapoint, cfg, ignore=['aliases'])
 
