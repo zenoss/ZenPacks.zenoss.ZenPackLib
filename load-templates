@@ -340,6 +340,11 @@ def add_datapoint(datasource, id_, cfg):
 
         return
 
+    # Stringify attributes that must be strings.
+    for attribute in ('rrdmin', 'rrdmax'):
+        if attribute in cfg:
+            cfg[attribute] = str(cfg[attribute])
+
     if 'aliases' in cfg:
         log_for(datapoint, "adding {} aliases".format(len(cfg['aliases'])))
         for alias_id, formula in cfg['aliases'].items():
