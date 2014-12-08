@@ -18,7 +18,7 @@ WARNING: This will delete and recreate the named monitoring templates.
 """
 
 import logging
-LOG = logging.getLogger()
+LOG = logging.getLogger('zen.load-templates')
 
 import os
 import re
@@ -41,12 +41,6 @@ unused(Globals)
 
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 dmd = ZenScriptBase(connect=True).dmd
-
-# ZenScriptBase breaks logging. We'll fix it.
-LOG.removeHandler(LOG.handlers[0])
-logging.basicConfig(
-    format='%(message)s',
-    level=logging.DEBUG if os.environ.get('DEBUG') else logging.INFO)
 
 from transaction import commit
 
