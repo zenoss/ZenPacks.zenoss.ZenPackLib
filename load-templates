@@ -446,6 +446,9 @@ def add_graphpoint(graph, id_, cfg):
 
         cfg['color'] = GraphPoint.colors[colorindex].lstrip('#')
 
+    if cfg.pop('includeThresholds', False):
+        graph.addThresholdsForDataPoint(cfg['dpName'])
+
     apply_properties(graphpoint, cfg, ignore=['colorindex', 'graphpoints'])
 
 
