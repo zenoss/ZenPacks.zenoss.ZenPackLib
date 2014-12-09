@@ -18,7 +18,7 @@ WARNING: This will delete and recreate the named monitoring templates.
 """
 
 import logging
-LOG = logging.getLogger()
+LOG = logging.getLogger('zen.load-templates')
 
 import os
 import re
@@ -42,12 +42,6 @@ unused(Globals)
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 dmd = ZenScriptBase(connect=True).dmd
 
-# ZenScriptBase breaks logging. We'll fix it.
-LOG.removeHandler(LOG.handlers[0])
-logging.basicConfig(
-    format='%(message)s',
-    level=logging.DEBUG if os.environ.get('DEBUG') else logging.INFO)
-
 from transaction import commit
 
 try:
@@ -67,12 +61,14 @@ except ImportError:
     except ImportError:
         die('ordereddict must be installed. Try "easy_install ordereddict" first.')
 
+from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
 from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
 from Products.ZenModel.DeviceClass import DeviceClass
 from Products.ZenModel.GraphDefinition import GraphDefinition
 from Products.ZenModel.GraphPoint import GraphPoint
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenModel.RRDDataPoint import RRDDataPoint
+from Products.ZenModel.RRDDataPointAlias import RRDDataPointAlias
 from Products.ZenModel.RRDDataSource import RRDDataSource
 from Products.ZenModel.RRDTemplate import RRDTemplate
 from Products.ZenModel.ThresholdClass import ThresholdClass
@@ -163,6 +159,13 @@ def log_for(obj, msg, level=logging.DEBUG):
             obj.datasource().rrdTemplate().deviceClass().getOrganizerName(),
             obj.datasource().rrdTemplate().id,
             obj.datasource().id,
+            obj.id)
+    elif isinstance(obj, RRDDataPointAlias):
+        parts = (
+            obj.datapoint().datasource().rrdTemplate().deviceClass().getOrganizerName(),
+            obj.datapoint().datasource().rrdTemplate().id,
+            obj.datapoint().datasource().id,
+            obj.datapoint().id,
             obj.id)
     elif isinstance(obj, GraphPoint):
         parts = (
@@ -337,6 +340,11 @@ def add_datapoint(datasource, id_, cfg):
 
         return
 
+    # Stringify attributes that must be strings.
+    for attribute in ('rrdmin', 'rrdmax'):
+        if attribute in cfg:
+            cfg[attribute] = str(cfg[attribute])
+
     if 'aliases' in cfg:
         log_for(datapoint, "adding {} aliases".format(len(cfg['aliases'])))
         for alias_id, formula in cfg['aliases'].items():
@@ -344,6 +352,14 @@ def add_datapoint(datasource, id_, cfg):
             alias = datapoint.aliases._getOb(alias_id)
             log_for(alias, "adding alias".format(alias_id))
             log_for(alias, "formula = {}".format(formula))
+
+            if os.environ.get('ALIASES'):
+                print "%s|%s|%s|%s|%s" % (
+                    datapoint.deviceClass().getPrimaryUrlPath(),
+                    datapoint.rrdTemplate().id,
+                    datapoint.id,
+                    alias_id,
+                    formula)
 
     apply_properties(datapoint, cfg, ignore=['aliases'])
 
@@ -384,12 +400,21 @@ def add_graph(template, id_, cfg):
     graph = template.manage_addGraphDefinition(id_)
     log_for(graph, "adding graph")
 
+    if 'comments' in cfg:
+        log_for(graph, "adding {} comments".format(len(cfg['comments'])))
+        for i, comment_text in enumerate(cfg['comments']):
+            comment = graph.createGraphPoint(
+                CommentGraphPoint,
+                'comment-{}'.format(i))
+
+            comment.text = comment_text
+
     if 'graphpoints' in cfg:
         log_for(graph, "adding {} graphpoints".format(len(cfg['graphpoints'])))
         for graphpoint_id, graphpoint_cfg in cfg['graphpoints'].items():
             add_graphpoint(graph, graphpoint_id, graphpoint_cfg)
 
-    apply_properties(graph, cfg, ignore=['graphpoints'])
+    apply_properties(graph, cfg, ignore=['comments', 'graphpoints'])
 
 
 def add_graphpoint(graph, id_, cfg):
@@ -420,6 +445,9 @@ def add_graphpoint(graph, id_, cfg):
             die("graphpoint colorindex must be numeric.")
 
         cfg['color'] = GraphPoint.colors[colorindex].lstrip('#')
+
+    if cfg.pop('includeThresholds', False):
+        graph.addThresholdsForDataPoint(cfg['dpName'])
 
     apply_properties(graphpoint, cfg, ignore=['colorindex', 'graphpoints'])
 
