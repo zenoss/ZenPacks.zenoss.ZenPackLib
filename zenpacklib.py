@@ -1382,8 +1382,6 @@ class ZPropertySpec(Spec):
             :type category: str
         """
 
-        # TODO custom yaml handing for type_ (call it type)
-
         self.zenpack_spec = zenpack_spec
         self.name = name
         self.type_ = type_
@@ -1490,23 +1488,33 @@ class ClassSpec(Spec):
             :type base: list(class)
             :param meta_type: meta_type (defaults to class name)
             :type meta_type: str
-            :param label: TODO
+            :param label: Label to use when describing this class in the
+                   UI.  If not specified, the default is to use the class name.
             :type label: str
-            :param plural_label: TODO
+            :param plural_label: Plural form of the label (default is to use the
+                  "pluralize" function on the label)
             :type plural_label: str
-            :param short_label: TODO
+            :param short_label: If specified, this is a shorter version of the
+                   label.
             :type short_label: str
-            :param plural_short_label: TODO
+            :param plural_short_label:  If specified, this is a shorter version
+                   of the short_label.
             :type plural_short_label: str
-            :param auto_expand_column: TODO
+            :param auto_expand_column: The name of the column to expand to fill
+                   available space in the grid display.  Defaults to the first
+                   column ('name').
             :type auto_expand_column: str
-            :param label_width: TODO
+            :param label_width: Optionally overrides ZPL's label width
+                   calculation with a higher value.
             :type label_width: int
-            :param plural_label_width: TODO
+            :param plural_label_width: Optionally overrides ZPL's label width
+                   calculation with a higher value.
             :type plural_label_width: int
-            :param content_width: TODO
+            :param content_width: Optionally overrides ZPL's content width
+                   calculation with a higher value.
             :type content_width: int
-            :param icon: TODO
+            :param icon: Filename (of a file within the zenpack's 'resources/icon'
+                   directory).  Default is the {class name}.png
             :type icon: str
             :param order: TODO
             :type order: float
@@ -2381,25 +2389,35 @@ class ClassPropertySpec(Spec):
             :param type_: Property Data Type (TODO (enum))
             :yaml_param type_: type
             :type type_: str
-            :param label: TODO
+            :param label: Label to use when describing this property in the
+                   UI.  If not specified, the default is to use the name of the
+                   property.
             :type label: str
-            :param short_label: TODO
+            :param short_label: If specified, this is a shorter version of the
+                   label, used, for example, in grid table headings.
             :type short_label: str
             :param index_type: TODO (enum)
             :type index_type: str
-            :param label_width: TODO
+            :param label_width: Optionally overrides ZPL's label width
+                   calculation with a higher value.
             :type label_width: int
             :param default: Default Value
             :type default: str
-            :param content_width: TODO
+            :param content_width: Optionally overrides ZPL's content width
+                   calculation with a higher value.
             :type content_width: int
-            :param display: TODO
+            :param display: If this is set to False, this property will be
+                   hidden from the UI completely.
             :type display: bool
-            :param details_display: TODO
+            :param details_display: If this is set to False, this property
+                   will be hidden from the "details" portion of the UI.
             :type details_display: bool
-            :param grid_display: TODO
+            :param grid_display: If this is set to False, this property
+                   will be hidden from the "grid" portion of the UI.
             :type grid_display: bool
-            :param renderer: TODO
+            :param renderer: Optional name of a javascript renderer to apply
+                   to this property, rather than passing the text through
+                   unformatted.
             :type renderer: str
             :param order: TODO
             :type order: float
@@ -2421,7 +2439,6 @@ class ClassPropertySpec(Spec):
             :type index_scope: str
 
         """
-        # TODO custom yaml handing for type_ (call it type)
 
         self.class_spec = class_spec
         self.name = name
@@ -2603,23 +2620,39 @@ class ClassRelationshipSpec(Spec):
 
             :param schema: TODO
             :type schema: RelSchema
-            :param label: TODO
+            :param label: Label to use when describing this relationship in the
+                   UI.  If not specified, the default is to use the name of the
+                   relationship's target class.
             :type label: str
-            :param short_label: TODO
+            :param short_label: If specified, this is a shorter version of the
+                   label, used, for example, in grid table headings.
             :type short_label: str
-            :param label_width: TODO
+            :param label_width: Optionally overrides ZPL's label width
+                   calculation with a higher value.
             :type label_width: int
-            :param content_width: TODO
+            :param content_width:  Optionally overrides ZPL's content width
+                   calculation with a higher value.
             :type content_width: int
-            :param display: TODO
+            :param display: If this is set to False, this relationship will be
+                   hidden from the UI completely.
             :type display: bool
-            :param details_display: TODO
+            :param details_display: If this is set to False, this relationship
+                   will be hidden from the "details" portion of the UI.
             :type details_display: bool
-            :param grid_display: TODO
+            :param grid_display:  If this is set to False, this relationship
+                   will be hidden from the "grid" portion of the UI.
             :type grid_display: bool
-            :param renderer: TODO
+            :param renderer: The default javascript renderer for a relationship
+                   provides a link with the title of the target object,
+                   optionally with the object's type (if render_with_type is
+                   set).  If something more specific is required, a javascript
+                   renderer function name may be provided.
             :type renderer: str
-            :param render_with_type: TODO
+            :param render_with_type: Indicates that when an object is linked to,
+                   it should be shown along with its type.  This is particularly
+                   useful when the relationship's target is a base class that
+                   may have several subclasses, such that the base class +
+                   target object is not sufficiently descriptive on its own.
             :type render_with_type: bool
             :param order: TODO
             :type order: float
