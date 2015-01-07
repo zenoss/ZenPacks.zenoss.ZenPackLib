@@ -3501,7 +3501,7 @@ if YAML_INSTALLED:
             self.name = name
 
     class ClassSpecParams(SpecParams, ClassSpec):
-        def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, **kwargs):
+        def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, monitoring_templates=[], **kwargs):
             SpecParams.__init__(self, **kwargs)
             self.name = name
 
@@ -3509,6 +3509,11 @@ if YAML_INSTALLED:
                 self.base = tuple(base)
             else:
                 self.base = (base,)
+
+            if isinstance(monitoring_templates, (tuple, list, set)):
+                self.monitoring_templates = list(monitoring_templates)
+            else:
+                self.monitoring_templates = [monitoring_templates]
 
             self.properties = self.specs_from_param(
                 ClassPropertySpecParams, 'properties', properties, leave_defaults=True)
