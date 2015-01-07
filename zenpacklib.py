@@ -933,6 +933,20 @@ class Spec(object):
 
         return params
 
+    def __eq__(self, other):
+        if type(self) != type(other):
+            return False
+
+        params = self.init_params()
+        for p in params:
+            if getattr(self, p) != getattr(other, p):
+                LOG.debug("Comparing %s %s to %s %s, parameter %s does not match (%s != %s)",
+                          self.__class__.__name__, self.name, other.__class__.__name__, other.name, p,
+                          getattr(self, p), getattr(other, p))
+                return False
+
+        return True
+
 
 class ZenPackSpec(Spec):
 
