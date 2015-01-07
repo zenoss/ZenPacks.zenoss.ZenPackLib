@@ -54,6 +54,7 @@ from Products.ZenModel.HWComponent import HWComponent as BaseHWComponent
 from Products.ZenModel.ManagedEntity import ManagedEntity as BaseManagedEntity
 from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
+from Products.ZenRelations.Exceptions import ZenSchemaError
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
 from Products.ZenRelations.ToManyRelationship import ToManyRelationship
@@ -1010,43 +1011,63 @@ class ZenPackSpec(Spec):
         self.zProperties = self.specs_from_param(
             ZPropertySpec, 'zProperties', zProperties)
 
-        # Classes
-        if classes:
-            for classname, classdata in classes.items():
-                if 'relationships' not in classdata:
-                    classdata['relationships'] = {}
-
-                # Merge class_relationships.
-                if class_relationships:
-                    update(
-                        classdata['relationships'],
-                        class_relationships.get(classname, {}))
-
+        # Class Relationship Schema
+        self.class_relationships = []
         if class_relationships:
-            self.class_relationships = class_relationships
-        else:
-            self.class_relationships = {}
+            if not isinstance(class_relationships, list):
+                raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
 
+            for rel in class_relationships:
+                self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
+
+        # Classes
         self.classes = self.specs_from_param(ClassSpec, 'classes', classes)
         self.imported_classes = {}
 
-        for classname, classdata in classes.iteritems():
-            relationships = classdata['relationships']
-            for relationship in relationships:
-                try:
-                    if 'schema' in relationships[relationship]:
-                        className = relationships[relationship]['schema'].remoteClass
-                        if '.' in className and className.split('.')[-1] not in self.classes:
-                            module = ".".join(className.split('.')[0:-1])
-                            kls = importClass(module)
-                            self.imported_classes[className] = kls
-                    else:
-                        LOG.error('%s: relationship %s has no schema' % (self.name, relationship))
-                except ImportError:
-                    pass
+        # Import any external classes referred to in the schema
+        for rel in self.class_relationships:
+            for relschema in (rel.left_schema, rel.right_schema):
+                className = relschema.remoteClass
+                if '.' in className and className.split('.')[-1] not in self.classes:
+                    module = ".".join(className.split('.')[0:-1])
+                    try:
+                        kls = importClass(module)
+                        self.imported_classes[className] = kls
+                    except ImportError:
+                        pass
+
+        # Class Relationships
+        if classes:
+            for classname, classdata in classes.iteritems():
+                if 'relationships' not in classdata:
+                    classdata['relationships'] = []
+
+                relationships = classdata['relationships']
+                for relationship in relationships:
+                        # We do not allow the schema to be specified directly.
+                        if 'schema' in relationships[relationship]:
+                            raise ValueError("Class '%s': 'schema' may not be defined or modified in an individual class's relationship.  Use the zenpack's class_relationships instead." % classname)
 
         for class_ in self.classes.values():
-            for relationship in class_.relationships.values():
+
+            # Link the appropriate predefined (class_relationships) schema into place on this class's relationships list.
+            for rel in self.class_relationships:
+                if class_.name == rel.left_class:
+                    if rel.left_relname not in class_.relationships:
+                        class_.relationships[rel.left_relname] = ClassRelationshipSpec(class_, rel.left_relname)
+                    class_.relationships[rel.left_relname].schema = rel.left_schema
+
+                if class_.name == rel.right_class:
+                    if rel.right_relname not in class_.relationships:
+                        class_.relationships[rel.right_relname] = ClassRelationshipSpec(class_, rel.right_relname)
+                    class_.relationships[rel.right_relname].schema = rel.right_schema
+
+            # Plumb _relations
+            for relname, relationship in class_.relationships.iteritems():
+                if not relationship.schema:
+                    LOG.error("Class '%s': no relationship schema has been defined for relationship '%s'" % (class_.name, relname))
+                    continue
+
                 if relationship.schema.remoteClass in self.imported_classes.keys():
                     remoteClass = relationship.schema.remoteClass  # Products.ZenModel.Device.Device
                     relname = relationship.schema.remoteName  # coolingFans
@@ -2600,6 +2621,139 @@ class ClassPropertySpec(Spec):
             ]
 
 
+class RelationshipSchemaSpec(Spec):
+    """TODO."""
+
+    def __init__(
+        self,
+        zenpack_spec=None,
+        left_class=None,
+        left_relname=None,
+        left_type=None,
+        right_type=None,
+        right_class=None,
+        right_relname=None
+    ):
+        """
+            Create a Relationship Schema specification.  This describes both sides
+            of a relationship (left and right).
+
+            :param left_class: TODO
+            :type left_class: class
+            :param left_relname: TODO
+            :type left_relname: str
+            :param left_type: TODO
+            :type left_type: reltype
+            :param right_type: TODO
+            :type right_type: reltype
+            :param right_class: TODO
+            :type right_class: class
+            :param right_relname: TODO
+            :type right_relname: str
+
+        """
+
+        if not RelationshipSchemaSpec.valid_orientation(left_type, right_type):
+            raise ZenSchemaError("In %s(%s) - (%s)%s, invalid orientation- left and right may be reversed." % (left_class, left_relname, right_relname, right_class))
+
+        self.zenpack_spec = zenpack_spec
+        self.left_class = left_class
+        self.left_relname = left_relname
+        self.left_schema = self.make_schema(left_type, right_type, right_class, right_relname)
+        self.right_class = right_class
+        self.right_relname = right_relname
+        self.right_schema = self.make_schema(right_type, left_type, left_class, left_relname)
+
+    @classmethod
+    def valid_orientation(cls, left_type, right_type):
+        # The objects in a relationship are always ordered left to right
+        # so that they can be easily compared and consistently represented.
+        #
+        # The valid combinations are:
+
+        # 1:1 - One To One
+        if right_type == 'ToOne' and left_type == 'ToOne':
+            return True
+
+        # 1:M - One To Many
+        if right_type == 'ToOne' and left_type == 'ToMany':
+            return True
+
+        # 1:MC - One To Many (Containing)
+        if right_type == 'ToOne' and left_type == 'ToManyCont':
+            return True
+
+        # M:M - Many To Many
+        if right_type == 'ToMany' and left_type == 'ToMany':
+            return True
+
+        return False
+
+    _relTypeCardinality = {
+        ToOne: '1',
+        ToMany: 'M',
+        ToManyCont: 'MC'
+    }
+
+    _relTypeClasses = {
+        "ToOne": ToOne,
+        "ToMany": ToMany,
+        "ToManyCont": ToManyCont
+    }
+
+    _relTypeNames = {
+        ToOne: "ToOne",
+        ToMany: "ToMany",
+        ToManyCont: "ToManyCont"
+    }
+
+    @property
+    def left_type(self):
+        return self._relTypeNames.get(self.right_schema.__class__)
+
+    @property
+    def right_type(self):
+        return self._relTypeNames.get(self.left_schema.__class__)
+
+    @property
+    def left_cardinality(self):
+        return self._relTypeCardinality.get(self.right_schema.__class__)
+
+    @property
+    def right_cardinality(self):
+        return self._relTypeCardinality.get(self.left_schema.__class__)
+
+    @property
+    def default_left_relname(self):
+        return relname_from_classname(self.right_class, plural=self.right_cardinality != '1')
+
+    @property
+    def default_right_relname(self):
+        return relname_from_classname(self.left_class, plural=self.left_cardinality != '1')
+
+    @property
+    def cardinality(self):
+        return '%s:%s' % (self.left_cardinality, self.right_cardinality)
+
+    def make_schema(self, relTypeName, remoteRelTypeName, remoteClass, remoteName):
+        relType = self._relTypeClasses.get(relTypeName, None)
+        if not relType:
+            raise ValueError("Unrecognized Relationship Type '%s'" % relTypeName)
+
+        remoteRelType = self._relTypeClasses.get(remoteRelTypeName, None)
+        if not remoteRelType:
+            raise ValueError("Unrecognized Relationship Type '%s'" % remoteRelTypeName)
+
+        schema = relType(remoteRelType, remoteClass, remoteName)
+
+        # Qualify unqualified classnames.
+        if '.' not in schema.remoteClass:
+            schema.remoteClass = '{}.{}'.format(
+                self.zenpack_spec.name, schema.remoteClass)
+
+        return schema
+
+
 class ClassRelationshipSpec(Spec):
 
     """TODO."""
@@ -2623,8 +2777,6 @@ class ClassRelationshipSpec(Spec):
         """
         Create a Class Relationship Specification
 
-            :param schema: TODO
-            :type schema: RelSchema
             :param label: Label to use when describing this relationship in the
                    UI.  If not specified, the default is to use the name of the
                    relationship's target class.
@@ -2665,20 +2817,6 @@ class ClassRelationshipSpec(Spec):
 
         self.class_ = class_
         self.name = name
-
-        # Schema
-        if not schema:
-            LOG.error(
-                "no schema specified for %s relationship on %s",
-                class_.name, name)
-
-            return
-
-        # Qualify unqualified classnames.
-        if '.' not in schema.remoteClass:
-            schema.remoteClass = '{}.{}'.format(
-                self.class_.zenpack.name, schema.remoteClass)
-
         self.schema = schema
         self.label = label
         self.short_label = short_label
@@ -2845,39 +2983,73 @@ class ClassRelationshipSpec(Spec):
 if YAML_INSTALLED:
     from yaml import Dumper, Loader
 
-    def relschema_to_str(schema):
-        return "%s(%s, %s, %s)" % (
-            schema.__class__.__name__,
-            schema.remoteType.__name__,
-            schema.remoteClass,
-            schema.remoteName
+    def relschemaspec_to_str(spec):
+        # Omit relation names that are their defaults.
+        left_optrelname = "" if spec.left_relname == spec.default_left_relname else "(%s)" % spec.left_relname
+        right_optrelname = "" if spec.right_relname == spec.default_right_relname else "(%s)" % spec.right_relname
+
+        return "%s%s %s:%s %s%s" % (
+            spec.left_class,
+            left_optrelname,
+            spec.left_cardinality,
+            spec.right_cardinality,
+            right_optrelname,
+            spec.right_class
         )
 
-    def str_to_relschema(schemastr):
-        m = re.match(r'^(ToOne|ToMany|ToManyCont)\((ToOne|ToMany|ToManyCont),\s*([^,]*),\s*([^,]*)\)', schemastr)
-        if m:
-            relClassName = m.group(1)
-            remoteType = m.group(2)
-            remoteClass = m.group(3)
-            remoteName = m.group(4)
+    def str_to_relschemaspec(schemastr):
+        schema_pattern = re.compile(
+            r'^\s*(?P<left>\S+)'
+            r'\s+(?P<cardinality>1:1|1:M|1:MC|M:M)'
+            r'\s+(?P<right>\S+)\s*$',
+        )
 
-            relClasses = {
-                "ToOne": ToOne,
-                "ToMany": ToMany,
-                "ToManyCont": ToManyCont
-            }
+        class_rel_pattern = re.compile(
+            r'(\((?P<pre_relname>[^\)\s]+)\))?'
+            r'(?P<class>[^\(\s]+)'
+            r'(\((?P<post_relname>[^\)\s]+)\))?'
+        )
 
-            relClass = relClasses.get(relClassName, None)
-            if not relClass:
-                raise ValueError("Unrecogznied Relationship Type '%s'" % relClassName)
+        m = schema_pattern.search(schemastr)
+        if not m:
+            raise ValueError("RelationshipSchemaSpec '%s' is not valid" % schemastr)
 
-            remoteTypeClass = relClasses.get(remoteType, None)
-            if not remoteTypeClass:
-                raise ValueError("Unrecogznied Relationship Type '%s'" % remoteType)
+        ml = class_rel_pattern.search(m.group('left'))
+        if not ml:
+            raise ValueError("RelationshipSchemaSpec '%s' left side is not valid" % m.group('left'))
 
-            return relClass(remoteTypeClass, remoteClass, remoteName)
-        else:
-            raise ValueError("Unrecogznied Relationship Schema '%s'" % schemastr)
+        mr = class_rel_pattern.search(m.group('right'))
+        if not mr:
+            raise ValueError("RelationshipSchemaSpec '%s' right side is not valid" % m.group('right'))
+
+        reltypes = {
+            '1:1': ('ToOne', 'ToOne'),
+            '1:M': ('ToMany', 'ToOne'),
+            '1:MC': ('ToManyCont', 'ToOne'),
+            'M:M': ('ToMany', 'ToMany')
+        }
+
+        left_class = ml.group('class')
+        right_class = mr.group('class')
+        left_type = reltypes.get(m.group('cardinality'))[0]
+        right_type = reltypes.get(m.group('cardinality'))[1]
+
+        left_relname = ml.group('pre_relname') or ml.group('post_relname')
+        if left_relname is None:
+            left_relname = relname_from_classname(right_class, plural=left_type != 'ToOne')
+
+        right_relname = mr.group('pre_relname') or mr.group('post_relname')
+        if right_relname is None:
+            right_relname = relname_from_classname(left_class, plural=right_type != 'ToOne')
+
+        return dict(
+            left_class=left_class,
+            left_relname=left_relname,
+            left_type=left_type,
+            right_type=right_type,
+            right_class=right_class,
+            right_relname=right_relname
+        )
 
     def class_to_str(class_):
         return class_.__module__ + "." + class_.__name__
@@ -2903,9 +3075,12 @@ if YAML_INSTALLED:
 
         return class_
 
-    def yaml_error(e, fatal=True):
+    def yaml_error(loader, e):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
+        fatal = not getattr(loader, 'warnings', False)
+        setattr(loader, 'yaml_errored', True)
+
         if fatal:
             raise e
 
@@ -2927,7 +3102,7 @@ if YAML_INSTALLED:
 
         print "%s: %s" % (position, ",".join(message))
 
-    def construct_specsparameters(loader, node, spectype, fatal=True):
+    def construct_specsparameters(loader, node, spectype):
         spec_class = {
             'ZenPackSpec': ZenPackSpec,
             'DeviceClassSpec': DeviceClassSpec,
@@ -2938,35 +3113,35 @@ if YAML_INSTALLED:
         }.get(spectype, None)
 
         if not spec_class:
-            yaml_error(yaml.constructor.ConstructorError(
+            yaml_error(loader, yaml.constructor.ConstructorError(
                 None, None,
                 "Unrecogznied Spec class %s" % spectype,
-                node.start_mark), fatal=fatal)
+                node.start_mark))
 
         if not isinstance(node, yaml.MappingNode):
-            yaml_error(yaml.constructor.ConstructorError(
+            yaml_error(loader, yaml.constructor.ConstructorError(
                 None, None,
                 "expected a mapping node, but found %s" % node.id,
-                node.start_mark), fatal=fatal)
+                node.start_mark))
         specs = {}
         for spec_key_node, spec_value_node in node.value:
             try:
                 spec_key = str(loader.construct_scalar(spec_key_node))
             except yaml.MarkedYAMLError, e:
-                yaml_error(e, fatal=fatal)
+                yaml_error(loader, e)
 
-            specs[spec_key] = construct_spec(spec_class, loader, spec_value_node, fatal=fatal)
+            specs[spec_key] = construct_spec(spec_class, loader, spec_value_node)
 
         return specs
 
-    def represent_relschema(dumper, data):
-        return dumper.represent_str(relschema_to_str(data))
+    def represent_relschemaspec(dumper, data):
+        return dumper.represent_str(relschemaspec_to_str(data))
 
-    def construct_relschema(loader, node):
+    def construct_relschemaspec(loader, node):
         schemastr = str(loader.construct_scalar(node))
-        return str_to_relschema(schemastr)
+        return str_to_relschemaspec(schemastr)
 
-    def represent_spec(dumper, obj, yaml_tag=u'tag:yaml.org,2002:map'):
+    def represent_spec(dumper, obj, yaml_tag=u'tag:yaml.org,2002:map', defaults=None):
         """
         Generic representer for serializing specs to YAML.  Rather than using
         the default PyYAML representer for python objects, we very carefully
@@ -3049,8 +3224,8 @@ if YAML_INSTALLED:
                     mapping[yaml_param] = dumper.represent_list(value)
                 elif type_ == "str":
                     mapping[yaml_param] = dumper.represent_str(value)
-                elif type_ == 'RelSchema':
-                    mapping[yaml_param] = dumper.represent_str(relschema_to_str(value))
+                elif type_ == 'RelationshipSchemaSpec':
+                    mapping[yaml_param] = dumper.represent_str(relschemaspec_to_str(value))
                 else:
                     m = re.match('^SpecsParameter\((.*)\)$', type_)
                     if m:
@@ -3098,14 +3273,20 @@ if YAML_INSTALLED:
         # used to build this spec.
         return node
 
-    def construct_spec(cls, loader, node, fatal=True):
+    def construct_spec(cls, loader, node):
+        """
+        Generic constructor for deserializing specs from YAML.   Should be
+        the opposite of represent_spec, and works in the same manner (with its
+        parsing and validation directed by the init_params of each spec class)
+        """
+
         param_defs = cls.init_params()
         params = {}
         if not isinstance(node, yaml.MappingNode):
-            yaml_error(yaml.constructor.ConstructorError(
+            yaml_error(loader, yaml.constructor.ConstructorError(
                 None, None,
                 "expected a mapping node, but found %s" % node.id,
-                node.start_mark), fatal=fatal)
+                node.start_mark))
 
         # TODO: When deserializing, we should check if required properties are present.
 
@@ -3117,10 +3298,10 @@ if YAML_INSTALLED:
             key = param_name_map[str(loader.construct_scalar(key_node))]
 
             if key not in param_defs:
-                yaml_error(yaml.constructor.ConstructorError(
+                yaml_error(loader, yaml.constructor.ConstructorError(
                     None, None,
                     "Unrecognized parameter '%s' found while processing %s" % (key, cls.__name__),
-                    key_node.start_mark), fatal=fatal)
+                    key_node.start_mark))
                 continue
 
             expected_type = param_defs[key]['type']
@@ -3145,31 +3326,31 @@ if YAML_INSTALLED:
                         'lines': "list(str)"
                     }.get(zPropType, 'str')
                 except KeyError:
-                    yaml_error(yaml.constructor.ConstructorError(
+                    yaml_error(loader, yaml.constructor.ConstructorError(
                         None, None,
                         "Invalid zProperty type_ '%s' for property %s found while processing %s" % (zPropType, key, cls.__name__),
-                        key_node.start_mark), fatal=fatal)
+                        key_node.start_mark))
                     continue
 
             try:
                 if expected_type == "bool":
-                    params[key] = bool(loader.construct_scalar(value_node))
+                    params[key] = loader.construct_yaml_bool(value_node)
                 elif expected_type.startswith("dict(SpecsParameter("):
                     m = re.match('^dict\(SpecsParameter\((.*)\)\)$', expected_type)
                     if m:
                         spectype = m.group(1)
 
                         if not isinstance(node, yaml.MappingNode):
-                            yaml_error(yaml.constructor.ConstructorError(
+                            yaml_error(loader, yaml.constructor.ConstructorError(
                                 None, None,
                                 "expected a mapping node, but found %s" % node.id,
-                                node.start_mark), fatal=fatal)
+                                node.start_mark))
                             continue
                         specs = {}
                         for spec_key_node, spec_value_node in value_node.value:
                             spec_key = str(loader.construct_scalar(spec_key_node))
 
-                            specs[spec_key] = construct_specsparameters(loader, spec_value_node, spectype, fatal=fatal)
+                            specs[spec_key] = construct_specsparameters(loader, spec_value_node, spectype)
                         params[key] = specs
                     else:
                         raise Exception("Unable to determine specs parameter type in '%s'" % expected_type)
@@ -3196,28 +3377,33 @@ if YAML_INSTALLED:
                     # class in this definition, or a class object representing
                     # an external class.
                     params[key] = classes
+                elif expected_type == "list(RelationshipSchemaSpec)":
+                    schemaspecs = []
+                    for s in loader.construct_sequence(value_node):
+                        schemaspecs.append(str_to_relschemaspec(s))
+                    params[key] = schemaspecs
                 elif expected_type.startswith("list"):
                     params[key] = loader.construct_sequence(value_node)
                 elif expected_type == "str":
                     params[key] = str(loader.construct_scalar(value_node))
-                elif expected_type == 'RelSchema':
+                elif expected_type == 'RelationshipSchemaSpec':
                     schemastr = str(loader.construct_scalar(value_node))
-                    params[key] = str_to_relschema(schemastr)
+                    params[key] = str_to_relschemaspec(schemastr)
                 else:
                     m = re.match('^SpecsParameter\((.*)\)$', expected_type)
                     if m:
                         spectype = m.group(1)
-                        params[key] = construct_specsparameters(loader, value_node, spectype, fatal=fatal)
+                        params[key] = construct_specsparameters(loader, value_node, spectype)
                     else:
                         raise Exception("Unhandled type '%s'" % expected_type)
 
             except yaml.constructor.ConstructorError, e:
-                yaml_error(e, fatal=fatal)
+                yaml_error(loader, e)
             except Exception, e:
-                yaml_error(yaml.constructor.ConstructorError(
+                yaml_error(loader, yaml.constructor.ConstructorError(
                     None, None,
                     "Unable to deserialize %s object (param %s): %s" % (cls.__name__, key_node.value, e),
-                    value_node.start_mark), fatal=fatal)
+                    value_node.start_mark))
 
         return params
 
@@ -3225,26 +3411,33 @@ if YAML_INSTALLED:
         return represent_spec(dumper, obj, yaml_tag=u'!ZenPackSpec')
 
     def construct_zenpackspec(loader, node):
-        fatal = not getattr(loader, 'warnings', False)
-        params = construct_spec(ZenPackSpec, loader, node, fatal=fatal)
+        params = construct_spec(ZenPackSpec, loader, node)
         name = params.pop("name")
 
-        spec = ZenPackSpec(name, **params)
+        fatal = not getattr(loader, 'warnings', False)
+        yaml_errored = getattr(loader, 'yaml_errored', False)
 
-        return spec
+        try:
+            return ZenPackSpec(name, **params)
+        except Exception, e:
+            if yaml_errored and not fatal:
+                LOG.error("(possibly because of earlier errors) %s" % e)
+            else:
+                raise
+
+        return None
 
     class WarningLoader(yaml.Loader):
         warnings = True
+        yaml_errored = False
 
-    Dumper.add_representer(ToManyCont, represent_relschema)
-    Dumper.add_representer(ToMany, represent_relschema)
-    Dumper.add_representer(ToOne, represent_relschema)
     Dumper.add_representer(ZenPackSpec, represent_zenpackspec)
     Dumper.add_representer(DeviceClassSpec, represent_spec)
     Dumper.add_representer(ZPropertySpec, represent_spec)
     Dumper.add_representer(ClassSpec, represent_spec)
     Dumper.add_representer(ClassPropertySpec, represent_spec)
     Dumper.add_representer(ClassRelationshipSpec, represent_spec)
+    Dumper.add_representer(RelationshipSchemaSpec, represent_relschemaspec)
     Loader.add_constructor(u'!ZenPackSpec', construct_zenpackspec)
 
     class SpecParams(object):
@@ -3273,13 +3466,22 @@ if YAML_INSTALLED:
 
             return params
 
+
     class ZenPackSpecParams(SpecParams, ZenPackSpec):
-        def __init__(self, name, zProperties=None, classes=None, device_classes=None, **kwargs):
+        def __init__(self, name, zProperties=None, class_relationships=None, classes=None, device_classes=None, **kwargs):
             SpecParams.__init__(self, **kwargs)
             self.name = name
 
             self.zProperties = self.specs_from_param(
                 ZPropertySpecParams, 'zProperties', zProperties, leave_defaults=True)
+
+            self.class_relationships = []
+            if class_relationships:
+                if not isinstance(class_relationships, list):
+                    raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
+
+                for rel in class_relationships:
+                    self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
 
             self.classes = self.specs_from_param(
                 ClassSpecParams, 'classes', classes, leave_defaults=True)
@@ -3474,7 +3676,7 @@ def relationships_from_yuml(yuml):
     string, or as a tuple or list of relationships.
 
     """
-    classes = collections.defaultdict(dict)
+    classes = []
     match_comment = re.compile(r'^\s*//').search
 
     match_line = re.compile(
@@ -3509,34 +3711,47 @@ def relationships_from_yuml(yuml):
         right_cardinality = match.group('right_cardinality')
 
         if '++' in left_cardinality:
-            left_type = ToManyCont
+            left_type = 'ToManyCont'
         elif '*' in right_cardinality:
-            left_type = ToMany
+            left_type = 'ToMany'
         else:
-            left_type = ToOne
+            left_type = 'ToOne'
 
         if '++' in right_cardinality:
-            right_type = ToManyCont
+            right_type = 'ToManyCont'
         elif '*' in left_cardinality:
-            right_type = ToMany
+            right_type = 'ToMany'
         else:
-            right_type = ToOne
+            right_type = 'ToOne'
 
         if not left_relname:
             left_relname = relname_from_classname(
-                right_class, plural=left_type != ToOne)
+                right_class, plural=left_type != 'ToOne')
 
         if not right_relname:
             right_relname = relname_from_classname(
-                left_class, plural=right_type != ToOne)
+                left_class, plural=right_type != 'ToOne')
 
-        classes[left_class][left_relname] = {
-            'schema': left_type(right_type, right_class, right_relname),
-            }
-
-        classes[right_class][right_relname] = {
-            'schema': right_type(left_type, left_class, left_relname),
-            }
+        # Order them correctly (larger one on the right)
+        if RelationshipSchemaSpec.valid_orientation(left_type, right_type):
+            classes.append(dict(
+                left_class=left_class,
+                left_relname=left_relname,
+                left_type=left_type,
+                right_type=right_type,
+                right_class=right_class,
+                right_relname=right_relname
+            ))
+        else:
+            # flip them around
+            classes.append(dict(
+                left_class=right_class,
+                left_relname=right_relname,
+                left_type=right_type,
+                right_type=left_type,
+                right_class=left_class,
+                right_relname=left_relname
+            ))
 
     return classes
 
@@ -4172,7 +4387,7 @@ if __name__ == '__main__':
                     with open(filename, 'r') as stream:
                         yaml.load(stream, Loader=WarningLoader)
                 except Exception, e:
-                    logging.getLogger("zen.zenpacklib").error(e)
+                    LOG.exception(e)
 
             else:
                 print "Usage: %s lint <file>" % sys.argv[0]
