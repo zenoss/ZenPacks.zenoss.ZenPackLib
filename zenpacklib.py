@@ -2990,14 +2990,28 @@ if YAML_INSTALLED:
                     (cls.__name__, param))
                 continue
 
-            if value is None:
-                # When serializing to yaml, we can treat everything as optional.
-                # Validation would already have happened when the objects were
-                # created, so we can skip null properties.
+            # Figure out what the default value is.  First, consider the default
+            # value for this parameter (globally):
+            default_value = param_defs[param].get('default', None)
+
+            # Now, we need to handle 'DEFAULTS'.  If we're in a situation
+            # where that is supported, and we're outputting a spec that
+            # would be affected by it (not DEFAULTS itself, in other words),
+            # then we look at the default value for this parameter, in case
+            # it has changed the global default for this parameter.
+            if hasattr(obj, 'name') and obj.name != 'DEFAULTS' and defaults is not None:
+                default_value = getattr(defaults, param, default_value)
+
+            if value == default_value:
+                # If the value is a default value, we can omit it from the export.
                 continue
 
-            if 'default' in param_defs[param] and value == param_defs[param]['default']:
-                # If the value is a default value, we can omit it form the export.
+            # If the value is null and the type is a list or dictionary, we can
+            # assume it was some optional nested data and omit it.
+            if value is None and (
+               type_.startswith('dict') or
+               type_.startswith('list') or
+               type_.startswith('SpecsParameter')):
                 continue
 
             if type_ == 'ZPropertyDefaultValue':
@@ -3026,7 +3040,7 @@ if YAML_INSTALLED:
                 elif type_ == "int":
                     mapping[yaml_param] = dumper.represent_int(value)
                 elif type_ == "list(class)":
-                    # We "class" in this context is either a class reference or
+                    # The "class" in this context is either a class reference or
                     # a class name (string) that refers to a class defined in
                     # this ZenPackSpec.
                     classes = [isinstance(x, type) and class_to_str(x) or x for x in value]
@@ -3043,9 +3057,11 @@ if YAML_INSTALLED:
                         spectype = m.group(1)
                         specmapping = collections.OrderedDict()
                         keys = sorted(value)
+                        defaults = None
                         if 'DEFAULTS' in keys:
                             keys.remove('DEFAULTS')
                             keys.insert(0, 'DEFAULTS')
+                            defaults = value['DEFAULTS']
                         for key in keys:
                             spec = value[key]
                             if type(spec).__name__ != spectype:
@@ -3053,7 +3069,7 @@ if YAML_INSTALLED:
                                     "Unable to serialize %s object (%s):  Expected an object of type %s" %
                                     (type(spec).__name__, key, spectype))
                             else:
-                                specmapping[dumper.represent_str(key)] = represent_spec(dumper, spec)
+                                specmapping[dumper.represent_str(key)] = represent_spec(dumper, spec, defaults=defaults)
 
                         specmapping_value = []
                         node = yaml.MappingNode(yaml_tag, specmapping_value)
