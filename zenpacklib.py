@@ -898,14 +898,15 @@ class Spec(object):
 
         params = collections.OrderedDict()
         for op, param, value in re.findall(
-            "^\s*:(type|param|yaml_param)\s+(\S+):\s*(.*)$",
+            "^\s*:(type|param|yaml_param|yaml_block_style)\s+(\S+):\s*(.*)$",
             cls.__init__.__doc__,
             flags=re.MULTILINE
         ):
             if param not in params:
                 params[param] = {'description': None,
                                  'type': None,
-                                 'yaml_param': param}
+                                 'yaml_param': param,
+                                 'yaml_block_style': False}
                 if param in defaults:
                     params[param]['default'] = defaults[param]
 
@@ -924,6 +925,8 @@ class Spec(object):
                         params[param]['default'] = {}
             elif op == 'yaml_param':
                 params[param]['yaml_param'] = value
+            elif op == 'yaml_block_style':
+                params[param]['yaml_block_style'] = bool(value)
             else:
                 params[param]['description'] = value
 
@@ -996,7 +999,8 @@ class ZenPackSpec(Spec):
             :param device_classes: DeviceClass Specs
             :type device_classes: SpecsParameter(DeviceClassSpec)
             :param class_relationships: Class Relationship Specs
-            :type class_relationships: dict(SpecsParameter(ClassRelationshipSpec))
+            :type class_relationships: list(RelationshipSchemaSpec)
+            :yaml_block_style class_relationships: True
         """
         self.name = name
         self.NEW_COMPONENT_TYPES = []
@@ -3067,6 +3071,9 @@ if YAML_INSTALLED:
                     "Unable to serialize %s object (param %s, type %s, value %s): %s" %
                     (cls.__name__, param, type_, value, e))
 
+            if param_defs[param]['yaml_block_style']:
+                mapping[yaml_param].flow_style = False
+
         mapping_value = []
         node = yaml.MappingNode(yaml_tag, mapping_value)
         mapping_value.extend(mapping.items())
@@ -3107,7 +3114,7 @@ if YAML_INSTALLED:
                 # depends on the defined type of the zProperty.
 
                 try:
-                    zPropType = [x[1].value for x in node.value if x[0].value == 'type_'][0]
+                    zPropType = [x[1].value for x in node.value if x[0].value == 'type'][0]
                 except Exception:
                     # type was not specified, so we assume the default (string)
                     zPropType = 'string'
