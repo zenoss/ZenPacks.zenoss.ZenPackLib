@@ -867,7 +867,7 @@ class Spec(object):
 
     """Abstract base class for specifications."""
 
-    def specs_from_param(self, spec_type, param_name, param_dict, leave_defaults=False):
+    def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False):
         """Return a normalized dictionary of spec_type instances."""
         if param_dict is None:
             param_dict = {}
@@ -878,8 +878,9 @@ class Spec(object):
                     '{}.{}'.format(spec_type.__name__, param_name),
                     type(param_dict).__name__))
         else:
-            if not leave_defaults:
-                apply_defaults(param_dict)
+            if apply_defaults:
+                _apply_defaults = globals()['apply_defaults']
+                _apply_defaults(param_dict, leave_defaults=leave_defaults)
 
         return {
             k: spec_type(self, k, **(fix_kwargs(v)))
@@ -3684,11 +3685,11 @@ def catalog_search(scope, name, *args, **kwargs):
     return catalog(**kwargs)
 
 
-def apply_defaults(dictionary, default_defaults=None):
+def apply_defaults(dictionary, default_defaults=None, leave_defaults=False):
     """Modify dictionary to put values from DEFAULTS key into other keys.
 
-    DEFAULTS key will no longer exist in dictionary. dictionary must be
-    a dictionary of dictionaries.
+    Unless leave_defaults is set to True, the DEFAULTS key will no longer exist
+    in dictionary. dictionary must be a dictionary of dictionaries.
 
     Example usage:
 
@@ -3711,7 +3712,10 @@ def apply_defaults(dictionary, default_defaults=None):
             dictionary['DEFAULTS'].setdefault(default_key, default_value)
 
     if 'DEFAULTS' in dictionary:
-        defaults = dictionary.pop('DEFAULTS')
+        if leave_defaults:
+            defaults = dictionary.get('DEFAULTS')
+        else:
+            defaults = dictionary.pop('DEFAULTS')
         for k, v in dictionary.iteritems():
             dictionary[k] = dict(defaults, **v)
 
