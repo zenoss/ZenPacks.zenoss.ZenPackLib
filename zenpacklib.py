@@ -4408,8 +4408,43 @@ if __name__ == '__main__':
                 except Exception, e:
                     LOG.exception(e)
 
+            elif len(args) == 3 and args[0] == 'py_to_yaml':
+                zenpack_name = args[1]
+                filename = args[2]
+
+                # create a dummy zenpacklib sufficient to be used in an
+                # __init__.py, so we can capture export the data.
+                zenpacklib_module = create_module("zenpacklib")
+                zenpacklib_module.ZenPackSpec = type('ZenPackSpec', (dict,), {})
+
+                def zpl_create(self):
+                    zenpacklib_module.CFG = dict(self)
+                zenpacklib_module.ZenPackSpec.create = zpl_create
+
+                stream = open(filename, 'r')
+                inputfile = stream.read()
+
+                # tweak the input slightly.
+                inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
+
+                g = dict(zenpacklib=zenpacklib_module)
+                l = dict()
+                exec inputfile in g, l
+
+                CFG = zenpacklib_module.CFG
+                CFG['name'] = zenpack_name
+
+                # convert the cfg dictionary to yaml
+                specparams = ZenPackSpecParams(**CFG)
+                outputfile = yaml.dump(specparams)
+
+                # tweak the yaml slightly.
+                outputfile = outputfile.replace("__builtin__.object", "object")
+
+                print outputfile
+
             else:
-                print "Usage: %s lint <file>" % sys.argv[0]
+                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> <__init__.py>" % sys.argv[0]
 
     script = ZPLCommand()
     script.run()
