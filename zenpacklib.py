@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 ##############################################################################
 #
 # Copyright (C) Zenoss, Inc. 2013-2014, all rights reserved.
@@ -23,12 +25,18 @@ LOG.addHandler(logging.NullHandler())
 import collections
 import imp
 import importlib
+import inspect
 import json
 import operator
 import os
 import re
 import sys
 import math
+
+if __name__ == '__main__':
+    import Globals
+    from Products.ZenUtils.Utils import unused
+    unused(Globals)
 
 from zope.browser.interfaces import IBrowserView
 from zope.component import adapts, getGlobalSiteManager
@@ -46,6 +54,7 @@ from Products.ZenModel.HWComponent import HWComponent as BaseHWComponent
 from Products.ZenModel.ManagedEntity import ManagedEntity as BaseManagedEntity
 from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
+from Products.ZenRelations.Exceptions import ZenSchemaError
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
 from Products.ZenRelations.ToManyRelationship import ToManyRelationship
@@ -78,6 +87,14 @@ from Products.Zuul.utils import ZuulMessageFactory as _t
 
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
 from zope.viewlet.interfaces import IViewlet
+
+try:
+    import yaml
+    import yaml.constructor
+    YAML_INSTALLED = True
+except ImportError:
+    YAML_INSTALLED = False
+
 
 # Exported symbols. These are the only symbols imported by wildcard.
 __all__ = (
@@ -121,6 +138,11 @@ class ZenPack(ZenPackBase):
             d.buildRelations()
 
     def install(self, app):
+
+        if not YAML_INSTALLED:
+            LOG.fatal('PyYAML is required by %s.  Try "easy_install PyYAML" first.' % self.id)
+            sys.exit(1)
+
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
                 try:
@@ -846,7 +868,7 @@ class Spec(object):
 
     """Abstract base class for specifications."""
 
-    def specs_from_param(self, spec_type, param_name, param_dict):
+    def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False):
         """Return a normalized dictionary of spec_type instances."""
         if param_dict is None:
             param_dict = {}
@@ -857,11 +879,73 @@ class Spec(object):
                     '{}.{}'.format(spec_type.__name__, param_name),
                     type(param_dict).__name__))
         else:
-            apply_defaults(param_dict)
+            if apply_defaults:
+                _apply_defaults = globals()['apply_defaults']
+                _apply_defaults(param_dict, leave_defaults=leave_defaults)
 
         return {
             k: spec_type(self, k, **(fix_kwargs(v)))
             for k, v in param_dict.iteritems()}
+
+    @classmethod
+    def init_params(cls):
+        """Return a dictionary describing the parameters accepted by __init__"""
+
+        argspec = inspect.getargspec(cls.__init__)
+        if argspec.defaults:
+            defaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
+        else:
+            defaults = {}
+
+        params = collections.OrderedDict()
+        for op, param, value in re.findall(
+            "^\s*:(type|param|yaml_param|yaml_block_style)\s+(\S+):\s*(.*)$",
+            cls.__init__.__doc__,
+            flags=re.MULTILINE
+        ):
+            if param not in params:
+                params[param] = {'description': None,
+                                 'type': None,
+                                 'yaml_param': param,
+                                 'yaml_block_style': False}
+                if param in defaults:
+                    params[param]['default'] = defaults[param]
+
+            if op == 'type':
+                params[param]['type'] = value
+
+                if 'default' not in params[param] or \
+                   params[param]['default'] is None:
+                    # For certain types, we know that None doesn't really mean
+                    # None.
+                    if params[param]['type'].startswith("dict"):
+                        params[param]['default'] = {}
+                    elif params[param]['type'].startswith("list"):
+                        params[param]['default'] = []
+                    elif params[param]['type'].startswith("SpecsParameter("):
+                        params[param]['default'] = {}
+            elif op == 'yaml_param':
+                params[param]['yaml_param'] = value
+            elif op == 'yaml_block_style':
+                params[param]['yaml_block_style'] = bool(value)
+            else:
+                params[param]['description'] = value
+
+        return params
+
+    def __eq__(self, other):
+        if type(self) != type(other):
+            return False
+
+        params = self.init_params()
+        for p in params:
+            if getattr(self, p) != getattr(other, p):
+                LOG.debug("Comparing %s %s to %s %s, parameter %s does not match (%s != %s)",
+                          self.__class__.__name__, self.name, other.__class__.__name__, other.name, p,
+                          getattr(self, p), getattr(other, p))
+                return False
+
+        return True
 
 
 class ZenPackSpec(Spec):
@@ -918,7 +1002,21 @@ class ZenPackSpec(Spec):
             classes=None,
             class_relationships=None,
             device_classes=None):
-        """TODO."""
+        """
+            Create a ZenPack Specification
+
+            :param name: Full name of the ZenPack (ZenPacks.zenoss.MyZenPack)
+            :type name: str
+            :param zProperties: zProperty Specs
+            :type zProperties: SpecsParameter(ZPropertySpec)
+            :param classes: Class Specs
+            :type classes: SpecsParameter(ClassSpec)
+            :param device_classes: DeviceClass Specs
+            :type device_classes: SpecsParameter(DeviceClassSpec)
+            :param class_relationships: Class Relationship Specs
+            :type class_relationships: list(RelationshipSchemaSpec)
+            :yaml_block_style class_relationships: True
+        """
         self.name = name
         self.NEW_COMPONENT_TYPES = []
         self.NEW_RELATIONS = collections.defaultdict(list)
@@ -927,38 +1025,63 @@ class ZenPackSpec(Spec):
         self.zProperties = self.specs_from_param(
             ZPropertySpec, 'zProperties', zProperties)
 
+        # Class Relationship Schema
+        self.class_relationships = []
+        if class_relationships:
+            if not isinstance(class_relationships, list):
+                raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
+
+            for rel in class_relationships:
+                self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
+
         # Classes
-        if classes:
-            for classname, classdata in classes.items():
-                if 'relationships' not in classdata:
-                    classdata['relationships'] = {}
-
-                # Merge class_relationships.
-                if class_relationships:
-                    update(
-                        classdata['relationships'],
-                        class_relationships.get(classname, {}))
-
         self.classes = self.specs_from_param(ClassSpec, 'classes', classes)
         self.imported_classes = {}
 
-        for classname, classdata in classes.iteritems():
-            relationships = classdata['relationships']
-            for relationship in relationships:
-                try:
-                    if 'schema' in relationships[relationship]:
-                        className = relationships[relationship]['schema'].remoteClass
-                        if '.' in className and className.split('.')[-1] not in self.classes:
-                            module = ".".join(className.split('.')[0:-1])
-                            kls = importClass(module)
-                            self.imported_classes[className] = kls
-                    else:
-                        LOG.error('%s: relationship %s has no schema' % (self.name, relationship))
-                except ImportError:
-                    pass
+        # Import any external classes referred to in the schema
+        for rel in self.class_relationships:
+            for relschema in (rel.left_schema, rel.right_schema):
+                className = relschema.remoteClass
+                if '.' in className and className.split('.')[-1] not in self.classes:
+                    module = ".".join(className.split('.')[0:-1])
+                    try:
+                        kls = importClass(module)
+                        self.imported_classes[className] = kls
+                    except ImportError:
+                        pass
+
+        # Class Relationships
+        if classes:
+            for classname, classdata in classes.iteritems():
+                if 'relationships' not in classdata:
+                    classdata['relationships'] = []
+
+                relationships = classdata['relationships']
+                for relationship in relationships:
+                        # We do not allow the schema to be specified directly.
+                        if 'schema' in relationships[relationship]:
+                            raise ValueError("Class '%s': 'schema' may not be defined or modified in an individual class's relationship.  Use the zenpack's class_relationships instead." % classname)
 
         for class_ in self.classes.values():
-            for relationship in class_.relationships.values():
+
+            # Link the appropriate predefined (class_relationships) schema into place on this class's relationships list.
+            for rel in self.class_relationships:
+                if class_.name == rel.left_class:
+                    if rel.left_relname not in class_.relationships:
+                        class_.relationships[rel.left_relname] = ClassRelationshipSpec(class_, rel.left_relname)
+                    class_.relationships[rel.left_relname].schema = rel.left_schema
+
+                if class_.name == rel.right_class:
+                    if rel.right_relname not in class_.relationships:
+                        class_.relationships[rel.right_relname] = ClassRelationshipSpec(class_, rel.right_relname)
+                    class_.relationships[rel.right_relname].schema = rel.right_schema
+
+            # Plumb _relations
+            for relname, relationship in class_.relationships.iteritems():
+                if not relationship.schema:
+                    LOG.error("Class '%s': no relationship schema has been defined for relationship '%s'" % (class_.name, relname))
+                    continue
+
                 if relationship.schema.remoteClass in self.imported_classes.keys():
                     remoteClass = relationship.schema.remoteClass  # Products.ZenModel.Device.Device
                     relname = relationship.schema.remoteName  # coolingFans
@@ -1253,6 +1376,17 @@ class DeviceClassSpec(Spec):
 
     def __init__(self, zenpack_spec, path, create=True, zProperties=None,
                  remove=False):
+        """
+            Create a DeviceClass Specification
+
+            :param create: Create the DeviceClass with ZenPack installation, if it does not exist?
+            :type create: bool
+            :param remove: Remove the DeviceClass when ZenPack is removed?
+            :type remove: bool
+            :param zProperties: zProperty values to set upon this DeviceClass
+            :type zProperties: dict(str)
+        """
+
         self.zenpack_spec = zenpack_spec
         self.path = path.lstrip('/')
         self.create = bool(create)
@@ -1276,7 +1410,18 @@ class ZPropertySpec(Spec):
             default=None,
             category=None,
             ):
-        """TODO."""
+        """
+            Create a ZProperty Specification
+
+            :param type_: ZProperty Type (boolean, int, float, string, password, or lines)
+            :yaml_param type_: type
+            :type type_: str
+            :param default: Default Value
+            :type default: ZPropertyDefaultValue
+            :param category: ZProperty Category.  This is used for display/sorting purposes.
+            :type category: str
+        """
+
         self.zenpack_spec = zenpack_spec
         self.name = name
         self.type_ = type_
@@ -1376,7 +1521,64 @@ class ClassSpec(Spec):
             dynamicview_group=None,
             dynamicview_relations=None,
             ):
-        """TODO."""
+        """
+            Create a Class Specification
+
+            :param base: Base Class (defaults to Component)
+            :type base: list(class)
+            :param meta_type: meta_type (defaults to class name)
+            :type meta_type: str
+            :param label: Label to use when describing this class in the
+                   UI.  If not specified, the default is to use the class name.
+            :type label: str
+            :param plural_label: Plural form of the label (default is to use the
+                  "pluralize" function on the label)
+            :type plural_label: str
+            :param short_label: If specified, this is a shorter version of the
+                   label.
+            :type short_label: str
+            :param plural_short_label:  If specified, this is a shorter version
+                   of the short_label.
+            :type plural_short_label: str
+            :param auto_expand_column: The name of the column to expand to fill
+                   available space in the grid display.  Defaults to the first
+                   column ('name').
+            :type auto_expand_column: str
+            :param label_width: Optionally overrides ZPL's label width
+                   calculation with a higher value.
+            :type label_width: int
+            :param plural_label_width: Optionally overrides ZPL's label width
+                   calculation with a higher value.
+            :type plural_label_width: int
+            :param content_width: Optionally overrides ZPL's content width
+                   calculation with a higher value.
+            :type content_width: int
+            :param icon: Filename (of a file within the zenpack's 'resources/icon'
+                   directory).  Default is the {class name}.png
+            :type icon: str
+            :param order: TODO
+            :type order: float
+            :param properties: TODO
+            :type properties: SpecsParameter(ClassPropertySpec)
+            :param relationships: TODO
+            :type relationships: SpecsParameter(ClassRelationshipSpec)
+            :param impacts: TODO
+            :type impacts: list(str)
+            :param impacted_by: TODO
+            :type impacted_by: list(str)
+            :param monitoring_templates: TODO
+            :type monitoring_templates: list(str)
+            :param filter_display: TODO
+            :type filter_display: bool
+            :param dynamicview_views: TODO
+            :type dynamicview_views: list(str)
+            :param dynamicview_group: TODO
+            :type dynamicview_group: str
+            :param dynamicview_relations: TODO
+            :type dynamicview_relations: dict
+            # TODO: should make this a spec class, not a plain dict.
+        """
+
         self.zenpack = zenpack
         self.name = name
 
@@ -1387,6 +1589,7 @@ class ClassSpec(Spec):
             bases = (base,)
 
         self.bases = bases
+        self.base = self.bases
 
         self.meta_type = meta_type or self.name
         self.label = label or self.meta_type
@@ -1774,10 +1977,10 @@ class ClassSpec(Spec):
 
         for spec in self.containing_components:
             attr = None
-            for rel,spec in self.relationships.items():
-               if spec.remote_classname == spec.name:
-                   attr = rel
-                   continue
+            for rel, spec in self.relationships.items():
+                if spec.remote_classname == spec.name:
+                    attr = rel
+                    continue
 
             if not attr:
                 attr = relname_from_classname(spec.name)
@@ -2220,7 +2423,63 @@ class ClassPropertySpec(Spec):
             datapoint_cached=True,
             index_scope='device'
             ):
-        """TODO."""
+        """
+        Create a Class Property Specification
+
+            :param type_: Property Data Type (TODO (enum))
+            :yaml_param type_: type
+            :type type_: str
+            :param label: Label to use when describing this property in the
+                   UI.  If not specified, the default is to use the name of the
+                   property.
+            :type label: str
+            :param short_label: If specified, this is a shorter version of the
+                   label, used, for example, in grid table headings.
+            :type short_label: str
+            :param index_type: TODO (enum)
+            :type index_type: str
+            :param label_width: Optionally overrides ZPL's label width
+                   calculation with a higher value.
+            :type label_width: int
+            :param default: Default Value
+            :type default: str
+            :param content_width: Optionally overrides ZPL's content width
+                   calculation with a higher value.
+            :type content_width: int
+            :param display: If this is set to False, this property will be
+                   hidden from the UI completely.
+            :type display: bool
+            :param details_display: If this is set to False, this property
+                   will be hidden from the "details" portion of the UI.
+            :type details_display: bool
+            :param grid_display: If this is set to False, this property
+                   will be hidden from the "grid" portion of the UI.
+            :type grid_display: bool
+            :param renderer: Optional name of a javascript renderer to apply
+                   to this property, rather than passing the text through
+                   unformatted.
+            :type renderer: str
+            :param order: TODO
+            :type order: float
+            :param editable: TODO
+            :type editable: bool
+            :param api_only: TODO
+            :type api_only: bool
+            :param api_backendtype: TODO (enum)
+            :type api_backendtype: str
+            :param enum: TODO
+            :type enum: list(str)
+            :param datapoint: TODO (validate datapoint name)
+            :type datapoint: str
+            :param datapoint_default: TODO  - DEPRECATE (use default instead)
+            :type datapoint_default: str
+            :param datapoint_cached: TODO
+            :type datapoint_cached: bool
+            :param index_scope: TODO (enum)
+            :type index_scope: str
+
+        """
+
         self.class_spec = class_spec
         self.name = name
         self.default = default
@@ -2376,6 +2635,139 @@ class ClassPropertySpec(Spec):
             ]
 
 
+class RelationshipSchemaSpec(Spec):
+    """TODO."""
+
+    def __init__(
+        self,
+        zenpack_spec=None,
+        left_class=None,
+        left_relname=None,
+        left_type=None,
+        right_type=None,
+        right_class=None,
+        right_relname=None
+    ):
+        """
+            Create a Relationship Schema specification.  This describes both sides
+            of a relationship (left and right).
+
+            :param left_class: TODO
+            :type left_class: class
+            :param left_relname: TODO
+            :type left_relname: str
+            :param left_type: TODO
+            :type left_type: reltype
+            :param right_type: TODO
+            :type right_type: reltype
+            :param right_class: TODO
+            :type right_class: class
+            :param right_relname: TODO
+            :type right_relname: str
+
+        """
+
+        if not RelationshipSchemaSpec.valid_orientation(left_type, right_type):
+            raise ZenSchemaError("In %s(%s) - (%s)%s, invalid orientation- left and right may be reversed." % (left_class, left_relname, right_relname, right_class))
+
+        self.zenpack_spec = zenpack_spec
+        self.left_class = left_class
+        self.left_relname = left_relname
+        self.left_schema = self.make_schema(left_type, right_type, right_class, right_relname)
+        self.right_class = right_class
+        self.right_relname = right_relname
+        self.right_schema = self.make_schema(right_type, left_type, left_class, left_relname)
+
+    @classmethod
+    def valid_orientation(cls, left_type, right_type):
+        # The objects in a relationship are always ordered left to right
+        # so that they can be easily compared and consistently represented.
+        #
+        # The valid combinations are:
+
+        # 1:1 - One To One
+        if right_type == 'ToOne' and left_type == 'ToOne':
+            return True
+
+        # 1:M - One To Many
+        if right_type == 'ToOne' and left_type == 'ToMany':
+            return True
+
+        # 1:MC - One To Many (Containing)
+        if right_type == 'ToOne' and left_type == 'ToManyCont':
+            return True
+
+        # M:M - Many To Many
+        if right_type == 'ToMany' and left_type == 'ToMany':
+            return True
+
+        return False
+
+    _relTypeCardinality = {
+        ToOne: '1',
+        ToMany: 'M',
+        ToManyCont: 'MC'
+    }
+
+    _relTypeClasses = {
+        "ToOne": ToOne,
+        "ToMany": ToMany,
+        "ToManyCont": ToManyCont
+    }
+
+    _relTypeNames = {
+        ToOne: "ToOne",
+        ToMany: "ToMany",
+        ToManyCont: "ToManyCont"
+    }
+
+    @property
+    def left_type(self):
+        return self._relTypeNames.get(self.right_schema.__class__)
+
+    @property
+    def right_type(self):
+        return self._relTypeNames.get(self.left_schema.__class__)
+
+    @property
+    def left_cardinality(self):
+        return self._relTypeCardinality.get(self.right_schema.__class__)
+
+    @property
+    def right_cardinality(self):
+        return self._relTypeCardinality.get(self.left_schema.__class__)
+
+    @property
+    def default_left_relname(self):
+        return relname_from_classname(self.right_class, plural=self.right_cardinality != '1')
+
+    @property
+    def default_right_relname(self):
+        return relname_from_classname(self.left_class, plural=self.left_cardinality != '1')
+
+    @property
+    def cardinality(self):
+        return '%s:%s' % (self.left_cardinality, self.right_cardinality)
+
+    def make_schema(self, relTypeName, remoteRelTypeName, remoteClass, remoteName):
+        relType = self._relTypeClasses.get(relTypeName, None)
+        if not relType:
+            raise ValueError("Unrecognized Relationship Type '%s'" % relTypeName)
+
+        remoteRelType = self._relTypeClasses.get(remoteRelTypeName, None)
+        if not remoteRelType:
+            raise ValueError("Unrecognized Relationship Type '%s'" % remoteRelTypeName)
+
+        schema = relType(remoteRelType, remoteClass, remoteName)
+
+        # Qualify unqualified classnames.
+        if '.' not in schema.remoteClass:
+            schema.remoteClass = '{}.{}'.format(
+                self.zenpack_spec.name, schema.remoteClass)
+
+        return schema
+
+
 class ClassRelationshipSpec(Spec):
 
     """TODO."""
@@ -2396,23 +2788,49 @@ class ClassRelationshipSpec(Spec):
             render_with_type=False,
             order=None,
             ):
-        """TODO."""
+        """
+        Create a Class Relationship Specification
+
+            :param label: Label to use when describing this relationship in the
+                   UI.  If not specified, the default is to use the name of the
+                   relationship's target class.
+            :type label: str
+            :param short_label: If specified, this is a shorter version of the
+                   label, used, for example, in grid table headings.
+            :type short_label: str
+            :param label_width: Optionally overrides ZPL's label width
+                   calculation with a higher value.
+            :type label_width: int
+            :param content_width:  Optionally overrides ZPL's content width
+                   calculation with a higher value.
+            :type content_width: int
+            :param display: If this is set to False, this relationship will be
+                   hidden from the UI completely.
+            :type display: bool
+            :param details_display: If this is set to False, this relationship
+                   will be hidden from the "details" portion of the UI.
+            :type details_display: bool
+            :param grid_display:  If this is set to False, this relationship
+                   will be hidden from the "grid" portion of the UI.
+            :type grid_display: bool
+            :param renderer: The default javascript renderer for a relationship
+                   provides a link with the title of the target object,
+                   optionally with the object's type (if render_with_type is
+                   set).  If something more specific is required, a javascript
+                   renderer function name may be provided.
+            :type renderer: str
+            :param render_with_type: Indicates that when an object is linked to,
+                   it should be shown along with its type.  This is particularly
+                   useful when the relationship's target is a base class that
+                   may have several subclasses, such that the base class +
+                   target object is not sufficiently descriptive on its own.
+            :type render_with_type: bool
+            :param order: TODO
+            :type order: float
+        """
+
         self.class_ = class_
         self.name = name
-
-        # Schema
-        if not schema:
-            LOG.error(
-                "no schema specified for %s relationship on %s",
-                class_.name, name)
-
-            return
-
-        # Qualify unqualified classnames.
-        if '.' not in schema.remoteClass:
-            schema.remoteClass = '{}.{}'.format(
-                self.class_.zenpack.name, schema.remoteClass)
-
         self.schema = schema
         self.label = label
         self.short_label = short_label
@@ -2574,6 +2992,566 @@ class ClassRelationshipSpec(Spec):
                 value='{{{}}}'.format(','.join(column_fields))),
             ]
 
+# YAML Import/Export ########################################################
+
+if YAML_INSTALLED:
+    from yaml import Dumper, Loader
+
+    def relschemaspec_to_str(spec):
+        # Omit relation names that are their defaults.
+        left_optrelname = "" if spec.left_relname == spec.default_left_relname else "(%s)" % spec.left_relname
+        right_optrelname = "" if spec.right_relname == spec.default_right_relname else "(%s)" % spec.right_relname
+
+        return "%s%s %s:%s %s%s" % (
+            spec.left_class,
+            left_optrelname,
+            spec.left_cardinality,
+            spec.right_cardinality,
+            right_optrelname,
+            spec.right_class
+        )
+
+    def str_to_relschemaspec(schemastr):
+        schema_pattern = re.compile(
+            r'^\s*(?P<left>\S+)'
+            r'\s+(?P<cardinality>1:1|1:M|1:MC|M:M)'
+            r'\s+(?P<right>\S+)\s*$',
+        )
+
+        class_rel_pattern = re.compile(
+            r'(\((?P<pre_relname>[^\)\s]+)\))?'
+            r'(?P<class>[^\(\s]+)'
+            r'(\((?P<post_relname>[^\)\s]+)\))?'
+        )
+
+        m = schema_pattern.search(schemastr)
+        if not m:
+            raise ValueError("RelationshipSchemaSpec '%s' is not valid" % schemastr)
+
+        ml = class_rel_pattern.search(m.group('left'))
+        if not ml:
+            raise ValueError("RelationshipSchemaSpec '%s' left side is not valid" % m.group('left'))
+
+        mr = class_rel_pattern.search(m.group('right'))
+        if not mr:
+            raise ValueError("RelationshipSchemaSpec '%s' right side is not valid" % m.group('right'))
+
+        reltypes = {
+            '1:1': ('ToOne', 'ToOne'),
+            '1:M': ('ToMany', 'ToOne'),
+            '1:MC': ('ToManyCont', 'ToOne'),
+            'M:M': ('ToMany', 'ToMany')
+        }
+
+        left_class = ml.group('class')
+        right_class = mr.group('class')
+        left_type = reltypes.get(m.group('cardinality'))[0]
+        right_type = reltypes.get(m.group('cardinality'))[1]
+
+        left_relname = ml.group('pre_relname') or ml.group('post_relname')
+        if left_relname is None:
+            left_relname = relname_from_classname(right_class, plural=left_type != 'ToOne')
+
+        right_relname = mr.group('pre_relname') or mr.group('post_relname')
+        if right_relname is None:
+            right_relname = relname_from_classname(left_class, plural=right_type != 'ToOne')
+
+        return dict(
+            left_class=left_class,
+            left_relname=left_relname,
+            left_type=left_type,
+            right_type=right_type,
+            right_class=right_class,
+            right_relname=right_relname
+        )
+
+    def class_to_str(class_):
+        return class_.__module__ + "." + class_.__name__
+
+    def str_to_class(classstr):
+        if "." not in classstr:
+            # TODO: Support non qualfied class names, searching zenpack, zenpacklib,
+            # and ZenModel namespaces
+
+            # An unqualified class name is assumed to be referring to one in
+            # the classes defined in this ZenPackSpec.   We can't validate this,
+            # or return a class object for it, if this is the case.  So we
+            # return no class object, and the caller will assume that it
+            # it referrs to a class being defined.
+            return None
+
+        modname, classname = classstr.rsplit(".", 1)
+
+        try:
+            class_ = getattr(importlib.import_module(modname), classname)
+        except Exception, e:
+            raise ValueError("Class '%s' is not valid: %s" % (classstr, e))
+
+        return class_
+
+    def yaml_error(loader, e):
+        # Given a MarkedYAMLError exception, either log or raise
+        # the error, depending on the 'fatal' argument.
+        fatal = not getattr(loader, 'warnings', False)
+        setattr(loader, 'yaml_errored', True)
+
+        if fatal:
+            raise e
+
+        message = []
+
+        mark = e.context_mark or e.problem_mark
+        if mark:
+            position = "%s:%s:%s" % (mark.name, mark.line+1, mark.column+1)
+        else:
+            position = "[unknown]"
+        if e.context is not None:
+            message.append(e.context)
+
+        if e.problem is not None:
+            message.append(e.problem)
+
+        if e.note is not None:
+            message.append("(note: " + e.note + ")")
+
+        print "%s: %s" % (position, ",".join(message))
+
+    def construct_specsparameters(loader, node, spectype):
+        spec_class = {
+            'ZenPackSpec': ZenPackSpec,
+            'DeviceClassSpec': DeviceClassSpec,
+            'ZPropertySpec': ZPropertySpec,
+            'ClassSpec': ClassSpec,
+            'ClassPropertySpec': ClassPropertySpec,
+            'ClassRelationshipSpec': ClassRelationshipSpec,
+        }.get(spectype, None)
+
+        if not spec_class:
+            yaml_error(loader, yaml.constructor.ConstructorError(
+                None, None,
+                "Unrecogznied Spec class %s" % spectype,
+                node.start_mark))
+
+        if not isinstance(node, yaml.MappingNode):
+            yaml_error(loader, yaml.constructor.ConstructorError(
+                None, None,
+                "expected a mapping node, but found %s" % node.id,
+                node.start_mark))
+        specs = {}
+        for spec_key_node, spec_value_node in node.value:
+            try:
+                spec_key = str(loader.construct_scalar(spec_key_node))
+            except yaml.MarkedYAMLError, e:
+                yaml_error(loader, e)
+
+            specs[spec_key] = construct_spec(spec_class, loader, spec_value_node)
+
+        return specs
+
+    def represent_relschemaspec(dumper, data):
+        return dumper.represent_str(relschemaspec_to_str(data))
+
+    def construct_relschemaspec(loader, node):
+        schemastr = str(loader.construct_scalar(node))
+        return str_to_relschemaspec(schemastr)
+
+    def represent_spec(dumper, obj, yaml_tag=u'tag:yaml.org,2002:map', defaults=None):
+        """
+        Generic representer for serializing specs to YAML.  Rather than using
+        the default PyYAML representer for python objects, we very carefully
+        build up the YAML according to the parameter definitions in the __init__
+        of each spec class.  This same format is used by construct_spec (the YAML
+        constructor) to ensure that the spec objects are built consistently,
+        whether it is done via YAML or the API.
+        """
+
+        mapping = {}
+        cls = obj.__class__
+        param_defs = cls.init_params()
+        for param in param_defs:
+            type_ = param_defs[param]['type']
+
+            try:
+                value = getattr(obj, param)
+            except AttributeError:
+                raise yaml.representer.RepresenterError(
+                    "Unable to serialize %s object: %s, a supported parameter, is not accessible as a property." %
+                    (cls.__name__, param))
+                continue
+
+            # Figure out what the default value is.  First, consider the default
+            # value for this parameter (globally):
+            default_value = param_defs[param].get('default', None)
+
+            # Now, we need to handle 'DEFAULTS'.  If we're in a situation
+            # where that is supported, and we're outputting a spec that
+            # would be affected by it (not DEFAULTS itself, in other words),
+            # then we look at the default value for this parameter, in case
+            # it has changed the global default for this parameter.
+            if hasattr(obj, 'name') and obj.name != 'DEFAULTS' and defaults is not None:
+                default_value = getattr(defaults, param, default_value)
+
+            if value == default_value:
+                # If the value is a default value, we can omit it from the export.
+                continue
+
+            # If the value is null and the type is a list or dictionary, we can
+            # assume it was some optional nested data and omit it.
+            if value is None and (
+               type_.startswith('dict') or
+               type_.startswith('list') or
+               type_.startswith('SpecsParameter')):
+                continue
+
+            if type_ == 'ZPropertyDefaultValue':
+                # For zproperties, the actual data type of a default value
+                # depends on the defined type of the zProperty.
+                try:
+                    type_ = {
+                        'boolean': "bool",
+                        'int': "int",
+                        'float': "float",
+                        'string': "str",
+                        'password': "str",
+                        'lines': "list(str)"
+                    }.get(obj.type_, 'str')
+                except KeyError:
+                    type_ = "str"
+
+            yaml_param = dumper.represent_str(param_defs[param]['yaml_param'])
+            try:
+                if type_ == "bool":
+                    mapping[yaml_param] = dumper.represent_bool(value)
+                elif type_.startswith("dict"):
+                    mapping[yaml_param] = dumper.represent_dict(value)
+                elif type_ == "float":
+                    mapping[yaml_param] = dumper.represent_float(value)
+                elif type_ == "int":
+                    mapping[yaml_param] = dumper.represent_int(value)
+                elif type_ == "list(class)":
+                    # The "class" in this context is either a class reference or
+                    # a class name (string) that refers to a class defined in
+                    # this ZenPackSpec.
+                    classes = [isinstance(x, type) and class_to_str(x) or x for x in value]
+                    mapping[yaml_param] = dumper.represent_list(classes)
+                elif type_.startswith("list"):
+                    mapping[yaml_param] = dumper.represent_list(value)
+                elif type_ == "str":
+                    mapping[yaml_param] = dumper.represent_str(value)
+                elif type_ == 'RelationshipSchemaSpec':
+                    mapping[yaml_param] = dumper.represent_str(relschemaspec_to_str(value))
+                else:
+                    m = re.match('^SpecsParameter\((.*)\)$', type_)
+                    if m:
+                        spectype = m.group(1)
+                        specmapping = collections.OrderedDict()
+                        keys = sorted(value)
+                        defaults = None
+                        if 'DEFAULTS' in keys:
+                            keys.remove('DEFAULTS')
+                            keys.insert(0, 'DEFAULTS')
+                            defaults = value['DEFAULTS']
+                        for key in keys:
+                            spec = value[key]
+                            if type(spec).__name__ != spectype:
+                                raise yaml.representer.RepresenterError(
+                                    "Unable to serialize %s object (%s):  Expected an object of type %s" %
+                                    (type(spec).__name__, key, spectype))
+                            else:
+                                specmapping[dumper.represent_str(key)] = represent_spec(dumper, spec, defaults=defaults)
+
+                        specmapping_value = []
+                        node = yaml.MappingNode(yaml_tag, specmapping_value)
+                        specmapping_value.extend(specmapping.items())
+                        mapping[yaml_param] = node
+
+                    else:
+                        raise yaml.representer.RepresenterError(
+                            "Unable to serialize %s object: %s, a supported parameter, is of an unrecognized type (%s)." %
+                            (cls.__name__, param, type_))
+            except yaml.representer.RepresenterError:
+                raise
+            except Exception, e:
+                raise yaml.representer.RepresenterError(
+                    "Unable to serialize %s object (param %s, type %s, value %s): %s" %
+                    (cls.__name__, param, type_, value, e))
+
+            if param_defs[param]['yaml_block_style']:
+                mapping[yaml_param].flow_style = False
+
+        mapping_value = []
+        node = yaml.MappingNode(yaml_tag, mapping_value)
+        mapping_value.extend(mapping.items())
+
+        # Return a node describing the mapping (dictionary) of the params
+        # used to build this spec.
+        return node
+
+    def construct_spec(cls, loader, node):
+        """
+        Generic constructor for deserializing specs from YAML.   Should be
+        the opposite of represent_spec, and works in the same manner (with its
+        parsing and validation directed by the init_params of each spec class)
+        """
+
+        param_defs = cls.init_params()
+        params = {}
+        if not isinstance(node, yaml.MappingNode):
+            yaml_error(loader, yaml.constructor.ConstructorError(
+                None, None,
+                "expected a mapping node, but found %s" % node.id,
+                node.start_mark))
+
+        # TODO: When deserializing, we should check if required properties are present.
+
+        param_name_map = {}
+        for param in param_defs:
+            param_name_map[param_defs[param]['yaml_param']] = param
+
+        for key_node, value_node in node.value:
+            key = param_name_map[str(loader.construct_scalar(key_node))]
+
+            if key not in param_defs:
+                yaml_error(loader, yaml.constructor.ConstructorError(
+                    None, None,
+                    "Unrecognized parameter '%s' found while processing %s" % (key, cls.__name__),
+                    key_node.start_mark))
+                continue
+
+            expected_type = param_defs[key]['type']
+
+            if expected_type == 'ZPropertyDefaultValue':
+                # For zproperties, the actual data type of a default value
+                # depends on the defined type of the zProperty.
+
+                try:
+                    zPropType = [x[1].value for x in node.value if x[0].value == 'type'][0]
+                except Exception:
+                    # type was not specified, so we assume the default (string)
+                    zPropType = 'string'
+
+                try:
+                    expected_type = {
+                        'boolean': "bool",
+                        'int': "int",
+                        'float': "float",
+                        'string': "str",
+                        'password': "str",
+                        'lines': "list(str)"
+                    }.get(zPropType, 'str')
+                except KeyError:
+                    yaml_error(loader, yaml.constructor.ConstructorError(
+                        None, None,
+                        "Invalid zProperty type_ '%s' for property %s found while processing %s" % (zPropType, key, cls.__name__),
+                        key_node.start_mark))
+                    continue
+
+            try:
+                if expected_type == "bool":
+                    params[key] = loader.construct_yaml_bool(value_node)
+                elif expected_type.startswith("dict(SpecsParameter("):
+                    m = re.match('^dict\(SpecsParameter\((.*)\)\)$', expected_type)
+                    if m:
+                        spectype = m.group(1)
+
+                        if not isinstance(node, yaml.MappingNode):
+                            yaml_error(loader, yaml.constructor.ConstructorError(
+                                None, None,
+                                "expected a mapping node, but found %s" % node.id,
+                                node.start_mark))
+                            continue
+                        specs = {}
+                        for spec_key_node, spec_value_node in value_node.value:
+                            spec_key = str(loader.construct_scalar(spec_key_node))
+
+                            specs[spec_key] = construct_specsparameters(loader, spec_value_node, spectype)
+                        params[key] = specs
+                    else:
+                        raise Exception("Unable to determine specs parameter type in '%s'" % expected_type)
+                elif expected_type.startswith("dict"):
+                    params[key] = loader.construct_mapping(value_node)
+                elif expected_type == "float":
+                    params[key] = float(loader.construct_scalar(value_node))
+                elif expected_type == "int":
+                    params[key] = int(loader.construct_scalar(value_node))
+                elif expected_type == "list(class)":
+                    classnames = loader.construct_sequence(value_node)
+                    classes = []
+                    for c in classnames:
+                        class_ = str_to_class(c)
+                        if class_ is None:
+                            # local reference to a class being defined in
+                            # this zenpack.  (ideally we should verify that
+                            # the name is valid, but this is not possible
+                            # in a one-pass parsing of the yaml).
+                            classes.append(c)
+                        else:
+                            classes.append(class_)
+                    # ZPL defines "class" as either a string representing a
+                    # class in this definition, or a class object representing
+                    # an external class.
+                    params[key] = classes
+                elif expected_type == "list(RelationshipSchemaSpec)":
+                    schemaspecs = []
+                    for s in loader.construct_sequence(value_node):
+                        schemaspecs.append(str_to_relschemaspec(s))
+                    params[key] = schemaspecs
+                elif expected_type.startswith("list"):
+                    params[key] = loader.construct_sequence(value_node)
+                elif expected_type == "str":
+                    params[key] = str(loader.construct_scalar(value_node))
+                elif expected_type == 'RelationshipSchemaSpec':
+                    schemastr = str(loader.construct_scalar(value_node))
+                    params[key] = str_to_relschemaspec(schemastr)
+                else:
+                    m = re.match('^SpecsParameter\((.*)\)$', expected_type)
+                    if m:
+                        spectype = m.group(1)
+                        params[key] = construct_specsparameters(loader, value_node, spectype)
+                    else:
+                        raise Exception("Unhandled type '%s'" % expected_type)
+
+            except yaml.constructor.ConstructorError, e:
+                yaml_error(loader, e)
+            except Exception, e:
+                yaml_error(loader, yaml.constructor.ConstructorError(
+                    None, None,
+                    "Unable to deserialize %s object (param %s): %s" % (cls.__name__, key_node.value, e),
+                    value_node.start_mark))
+
+        return params
+
+    def represent_zenpackspec(dumper, obj):
+        return represent_spec(dumper, obj, yaml_tag=u'!ZenPackSpec')
+
+    def construct_zenpackspec(loader, node):
+        params = construct_spec(ZenPackSpec, loader, node)
+        name = params.pop("name")
+
+        fatal = not getattr(loader, 'warnings', False)
+        yaml_errored = getattr(loader, 'yaml_errored', False)
+
+        try:
+            return ZenPackSpec(name, **params)
+        except Exception, e:
+            if yaml_errored and not fatal:
+                LOG.error("(possibly because of earlier errors) %s" % e)
+            else:
+                raise
+
+        return None
+
+    class WarningLoader(yaml.Loader):
+        warnings = True
+        yaml_errored = False
+
+    Dumper.add_representer(ZenPackSpec, represent_zenpackspec)
+    Dumper.add_representer(DeviceClassSpec, represent_spec)
+    Dumper.add_representer(ZPropertySpec, represent_spec)
+    Dumper.add_representer(ClassSpec, represent_spec)
+    Dumper.add_representer(ClassPropertySpec, represent_spec)
+    Dumper.add_representer(ClassRelationshipSpec, represent_spec)
+    Dumper.add_representer(RelationshipSchemaSpec, represent_relschemaspec)
+    Loader.add_constructor(u'!ZenPackSpec', construct_zenpackspec)
+
+    class SpecParams(object):
+        def __init__(self, **kwargs):
+            # Initialize with default values
+            params = self.__class__.init_params()
+            for param in params:
+                if 'default' in params[param]:
+                    setattr(self, param, params[param]['default'])
+
+            # Overlay any named parameters
+            self.__dict__.update(kwargs)
+
+        @classmethod
+        def init_params(cls):
+            # Pull over the params for the underlying Spec class,
+            # correcting nested Specs to SpecsParams instead.
+            try:
+                spec_base = [x for x in cls.__bases__ if issubclass(x, Spec)][0]
+            except Exception:
+                raise Exception("Spec Base Not Found for %s" % cls.__name__)
+
+            params = spec_base.init_params()
+            for p in params:
+                params[p]['type'] = params[p]['type'].replace("Spec)", "SpecParams)")
+
+            return params
+
+
+    class ZenPackSpecParams(SpecParams, ZenPackSpec):
+        def __init__(self, name, zProperties=None, class_relationships=None, classes=None, device_classes=None, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+            self.zProperties = self.specs_from_param(
+                ZPropertySpecParams, 'zProperties', zProperties, leave_defaults=True)
+
+            self.class_relationships = []
+            if class_relationships:
+                if not isinstance(class_relationships, list):
+                    raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
+
+                for rel in class_relationships:
+                    self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
+
+            self.classes = self.specs_from_param(
+                ClassSpecParams, 'classes', classes, leave_defaults=True)
+
+            self.device_classes = self.specs_from_param(
+                DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True)
+
+    class DeviceClassSpecParams(SpecParams, DeviceClassSpec):
+        def __init__(self, zenpack_spec, path, zProperties=None, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.path = path
+            self.zProperties = zProperties
+
+    class ZPropertySpecParams(SpecParams, ZPropertySpec):
+        def __init__(self, zenpack_spec, name, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+    class ClassSpecParams(SpecParams, ClassSpec):
+        def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, monitoring_templates=[], **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+            if isinstance(base, (tuple, list, set)):
+                self.base = tuple(base)
+            else:
+                self.base = (base,)
+
+            if isinstance(monitoring_templates, (tuple, list, set)):
+                self.monitoring_templates = list(monitoring_templates)
+            else:
+                self.monitoring_templates = [monitoring_templates]
+
+            self.properties = self.specs_from_param(
+                ClassPropertySpecParams, 'properties', properties, leave_defaults=True)
+
+            self.relationships = self.specs_from_param(
+                ClassRelationshipSpecParams, 'relationships', relationships, leave_defaults=True)
+
+    class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
+        def __init__(self, class_spec, name, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+    class ClassRelationshipSpecParams(SpecParams, ClassRelationshipSpec):
+        def __init__(self, class_spec, name, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+    Dumper.add_representer(ZenPackSpecParams, represent_zenpackspec)
+    Dumper.add_representer(DeviceClassSpecParams, represent_spec)
+    Dumper.add_representer(ZPropertySpecParams, represent_spec)
+    Dumper.add_representer(ClassSpecParams, represent_spec)
+    Dumper.add_representer(ClassPropertySpecParams, represent_spec)
+    Dumper.add_representer(ClassRelationshipSpecParams, represent_spec)
+
 
 # Public Functions ##########################################################
 
@@ -2717,7 +3695,7 @@ def relationships_from_yuml(yuml):
     string, or as a tuple or list of relationships.
 
     """
-    classes = collections.defaultdict(dict)
+    classes = []
     match_comment = re.compile(r'^\s*//').search
 
     match_line = re.compile(
@@ -2752,34 +3730,47 @@ def relationships_from_yuml(yuml):
         right_cardinality = match.group('right_cardinality')
 
         if '++' in left_cardinality:
-            left_type = ToManyCont
+            left_type = 'ToManyCont'
         elif '*' in right_cardinality:
-            left_type = ToMany
+            left_type = 'ToMany'
         else:
-            left_type = ToOne
+            left_type = 'ToOne'
 
         if '++' in right_cardinality:
-            right_type = ToManyCont
+            right_type = 'ToManyCont'
         elif '*' in left_cardinality:
-            right_type = ToMany
+            right_type = 'ToMany'
         else:
-            right_type = ToOne
+            right_type = 'ToOne'
 
         if not left_relname:
             left_relname = relname_from_classname(
-                right_class, plural=left_type != ToOne)
+                right_class, plural=left_type != 'ToOne')
 
         if not right_relname:
             right_relname = relname_from_classname(
-                left_class, plural=right_type != ToOne)
+                left_class, plural=right_type != 'ToOne')
 
-        classes[left_class][left_relname] = {
-            'schema': left_type(right_type, right_class, right_relname),
-            }
-
-        classes[right_class][right_relname] = {
-            'schema': right_type(left_type, left_class, left_relname),
-            }
+        # Order them correctly (larger one on the right)
+        if RelationshipSchemaSpec.valid_orientation(left_type, right_type):
+            classes.append(dict(
+                left_class=left_class,
+                left_relname=left_relname,
+                left_type=left_type,
+                right_type=right_type,
+                right_class=right_class,
+                right_relname=right_relname
+            ))
+        else:
+            # flip them around
+            classes.append(dict(
+                left_class=right_class,
+                left_relname=right_relname,
+                left_type=right_type,
+                right_type=left_type,
+                right_class=left_class,
+                right_relname=left_relname
+            ))
 
     return classes
 
@@ -2951,11 +3942,11 @@ def catalog_search(scope, name, *args, **kwargs):
     return catalog(**kwargs)
 
 
-def apply_defaults(dictionary, default_defaults=None):
+def apply_defaults(dictionary, default_defaults=None, leave_defaults=False):
     """Modify dictionary to put values from DEFAULTS key into other keys.
 
-    DEFAULTS key will no longer exist in dictionary. dictionary must be
-    a dictionary of dictionaries.
+    Unless leave_defaults is set to True, the DEFAULTS key will no longer exist
+    in dictionary. dictionary must be a dictionary of dictionaries.
 
     Example usage:
 
@@ -2978,7 +3969,10 @@ def apply_defaults(dictionary, default_defaults=None):
             dictionary['DEFAULTS'].setdefault(default_key, default_value)
 
     if 'DEFAULTS' in dictionary:
-        defaults = dictionary.pop('DEFAULTS')
+        if leave_defaults:
+            defaults = dictionary.get('DEFAULTS')
+        else:
+            defaults = dictionary.pop('DEFAULTS')
         for k, v in dictionary.iteritems():
             dictionary[k] = dict(defaults, **v)
 
@@ -3383,3 +4377,74 @@ Zenoss.ZPLRenderableDisplayField = Ext.extend(Zenoss.DisplayField, {
 Ext.reg('ZPLRenderableDisplayField', 'Zenoss.ZPLRenderableDisplayField');
 
 """.strip()
+
+
+if __name__ == '__main__':
+    from Products.ZenUtils.ZenScriptBase import ZenScriptBase
+
+    class ZPLCommand(ZenScriptBase):
+        def run(self):
+            args = sys.argv[1:]
+
+            if len(args) == 2 and args[0] == 'lint':
+                filename = args[1]
+
+                with open(filename, 'r') as file:
+                    linecount = len(file.readlines())
+
+                # Change our logging output format.
+                logging.getLogger().handlers = []
+                for logger in logging.Logger.manager.loggerDict.values():
+                    logger.handlers = []
+                handler = logging.StreamHandler(sys.stdout)
+                formatter = logging.Formatter(
+                    fmt='%s:%s:0: %%(message)s' % (filename, linecount))
+                handler.setFormatter(formatter)
+                logging.getLogger().addHandler(handler)
+
+                try:
+                    with open(filename, 'r') as stream:
+                        yaml.load(stream, Loader=WarningLoader)
+                except Exception, e:
+                    LOG.exception(e)
+
+            elif len(args) == 3 and args[0] == 'py_to_yaml':
+                zenpack_name = args[1]
+                filename = args[2]
+
+                # create a dummy zenpacklib sufficient to be used in an
+                # __init__.py, so we can capture export the data.
+                zenpacklib_module = create_module("zenpacklib")
+                zenpacklib_module.ZenPackSpec = type('ZenPackSpec', (dict,), {})
+
+                def zpl_create(self):
+                    zenpacklib_module.CFG = dict(self)
+                zenpacklib_module.ZenPackSpec.create = zpl_create
+
+                stream = open(filename, 'r')
+                inputfile = stream.read()
+
+                # tweak the input slightly.
+                inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
+
+                g = dict(zenpacklib=zenpacklib_module)
+                l = dict()
+                exec inputfile in g, l
+
+                CFG = zenpacklib_module.CFG
+                CFG['name'] = zenpack_name
+
+                # convert the cfg dictionary to yaml
+                specparams = ZenPackSpecParams(**CFG)
+                outputfile = yaml.dump(specparams)
+
+                # tweak the yaml slightly.
+                outputfile = outputfile.replace("__builtin__.object", "object")
+
+                print outputfile
+
+            else:
+                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> <__init__.py>" % sys.argv[0]
+
+    script = ZPLCommand()
+    script.run()
