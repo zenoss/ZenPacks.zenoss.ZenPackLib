@@ -3117,26 +3117,22 @@ if YAML_INSTALLED:
         print "%s: %s" % (position, ",".join(message))
 
     def construct_specsparameters(loader, node, spectype):
-        spec_class = {
-            'ZenPackSpec': ZenPackSpec,
-            'DeviceClassSpec': DeviceClassSpec,
-            'ZPropertySpec': ZPropertySpec,
-            'ClassSpec': ClassSpec,
-            'ClassPropertySpec': ClassPropertySpec,
-            'ClassRelationshipSpec': ClassRelationshipSpec,
-        }.get(spectype, None)
+        spec_class = {x.__name__: x for x in Spec.__subclasses__()}.get(spectype, None)
 
         if not spec_class:
             yaml_error(loader, yaml.constructor.ConstructorError(
                 None, None,
-                "Unrecogznied Spec class %s" % spectype,
+                "Unrecognized Spec class %s" % spectype,
                 node.start_mark))
+            return
 
         if not isinstance(node, yaml.MappingNode):
             yaml_error(loader, yaml.constructor.ConstructorError(
                 None, None,
                 "expected a mapping node, but found %s" % node.id,
                 node.start_mark))
+            return
+
         specs = {}
         for spec_key_node, spec_value_node in node.value:
             try:
