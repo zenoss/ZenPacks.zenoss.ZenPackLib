@@ -1375,7 +1375,7 @@ class DeviceClassSpec(Spec):
     """Initialize a DeviceClass via Python at install time."""
 
     def __init__(self, zenpack_spec, path, create=True, zProperties=None,
-                 remove=False):
+                 remove=False, templates=None):
         """
             Create a DeviceClass Specification
 
@@ -1385,6 +1385,8 @@ class DeviceClassSpec(Spec):
             :type remove: bool
             :param zProperties: zProperty values to set upon this DeviceClass
             :type zProperties: dict(str)
+            :param templates: TODO
+            :type templates: SpecsParameter(RRDTemplateSpec)
         """
 
         self.zenpack_spec = zenpack_spec
@@ -1396,6 +1398,9 @@ class DeviceClassSpec(Spec):
             self.zProperties = {}
         else:
             self.zProperties = zProperties
+
+        self.templates = self.specs_from_param(
+            RRDTemplateSpec, 'templates', templates)
 
 
 class ZPropertySpec(Spec):
@@ -2992,6 +2997,322 @@ class ClassRelationshipSpec(Spec):
                 value='{{{}}}'.format(','.join(column_fields))),
             ]
 
+
+class RRDTemplateSpec(Spec):
+
+    """TODO."""
+
+    def __init__(
+            self,
+            deviceclass_spec,
+            name,
+            description=None,
+            targetPythonClass=None,
+            thresholds=None,
+            datasources=None,
+            graphs=None
+            ):
+        """
+        Create an RRDTemplate Specification
+
+
+            :param description: TODO
+            :type description: str
+            :param targetPythonClass: TODO
+            :type targetPythonClass: str
+            :param thresholds: TODO
+            :type thresholds: SpecsParameter(RRDThresholdSpec)
+            :param datasources: TODO
+            :type datasources: SpecsParameter(RRDDatasourceSpec)
+            :param graphs: TODO
+            :type graphs: SpecsParameter(GraphDefinitionSpec)
+
+        """
+
+        self.deviceclass_spec = deviceclass_spec
+        self.name = name
+        self.targetPythonClass = targetPythonClass
+
+        self.thresholds = self.specs_from_param(
+            RRDThresholdSpec, 'thresholds', thresholds)
+
+        self.datasources = self.specs_from_param(
+            RRDDatasourceSpec, 'datasources', datasources)
+
+        self.graphs = self.specs_from_param(
+            GraphDefinitionSpec, 'graphs', graphs)
+
+
+class RRDThresholdSpec(Spec):
+
+    """TODO."""
+
+    def __init__(
+            self,
+            template_spec,
+            dsnames=None,
+            minval=None,
+            maxval=None,
+            eventClass=None,
+            severity=None,
+            escalateCount=None,
+            enabled=None
+            ):
+        """
+        Create an RRDTemplate Specification
+
+            :param dsnames: TODO
+            :type dsnames: list(str)
+            :param minval: TODO
+            :type minval: str
+            :param maxval: TODO
+            :type maxval: str
+            :param eventClass: TODO
+            :type eventClass: str
+            :param severity: TODO
+            :type severity: int
+            :param escalateCount: TODO
+            :type escalateCount: int
+            :param enabled: TODO
+            :type enabled: bool
+
+        """
+
+        self.template_spec = template_spec
+        self.dsnames = dsnames
+        self.minval = minval
+        self.maxval = maxval
+        self.eventClass = eventClass
+        self.severity = severity
+        self.escalateCount = escalateCount
+        self.enabled = enabled
+
+
+class RRDDatasourceSpec(Spec):
+
+    """TODO."""
+
+    def __init__(
+            self,
+            template_spec,
+            name,
+            sourcetype=None,
+            enabled=None,
+            component=None,
+            eventClass=None,
+            eventKey=None,
+            severity=None,
+            commandTemplate=None,
+            cycletime=None,
+            datapoints=None
+            ):
+        """
+        Create an RRDDatasource Specification
+
+            :param sourcetype: TODO
+            :type sourcetype: str
+            :yaml_param sourcetype: type
+            :param enabled: TODO
+            :type enabled: bool
+            :param component: TODO
+            :type component: str
+            :param eventClass: TODO
+            :type eventClass: str
+            :param eventKey: TODO
+            :type eventKey: str
+            :param severity: TODO
+            :type severity: int
+            :param commandTemplate: TODO
+            :type commandTemplate: str
+            :param cycletime: TODO
+            :type cycletime: int
+            :param datapoints: TODO
+            :type datapoints: SpecsParameter(RRDDatapointSpec)
+        """
+        self.template_spec = template_spec
+        self.name = name
+        self.sourcetype = sourcetype
+        self.enabled = enabled
+        self.component = component
+        self.eventClass = eventClass
+        self.eventKey = eventKey
+        self.severity = severity
+        self.commandTemplate = commandTemplate
+        self.cycletime = cycletime
+
+
+class RRDDatapointSpec(Spec):
+
+    """TODO."""
+
+    def __init__(
+            self,
+            datasource_spec,
+            rrdtype=None,
+            createCmd=None,
+            isrow=None,
+            rrdmin=None,
+            rrdmax=None,
+            description=None
+            ):
+        """
+        Create an RRDDatapoint Specification
+
+        :param rrdtype: TODO
+        :type rrdtype: RRDType
+        :param createCmd: TODO
+        :type createCmd: str
+        :param isrow: TODO
+        :type isrow: bool
+        :param rrdmin: TODO
+        :type rrdmin: str
+        :param rrdmax: TODO
+        :type rrdmax: str
+        :param description: TODO
+        :type description: str
+
+        """
+        self.datasource_spec = datasource_spec
+        self.rrdtype = rrdtype
+        self.createCmd = createCmd
+        self.isrow = isrow
+        self.rrdmin = rrdmin
+        self.rrdmax = rrdmax
+        self.description = description
+
+
+class GraphDefinitionSpec(Spec):
+    """TODO."""
+
+    def __init__(
+            self,
+            template_spec,
+            height=None,
+            width=None,
+            units=None,
+            log=None,
+            base=None,
+            miny=None,
+            maxy=None,
+            custom=None,
+            hasSummary=None,
+            sequence=None,
+            graphpoints=None,
+            comments=None,
+            ):
+        """
+        Create a GraphDefinition Specification
+
+        :param height TODO
+        :type height: int
+        :param width TODO
+        :type width: int
+        :param units TODO
+        :type units: str
+        :param log TODO
+        :type log: bool
+        :param base TODO
+        :type base: bool
+        :param miny TODO
+        :type miny: int
+        :param maxy TODO
+        :type maxy: int
+        :param custom: TODO
+        :type custom: str
+        :param hasSummary: TODO
+        :type hasSummary: bool
+        :param sequence TODO
+        :type sequence: long
+        :param graphpoints: TODO
+        :type graphpoints: SpecsParameter(GraphPointSpec)
+        :param comments: TODO
+        :type comments: list(str)
+        """
+
+        self.template_spec = template_spec
+
+        self.height = height
+        self.width = width
+        self.units = units
+        self.log = log
+        self.base = base
+        self.miny = miny
+        self.maxy = maxy
+        self.custom = custom
+        self.hasSummary = hasSummary
+        self.sequence = sequence
+        self.graphpoints = graphpoints
+        self.graphpoints = self.specs_from_param(
+            GraphPointSpec, 'graphpoints', graphpoints)
+        self.comments = comments
+
+
+class GraphPointSpec(Spec):
+    """TODO."""
+
+    def __init__(
+            self,
+            template_spec,
+            name=None,
+            dpName=None,
+            lineType=None,
+            lineWidth=None,
+            stacked=None,
+            format=None,
+            legend=None,
+            limit=None,
+            rpn=None,
+            cFunc=None,
+            colorindex=None,
+            color=None,
+            includeThresholds=False
+            ):
+        """
+        Create a GraphPoint Specification
+
+            :param dpName: TODO
+            :type dpName: str
+            :param lineType: TODO
+            :type lineType: LineType
+            :param lineWidth: TODO
+            :type lineWidth: long
+            :param stacked: TODO
+            :type stacked: bool
+            :param format: TODO
+            :type format: str
+            :param legend: TODO
+            :type legend: str
+            :param limit: TODO
+            :type limit: long
+            :param rpn: TODO
+            :type rpn: str
+            :param cFunc: TODO
+            :type cFunc: str
+            :param color: TODO
+            :type color: str
+            :param colorindex: TODO
+            :type colorindex: int
+            :param includeThresholds: TODO
+            :type includeThresholds: bool
+
+        """
+
+        self.template_spec = template_spec
+        self.name = name
+        self.dpName = dpName
+        self.lineType = lineType
+        self.lineWidth = lineWidth
+        self.stacked = stacked
+        self.format = format
+        self.legend = legend
+        self.limit = limit
+        self.rpn = rpn
+        self.cFunc = cFunc
+        self.colorindex = colorindex
+        self.color = color
+        self.includeThresholds = includeThresholds
+
+
 # YAML Import/Export ########################################################
 
 if YAML_INSTALLED:
@@ -3289,6 +3610,10 @@ if YAML_INSTALLED:
         the opposite of represent_spec, and works in the same manner (with its
         parsing and validation directed by the init_params of each spec class)
         """
+
+        if issubclass(cls, RRDDatapointSpec) and isinstance(node, yaml.ScalarNode):
+            # Special case- we allow for a shorthand in specifying datapoint specs.
+            return dict(shorthand=loader.construct_scalar(node))
 
         param_defs = cls.init_params()
         params = {}
