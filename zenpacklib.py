@@ -3429,6 +3429,48 @@ if YAML_INSTALLED:
 
         return class_
 
+    def severity_to_str(value):
+        '''
+        Return string representation for severity given a numeric value.
+        '''
+        try:
+            severity = int(value)
+        except (TypeError, ValueError):
+            severity = {
+                5: 'crit',
+                4: 'err',
+                3: 'warn',
+                2: 'info',
+                1: 'debug',
+                0: 'clear'
+                }.get(value.lower())
+
+        if severity is None:
+            raise ValueError("'%s' is not a valid value for severity.", value)
+
+        return severity
+
+    def str_to_severity(value):
+        '''
+        Return numeric severity given a string representation of severity.
+        '''
+        try:
+            severity = int(value)
+        except (TypeError, ValueError):
+            severity = {
+                'crit': 5, 'critical': 5,
+                'err': 4, 'error': 4,
+                'warn': 3, 'warning': 3,
+                'info': 2, 'information': 2, 'informational': 2,
+                'debug': 1, 'debugging': 1,
+                'clear': 0,
+                }.get(value.lower())
+
+        if severity is None:
+            raise ValueError("'%s' is not a valid value for severity." % value)
+
+        return severity
+
     def yaml_error(loader, e):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
@@ -3576,6 +3618,8 @@ if YAML_INSTALLED:
                     mapping[yaml_param] = dumper.represent_str(value)
                 elif type_ == 'RelationshipSchemaSpec':
                     mapping[yaml_param] = dumper.represent_str(relschemaspec_to_str(value))
+                elif type_ == 'Severity':
+                    mapping[yaml_param] = dumper.represent_str(severity_to_str(value))
                 else:
                     m = re.match('^SpecsParameter\((.*)\)$', type_)
                     if m:
@@ -3743,6 +3787,9 @@ if YAML_INSTALLED:
                 elif expected_type == 'RelationshipSchemaSpec':
                     schemastr = str(loader.construct_scalar(value_node))
                     params[key] = str_to_relschemaspec(schemastr)
+                elif expected_type == 'Severity':
+                    severitystr = str(loader.construct_scalar(value_node))
+                    params[key] = str_to_severity(severitystr)
                 else:
                     m = re.match('^SpecsParameter\((.*)\)$', expected_type)
                     if m:
