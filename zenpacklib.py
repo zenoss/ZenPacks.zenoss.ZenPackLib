@@ -95,6 +95,18 @@ try:
 except ImportError:
     YAML_INSTALLED = False
 
+OrderedDict = None
+
+try:
+    # included in standard lib from Python 2.7
+    from collections import OrderedDict
+except ImportError:
+    # try importing the backported drop-in replacement
+    # it's available on PyPI
+    try:
+        from ordereddict import OrderedDict
+    except ImportError:
+        OrderedDict = None
 
 # Exported symbols. These are the only symbols imported by wildcard.
 __all__ = (
@@ -143,6 +155,11 @@ class ZenPack(ZenPackBase):
             LOG.fatal('PyYAML is required by %s.  Try "easy_install PyYAML" first.' % self.id)
             sys.exit(1)
 
+        if not OrderedDict:
+            LOG.fatal('ordereddict is required by %s. Try "easy_install ordereddict" first.' % self.id)
+            sys.exit(1)
+
+        # create device classes and set zProperties on them
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
                 try:
@@ -883,9 +900,11 @@ class Spec(object):
                 _apply_defaults = globals()['apply_defaults']
                 _apply_defaults(param_dict, leave_defaults=leave_defaults)
 
-        return {
-            k: spec_type(self, k, **(fix_kwargs(v)))
-            for k, v in param_dict.iteritems()}
+        specs = OrderedDict()
+        for k, v in param_dict.iteritems():
+            specs[k] = spec_type(self, k, **(fix_kwargs(v)))
+
+        return specs
 
     @classmethod
     def init_params(cls):
@@ -897,7 +916,7 @@ class Spec(object):
         else:
             defaults = {}
 
-        params = collections.OrderedDict()
+        params = OrderedDict()
         for op, param, value in re.findall(
             "^\s*:(type|param|yaml_param|yaml_block_style)\s+(\S+):\s*(.*)$",
             cls.__init__.__doc__,
@@ -3454,7 +3473,7 @@ if YAML_INSTALLED:
                 node.start_mark))
             return
 
-        specs = {}
+        specs = OrderedDict()
         for spec_key_node, spec_value_node in node.value:
             try:
                 spec_key = str(loader.construct_scalar(spec_key_node))
@@ -3561,7 +3580,7 @@ if YAML_INSTALLED:
                     m = re.match('^SpecsParameter\((.*)\)$', type_)
                     if m:
                         spectype = m.group(1)
-                        specmapping = collections.OrderedDict()
+                        specmapping = OrderedDict()
                         keys = sorted(value)
                         defaults = None
                         if 'DEFAULTS' in keys:
@@ -3681,7 +3700,7 @@ if YAML_INSTALLED:
                                 "expected a mapping node, but found %s" % node.id,
                                 node.start_mark))
                             continue
-                        specs = {}
+                        specs = OrderedDict()
                         for spec_key_node, spec_value_node in value_node.value:
                             spec_key = str(loader.construct_scalar(spec_key_node))
 
