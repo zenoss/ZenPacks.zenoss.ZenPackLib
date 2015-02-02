@@ -55,6 +55,17 @@ from Products.ZenModel.HWComponent import HWComponent as BaseHWComponent
 from Products.ZenModel.ManagedEntity import ManagedEntity as BaseManagedEntity
 from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
+from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
+from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
+from Products.ZenModel.DeviceClass import DeviceClass
+from Products.ZenModel.GraphDefinition import GraphDefinition
+from Products.ZenModel.GraphPoint import GraphPoint
+from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
+from Products.ZenModel.RRDDataPoint import RRDDataPoint
+from Products.ZenModel.RRDDataPointAlias import RRDDataPointAlias
+from Products.ZenModel.RRDDataSource import RRDDataSource
+from Products.ZenModel.RRDTemplate import RRDTemplate
+from Products.ZenModel.ThresholdClass import ThresholdClass
 from Products.ZenRelations.Exceptions import ZenSchemaError
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
@@ -179,6 +190,11 @@ class ZenPack(ZenPackBase):
         if self.NEW_COMPONENT_TYPES:
             LOG.info('Adding %s relationships to existing devices' % self.id)
             self._buildDeviceRelations()
+
+        # load monitoring templates
+        for dcname, dcspec in self.device_classes.iteritems():
+            for mtname, mtspec in dcspec.templates.iteritems():
+                mtspec.create(self.dmd)
 
     def remove(self, app, leaveObjects=False):
         from Products.Zuul.interfaces import ICatalogTool
@@ -1788,6 +1804,8 @@ class ClassSpec(Spec):
         for base in self.bases:
             if isinstance(base, type):
                 resolved_bases.append(base)
+            elif base not in self.zenpack.classes:
+                raise ValueError("Unrecognized base class name '%s'" % base)
             else:
                 base_spec = self.zenpack.classes[base]
                 resolved_bases.append(base_spec.model_class)
@@ -3135,6 +3153,7 @@ class RRDTemplateSpec(Spec):
 
         self.deviceclass_spec = deviceclass_spec
         self.name = name
+        self.description = description
         self.targetPythonClass = targetPythonClass
 
         self.thresholds = self.specs_from_param(
@@ -3146,6 +3165,41 @@ class RRDTemplateSpec(Spec):
         self.graphs = self.specs_from_param(
             GraphDefinitionSpec, 'graphs', graphs)
 
+    def create(self, dmd):
+        device_class = dmd.Devices.createOrganizer(self.deviceclass_spec.path)
+
+        existing_template = device_class.rrdTemplates._getOb(self.name, None)
+        if existing_template:
+            self.speclog.info("replacing template")
+            device_class.rrdTemplates._delObject(self.name)
+
+        device_class.manage_addRRDTemplate(self.name)
+        template = device_class.rrdTemplates._getOb(self.name)
+
+        # Flag this as a ZPL managed object, that is, one that should not be
+        # exported to objects.xml  (contained objects will also be excluded)
+        template.zpl_managed = True
+
+        if not existing_template:
+            self.speclog.info("adding template")
+
+        if self.targetPythonClass is not None:
+            template.targetPythonClass = self.targetPythonClass
+        if self.description is not None:
+            template.description = self.description
+
+        self.speclog.debug("adding {} thresholds".format(len(self.thresholds)))
+        for threshold_id, threshold_spec in self.thresholds.items():
+            threshold_spec.create(threshold_id, self, template)
+
+        self.speclog.debug("adding {} datasources".format(len(self.datasources)))
+        for datasource_id, datasource_spec in self.datasources.items():
+            datasource_spec.create(self, template)
+
+        self.speclog.debug("adding {} graphs".format(len(self.graphs)))
+        for graph_id, graph_spec in self.graphs.items():
+            graph_spec.create(self, template)
+
 
 class RRDThresholdSpec(Spec):
 
@@ -3154,6 +3208,7 @@ class RRDThresholdSpec(Spec):
     def __init__(
             self,
             template_spec,
+            type_='MinMaxThreshold',
             dsnames=None,
             minval=None,
             maxval=None,
@@ -3164,8 +3219,10 @@ class RRDThresholdSpec(Spec):
             _source_location=None
             ):
         """
-        Create an RRDTemplate Specification
+        Create an RRDThreshold Specification
 
+            :param type_: TODO
+            :type type_: str
             :param dsnames: TODO
             :type dsnames: list(str)
             :param minval: TODO
@@ -3175,7 +3232,7 @@ class RRDThresholdSpec(Spec):
             :param eventClass: TODO
             :type eventClass: str
             :param severity: TODO
-            :type severity: int
+            :type severity: Severity
             :param escalateCount: TODO
             :type escalateCount: int
             :param enabled: TODO
@@ -3192,6 +3249,40 @@ class RRDThresholdSpec(Spec):
         self.severity = severity
         self.escalateCount = escalateCount
         self.enabled = enabled
+        self.type_ = type_
+
+    def create(self, id_, templatespec, template):
+        if not self.dsnames:
+            raise ValueError("%s: threshold has no dsnames attribute", self)
+
+        # Shorthand for datapoints that have the same name as their datasource.
+        for i, dsname in enumerate(self.dsnames):
+            if '_' not in dsname:
+                self.dsnames[i] = '_'.join((dsname, dsname))
+
+        threshold_types = dict((y, x) for x, y in template.getThresholdClasses())
+        type_ = threshold_types.get(self.type_)
+        if not type_:
+            raise ValueError("'%s' is an invalid threshold type. Valid types: %s",
+                             self.type_, ', '.join(threshold_types))
+
+        threshold = template.manage_addRRDThreshold(id_, self.type_)
+        self.speclog.debug("adding threshold")
+
+        if self.dsnames is not None:
+            threshold.dsnames = self.dsnames
+        if self.minval is not None:
+            threshold.minval = self.minval
+        if self.maxval is not None:
+            threshold.maxval = self.maxval
+        if self.eventClass is not None:
+            threshold.eventClass = self.eventClass
+        if self.severity is not None:
+            threshold.severity = self.severity
+        if self.escalateCount is not None:
+            threshold.escalateCount = self.escalateCount
+        if self.enabled is not None:
+            threshold.enabled = self.enabled
 
 
 class RRDDatasourceSpec(Spec):
@@ -3203,7 +3294,7 @@ class RRDDatasourceSpec(Spec):
             template_spec,
             name,
             sourcetype=None,
-            enabled=None,
+            enabled=True,
             component=None,
             eventClass=None,
             eventKey=None,
@@ -3228,7 +3319,7 @@ class RRDDatasourceSpec(Spec):
             :param eventKey: TODO
             :type eventKey: str
             :param severity: TODO
-            :type severity: int
+            :type severity: Severity
             :param commandTemplate: TODO
             :type commandTemplate: str
             :param cycletime: TODO
@@ -3249,6 +3340,43 @@ class RRDDatasourceSpec(Spec):
         self.commandTemplate = commandTemplate
         self.cycletime = cycletime
 
+        self.datapoints = self.specs_from_param(
+            RRDDatapointSpec, 'datapoints', datapoints)
+
+    def create(self, templatespec, template):
+        datasource_types = dict(template.getDataSourceOptions())
+
+        if not self.sourcetype:
+            raise ValueError('No type for %s/%s. Valid types: %s' % (
+                             template.id, self.name, ', '.join(datasource_types)))
+
+        type_ = datasource_types.get(self.sourcetype)
+        if not type_:
+            raise ValueError("%s is an invalid datasource type. Valid types: %s" % (
+                             self.sourcetype, ', '.join(datasource_types)))
+
+        datasource = template.manage_addRRDDataSource(self.name, type_)
+        self.speclog.debug("adding datasource")
+
+        if self.enabled is not None:
+            datasource.enabled = self.enabled
+        if self.component is not None:
+            datasource.component = self.component
+        if self.eventClass is not None:
+            datasource.eventClass = self.eventClass
+        if self.eventKey is not None:
+            datasource.eventKey = self.eventKey
+        if self.severity is not None:
+            datasource.severity = self.severity
+        if self.commandTemplate is not None:
+            datasource.commandTemplate = self.commandTemplate
+        if self.cycletime is not None:
+            datasource.cycletime = self.cycletime
+
+        self.speclog.debug("adding {} datapoints".format(len(self.datapoints)))
+        for datapoint_id, datapoint_spec in self.datapoints.items():
+            datapoint_spec.create(self, datasource)
+
 
 class RRDDatapointSpec(Spec):
 
@@ -3257,12 +3385,16 @@ class RRDDatapointSpec(Spec):
     def __init__(
             self,
             datasource_spec,
+            name,
             rrdtype=None,
             createCmd=None,
             isrow=None,
             rrdmin=None,
             rrdmax=None,
-            description=None
+            description=None,
+            aliases=None,
+            shorthand=None,
+            _source_location=None
             ):
         """
         Create an RRDDatapoint Specification
@@ -3279,17 +3411,63 @@ class RRDDatapointSpec(Spec):
         :type rrdmax: str
         :param description: TODO
         :type description: str
+        :param aliases: TODO
+        :type aliases: dict(str)
 
         """
         super(RRDDatapointSpec, self).__init__(_source_location=_source_location)
 
         self.datasource_spec = datasource_spec
+        self.name = name
+
         self.rrdtype = rrdtype
         self.createCmd = createCmd
         self.isrow = isrow
         self.rrdmin = rrdmin
         self.rrdmax = rrdmax
         self.description = description
+
+        if aliases is None:
+            self.aliases = {}
+        elif isinstance(aliases, dict):
+            self.aliases = aliases
+        else:
+            raise ValueError("aliases must be specified as a dict")
+
+        if shorthand:
+            if 'DERIVE' in shorthand.upper():
+                self.rrdtype = 'DERIVE'
+
+            min_match = re.search(r'MIN_(\d+)', shorthand, re.IGNORECASE)
+            if min_match:
+                rrdmin = min_match.group(1)
+                self.rrdmin = rrdmin
+
+            max_match = re.search(r'MAX_(\d+)', shorthand, re.IGNORECASE)
+            if max_match:
+                rrdmax = max_match.group(1)
+                self.rrdmax = rrdmax
+
+    def create(self, datasource_spec, datasource):
+        datapoint = datasource.manage_addRRDDataPoint(self.name)
+        self.speclog.debug("adding datapoint")
+
+        if self.createCmd is not None:
+            datapoint.createCmd = self.createCmd
+        if self.isrow is not None:
+            datapoint.isrow = self.isrow
+        if self.rrdmin is not None:
+            datapoint.rrdmin = str(self.rrdmin)
+        if self.rrdmax is not None:
+            datapoint.rrdmax = str(self.rrdmax)
+        if self.description is not None:
+            datapoint.description = self.description
+
+        self.speclog.debug("adding {} aliases".format(len(self.aliases)))
+        for alias_id, formula in self.aliases.items():
+            datapoint.addAlias(alias_id, formula)
+            self.speclog.debug("adding alias".format(alias_id))
+            self.speclog.debug("formula = {}".format(formula))
 
 
 class GraphDefinitionSpec(Spec):
@@ -3298,6 +3476,7 @@ class GraphDefinitionSpec(Spec):
     def __init__(
             self,
             template_spec,
+            name,
             height=None,
             width=None,
             units=None,
@@ -3307,7 +3486,6 @@ class GraphDefinitionSpec(Spec):
             maxy=None,
             custom=None,
             hasSummary=None,
-            sequence=None,
             graphpoints=None,
             comments=None,
             _source_location=None
@@ -3333,8 +3511,6 @@ class GraphDefinitionSpec(Spec):
         :type custom: str
         :param hasSummary: TODO
         :type hasSummary: bool
-        :param sequence TODO
-        :type sequence: long
         :param graphpoints: TODO
         :type graphpoints: SpecsParameter(GraphPointSpec)
         :param comments: TODO
@@ -3343,6 +3519,7 @@ class GraphDefinitionSpec(Spec):
         super(GraphDefinitionSpec, self).__init__(_source_location=_source_location)
 
         self.template_spec = template_spec
+        self.name = name
 
         self.height = height
         self.width = width
@@ -3353,11 +3530,47 @@ class GraphDefinitionSpec(Spec):
         self.maxy = maxy
         self.custom = custom
         self.hasSummary = hasSummary
-        self.sequence = sequence
-        self.graphpoints = graphpoints
         self.graphpoints = self.specs_from_param(
             GraphPointSpec, 'graphpoints', graphpoints)
         self.comments = comments
+
+        # TODO fix comments parsing - must always be a list.
+
+    def create(self, templatespec, template):
+        graph = template.manage_addGraphDefinition(self.name)
+        self.speclog.debug("adding graph")
+
+        if self.height is not None:
+            graph.height = self.height
+        if self.width is not None:
+            graph.width = self.width
+        if self.units is not None:
+            graph.units = self.units
+        if self.log is not None:
+            graph.log = self.log
+        if self.base is not None:
+            graph.base = self.base
+        if self.miny is not None:
+            graph.miny = self.miny
+        if self.maxy is not None:
+            graph.maxy = self.maxy
+        if self.custom is not None:
+            graph.custom = self.custom
+        if self.hasSummary is not None:
+            graph.hasSummary = self.hasSummary
+
+        if self.comments:
+            self.speclog.debug("adding {} comments".format(len(self.comments)))
+            for i, comment_text in enumerate(self.comments):
+                comment = graph.createGraphPoint(
+                    CommentGraphPoint,
+                    'comment-{}'.format(i))
+
+                comment.text = comment_text
+
+        self.speclog.debug("adding {} graphpoints".format(len(self.graphpoints)))
+        for graphpoint_id, graphpoint_spec in self.graphpoints.items():
+            graphpoint_spec.create(self, graph)
 
 
 class GraphPointSpec(Spec):
@@ -3414,7 +3627,7 @@ class GraphPointSpec(Spec):
 
         self.template_spec = template_spec
         self.name = name
-        self.dpName = dpName
+
         self.lineType = lineType
         self.lineWidth = lineWidth
         self.stacked = stacked
@@ -3423,9 +3636,63 @@ class GraphPointSpec(Spec):
         self.limit = limit
         self.rpn = rpn
         self.cFunc = cFunc
-        self.colorindex = colorindex
         self.color = color
         self.includeThresholds = includeThresholds
+
+        # Shorthand for datapoints that have the same name as their datasource.
+        if '_' not in dpName:
+            self.dpName = '_'.join(dpName, dpName)
+        else:
+            self.dpName = dpName
+
+        # Allow color to be specified by color_index instead of directly. This is
+        # useful when you want to keep the normal progression of colors, but need
+        # to add some DONTDRAW graphpoints for calculations.
+        if colorindex:
+            try:
+                colorindex = int(colorindex) % len(GraphPoint.colors)
+            except (TypeError, ValueError):
+                raise ValueError("graphpoint colorindex must be numeric.")
+
+            self.color = GraphPoint.colors[colorindex].lstrip('#')
+
+        # Validate lineType.
+        if lineType:
+            valid_linetypes = [x[1] for x in ComplexGraphPoint.lineTypeOptions]
+
+            if lineType.upper() in valid_linetypes:
+                self.lineType = lineType.upper()
+            else:
+                raise ValueError("'%s' is not a valid graphpoint lineType. Valid lineTypes: %s" % (
+                                 lineType, ', '.join(valid_linetypes)))
+
+    def create(self, graph_spec, graph):
+        graphpoint = graph.createGraphPoint(DataPointGraphPoint, self.name)
+        self.speclog.debug("adding graphpoint")
+
+        graphpoint.dpName = self.dpName
+
+        if self.lineType is not None:
+            graphpoint.lineType = self.lineType
+        if self.lineWidth is not None:
+            graphpoint.lineWidth = self.lineWidth
+        if self.stacked is not None:
+            graphpoint.stacked = self.stacked
+        if self.format is not None:
+            graphpoint.format = self.format
+        if self.legend is not None:
+            graphpoint.legend = self.legend
+        if self.limit is not None:
+            graphpoint.limit = self.limit
+        if self.rpn is not None:
+            graphpoint.rpn = self.rpn
+        if self.cFunc is not None:
+            graphpoint.cFunc = self.cFunc
+        if self.color is not None:
+            graphpoint.color = self.color
+
+        if self.includeThresholds:
+            graph.addThresholdsForDataPoint(self.dpName)
 
 
 # YAML Import/Export ########################################################
@@ -3505,6 +3772,10 @@ if YAML_INSTALLED:
         return class_.__module__ + "." + class_.__name__
 
     def str_to_class(classstr):
+
+        if classstr == 'object':
+            return object
+
         if "." not in classstr:
             # TODO: Support non qualfied class names, searching zenpack, zenpacklib,
             # and ZenModel namespaces
@@ -3513,10 +3784,15 @@ if YAML_INSTALLED:
             # the classes defined in this ZenPackSpec.   We can't validate this,
             # or return a class object for it, if this is the case.  So we
             # return no class object, and the caller will assume that it
-            # it referrs to a class being defined.
+            # it refers to a class being defined.
             return None
 
         modname, classname = classstr.rsplit(".", 1)
+
+        # ensure that 'zenpacklib' refers to *this* zenpacklib, if more than
+        # one is loaded in the system.
+        if modname == 'zenpacklib':
+            modname = __name__
 
         try:
             class_ = getattr(importlib.import_module(modname), classname)
