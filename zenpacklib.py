@@ -1082,7 +1082,8 @@ class ZenPackSpec(Spec):
             zProperties=None,
             classes=None,
             class_relationships=None,
-            device_classes=None):
+            device_classes=None,
+            _source_location=None):
         """
             Create a ZenPack Specification
 
@@ -1098,6 +1099,8 @@ class ZenPackSpec(Spec):
             :type class_relationships: list(RelationshipSchemaSpec)
             :yaml_block_style class_relationships: True
         """
+        super(ZenPackSpec, self).__init__(_source_location=_source_location)
+
         self.name = name
         self.NEW_COMPONENT_TYPES = []
         self.NEW_RELATIONS = collections.defaultdict(list)
@@ -1455,8 +1458,15 @@ class DeviceClassSpec(Spec):
 
     """Initialize a DeviceClass via Python at install time."""
 
-    def __init__(self, zenpack_spec, path, create=True, zProperties=None,
-                 remove=False, templates=None):
+    def __init__(
+            self,
+            zenpack_spec,
+            path,
+            create=True,
+            zProperties=None,
+            remove=False,
+            templates=None,
+            _source_location=None):
         """
             Create a DeviceClass Specification
 
@@ -1469,6 +1479,7 @@ class DeviceClassSpec(Spec):
             :param templates: TODO
             :type templates: SpecsParameter(RRDTemplateSpec)
         """
+        super(DeviceClassSpec, self).__init__(_source_location=_source_location)
 
         self.zenpack_spec = zenpack_spec
         self.path = path.lstrip('/')
@@ -1495,6 +1506,7 @@ class ZPropertySpec(Spec):
             type_='string',
             default=None,
             category=None,
+            _source_location=None
             ):
         """
             Create a ZProperty Specification
@@ -1507,6 +1519,7 @@ class ZPropertySpec(Spec):
             :param category: ZProperty Category.  This is used for display/sorting purposes.
             :type category: str
         """
+        super(ZPropertySpec, self).__init__(_source_location=_source_location)
 
         self.zenpack_spec = zenpack_spec
         self.name = name
@@ -1606,6 +1619,7 @@ class ClassSpec(Spec):
             dynamicview_views=None,
             dynamicview_group=None,
             dynamicview_relations=None,
+            _source_location=None
             ):
         """
             Create a Class Specification
@@ -1664,6 +1678,7 @@ class ClassSpec(Spec):
             :type dynamicview_relations: dict
             # TODO: should make this a spec class, not a plain dict.
         """
+        super(ClassSpec, self).__init__(_source_location=_source_location)
 
         self.zenpack = zenpack
         self.name = name
@@ -2507,7 +2522,8 @@ class ClassPropertySpec(Spec):
             datapoint=None,
             datapoint_default=None,
             datapoint_cached=True,
-            index_scope='device'
+            index_scope='device',
+            _source_location=None
             ):
         """
         Create a Class Property Specification
@@ -2565,6 +2581,7 @@ class ClassPropertySpec(Spec):
             :type index_scope: str
 
         """
+        super(ClassPropertySpec, self).__init__(_source_location=_source_location)
 
         self.class_spec = class_spec
         self.name = name
@@ -2732,7 +2749,8 @@ class RelationshipSchemaSpec(Spec):
         left_type=None,
         right_type=None,
         right_class=None,
-        right_relname=None
+        right_relname=None,
+        _source_location=None
     ):
         """
             Create a Relationship Schema specification.  This describes both sides
@@ -2752,6 +2770,7 @@ class RelationshipSchemaSpec(Spec):
             :type right_relname: str
 
         """
+        super(RelationshipSchemaSpec, self).__init__(_source_location=_source_location)
 
         if not RelationshipSchemaSpec.valid_orientation(left_type, right_type):
             raise ZenSchemaError("In %s(%s) - (%s)%s, invalid orientation- left and right may be reversed." % (left_class, left_relname, right_relname, right_class))
@@ -2873,6 +2892,7 @@ class ClassRelationshipSpec(Spec):
             renderer=None,
             render_with_type=False,
             order=None,
+            _source_location=None
             ):
         """
         Create a Class Relationship Specification
@@ -2914,6 +2934,7 @@ class ClassRelationshipSpec(Spec):
             :param order: TODO
             :type order: float
         """
+        super(ClassRelationshipSpec, self).__init__(_source_location=_source_location)
 
         self.class_ = class_
         self.name = name
@@ -3091,7 +3112,8 @@ class RRDTemplateSpec(Spec):
             targetPythonClass=None,
             thresholds=None,
             datasources=None,
-            graphs=None
+            graphs=None,
+            _source_location=None
             ):
         """
         Create an RRDTemplate Specification
@@ -3109,6 +3131,7 @@ class RRDTemplateSpec(Spec):
             :type graphs: SpecsParameter(GraphDefinitionSpec)
 
         """
+        super(RRDTemplateSpec, self).__init__(_source_location=_source_location)
 
         self.deviceclass_spec = deviceclass_spec
         self.name = name
@@ -3137,7 +3160,8 @@ class RRDThresholdSpec(Spec):
             eventClass=None,
             severity=None,
             escalateCount=None,
-            enabled=None
+            enabled=None,
+            _source_location=None
             ):
         """
         Create an RRDTemplate Specification
@@ -3158,6 +3182,7 @@ class RRDThresholdSpec(Spec):
             :type enabled: bool
 
         """
+        super(RRDThresholdSpec, self).__init__(_source_location=_source_location)
 
         self.template_spec = template_spec
         self.dsnames = dsnames
@@ -3185,7 +3210,8 @@ class RRDDatasourceSpec(Spec):
             severity=None,
             commandTemplate=None,
             cycletime=None,
-            datapoints=None
+            datapoints=None,
+            _source_location=None
             ):
         """
         Create an RRDDatasource Specification
@@ -3210,6 +3236,8 @@ class RRDDatasourceSpec(Spec):
             :param datapoints: TODO
             :type datapoints: SpecsParameter(RRDDatapointSpec)
         """
+        super(RRDDatasourceSpec, self).__init__(_source_location=_source_location)
+
         self.template_spec = template_spec
         self.name = name
         self.sourcetype = sourcetype
@@ -3253,6 +3281,8 @@ class RRDDatapointSpec(Spec):
         :type description: str
 
         """
+        super(RRDDatapointSpec, self).__init__(_source_location=_source_location)
+
         self.datasource_spec = datasource_spec
         self.rrdtype = rrdtype
         self.createCmd = createCmd
@@ -3280,6 +3310,7 @@ class GraphDefinitionSpec(Spec):
             sequence=None,
             graphpoints=None,
             comments=None,
+            _source_location=None
             ):
         """
         Create a GraphDefinition Specification
@@ -3309,6 +3340,7 @@ class GraphDefinitionSpec(Spec):
         :param comments: TODO
         :type comments: list(str)
         """
+        super(GraphDefinitionSpec, self).__init__(_source_location=_source_location)
 
         self.template_spec = template_spec
 
@@ -3346,7 +3378,8 @@ class GraphPointSpec(Spec):
             cFunc=None,
             colorindex=None,
             color=None,
-            includeThresholds=False
+            includeThresholds=False,
+            _source_location=None
             ):
         """
         Create a GraphPoint Specification
@@ -3377,6 +3410,7 @@ class GraphPointSpec(Spec):
             :type includeThresholds: bool
 
         """
+        super(GraphPointSpec, self).__init__(_source_location=_source_location)
 
         self.template_spec = template_spec
         self.name = name
@@ -3533,11 +3567,18 @@ if YAML_INSTALLED:
 
         return severity
 
-    def yaml_error(loader, e):
+    def yaml_error(loader, e, exc_info=None):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
         fatal = not getattr(loader, 'warnings', False)
         setattr(loader, 'yaml_errored', True)
+
+        if exc_info:
+            # When we're given the original exception (which was wrapped in
+            # a MarkedYAMLError), we can provide more context for debugging.
+
+            from traceback import format_exc
+            e.note = "\nOriginal exception:\n" + format_exc(exc_info)
 
         if fatal:
             raise e
@@ -3748,6 +3789,11 @@ if YAML_INSTALLED:
                 "expected a mapping node, but found %s" % node.id,
                 node.start_mark))
 
+        params['_source_location'] = "%s: %s-%s" % (
+            os.path.basename(node.start_mark.name),
+            node.start_mark.line+1,
+            node.end_mark.line+1)
+
         # TODO: When deserializing, we should check if required properties are present.
 
         param_name_map = {}
@@ -3755,15 +3801,16 @@ if YAML_INSTALLED:
             param_name_map[param_defs[param]['yaml_param']] = param
 
         for key_node, value_node in node.value:
-            key = param_name_map[str(loader.construct_scalar(key_node))]
+            yaml_key = str(loader.construct_scalar(key_node))
 
-            if key not in param_defs:
+            if yaml_key not in param_name_map:
                 yaml_error(loader, yaml.constructor.ConstructorError(
                     None, None,
-                    "Unrecognized parameter '%s' found while processing %s" % (key, cls.__name__),
+                    "Unrecognized parameter '%s' found while processing %s" % (yaml_key, cls.__name__),
                     key_node.start_mark))
                 continue
 
+            key = param_name_map[yaml_key]
             expected_type = param_defs[key]['type']
 
             if expected_type == 'ZPropertyDefaultValue':
@@ -3866,7 +3913,7 @@ if YAML_INSTALLED:
                 yaml_error(loader, yaml.constructor.ConstructorError(
                     None, None,
                     "Unable to deserialize %s object (param %s): %s" % (cls.__name__, key_node.value, e),
-                    value_node.start_mark))
+                    value_node.start_mark), exc_info=sys.exc_info())
 
         return params
 
