@@ -3698,8 +3698,6 @@ class GraphPointSpec(Spec):
 # YAML Import/Export ########################################################
 
 if YAML_INSTALLED:
-    from yaml import Dumper, Loader
-
     def relschemaspec_to_str(spec):
         # Omit relation names that are their defaults.
         left_optrelname = "" if spec.left_relname == spec.default_left_relname else "(%s)" % spec.left_relname
@@ -4217,6 +4215,16 @@ if YAML_INSTALLED:
         warnings = True
         yaml_errored = False
 
+    # These subclasses exist so that each copy of zenpacklib installed on a
+    # zenoss system provide their own loader (for add_constructor and yaml.load)
+    # and its own dumper (for add_representer) and yaml.dumper so that the
+    # proper methods will be used for this specific zenpacklib.
+    class Loader(yaml.Loader):
+        pass
+
+    class Dumper(yaml.Dumper):
+        pass
+
     Dumper.add_representer(ZenPackSpec, represent_zenpackspec)
     Dumper.add_representer(DeviceClassSpec, represent_spec)
     Dumper.add_representer(ZPropertySpec, represent_spec)
@@ -4225,6 +4233,10 @@ if YAML_INSTALLED:
     Dumper.add_representer(ClassRelationshipSpec, represent_spec)
     Dumper.add_representer(RelationshipSchemaSpec, represent_relschemaspec)
     Loader.add_constructor(u'!ZenPackSpec', construct_zenpackspec)
+
+    def load_yaml(yaml_filename):
+        CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
+        CFG.create()
 
     class SpecParams(object):
         def __init__(self, **kwargs):
