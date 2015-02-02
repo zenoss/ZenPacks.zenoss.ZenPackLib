@@ -43,6 +43,7 @@ from zope.component import adapts, getGlobalSiteManager
 from zope.event import notify
 from zope.interface import classImplements, implements
 from zope.interface.interface import InterfaceClass
+import zope.proxy
 
 from Products.AdvancedQuery import Eq, Or
 from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
@@ -212,6 +213,44 @@ class ZenPack(ZenPackBase):
                     app.dmd.Devices.manage_deleteOrganizer(dcspec.path)
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
+
+    def manage_exportPack(self, *args, **kwargs):
+        # In order to control which objects are exported, we wrap the entire
+        # zenpack object, and the zenpackable objects it contains, in proxy
+        # objects, which allow us to override their behavior without disrupting
+        # the original objects.
+
+        class FilteredZenPackable(zope.proxy.ProxyBase):
+            @zope.proxy.non_overridable
+            def objectValues(self):
+                # proxy the remote objects on ToManyContRelationships
+                return [FilteredZenPackable(x) for x in self._objects.values()]
+
+            @zope.proxy.non_overridable
+            def exportXmlRelationships(self, ofile, ignorerels=[]):
+                for rel in self.getRelationships():
+                    if rel.id in ignorerels:
+                        continue
+                    FilteredZenPackable(rel).exportXml(ofile, ignorerels)
+
+            @zope.proxy.non_overridable
+            def exportXml(self, *args, **kwargs):
+                original = zope.proxy.getProxiedObject(self).__class__.exportXml
+                path = '/'.join(self.getPrimaryPath())
+
+                if getattr(self, 'zpl_managed', False):
+                    LOG.info("Excluding %s from export (ZPL-managed object)" % path)
+                    return
+
+                original(self, *args, **kwargs)
+
+        class FilteredZenPack(zope.proxy.ProxyBase):
+            @zope.proxy.non_overridable
+            def packables(self):
+                packables = zope.proxy.getProxiedObject(self).packables()
+                return [FilteredZenPackable(x) for x in packables]
+
+        ZenPackBase.manage_exportPack(FilteredZenPack(self), args, kwargs)
 
 
 class CatalogBase(object):
