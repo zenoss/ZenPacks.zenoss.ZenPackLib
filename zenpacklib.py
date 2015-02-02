@@ -921,8 +921,31 @@ FACET_BLACKLIST = (
 
 
 class Spec(object):
-
     """Abstract base class for specifications."""
+
+    source_location = None
+    speclog = None
+
+    def __init__(self, _source_location=None):
+
+        class LogAdapter(logging.LoggerAdapter):
+            def process(self, msg, kwargs):
+                return '%s %s' % (self.extra['context'], msg), kwargs
+
+        self.source_location = _source_location
+        self.speclog = LogAdapter(LOG, {'context': self})
+
+    def __str__(self):
+        parts = []
+
+        if self.source_location:
+            parts.append(self. source_location)
+        if hasattr(self, 'name') and self.name:
+            parts.append(self.name)
+        else:
+            parts.append(id(self))
+
+        return "%s(%s)" % (self.__class__.__name__, ' - '.join(parts))
 
     def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False):
         """Return a normalized dictionary of spec_type instances."""
