@@ -57,15 +57,8 @@ from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
 from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
-from Products.ZenModel.DeviceClass import DeviceClass
-from Products.ZenModel.GraphDefinition import GraphDefinition
 from Products.ZenModel.GraphPoint import GraphPoint
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
-from Products.ZenModel.RRDDataPoint import RRDDataPoint
-from Products.ZenModel.RRDDataPointAlias import RRDDataPointAlias
-from Products.ZenModel.RRDDataSource import RRDDataSource
-from Products.ZenModel.RRDTemplate import RRDTemplate
-from Products.ZenModel.ThresholdClass import ThresholdClass
 from Products.ZenRelations.Exceptions import ZenSchemaError
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
@@ -2951,6 +2944,7 @@ class ClassRelationshipSpec(Spec):
             :type render_with_type: bool
             :param order: TODO
             :type order: float
+
         """
         super(ClassRelationshipSpec, self).__init__(_source_location=_source_location)
 
@@ -3216,6 +3210,7 @@ class RRDThresholdSpec(Spec):
             severity=None,
             escalateCount=None,
             enabled=None,
+            extra_params=None,
             _source_location=None
             ):
         """
@@ -3237,6 +3232,8 @@ class RRDThresholdSpec(Spec):
             :type escalateCount: int
             :param enabled: TODO
             :type enabled: bool
+            :param extra_params: Additional parameters that may be used by subclasses of RRDDatasource
+            :type extra_params: ExtraParams
 
         """
         super(RRDThresholdSpec, self).__init__(_source_location=_source_location)
@@ -3250,6 +3247,7 @@ class RRDThresholdSpec(Spec):
         self.escalateCount = escalateCount
         self.enabled = enabled
         self.type_ = type_
+        self.extra_params = extra_params
 
     def create(self, id_, templatespec, template):
         if not self.dsnames:
@@ -3283,6 +3281,12 @@ class RRDThresholdSpec(Spec):
             threshold.escalateCount = self.escalateCount
         if self.enabled is not None:
             threshold.enabled = self.enabled
+        if self.extra_params:
+            for param, value in self.extra_params.iteritems():
+                if param in threshold._properties:
+                    setattr(threshold, param, value)
+                else:
+                    raise ValueError("%s is not a valid property for threshold of type %s" % (param, type_))
 
 
 class RRDDatasourceSpec(Spec):
@@ -3302,6 +3306,7 @@ class RRDDatasourceSpec(Spec):
             commandTemplate=None,
             cycletime=None,
             datapoints=None,
+            extra_params=None,
             _source_location=None
             ):
         """
@@ -3326,6 +3331,9 @@ class RRDDatasourceSpec(Spec):
             :type cycletime: int
             :param datapoints: TODO
             :type datapoints: SpecsParameter(RRDDatapointSpec)
+            :param extra_params: Additional parameters that may be used by subclasses of RRDDatasource
+            :type extra_params: ExtraParams
+
         """
         super(RRDDatasourceSpec, self).__init__(_source_location=_source_location)
 
@@ -3339,6 +3347,7 @@ class RRDDatasourceSpec(Spec):
         self.severity = severity
         self.commandTemplate = commandTemplate
         self.cycletime = cycletime
+        self.extra_params = extra_params
 
         self.datapoints = self.specs_from_param(
             RRDDatapointSpec, 'datapoints', datapoints)
@@ -3372,6 +3381,13 @@ class RRDDatasourceSpec(Spec):
             datasource.commandTemplate = self.commandTemplate
         if self.cycletime is not None:
             datasource.cycletime = self.cycletime
+
+        if self.extra_params:
+            for param, value in self.extra_params.iteritems():
+                if param in datasource._properties:
+                    setattr(datasource, param, value)
+                else:
+                    raise ValueError("%s is not a valid property for datasource of type %s" % (param, type_))
 
         self.speclog.debug("adding {} datapoints".format(len(self.datapoints)))
         for datapoint_id, datapoint_spec in self.datapoints.items():
@@ -3997,6 +4013,21 @@ if YAML_INSTALLED:
                     mapping[yaml_param] = dumper.represent_str(relschemaspec_to_str(value))
                 elif type_ == 'Severity':
                     mapping[yaml_param] = dumper.represent_str(severity_to_str(value))
+                elif type_ == 'ExtraParams':
+                    # ExtraParams is a special case, where any 'extra'
+                    # parameters not otherwise defined in the init_params
+                    # definition are tacked into a dictionary with no specific
+                    # schema validation.  This is meant to be used in situations
+                    # where it is impossible to know what parameters will be
+                    # needed ahead of time, such as with a datasource
+                    # that has been subclassed and had new properties added.
+                    #
+                    # Note: the extra parameters are required to have scalar
+                    # values only.
+                    for param in value:
+                        # add any values from an extraparams dict onto the spec's parameter list directly.
+                        yaml_param = dumper.represent_str(param)
+                        mapping[yaml_param] = dumper.represent_scalar(value[param])
                 else:
                     m = re.match('^SpecsParameter\((.*)\)$', type_)
                     if m:
@@ -4074,15 +4105,36 @@ if YAML_INSTALLED:
         for param in param_defs:
             param_name_map[param_defs[param]['yaml_param']] = param
 
+        extra_params = None
+        for key in param_defs:
+            if param_defs[key]['type'] == 'ExtraParams':
+                if extra_params:
+                    yaml_error(loader, yaml.constructor.ConstructorError(
+                        None, None,
+                        "Only one ExtraParams parameter may be specified.",
+                        node.start_mark))
+                extra_params = key
+                params[extra_params] = {}
+
         for key_node, value_node in node.value:
             yaml_key = str(loader.construct_scalar(key_node))
 
             if yaml_key not in param_name_map:
-                yaml_error(loader, yaml.constructor.ConstructorError(
-                    None, None,
-                    "Unrecognized parameter '%s' found while processing %s" % (yaml_key, cls.__name__),
-                    key_node.start_mark))
-                continue
+                if extra_params:
+                    # If an 'extra_params' parameter is defined for this spec,
+                    # we take all unrecognized paramters and stuff them into
+                    # a single parameter, which is a dictonary of "extra" parameters.
+                    #
+                    # Note that the values of these extra parameters need to be
+                    # scalars, not nested maps or something like that.
+                    params[extra_params][yaml_key] = loader.construct_scalar(value_node)
+                    continue
+                else:
+                    yaml_error(loader, yaml.constructor.ConstructorError(
+                        None, None,
+                        "Unrecognized parameter '%s' found while processing %s" % (yaml_key, cls.__name__),
+                        key_node.start_mark))
+                    continue
 
             key = param_name_map[yaml_key]
             expected_type = param_defs[key]['type']
