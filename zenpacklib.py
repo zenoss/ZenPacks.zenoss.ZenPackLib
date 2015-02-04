@@ -3204,11 +3204,8 @@ class RRDThresholdSpec(Spec):
             template_spec,
             type_='MinMaxThreshold',
             dsnames=None,
-            minval=None,
-            maxval=None,
             eventClass=None,
             severity=None,
-            escalateCount=None,
             enabled=None,
             extra_params=None,
             _source_location=None
@@ -3220,16 +3217,10 @@ class RRDThresholdSpec(Spec):
             :type type_: str
             :param dsnames: TODO
             :type dsnames: list(str)
-            :param minval: TODO
-            :type minval: str
-            :param maxval: TODO
-            :type maxval: str
             :param eventClass: TODO
             :type eventClass: str
             :param severity: TODO
             :type severity: Severity
-            :param escalateCount: TODO
-            :type escalateCount: int
             :param enabled: TODO
             :type enabled: bool
             :param extra_params: Additional parameters that may be used by subclasses of RRDDatasource
@@ -3240,11 +3231,8 @@ class RRDThresholdSpec(Spec):
 
         self.template_spec = template_spec
         self.dsnames = dsnames
-        self.minval = minval
-        self.maxval = maxval
         self.eventClass = eventClass
         self.severity = severity
-        self.escalateCount = escalateCount
         self.enabled = enabled
         self.type_ = type_
         self.extra_params = extra_params
@@ -3269,16 +3257,10 @@ class RRDThresholdSpec(Spec):
 
         if self.dsnames is not None:
             threshold.dsnames = self.dsnames
-        if self.minval is not None:
-            threshold.minval = self.minval
-        if self.maxval is not None:
-            threshold.maxval = self.maxval
         if self.eventClass is not None:
             threshold.eventClass = self.eventClass
         if self.severity is not None:
             threshold.severity = self.severity
-        if self.escalateCount is not None:
-            threshold.escalateCount = self.escalateCount
         if self.enabled is not None:
             threshold.enabled = self.enabled
         if self.extra_params:
@@ -3410,6 +3392,7 @@ class RRDDatapointSpec(Spec):
             description=None,
             aliases=None,
             shorthand=None,
+            extra_params=None,
             _source_location=None
             ):
         """
@@ -3429,6 +3412,8 @@ class RRDDatapointSpec(Spec):
         :type description: str
         :param aliases: TODO
         :type aliases: dict(str)
+        :param extra_params: Additional parameters that may be used by subclasses of RRDDatapoint
+        :type extra_params: ExtraParams
 
         """
         super(RRDDatapointSpec, self).__init__(_source_location=_source_location)
@@ -3442,6 +3427,10 @@ class RRDDatapointSpec(Spec):
         self.rrdmin = rrdmin
         self.rrdmax = rrdmax
         self.description = description
+        if extra_params is None:
+            self.extra_params = {}
+        elif isinstance(extra_params, dict):
+            self.extra_params = extra_params
 
         if aliases is None:
             self.aliases = {}
@@ -3466,7 +3455,8 @@ class RRDDatapointSpec(Spec):
 
     def create(self, datasource_spec, datasource):
         datapoint = datasource.manage_addRRDDataPoint(self.name)
-        self.speclog.debug("adding datapoint")
+        type_ = datapoint.__class__.__name__
+        self.speclog.debug("adding datapoint of type %s" % type_)
 
         if self.createCmd is not None:
             datapoint.createCmd = self.createCmd
@@ -3478,6 +3468,12 @@ class RRDDatapointSpec(Spec):
             datapoint.rrdmax = str(self.rrdmax)
         if self.description is not None:
             datapoint.description = self.description
+        if self.extra_params:
+            for param, value in self.extra_params.iteritems():
+                if param in datapoint._properties:
+                    setattr(datapoint, param, value)
+                else:
+                    raise ValueError("%s is not a valid property for datapoint of type %s" % (param, type_))
 
         self.speclog.debug("adding {} aliases".format(len(self.aliases)))
         for alias_id, formula in self.aliases.items():
