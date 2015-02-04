@@ -147,6 +147,28 @@ class ZenPack(ZenPackBase):
     ZenPack loader that handles custom installation and removal tasks.
     """
 
+    def __init__(self, *args, **kwargs):
+        super(ZenPack, self).__init__(*args, **kwargs)
+
+        # Emable logging to stderr if the user sets the ZPL_LOG_ENABLE environment
+        # variable to this zenpack's name.   (defaults to 'DEBUG', but
+        # user may choose a different level with ZPL_LOG_LEVEL.
+        if self.id in os.environ.get('ZPL_LOG_ENABLE'):
+            levelName = os.environ.get('ZPL_LOG_LEVEL', 'DEBUG').upper()
+            logLevel = getattr(logging, levelName)
+
+            if logLevel:
+                # Reconfigure the logger to ensure it goes to stderr for the
+                # selected level or above.
+                LOG.propagate = False
+                LOG.setLevel(logLevel)
+                h = logging.StreamHandler(sys.stderr)
+                h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
+                LOG.addHandler(h)
+            else:
+                LOG.error("Unrecognized ZPL_LOG_LEVEL '%s'" %
+                          os.environ.get('ZPL_LOG_LEVEL'))
+
     # NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in
     # via zenpacklib when this class is instantiated.
 
@@ -1030,9 +1052,9 @@ class Spec(object):
         params = self.init_params()
         for p in params:
             if getattr(self, p) != getattr(other, p):
-                LOG.debug("Comparing %s %s to %s %s, parameter %s does not match (%s != %s)",
-                          self.__class__.__name__, self.name, other.__class__.__name__, other.name, p,
-                          getattr(self, p), getattr(other, p))
+                # LOG.debug("Comparing %s %s to %s %s, parameter %s does not match (%s != %s)",
+                #           self.__class__.__name__, self.name, other.__class__.__name__, other.name, p,
+                #           getattr(self, p), getattr(other, p))
                 return False
 
         return True
