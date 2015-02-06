@@ -57,6 +57,7 @@ from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
 from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
+from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
 from Products.ZenModel.GraphPoint import GraphPoint
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenRelations.Exceptions import ZenSchemaError
@@ -970,11 +971,14 @@ class Spec(object):
         parts = []
 
         if self.source_location:
-            parts.append(self. source_location)
+            parts.append(self.source_location)
         if hasattr(self, 'name') and self.name:
-            parts.append(self.name)
+            if callable(self.name):
+                parts.append(self.name())
+            else:
+                parts.append(self.name)
         else:
-            parts.append(id(self))
+            parts.append(super(Spec, self).__str__())
 
         return "%s(%s)" % (self.__class__.__name__, ' - '.join(parts))
 
@@ -3237,6 +3241,7 @@ class RRDThresholdSpec(Spec):
 
             :param type_: TODO
             :type type_: str
+            :yaml_param type_: type
             :param dsnames: TODO
             :type dsnames: list(str)
             :param eventClass: TODO
@@ -3421,15 +3426,15 @@ class RRDDatapointSpec(Spec):
         Create an RRDDatapoint Specification
 
         :param rrdtype: TODO
-        :type rrdtype: RRDType
+        :type rrdtype: str
         :param createCmd: TODO
         :type createCmd: str
         :param isrow: TODO
         :type isrow: bool
         :param rrdmin: TODO
-        :type rrdmin: str
+        :type rrdmin: int
         :param rrdmax: TODO
-        :type rrdmax: str
+        :type rrdmax: int
         :param description: TODO
         :type description: str
         :param aliases: TODO
@@ -3634,9 +3639,9 @@ class GraphPointSpec(Spec):
             :param dpName: TODO
             :type dpName: str
             :param lineType: TODO
-            :type lineType: LineType
+            :type lineType: str
             :param lineWidth: TODO
-            :type lineWidth: long
+            :type lineWidth: int
             :param stacked: TODO
             :type stacked: bool
             :param format: TODO
@@ -3644,7 +3649,7 @@ class GraphPointSpec(Spec):
             :param legend: TODO
             :type legend: str
             :param limit: TODO
-            :type limit: long
+            :type limit: int
             :param rpn: TODO
             :type rpn: str
             :param cFunc: TODO
@@ -3837,17 +3842,14 @@ if YAML_INSTALLED:
         '''
         Return string representation for severity given a numeric value.
         '''
-        try:
-            severity = int(value)
-        except (TypeError, ValueError):
-            severity = {
-                5: 'crit',
-                4: 'err',
-                3: 'warn',
-                2: 'info',
-                1: 'debug',
-                0: 'clear'
-                }.get(value.lower())
+        severity = {
+            5: 'crit',
+            4: 'err',
+            3: 'warn',
+            2: 'info',
+            1: 'debug',
+            0: 'clear'
+            }.get(value, None)
 
         if severity is None:
             raise ValueError("'%s' is not a valid value for severity.", value)
@@ -3954,6 +3956,11 @@ if YAML_INSTALLED:
         whether it is done via YAML or the API.
         """
 
+        if isinstance(obj, RRDDatapointSpec) and obj.shorthand:
+            # Special case- we allow for a shorthand in specifying datapoints
+            # as specs as strings rather than explicitly as a map.
+            return dumper.represent_str(obj.shorthand)
+
         mapping = {}
         cls = obj.__class__
         param_defs = cls.init_params()
@@ -4042,10 +4049,11 @@ if YAML_INSTALLED:
                     #
                     # Note: the extra parameters are required to have scalar
                     # values only.
-                    for param in value:
+                    for extra_param in value:
                         # add any values from an extraparams dict onto the spec's parameter list directly.
-                        yaml_param = dumper.represent_str(param)
-                        mapping[yaml_param] = dumper.represent_scalar(value[param])
+                        yaml_extra_param = dumper.represent_str(extra_param)
+
+                        mapping[yaml_extra_param] = dumper.represent_data(value[extra_param])
                 else:
                     m = re.match('^SpecsParameter\((.*)\)$', type_)
                     if m:
@@ -4070,7 +4078,6 @@ if YAML_INSTALLED:
                         node = yaml.MappingNode(yaml_tag, specmapping_value)
                         specmapping_value.extend(specmapping.items())
                         mapping[yaml_param] = node
-
                     else:
                         raise yaml.representer.RepresenterError(
                             "Unable to serialize %s object: %s, a supported parameter, is of an unrecognized type (%s)." %
@@ -4082,7 +4089,7 @@ if YAML_INSTALLED:
                     "Unable to serialize %s object (param %s, type %s, value %s): %s" %
                     (cls.__name__, param, type_, value, e))
 
-            if param_defs[param]['yaml_block_style']:
+            if param in param_defs and param_defs[param]['yaml_block_style']:
                 mapping[yaml_param].flow_style = False
 
         mapping_value = []
@@ -4287,8 +4294,8 @@ if YAML_INSTALLED:
 
     # These subclasses exist so that each copy of zenpacklib installed on a
     # zenoss system provide their own loader (for add_constructor and yaml.load)
-    # and its own dumper (for add_representer) and yaml.dumper so that the
-    # proper methods will be used for this specific zenpacklib.
+    # and its own dumper (for add_representer) so that the proper methods will
+    # be used for this specific zenpacklib.
     class Loader(yaml.Loader):
         pass
 
@@ -4399,15 +4406,185 @@ if YAML_INSTALLED:
             SpecParams.__init__(self, **kwargs)
             self.name = name
 
+    # The following adapt their underlying model classes, to support
+    # exporting from ZODB.
+    class RRDTemplateSpecParams(SpecParams, RRDTemplateSpec):
+        def __init__(self, template):
+            SpecParams.__init__(self)
+
+            self.targetPythonClass = template.targetPythonClass
+            self.description = template.description
+
+            self.thresholds = {x.id: RRDThresholdSpecParams(x) for x in template.thresholds()}
+            self.datasources = {x.id: RRDDatasourceSpecParams(x) for x in template.datasources()}
+            self.graphs = {x.id: GraphDefinitionSpecParams(x) for x in template.graphDefs()}
+
+    class RRDDatasourceSpecParams(SpecParams, RRDDatasourceSpec):
+        def __init__(self, datasource):
+            SpecParams.__init__(self)
+
+            # Weed out any values that are the same as they would by by default.
+            # We do this by instantiating a "blank" datapoint and comparing
+            # to it.
+            sample_ds = datasource.__class__(datasource.id)
+
+            self.sourcetype = datasource.sourcetype
+            for propname in ('enabled', 'component', 'eventClass', 'eventKey',
+                             'severity', 'commandTemplate', 'cycletime',):
+                if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
+                    setattr(self, propname, getattr(datasource, propname, None))
+
+            self.extra_params = {}
+            for propname in [x['id'] for x in datasource._properties]:
+                if propname not in self.init_params():
+                    if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
+                        self.extra_params[propname] = getattr(datasource, propname, None)
+
+            self.datapoints = {x.id: RRDDatapointSpecParams(x) for x in datasource.datapoints()}
+
+    class RRDThresholdSpecParams(SpecParams, RRDThresholdSpec):
+        def __init__(self, threshold):
+            SpecParams.__init__(self)
+            sample_th = threshold.__class__(threshold.id)
+
+            for propname in ('dnsnames', 'eventClass', 'severity', 'type_'):
+                if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
+                    setattr(self, propname, getattr(threshold, propname, None))
+
+            self.extra_params = {}
+            for propname in [x['id'] for x in threshold._properties]:
+                if propname not in self.init_params():
+                    if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
+                        self.extra_params[propname] = getattr(threshold, propname, None)
+
+    class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
+        def __init__(self, datapoint):
+            SpecParams.__init__(self)
+            sample_dp = datapoint.__class__(datapoint.id)
+
+            for propname in ('name', 'rrdtype', 'createCmd', 'isrow', 'rrdmin',
+                             'rrdmax', 'description',):
+                if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
+                    setattr(self, propname, getattr(datapoint, propname, None))
+
+            self.aliases = {x.id: x.formula for x in datapoint.aliases()}
+
+            self.extra_params = {}
+            for propname in [x['id'] for x in datapoint._properties]:
+                if propname not in self.init_params():
+                    if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
+                        self.extra_params[propname] = getattr(datapoint, propname, None)
+
+            # Shorthand support.  The use of the shorthand field takes
+            # over all other attributes.  So we can only use it when the rest of
+            # the attributes have default values.   This gets tricky if
+            # RRDDatapoint has been subclassed, since we don't know what
+            # the defaults are, necessarily.
+            #
+            # To do this, we actually instantiate a sample datapoint
+            # using only the shorthand values, and see if the result
+            # ends up being effectively the same as what we have.
+
+            shorthand_props = {}
+            shorthand = []
+            self.shorthand = None
+            if datapoint.rrdtype in ('GAUGE', 'DERIVE'):
+                shorthand.append(datapoint.rrdtype)
+                shorthand_props['rrdtype'] = datapoint.rrdtype
+
+                if datapoint.rrdmin:
+                    shorthand.append('MIN_%d' % int(datapoint.rrdmin))
+                    shorthand_props['rrdmin'] = datapoint.rrdmin
+
+                if datapoint.rrdmax:
+                    shorthand.append('MAX_%d' % int(datapoint.rrdmax))
+                    shorthand_props['rrdmax'] = datapoint.rrdmax
+
+                if shorthand:
+                    for prop in shorthand_props:
+                        setattr(sample_dp, prop, shorthand_props[prop])
+
+                    # Compare the current datapoint with the results
+                    # of constructing one from the shorthand syntax.
+                    #
+                    # The comparison is based on the objects.xml-style
+                    # xml representation, because it seems like that's really
+                    # the bottom line.  If they end up the same in there, then
+                    # I am certain that they are equivalent.
+
+                    import StringIO
+                    io = StringIO.StringIO()
+                    datapoint.exportXml(io)
+                    dp_xml = io.getvalue()
+                    io.close()
+
+                    io = StringIO.StringIO()
+                    sample_dp.exportXml(io)
+                    sample_dp_xml = io.getvalue()
+                    io.close()
+
+                    # Identical, so set the shorthand.  This will cause
+                    # all other properties to be ignored during
+                    # serialization to yaml.
+                    if dp_xml == sample_dp_xml:
+                        self.shorthand = '_'.join(shorthand)
+
+    class GraphDefinitionSpecParams(SpecParams, GraphDefinitionSpec):
+        def __init__(self, graphdefinition):
+            SpecParams.__init__(self)
+            sample_gd = graphdefinition.__class__(graphdefinition.id)
+
+            for propname in ('height', 'width', 'units', 'log', 'base', 'miny',
+                             'maxy', 'custom', 'hasSummary', 'comments'):
+                if getattr(graphdefinition, propname, None) != getattr(sample_gd, propname, None):
+                    setattr(self, propname, getattr(graphdefinition, propname, None))
+
+            datapoint_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, DataPointGraphPoint)]
+            self.graphpoints = {x.id: GraphPointSpecParams(x, graphdefinition) for x in datapoint_graphpoints}
+
+            comment_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, CommentGraphPoint)]
+            if comment_graphpoints:
+                self.comments = [y.text for y in sorted(comment_graphpoints, key=lambda x: x.id)]
+
+
+    class GraphPointSpecParams(SpecParams, GraphPointSpec):
+        def __init__(self, graphpoint, graphdefinition):
+            SpecParams.__init__(self)
+            sample_gp = graphpoint.__class__(graphpoint.id)
+
+            for propname in ('lineType', 'lineWidth', 'stacked', 'format',
+                             'legend', 'limit', 'rpn', 'cFunc', 'color', 'dpName'):
+                if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
+                    setattr(self, propname, getattr(graphpoint, propname, None))
+
+            threshold_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, ThresholdGraphPoint)]
+
+            self.includeThresholds = False
+            if threshold_graphpoints:
+                thresholds = {x.id: x for x in graphpoint.graphDef().rrdTemplate().thresholds()}
+                for tgp in threshold_graphpoints:
+                    threshold = thresholds.get(tgp.threshId, None)
+                    if threshold:
+                        if graphpoint.dpName in threshold.dsnames:
+                            self.includeThresholds = True
+
+
+
     Dumper.add_representer(ZenPackSpecParams, represent_zenpackspec)
     Dumper.add_representer(DeviceClassSpecParams, represent_spec)
     Dumper.add_representer(ZPropertySpecParams, represent_spec)
     Dumper.add_representer(ClassSpecParams, represent_spec)
     Dumper.add_representer(ClassPropertySpecParams, represent_spec)
     Dumper.add_representer(ClassRelationshipSpecParams, represent_spec)
-
+    Dumper.add_representer(RRDTemplateSpecParams, represent_spec)
+    Dumper.add_representer(RRDThresholdSpecParams, represent_spec)
+    Dumper.add_representer(RRDDatasourceSpecParams, represent_spec)
+    Dumper.add_representer(RRDDatapointSpecParams, represent_spec)
+    Dumper.add_representer(GraphDefinitionSpecParams, represent_spec)
+    Dumper.add_representer(GraphPointSpecParams, represent_spec)
 
 # Public Functions ##########################################################
+
 
 def enableTesting():
     """Enable test mode. Only call from code under tests/.
@@ -5290,15 +5467,39 @@ if __name__ == '__main__':
 
                 # convert the cfg dictionary to yaml
                 specparams = ZenPackSpecParams(**CFG)
-                outputfile = yaml.dump(specparams)
+                outputfile = yaml.dump(specparams, Dumper=Dumper)
 
                 # tweak the yaml slightly.
                 outputfile = outputfile.replace("__builtin__.object", "object")
 
                 print outputfile
 
+            elif len(args) == 2 and args[0] == 'dump_templates':
+                zenpack_name = args[1]
+
+                self.connect()
+                zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
+                if zenpack is None:
+                    LOG.error("Zenpack '%s' not found." % zenpack_name)
+                    return
+
+                device_classes = {}
+                templates = {}
+                for deviceclass in [x for x in zenpack.packables() if x.meta_type == 'DeviceClass']:
+                    dc_name = deviceclass.getOrganizerName()
+                    device_classes[dc_name] = {}
+                    templates[dc_name] = {}
+                    for template in deviceclass.getAllRRDTemplates():
+                        templates[dc_name][template.id] = RRDTemplateSpecParams(template)
+
+                zpsp = ZenPackSpecParams(zenpack_name, device_classes=device_classes)
+                for dc_name in templates:
+                    zpsp.device_classes[dc_name].templates = templates[dc_name]
+
+                print yaml.dump(zpsp, Dumper=Dumper)
+
             else:
-                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> <__init__.py>" % sys.argv[0]
+                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> <__init__.py> | dump_templates <zenpack_name>" % sys.argv[0]
 
     script = ZPLCommand()
     script.run()
