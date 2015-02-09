@@ -43,6 +43,7 @@ from zope.component import adapts, getGlobalSiteManager
 from zope.event import notify
 from zope.interface import classImplements, implements
 from zope.interface.interface import InterfaceClass
+import zope.proxy
 
 from Products.AdvancedQuery import Eq, Or
 from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
@@ -54,6 +55,11 @@ from Products.ZenModel.HWComponent import HWComponent as BaseHWComponent
 from Products.ZenModel.ManagedEntity import ManagedEntity as BaseManagedEntity
 from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
+from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
+from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
+from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
+from Products.ZenModel.GraphPoint import GraphPoint
+from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenRelations.Exceptions import ZenSchemaError
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
@@ -95,6 +101,18 @@ try:
 except ImportError:
     YAML_INSTALLED = False
 
+OrderedDict = None
+
+try:
+    # included in standard lib from Python 2.7
+    from collections import OrderedDict
+except ImportError:
+    # try importing the backported drop-in replacement
+    # it's available on PyPI
+    try:
+        from ordereddict import OrderedDict
+    except ImportError:
+        OrderedDict = None
 
 # Exported symbols. These are the only symbols imported by wildcard.
 __all__ = (
@@ -130,6 +148,28 @@ class ZenPack(ZenPackBase):
     ZenPack loader that handles custom installation and removal tasks.
     """
 
+    def __init__(self, *args, **kwargs):
+        super(ZenPack, self).__init__(*args, **kwargs)
+
+        # Emable logging to stderr if the user sets the ZPL_LOG_ENABLE environment
+        # variable to this zenpack's name.   (defaults to 'DEBUG', but
+        # user may choose a different level with ZPL_LOG_LEVEL.
+        if self.id in os.environ.get('ZPL_LOG_ENABLE'):
+            levelName = os.environ.get('ZPL_LOG_LEVEL', 'DEBUG').upper()
+            logLevel = getattr(logging, levelName)
+
+            if logLevel:
+                # Reconfigure the logger to ensure it goes to stderr for the
+                # selected level or above.
+                LOG.propagate = False
+                LOG.setLevel(logLevel)
+                h = logging.StreamHandler(sys.stderr)
+                h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
+                LOG.addHandler(h)
+            else:
+                LOG.error("Unrecognized ZPL_LOG_LEVEL '%s'" %
+                          os.environ.get('ZPL_LOG_LEVEL'))
+
     # NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in
     # via zenpacklib when this class is instantiated.
 
@@ -143,6 +183,11 @@ class ZenPack(ZenPackBase):
             LOG.fatal('PyYAML is required by %s.  Try "easy_install PyYAML" first.' % self.id)
             sys.exit(1)
 
+        if not OrderedDict:
+            LOG.fatal('ordereddict is required by %s. Try "easy_install ordereddict" first.' % self.id)
+            sys.exit(1)
+
+        # create device classes and set zProperties on them
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
                 try:
@@ -161,6 +206,11 @@ class ZenPack(ZenPackBase):
         if self.NEW_COMPONENT_TYPES:
             LOG.info('Adding %s relationships to existing devices' % self.id)
             self._buildDeviceRelations()
+
+        # load monitoring templates
+        for dcname, dcspec in self.device_classes.iteritems():
+            for mtname, mtspec in dcspec.templates.iteritems():
+                mtspec.create(self.dmd)
 
     def remove(self, app, leaveObjects=False):
         from Products.Zuul.interfaces import ICatalogTool
@@ -195,6 +245,44 @@ class ZenPack(ZenPackBase):
                     app.dmd.Devices.manage_deleteOrganizer(dcspec.path)
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
+
+    def manage_exportPack(self, *args, **kwargs):
+        # In order to control which objects are exported, we wrap the entire
+        # zenpack object, and the zenpackable objects it contains, in proxy
+        # objects, which allow us to override their behavior without disrupting
+        # the original objects.
+
+        class FilteredZenPackable(zope.proxy.ProxyBase):
+            @zope.proxy.non_overridable
+            def objectValues(self):
+                # proxy the remote objects on ToManyContRelationships
+                return [FilteredZenPackable(x) for x in self._objects.values()]
+
+            @zope.proxy.non_overridable
+            def exportXmlRelationships(self, ofile, ignorerels=[]):
+                for rel in self.getRelationships():
+                    if rel.id in ignorerels:
+                        continue
+                    FilteredZenPackable(rel).exportXml(ofile, ignorerels)
+
+            @zope.proxy.non_overridable
+            def exportXml(self, *args, **kwargs):
+                original = zope.proxy.getProxiedObject(self).__class__.exportXml
+                path = '/'.join(self.getPrimaryPath())
+
+                if getattr(self, 'zpl_managed', False):
+                    LOG.info("Excluding %s from export (ZPL-managed object)" % path)
+                    return
+
+                original(self, *args, **kwargs)
+
+        class FilteredZenPack(zope.proxy.ProxyBase):
+            @zope.proxy.non_overridable
+            def packables(self):
+                packables = zope.proxy.getProxiedObject(self).packables()
+                return [FilteredZenPackable(x) for x in packables]
+
+        ZenPackBase.manage_exportPack(FilteredZenPack(self), args, kwargs)
 
 
 class CatalogBase(object):
@@ -865,8 +953,34 @@ FACET_BLACKLIST = (
 
 
 class Spec(object):
-
     """Abstract base class for specifications."""
+
+    source_location = None
+    speclog = None
+
+    def __init__(self, _source_location=None):
+
+        class LogAdapter(logging.LoggerAdapter):
+            def process(self, msg, kwargs):
+                return '%s %s' % (self.extra['context'], msg), kwargs
+
+        self.source_location = _source_location
+        self.speclog = LogAdapter(LOG, {'context': self})
+
+    def __str__(self):
+        parts = []
+
+        if self.source_location:
+            parts.append(self.source_location)
+        if hasattr(self, 'name') and self.name:
+            if callable(self.name):
+                parts.append(self.name())
+            else:
+                parts.append(self.name)
+        else:
+            parts.append(super(Spec, self).__str__())
+
+        return "%s(%s)" % (self.__class__.__name__, ' - '.join(parts))
 
     def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False):
         """Return a normalized dictionary of spec_type instances."""
@@ -883,9 +997,11 @@ class Spec(object):
                 _apply_defaults = globals()['apply_defaults']
                 _apply_defaults(param_dict, leave_defaults=leave_defaults)
 
-        return {
-            k: spec_type(self, k, **(fix_kwargs(v)))
-            for k, v in param_dict.iteritems()}
+        specs = OrderedDict()
+        for k, v in param_dict.iteritems():
+            specs[k] = spec_type(self, k, **(fix_kwargs(v)))
+
+        return specs
 
     @classmethod
     def init_params(cls):
@@ -897,7 +1013,7 @@ class Spec(object):
         else:
             defaults = {}
 
-        params = collections.OrderedDict()
+        params = OrderedDict()
         for op, param, value in re.findall(
             "^\s*:(type|param|yaml_param|yaml_block_style)\s+(\S+):\s*(.*)$",
             cls.__init__.__doc__,
@@ -940,9 +1056,9 @@ class Spec(object):
         params = self.init_params()
         for p in params:
             if getattr(self, p) != getattr(other, p):
-                LOG.debug("Comparing %s %s to %s %s, parameter %s does not match (%s != %s)",
-                          self.__class__.__name__, self.name, other.__class__.__name__, other.name, p,
-                          getattr(self, p), getattr(other, p))
+                # LOG.debug("Comparing %s %s to %s %s, parameter %s does not match (%s != %s)",
+                #           self.__class__.__name__, self.name, other.__class__.__name__, other.name, p,
+                #           getattr(self, p), getattr(other, p))
                 return False
 
         return True
@@ -1001,7 +1117,8 @@ class ZenPackSpec(Spec):
             zProperties=None,
             classes=None,
             class_relationships=None,
-            device_classes=None):
+            device_classes=None,
+            _source_location=None):
         """
             Create a ZenPack Specification
 
@@ -1017,6 +1134,8 @@ class ZenPackSpec(Spec):
             :type class_relationships: list(RelationshipSchemaSpec)
             :yaml_block_style class_relationships: True
         """
+        super(ZenPackSpec, self).__init__(_source_location=_source_location)
+
         self.name = name
         self.NEW_COMPONENT_TYPES = []
         self.NEW_RELATIONS = collections.defaultdict(list)
@@ -1374,8 +1493,15 @@ class DeviceClassSpec(Spec):
 
     """Initialize a DeviceClass via Python at install time."""
 
-    def __init__(self, zenpack_spec, path, create=True, zProperties=None,
-                 remove=False):
+    def __init__(
+            self,
+            zenpack_spec,
+            path,
+            create=True,
+            zProperties=None,
+            remove=False,
+            templates=None,
+            _source_location=None):
         """
             Create a DeviceClass Specification
 
@@ -1385,7 +1511,10 @@ class DeviceClassSpec(Spec):
             :type remove: bool
             :param zProperties: zProperty values to set upon this DeviceClass
             :type zProperties: dict(str)
+            :param templates: TODO
+            :type templates: SpecsParameter(RRDTemplateSpec)
         """
+        super(DeviceClassSpec, self).__init__(_source_location=_source_location)
 
         self.zenpack_spec = zenpack_spec
         self.path = path.lstrip('/')
@@ -1396,6 +1525,9 @@ class DeviceClassSpec(Spec):
             self.zProperties = {}
         else:
             self.zProperties = zProperties
+
+        self.templates = self.specs_from_param(
+            RRDTemplateSpec, 'templates', templates)
 
 
 class ZPropertySpec(Spec):
@@ -1409,6 +1541,7 @@ class ZPropertySpec(Spec):
             type_='string',
             default=None,
             category=None,
+            _source_location=None
             ):
         """
             Create a ZProperty Specification
@@ -1421,6 +1554,7 @@ class ZPropertySpec(Spec):
             :param category: ZProperty Category.  This is used for display/sorting purposes.
             :type category: str
         """
+        super(ZPropertySpec, self).__init__(_source_location=_source_location)
 
         self.zenpack_spec = zenpack_spec
         self.name = name
@@ -1520,6 +1654,7 @@ class ClassSpec(Spec):
             dynamicview_views=None,
             dynamicview_group=None,
             dynamicview_relations=None,
+            _source_location=None
             ):
         """
             Create a Class Specification
@@ -1578,6 +1713,7 @@ class ClassSpec(Spec):
             :type dynamicview_relations: dict
             # TODO: should make this a spec class, not a plain dict.
         """
+        super(ClassSpec, self).__init__(_source_location=_source_location)
 
         self.zenpack = zenpack
         self.name = name
@@ -1687,6 +1823,8 @@ class ClassSpec(Spec):
         for base in self.bases:
             if isinstance(base, type):
                 resolved_bases.append(base)
+            elif base not in self.zenpack.classes:
+                raise ValueError("Unrecognized base class name '%s'" % base)
             else:
                 base_spec = self.zenpack.classes[base]
                 resolved_bases.append(base_spec.model_class)
@@ -2421,7 +2559,8 @@ class ClassPropertySpec(Spec):
             datapoint=None,
             datapoint_default=None,
             datapoint_cached=True,
-            index_scope='device'
+            index_scope='device',
+            _source_location=None
             ):
         """
         Create a Class Property Specification
@@ -2479,6 +2618,7 @@ class ClassPropertySpec(Spec):
             :type index_scope: str
 
         """
+        super(ClassPropertySpec, self).__init__(_source_location=_source_location)
 
         self.class_spec = class_spec
         self.name = name
@@ -2646,7 +2786,8 @@ class RelationshipSchemaSpec(Spec):
         left_type=None,
         right_type=None,
         right_class=None,
-        right_relname=None
+        right_relname=None,
+        _source_location=None
     ):
         """
             Create a Relationship Schema specification.  This describes both sides
@@ -2666,6 +2807,7 @@ class RelationshipSchemaSpec(Spec):
             :type right_relname: str
 
         """
+        super(RelationshipSchemaSpec, self).__init__(_source_location=_source_location)
 
         if not RelationshipSchemaSpec.valid_orientation(left_type, right_type):
             raise ZenSchemaError("In %s(%s) - (%s)%s, invalid orientation- left and right may be reversed." % (left_class, left_relname, right_relname, right_class))
@@ -2787,6 +2929,7 @@ class ClassRelationshipSpec(Spec):
             renderer=None,
             render_with_type=False,
             order=None,
+            _source_location=None
             ):
         """
         Create a Class Relationship Specification
@@ -2827,7 +2970,9 @@ class ClassRelationshipSpec(Spec):
             :type render_with_type: bool
             :param order: TODO
             :type order: float
+
         """
+        super(ClassRelationshipSpec, self).__init__(_source_location=_source_location)
 
         self.class_ = class_
         self.name = name
@@ -2992,11 +3137,606 @@ class ClassRelationshipSpec(Spec):
                 value='{{{}}}'.format(','.join(column_fields))),
             ]
 
+
+class RRDTemplateSpec(Spec):
+
+    """TODO."""
+
+    def __init__(
+            self,
+            deviceclass_spec,
+            name,
+            description=None,
+            targetPythonClass=None,
+            thresholds=None,
+            datasources=None,
+            graphs=None,
+            _source_location=None
+            ):
+        """
+        Create an RRDTemplate Specification
+
+
+            :param description: TODO
+            :type description: str
+            :param targetPythonClass: TODO
+            :type targetPythonClass: str
+            :param thresholds: TODO
+            :type thresholds: SpecsParameter(RRDThresholdSpec)
+            :param datasources: TODO
+            :type datasources: SpecsParameter(RRDDatasourceSpec)
+            :param graphs: TODO
+            :type graphs: SpecsParameter(GraphDefinitionSpec)
+
+        """
+        super(RRDTemplateSpec, self).__init__(_source_location=_source_location)
+
+        self.deviceclass_spec = deviceclass_spec
+        self.name = name
+        self.description = description
+        self.targetPythonClass = targetPythonClass
+
+        self.thresholds = self.specs_from_param(
+            RRDThresholdSpec, 'thresholds', thresholds)
+
+        self.datasources = self.specs_from_param(
+            RRDDatasourceSpec, 'datasources', datasources)
+
+        self.graphs = self.specs_from_param(
+            GraphDefinitionSpec, 'graphs', graphs)
+
+    def create(self, dmd):
+        device_class = dmd.Devices.createOrganizer(self.deviceclass_spec.path)
+
+        existing_template = device_class.rrdTemplates._getOb(self.name, None)
+        if existing_template:
+            self.speclog.info("replacing template")
+            device_class.rrdTemplates._delObject(self.name)
+
+        device_class.manage_addRRDTemplate(self.name)
+        template = device_class.rrdTemplates._getOb(self.name)
+
+        # Flag this as a ZPL managed object, that is, one that should not be
+        # exported to objects.xml  (contained objects will also be excluded)
+        template.zpl_managed = True
+
+        if not existing_template:
+            self.speclog.info("adding template")
+
+        if self.targetPythonClass is not None:
+            template.targetPythonClass = self.targetPythonClass
+        if self.description is not None:
+            template.description = self.description
+
+        self.speclog.debug("adding {} thresholds".format(len(self.thresholds)))
+        for threshold_id, threshold_spec in self.thresholds.items():
+            threshold_spec.create(threshold_id, self, template)
+
+        self.speclog.debug("adding {} datasources".format(len(self.datasources)))
+        for datasource_id, datasource_spec in self.datasources.items():
+            datasource_spec.create(self, template)
+
+        self.speclog.debug("adding {} graphs".format(len(self.graphs)))
+        for graph_id, graph_spec in self.graphs.items():
+            graph_spec.create(self, template)
+
+
+class RRDThresholdSpec(Spec):
+
+    """TODO."""
+
+    def __init__(
+            self,
+            template_spec,
+            type_='MinMaxThreshold',
+            dsnames=None,
+            eventClass=None,
+            severity=None,
+            enabled=None,
+            extra_params=None,
+            _source_location=None
+            ):
+        """
+        Create an RRDThreshold Specification
+
+            :param type_: TODO
+            :type type_: str
+            :yaml_param type_: type
+            :param dsnames: TODO
+            :type dsnames: list(str)
+            :param eventClass: TODO
+            :type eventClass: str
+            :param severity: TODO
+            :type severity: Severity
+            :param enabled: TODO
+            :type enabled: bool
+            :param extra_params: Additional parameters that may be used by subclasses of RRDDatasource
+            :type extra_params: ExtraParams
+
+        """
+        super(RRDThresholdSpec, self).__init__(_source_location=_source_location)
+
+        self.template_spec = template_spec
+        self.dsnames = dsnames
+        self.eventClass = eventClass
+        self.severity = severity
+        self.enabled = enabled
+        self.type_ = type_
+        self.extra_params = extra_params
+
+    def create(self, id_, templatespec, template):
+        if not self.dsnames:
+            raise ValueError("%s: threshold has no dsnames attribute", self)
+
+        # Shorthand for datapoints that have the same name as their datasource.
+        for i, dsname in enumerate(self.dsnames):
+            if '_' not in dsname:
+                self.dsnames[i] = '_'.join((dsname, dsname))
+
+        threshold_types = dict((y, x) for x, y in template.getThresholdClasses())
+        type_ = threshold_types.get(self.type_)
+        if not type_:
+            raise ValueError("'%s' is an invalid threshold type. Valid types: %s",
+                             self.type_, ', '.join(threshold_types))
+
+        threshold = template.manage_addRRDThreshold(id_, self.type_)
+        self.speclog.debug("adding threshold")
+
+        if self.dsnames is not None:
+            threshold.dsnames = self.dsnames
+        if self.eventClass is not None:
+            threshold.eventClass = self.eventClass
+        if self.severity is not None:
+            threshold.severity = self.severity
+        if self.enabled is not None:
+            threshold.enabled = self.enabled
+        if self.extra_params:
+            for param, value in self.extra_params.iteritems():
+                if param in threshold._properties:
+                    setattr(threshold, param, value)
+                else:
+                    raise ValueError("%s is not a valid property for threshold of type %s" % (param, type_))
+
+
+class RRDDatasourceSpec(Spec):
+
+    """TODO."""
+
+    def __init__(
+            self,
+            template_spec,
+            name,
+            sourcetype=None,
+            enabled=True,
+            component=None,
+            eventClass=None,
+            eventKey=None,
+            severity=None,
+            commandTemplate=None,
+            cycletime=None,
+            datapoints=None,
+            extra_params=None,
+            _source_location=None
+            ):
+        """
+        Create an RRDDatasource Specification
+
+            :param sourcetype: TODO
+            :type sourcetype: str
+            :yaml_param sourcetype: type
+            :param enabled: TODO
+            :type enabled: bool
+            :param component: TODO
+            :type component: str
+            :param eventClass: TODO
+            :type eventClass: str
+            :param eventKey: TODO
+            :type eventKey: str
+            :param severity: TODO
+            :type severity: Severity
+            :param commandTemplate: TODO
+            :type commandTemplate: str
+            :param cycletime: TODO
+            :type cycletime: int
+            :param datapoints: TODO
+            :type datapoints: SpecsParameter(RRDDatapointSpec)
+            :param extra_params: Additional parameters that may be used by subclasses of RRDDatasource
+            :type extra_params: ExtraParams
+
+        """
+        super(RRDDatasourceSpec, self).__init__(_source_location=_source_location)
+
+        self.template_spec = template_spec
+        self.name = name
+        self.sourcetype = sourcetype
+        self.enabled = enabled
+        self.component = component
+        self.eventClass = eventClass
+        self.eventKey = eventKey
+        self.severity = severity
+        self.commandTemplate = commandTemplate
+        self.cycletime = cycletime
+        self.extra_params = extra_params
+
+        self.datapoints = self.specs_from_param(
+            RRDDatapointSpec, 'datapoints', datapoints)
+
+    def create(self, templatespec, template):
+        datasource_types = dict(template.getDataSourceOptions())
+
+        if not self.sourcetype:
+            raise ValueError('No type for %s/%s. Valid types: %s' % (
+                             template.id, self.name, ', '.join(datasource_types)))
+
+        type_ = datasource_types.get(self.sourcetype)
+        if not type_:
+            raise ValueError("%s is an invalid datasource type. Valid types: %s" % (
+                             self.sourcetype, ', '.join(datasource_types)))
+
+        datasource = template.manage_addRRDDataSource(self.name, type_)
+        self.speclog.debug("adding datasource")
+
+        if self.enabled is not None:
+            datasource.enabled = self.enabled
+        if self.component is not None:
+            datasource.component = self.component
+        if self.eventClass is not None:
+            datasource.eventClass = self.eventClass
+        if self.eventKey is not None:
+            datasource.eventKey = self.eventKey
+        if self.severity is not None:
+            datasource.severity = self.severity
+        if self.commandTemplate is not None:
+            datasource.commandTemplate = self.commandTemplate
+        if self.cycletime is not None:
+            datasource.cycletime = self.cycletime
+
+        if self.extra_params:
+            for param, value in self.extra_params.iteritems():
+                if param in datasource._properties:
+                    setattr(datasource, param, value)
+                else:
+                    raise ValueError("%s is not a valid property for datasource of type %s" % (param, type_))
+
+        self.speclog.debug("adding {} datapoints".format(len(self.datapoints)))
+        for datapoint_id, datapoint_spec in self.datapoints.items():
+            datapoint_spec.create(self, datasource)
+
+
+class RRDDatapointSpec(Spec):
+
+    """TODO."""
+
+    def __init__(
+            self,
+            datasource_spec,
+            name,
+            rrdtype=None,
+            createCmd=None,
+            isrow=None,
+            rrdmin=None,
+            rrdmax=None,
+            description=None,
+            aliases=None,
+            shorthand=None,
+            extra_params=None,
+            _source_location=None
+            ):
+        """
+        Create an RRDDatapoint Specification
+
+        :param rrdtype: TODO
+        :type rrdtype: str
+        :param createCmd: TODO
+        :type createCmd: str
+        :param isrow: TODO
+        :type isrow: bool
+        :param rrdmin: TODO
+        :type rrdmin: int
+        :param rrdmax: TODO
+        :type rrdmax: int
+        :param description: TODO
+        :type description: str
+        :param aliases: TODO
+        :type aliases: dict(str)
+        :param extra_params: Additional parameters that may be used by subclasses of RRDDatapoint
+        :type extra_params: ExtraParams
+
+        """
+        super(RRDDatapointSpec, self).__init__(_source_location=_source_location)
+
+        self.datasource_spec = datasource_spec
+        self.name = name
+
+        self.rrdtype = rrdtype
+        self.createCmd = createCmd
+        self.isrow = isrow
+        self.rrdmin = rrdmin
+        self.rrdmax = rrdmax
+        self.description = description
+        if extra_params is None:
+            self.extra_params = {}
+        elif isinstance(extra_params, dict):
+            self.extra_params = extra_params
+
+        if aliases is None:
+            self.aliases = {}
+        elif isinstance(aliases, dict):
+            self.aliases = aliases
+        else:
+            raise ValueError("aliases must be specified as a dict")
+
+        if shorthand:
+            if 'DERIVE' in shorthand.upper():
+                self.rrdtype = 'DERIVE'
+
+            min_match = re.search(r'MIN_(\d+)', shorthand, re.IGNORECASE)
+            if min_match:
+                rrdmin = min_match.group(1)
+                self.rrdmin = rrdmin
+
+            max_match = re.search(r'MAX_(\d+)', shorthand, re.IGNORECASE)
+            if max_match:
+                rrdmax = max_match.group(1)
+                self.rrdmax = rrdmax
+
+    def create(self, datasource_spec, datasource):
+        datapoint = datasource.manage_addRRDDataPoint(self.name)
+        type_ = datapoint.__class__.__name__
+        self.speclog.debug("adding datapoint of type %s" % type_)
+
+        if self.createCmd is not None:
+            datapoint.createCmd = self.createCmd
+        if self.isrow is not None:
+            datapoint.isrow = self.isrow
+        if self.rrdmin is not None:
+            datapoint.rrdmin = str(self.rrdmin)
+        if self.rrdmax is not None:
+            datapoint.rrdmax = str(self.rrdmax)
+        if self.description is not None:
+            datapoint.description = self.description
+        if self.extra_params:
+            for param, value in self.extra_params.iteritems():
+                if param in datapoint._properties:
+                    setattr(datapoint, param, value)
+                else:
+                    raise ValueError("%s is not a valid property for datapoint of type %s" % (param, type_))
+
+        self.speclog.debug("adding {} aliases".format(len(self.aliases)))
+        for alias_id, formula in self.aliases.items():
+            datapoint.addAlias(alias_id, formula)
+            self.speclog.debug("adding alias".format(alias_id))
+            self.speclog.debug("formula = {}".format(formula))
+
+
+class GraphDefinitionSpec(Spec):
+    """TODO."""
+
+    def __init__(
+            self,
+            template_spec,
+            name,
+            height=None,
+            width=None,
+            units=None,
+            log=None,
+            base=None,
+            miny=None,
+            maxy=None,
+            custom=None,
+            hasSummary=None,
+            graphpoints=None,
+            comments=None,
+            _source_location=None
+            ):
+        """
+        Create a GraphDefinition Specification
+
+        :param height TODO
+        :type height: int
+        :param width TODO
+        :type width: int
+        :param units TODO
+        :type units: str
+        :param log TODO
+        :type log: bool
+        :param base TODO
+        :type base: bool
+        :param miny TODO
+        :type miny: int
+        :param maxy TODO
+        :type maxy: int
+        :param custom: TODO
+        :type custom: str
+        :param hasSummary: TODO
+        :type hasSummary: bool
+        :param graphpoints: TODO
+        :type graphpoints: SpecsParameter(GraphPointSpec)
+        :param comments: TODO
+        :type comments: list(str)
+        """
+        super(GraphDefinitionSpec, self).__init__(_source_location=_source_location)
+
+        self.template_spec = template_spec
+        self.name = name
+
+        self.height = height
+        self.width = width
+        self.units = units
+        self.log = log
+        self.base = base
+        self.miny = miny
+        self.maxy = maxy
+        self.custom = custom
+        self.hasSummary = hasSummary
+        self.graphpoints = self.specs_from_param(
+            GraphPointSpec, 'graphpoints', graphpoints)
+        self.comments = comments
+
+        # TODO fix comments parsing - must always be a list.
+
+    def create(self, templatespec, template):
+        graph = template.manage_addGraphDefinition(self.name)
+        self.speclog.debug("adding graph")
+
+        if self.height is not None:
+            graph.height = self.height
+        if self.width is not None:
+            graph.width = self.width
+        if self.units is not None:
+            graph.units = self.units
+        if self.log is not None:
+            graph.log = self.log
+        if self.base is not None:
+            graph.base = self.base
+        if self.miny is not None:
+            graph.miny = self.miny
+        if self.maxy is not None:
+            graph.maxy = self.maxy
+        if self.custom is not None:
+            graph.custom = self.custom
+        if self.hasSummary is not None:
+            graph.hasSummary = self.hasSummary
+
+        if self.comments:
+            self.speclog.debug("adding {} comments".format(len(self.comments)))
+            for i, comment_text in enumerate(self.comments):
+                comment = graph.createGraphPoint(
+                    CommentGraphPoint,
+                    'comment-{}'.format(i))
+
+                comment.text = comment_text
+
+        self.speclog.debug("adding {} graphpoints".format(len(self.graphpoints)))
+        for graphpoint_id, graphpoint_spec in self.graphpoints.items():
+            graphpoint_spec.create(self, graph)
+
+
+class GraphPointSpec(Spec):
+    """TODO."""
+
+    def __init__(
+            self,
+            template_spec,
+            name=None,
+            dpName=None,
+            lineType=None,
+            lineWidth=None,
+            stacked=None,
+            format=None,
+            legend=None,
+            limit=None,
+            rpn=None,
+            cFunc=None,
+            colorindex=None,
+            color=None,
+            includeThresholds=False,
+            _source_location=None
+            ):
+        """
+        Create a GraphPoint Specification
+
+            :param dpName: TODO
+            :type dpName: str
+            :param lineType: TODO
+            :type lineType: str
+            :param lineWidth: TODO
+            :type lineWidth: int
+            :param stacked: TODO
+            :type stacked: bool
+            :param format: TODO
+            :type format: str
+            :param legend: TODO
+            :type legend: str
+            :param limit: TODO
+            :type limit: int
+            :param rpn: TODO
+            :type rpn: str
+            :param cFunc: TODO
+            :type cFunc: str
+            :param color: TODO
+            :type color: str
+            :param colorindex: TODO
+            :type colorindex: int
+            :param includeThresholds: TODO
+            :type includeThresholds: bool
+
+        """
+        super(GraphPointSpec, self).__init__(_source_location=_source_location)
+
+        self.template_spec = template_spec
+        self.name = name
+
+        self.lineType = lineType
+        self.lineWidth = lineWidth
+        self.stacked = stacked
+        self.format = format
+        self.legend = legend
+        self.limit = limit
+        self.rpn = rpn
+        self.cFunc = cFunc
+        self.color = color
+        self.includeThresholds = includeThresholds
+
+        # Shorthand for datapoints that have the same name as their datasource.
+        if '_' not in dpName:
+            self.dpName = '_'.join(dpName, dpName)
+        else:
+            self.dpName = dpName
+
+        # Allow color to be specified by color_index instead of directly. This is
+        # useful when you want to keep the normal progression of colors, but need
+        # to add some DONTDRAW graphpoints for calculations.
+        if colorindex:
+            try:
+                colorindex = int(colorindex) % len(GraphPoint.colors)
+            except (TypeError, ValueError):
+                raise ValueError("graphpoint colorindex must be numeric.")
+
+            self.color = GraphPoint.colors[colorindex].lstrip('#')
+
+        # Validate lineType.
+        if lineType:
+            valid_linetypes = [x[1] for x in ComplexGraphPoint.lineTypeOptions]
+
+            if lineType.upper() in valid_linetypes:
+                self.lineType = lineType.upper()
+            else:
+                raise ValueError("'%s' is not a valid graphpoint lineType. Valid lineTypes: %s" % (
+                                 lineType, ', '.join(valid_linetypes)))
+
+    def create(self, graph_spec, graph):
+        graphpoint = graph.createGraphPoint(DataPointGraphPoint, self.name)
+        self.speclog.debug("adding graphpoint")
+
+        graphpoint.dpName = self.dpName
+
+        if self.lineType is not None:
+            graphpoint.lineType = self.lineType
+        if self.lineWidth is not None:
+            graphpoint.lineWidth = self.lineWidth
+        if self.stacked is not None:
+            graphpoint.stacked = self.stacked
+        if self.format is not None:
+            graphpoint.format = self.format
+        if self.legend is not None:
+            graphpoint.legend = self.legend
+        if self.limit is not None:
+            graphpoint.limit = self.limit
+        if self.rpn is not None:
+            graphpoint.rpn = self.rpn
+        if self.cFunc is not None:
+            graphpoint.cFunc = self.cFunc
+        if self.color is not None:
+            graphpoint.color = self.color
+
+        if self.includeThresholds:
+            graph.addThresholdsForDataPoint(self.dpName)
+
+
 # YAML Import/Export ########################################################
 
 if YAML_INSTALLED:
-    from yaml import Dumper, Loader
-
     def relschemaspec_to_str(spec):
         # Omit relation names that are their defaults.
         left_optrelname = "" if spec.left_relname == spec.default_left_relname else "(%s)" % spec.left_relname
@@ -3069,6 +3809,10 @@ if YAML_INSTALLED:
         return class_.__module__ + "." + class_.__name__
 
     def str_to_class(classstr):
+
+        if classstr == 'object':
+            return object
+
         if "." not in classstr:
             # TODO: Support non qualfied class names, searching zenpack, zenpacklib,
             # and ZenModel namespaces
@@ -3077,10 +3821,15 @@ if YAML_INSTALLED:
             # the classes defined in this ZenPackSpec.   We can't validate this,
             # or return a class object for it, if this is the case.  So we
             # return no class object, and the caller will assume that it
-            # it referrs to a class being defined.
+            # it refers to a class being defined.
             return None
 
         modname, classname = classstr.rsplit(".", 1)
+
+        # ensure that 'zenpacklib' refers to *this* zenpacklib, if more than
+        # one is loaded in the system.
+        if modname == 'zenpacklib':
+            modname = __name__
 
         try:
             class_ = getattr(importlib.import_module(modname), classname)
@@ -3089,11 +3838,57 @@ if YAML_INSTALLED:
 
         return class_
 
-    def yaml_error(loader, e):
+    def severity_to_str(value):
+        '''
+        Return string representation for severity given a numeric value.
+        '''
+        severity = {
+            5: 'crit',
+            4: 'err',
+            3: 'warn',
+            2: 'info',
+            1: 'debug',
+            0: 'clear'
+            }.get(value, None)
+
+        if severity is None:
+            raise ValueError("'%s' is not a valid value for severity.", value)
+
+        return severity
+
+    def str_to_severity(value):
+        '''
+        Return numeric severity given a string representation of severity.
+        '''
+        try:
+            severity = int(value)
+        except (TypeError, ValueError):
+            severity = {
+                'crit': 5, 'critical': 5,
+                'err': 4, 'error': 4,
+                'warn': 3, 'warning': 3,
+                'info': 2, 'information': 2, 'informational': 2,
+                'debug': 1, 'debugging': 1,
+                'clear': 0,
+                }.get(value.lower())
+
+        if severity is None:
+            raise ValueError("'%s' is not a valid value for severity." % value)
+
+        return severity
+
+    def yaml_error(loader, e, exc_info=None):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
         fatal = not getattr(loader, 'warnings', False)
         setattr(loader, 'yaml_errored', True)
+
+        if exc_info:
+            # When we're given the original exception (which was wrapped in
+            # a MarkedYAMLError), we can provide more context for debugging.
+
+            from traceback import format_exc
+            e.note = "\nOriginal exception:\n" + format_exc(exc_info)
 
         if fatal:
             raise e
@@ -3117,27 +3912,23 @@ if YAML_INSTALLED:
         print "%s: %s" % (position, ",".join(message))
 
     def construct_specsparameters(loader, node, spectype):
-        spec_class = {
-            'ZenPackSpec': ZenPackSpec,
-            'DeviceClassSpec': DeviceClassSpec,
-            'ZPropertySpec': ZPropertySpec,
-            'ClassSpec': ClassSpec,
-            'ClassPropertySpec': ClassPropertySpec,
-            'ClassRelationshipSpec': ClassRelationshipSpec,
-        }.get(spectype, None)
+        spec_class = {x.__name__: x for x in Spec.__subclasses__()}.get(spectype, None)
 
         if not spec_class:
             yaml_error(loader, yaml.constructor.ConstructorError(
                 None, None,
-                "Unrecogznied Spec class %s" % spectype,
+                "Unrecognized Spec class %s" % spectype,
                 node.start_mark))
+            return
 
         if not isinstance(node, yaml.MappingNode):
             yaml_error(loader, yaml.constructor.ConstructorError(
                 None, None,
                 "expected a mapping node, but found %s" % node.id,
                 node.start_mark))
-        specs = {}
+            return
+
+        specs = OrderedDict()
         for spec_key_node, spec_value_node in node.value:
             try:
                 spec_key = str(loader.construct_scalar(spec_key_node))
@@ -3164,6 +3955,11 @@ if YAML_INSTALLED:
         constructor) to ensure that the spec objects are built consistently,
         whether it is done via YAML or the API.
         """
+
+        if isinstance(obj, RRDDatapointSpec) and obj.shorthand:
+            # Special case- we allow for a shorthand in specifying datapoints
+            # as specs as strings rather than explicitly as a map.
+            return dumper.represent_str(obj.shorthand)
 
         mapping = {}
         cls = obj.__class__
@@ -3240,11 +4036,29 @@ if YAML_INSTALLED:
                     mapping[yaml_param] = dumper.represent_str(value)
                 elif type_ == 'RelationshipSchemaSpec':
                     mapping[yaml_param] = dumper.represent_str(relschemaspec_to_str(value))
+                elif type_ == 'Severity':
+                    mapping[yaml_param] = dumper.represent_str(severity_to_str(value))
+                elif type_ == 'ExtraParams':
+                    # ExtraParams is a special case, where any 'extra'
+                    # parameters not otherwise defined in the init_params
+                    # definition are tacked into a dictionary with no specific
+                    # schema validation.  This is meant to be used in situations
+                    # where it is impossible to know what parameters will be
+                    # needed ahead of time, such as with a datasource
+                    # that has been subclassed and had new properties added.
+                    #
+                    # Note: the extra parameters are required to have scalar
+                    # values only.
+                    for extra_param in value:
+                        # add any values from an extraparams dict onto the spec's parameter list directly.
+                        yaml_extra_param = dumper.represent_str(extra_param)
+
+                        mapping[yaml_extra_param] = dumper.represent_data(value[extra_param])
                 else:
                     m = re.match('^SpecsParameter\((.*)\)$', type_)
                     if m:
                         spectype = m.group(1)
-                        specmapping = collections.OrderedDict()
+                        specmapping = OrderedDict()
                         keys = sorted(value)
                         defaults = None
                         if 'DEFAULTS' in keys:
@@ -3264,7 +4078,6 @@ if YAML_INSTALLED:
                         node = yaml.MappingNode(yaml_tag, specmapping_value)
                         specmapping_value.extend(specmapping.items())
                         mapping[yaml_param] = node
-
                     else:
                         raise yaml.representer.RepresenterError(
                             "Unable to serialize %s object: %s, a supported parameter, is of an unrecognized type (%s)." %
@@ -3276,7 +4089,7 @@ if YAML_INSTALLED:
                     "Unable to serialize %s object (param %s, type %s, value %s): %s" %
                     (cls.__name__, param, type_, value, e))
 
-            if param_defs[param]['yaml_block_style']:
+            if param in param_defs and param_defs[param]['yaml_block_style']:
                 mapping[yaml_param].flow_style = False
 
         mapping_value = []
@@ -3294,6 +4107,10 @@ if YAML_INSTALLED:
         parsing and validation directed by the init_params of each spec class)
         """
 
+        if issubclass(cls, RRDDatapointSpec) and isinstance(node, yaml.ScalarNode):
+            # Special case- we allow for a shorthand in specifying datapoint specs.
+            return dict(shorthand=loader.construct_scalar(node))
+
         param_defs = cls.init_params()
         params = {}
         if not isinstance(node, yaml.MappingNode):
@@ -3302,22 +4119,49 @@ if YAML_INSTALLED:
                 "expected a mapping node, but found %s" % node.id,
                 node.start_mark))
 
+        params['_source_location'] = "%s: %s-%s" % (
+            os.path.basename(node.start_mark.name),
+            node.start_mark.line+1,
+            node.end_mark.line+1)
+
         # TODO: When deserializing, we should check if required properties are present.
 
         param_name_map = {}
         for param in param_defs:
             param_name_map[param_defs[param]['yaml_param']] = param
 
+        extra_params = None
+        for key in param_defs:
+            if param_defs[key]['type'] == 'ExtraParams':
+                if extra_params:
+                    yaml_error(loader, yaml.constructor.ConstructorError(
+                        None, None,
+                        "Only one ExtraParams parameter may be specified.",
+                        node.start_mark))
+                extra_params = key
+                params[extra_params] = {}
+
         for key_node, value_node in node.value:
-            key = param_name_map[str(loader.construct_scalar(key_node))]
+            yaml_key = str(loader.construct_scalar(key_node))
 
-            if key not in param_defs:
-                yaml_error(loader, yaml.constructor.ConstructorError(
-                    None, None,
-                    "Unrecognized parameter '%s' found while processing %s" % (key, cls.__name__),
-                    key_node.start_mark))
-                continue
+            if yaml_key not in param_name_map:
+                if extra_params:
+                    # If an 'extra_params' parameter is defined for this spec,
+                    # we take all unrecognized paramters and stuff them into
+                    # a single parameter, which is a dictonary of "extra" parameters.
+                    #
+                    # Note that the values of these extra parameters need to be
+                    # scalars, not nested maps or something like that.
+                    params[extra_params][yaml_key] = loader.construct_scalar(value_node)
+                    continue
+                else:
+                    yaml_error(loader, yaml.constructor.ConstructorError(
+                        None, None,
+                        "Unrecognized parameter '%s' found while processing %s" % (yaml_key, cls.__name__),
+                        key_node.start_mark))
+                    continue
 
+            key = param_name_map[yaml_key]
             expected_type = param_defs[key]['type']
 
             if expected_type == 'ZPropertyDefaultValue':
@@ -3360,7 +4204,7 @@ if YAML_INSTALLED:
                                 "expected a mapping node, but found %s" % node.id,
                                 node.start_mark))
                             continue
-                        specs = {}
+                        specs = OrderedDict()
                         for spec_key_node, spec_value_node in value_node.value:
                             spec_key = str(loader.construct_scalar(spec_key_node))
 
@@ -3403,6 +4247,9 @@ if YAML_INSTALLED:
                 elif expected_type == 'RelationshipSchemaSpec':
                     schemastr = str(loader.construct_scalar(value_node))
                     params[key] = str_to_relschemaspec(schemastr)
+                elif expected_type == 'Severity':
+                    severitystr = str(loader.construct_scalar(value_node))
+                    params[key] = str_to_severity(severitystr)
                 else:
                     m = re.match('^SpecsParameter\((.*)\)$', expected_type)
                     if m:
@@ -3417,7 +4264,7 @@ if YAML_INSTALLED:
                 yaml_error(loader, yaml.constructor.ConstructorError(
                     None, None,
                     "Unable to deserialize %s object (param %s): %s" % (cls.__name__, key_node.value, e),
-                    value_node.start_mark))
+                    value_node.start_mark), exc_info=sys.exc_info())
 
         return params
 
@@ -3445,6 +4292,16 @@ if YAML_INSTALLED:
         warnings = True
         yaml_errored = False
 
+    # These subclasses exist so that each copy of zenpacklib installed on a
+    # zenoss system provide their own loader (for add_constructor and yaml.load)
+    # and its own dumper (for add_representer) so that the proper methods will
+    # be used for this specific zenpacklib.
+    class Loader(yaml.Loader):
+        pass
+
+    class Dumper(yaml.Dumper):
+        pass
+
     Dumper.add_representer(ZenPackSpec, represent_zenpackspec)
     Dumper.add_representer(DeviceClassSpec, represent_spec)
     Dumper.add_representer(ZPropertySpec, represent_spec)
@@ -3453,6 +4310,10 @@ if YAML_INSTALLED:
     Dumper.add_representer(ClassRelationshipSpec, represent_spec)
     Dumper.add_representer(RelationshipSchemaSpec, represent_relschemaspec)
     Loader.add_constructor(u'!ZenPackSpec', construct_zenpackspec)
+
+    def load_yaml(yaml_filename):
+        CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
+        CFG.create()
 
     class SpecParams(object):
         def __init__(self, **kwargs):
@@ -3545,15 +4406,185 @@ if YAML_INSTALLED:
             SpecParams.__init__(self, **kwargs)
             self.name = name
 
+    # The following adapt their underlying model classes, to support
+    # exporting from ZODB.
+    class RRDTemplateSpecParams(SpecParams, RRDTemplateSpec):
+        def __init__(self, template):
+            SpecParams.__init__(self)
+
+            self.targetPythonClass = template.targetPythonClass
+            self.description = template.description
+
+            self.thresholds = {x.id: RRDThresholdSpecParams(x) for x in template.thresholds()}
+            self.datasources = {x.id: RRDDatasourceSpecParams(x) for x in template.datasources()}
+            self.graphs = {x.id: GraphDefinitionSpecParams(x) for x in template.graphDefs()}
+
+    class RRDDatasourceSpecParams(SpecParams, RRDDatasourceSpec):
+        def __init__(self, datasource):
+            SpecParams.__init__(self)
+
+            # Weed out any values that are the same as they would by by default.
+            # We do this by instantiating a "blank" datapoint and comparing
+            # to it.
+            sample_ds = datasource.__class__(datasource.id)
+
+            self.sourcetype = datasource.sourcetype
+            for propname in ('enabled', 'component', 'eventClass', 'eventKey',
+                             'severity', 'commandTemplate', 'cycletime',):
+                if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
+                    setattr(self, propname, getattr(datasource, propname, None))
+
+            self.extra_params = {}
+            for propname in [x['id'] for x in datasource._properties]:
+                if propname not in self.init_params():
+                    if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
+                        self.extra_params[propname] = getattr(datasource, propname, None)
+
+            self.datapoints = {x.id: RRDDatapointSpecParams(x) for x in datasource.datapoints()}
+
+    class RRDThresholdSpecParams(SpecParams, RRDThresholdSpec):
+        def __init__(self, threshold):
+            SpecParams.__init__(self)
+            sample_th = threshold.__class__(threshold.id)
+
+            for propname in ('dnsnames', 'eventClass', 'severity', 'type_'):
+                if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
+                    setattr(self, propname, getattr(threshold, propname, None))
+
+            self.extra_params = {}
+            for propname in [x['id'] for x in threshold._properties]:
+                if propname not in self.init_params():
+                    if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
+                        self.extra_params[propname] = getattr(threshold, propname, None)
+
+    class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
+        def __init__(self, datapoint):
+            SpecParams.__init__(self)
+            sample_dp = datapoint.__class__(datapoint.id)
+
+            for propname in ('name', 'rrdtype', 'createCmd', 'isrow', 'rrdmin',
+                             'rrdmax', 'description',):
+                if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
+                    setattr(self, propname, getattr(datapoint, propname, None))
+
+            self.aliases = {x.id: x.formula for x in datapoint.aliases()}
+
+            self.extra_params = {}
+            for propname in [x['id'] for x in datapoint._properties]:
+                if propname not in self.init_params():
+                    if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
+                        self.extra_params[propname] = getattr(datapoint, propname, None)
+
+            # Shorthand support.  The use of the shorthand field takes
+            # over all other attributes.  So we can only use it when the rest of
+            # the attributes have default values.   This gets tricky if
+            # RRDDatapoint has been subclassed, since we don't know what
+            # the defaults are, necessarily.
+            #
+            # To do this, we actually instantiate a sample datapoint
+            # using only the shorthand values, and see if the result
+            # ends up being effectively the same as what we have.
+
+            shorthand_props = {}
+            shorthand = []
+            self.shorthand = None
+            if datapoint.rrdtype in ('GAUGE', 'DERIVE'):
+                shorthand.append(datapoint.rrdtype)
+                shorthand_props['rrdtype'] = datapoint.rrdtype
+
+                if datapoint.rrdmin:
+                    shorthand.append('MIN_%d' % int(datapoint.rrdmin))
+                    shorthand_props['rrdmin'] = datapoint.rrdmin
+
+                if datapoint.rrdmax:
+                    shorthand.append('MAX_%d' % int(datapoint.rrdmax))
+                    shorthand_props['rrdmax'] = datapoint.rrdmax
+
+                if shorthand:
+                    for prop in shorthand_props:
+                        setattr(sample_dp, prop, shorthand_props[prop])
+
+                    # Compare the current datapoint with the results
+                    # of constructing one from the shorthand syntax.
+                    #
+                    # The comparison is based on the objects.xml-style
+                    # xml representation, because it seems like that's really
+                    # the bottom line.  If they end up the same in there, then
+                    # I am certain that they are equivalent.
+
+                    import StringIO
+                    io = StringIO.StringIO()
+                    datapoint.exportXml(io)
+                    dp_xml = io.getvalue()
+                    io.close()
+
+                    io = StringIO.StringIO()
+                    sample_dp.exportXml(io)
+                    sample_dp_xml = io.getvalue()
+                    io.close()
+
+                    # Identical, so set the shorthand.  This will cause
+                    # all other properties to be ignored during
+                    # serialization to yaml.
+                    if dp_xml == sample_dp_xml:
+                        self.shorthand = '_'.join(shorthand)
+
+    class GraphDefinitionSpecParams(SpecParams, GraphDefinitionSpec):
+        def __init__(self, graphdefinition):
+            SpecParams.__init__(self)
+            sample_gd = graphdefinition.__class__(graphdefinition.id)
+
+            for propname in ('height', 'width', 'units', 'log', 'base', 'miny',
+                             'maxy', 'custom', 'hasSummary', 'comments'):
+                if getattr(graphdefinition, propname, None) != getattr(sample_gd, propname, None):
+                    setattr(self, propname, getattr(graphdefinition, propname, None))
+
+            datapoint_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, DataPointGraphPoint)]
+            self.graphpoints = {x.id: GraphPointSpecParams(x, graphdefinition) for x in datapoint_graphpoints}
+
+            comment_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, CommentGraphPoint)]
+            if comment_graphpoints:
+                self.comments = [y.text for y in sorted(comment_graphpoints, key=lambda x: x.id)]
+
+
+    class GraphPointSpecParams(SpecParams, GraphPointSpec):
+        def __init__(self, graphpoint, graphdefinition):
+            SpecParams.__init__(self)
+            sample_gp = graphpoint.__class__(graphpoint.id)
+
+            for propname in ('lineType', 'lineWidth', 'stacked', 'format',
+                             'legend', 'limit', 'rpn', 'cFunc', 'color', 'dpName'):
+                if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
+                    setattr(self, propname, getattr(graphpoint, propname, None))
+
+            threshold_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, ThresholdGraphPoint)]
+
+            self.includeThresholds = False
+            if threshold_graphpoints:
+                thresholds = {x.id: x for x in graphpoint.graphDef().rrdTemplate().thresholds()}
+                for tgp in threshold_graphpoints:
+                    threshold = thresholds.get(tgp.threshId, None)
+                    if threshold:
+                        if graphpoint.dpName in threshold.dsnames:
+                            self.includeThresholds = True
+
+
+
     Dumper.add_representer(ZenPackSpecParams, represent_zenpackspec)
     Dumper.add_representer(DeviceClassSpecParams, represent_spec)
     Dumper.add_representer(ZPropertySpecParams, represent_spec)
     Dumper.add_representer(ClassSpecParams, represent_spec)
     Dumper.add_representer(ClassPropertySpecParams, represent_spec)
     Dumper.add_representer(ClassRelationshipSpecParams, represent_spec)
-
+    Dumper.add_representer(RRDTemplateSpecParams, represent_spec)
+    Dumper.add_representer(RRDThresholdSpecParams, represent_spec)
+    Dumper.add_representer(RRDDatasourceSpecParams, represent_spec)
+    Dumper.add_representer(RRDDatapointSpecParams, represent_spec)
+    Dumper.add_representer(GraphDefinitionSpecParams, represent_spec)
+    Dumper.add_representer(GraphPointSpecParams, represent_spec)
 
 # Public Functions ##########################################################
+
 
 def enableTesting():
     """Enable test mode. Only call from code under tests/.
@@ -4436,15 +5467,39 @@ if __name__ == '__main__':
 
                 # convert the cfg dictionary to yaml
                 specparams = ZenPackSpecParams(**CFG)
-                outputfile = yaml.dump(specparams)
+                outputfile = yaml.dump(specparams, Dumper=Dumper)
 
                 # tweak the yaml slightly.
                 outputfile = outputfile.replace("__builtin__.object", "object")
 
                 print outputfile
 
+            elif len(args) == 2 and args[0] == 'dump_templates':
+                zenpack_name = args[1]
+
+                self.connect()
+                zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
+                if zenpack is None:
+                    LOG.error("Zenpack '%s' not found." % zenpack_name)
+                    return
+
+                device_classes = {}
+                templates = {}
+                for deviceclass in [x for x in zenpack.packables() if x.meta_type == 'DeviceClass']:
+                    dc_name = deviceclass.getOrganizerName()
+                    device_classes[dc_name] = {}
+                    templates[dc_name] = {}
+                    for template in deviceclass.getAllRRDTemplates():
+                        templates[dc_name][template.id] = RRDTemplateSpecParams(template)
+
+                zpsp = ZenPackSpecParams(zenpack_name, device_classes=device_classes)
+                for dc_name in templates:
+                    zpsp.device_classes[dc_name].templates = templates[dc_name]
+
+                print yaml.dump(zpsp, Dumper=Dumper)
+
             else:
-                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> <__init__.py>" % sys.argv[0]
+                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> <__init__.py> | dump_templates <zenpack_name>" % sys.argv[0]
 
     script = ZPLCommand()
     script.run()
