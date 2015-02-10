@@ -44,6 +44,7 @@ from zope.event import notify
 from zope.interface import classImplements, implements
 from zope.interface.interface import InterfaceClass
 import zope.proxy
+from Acquisition import aq_base
 
 from Products.AdvancedQuery import Eq, Or
 from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
@@ -212,9 +213,50 @@ class ZenPack(ZenPackBase):
             for mtname, mtspec in dcspec.templates.iteritems():
                 mtspec.create(self.dmd)
 
+
     def remove(self, app, leaveObjects=False):
         from Products.Zuul.interfaces import ICatalogTool
-        if not leaveObjects:
+        if leaveObjects:
+            # Check whether the ZPL-managed monitoring templates have
+            # been modified by the user.  If so, those changes will
+            # be lost during the upgrade.
+            #
+            # Ideally, I would inspect self.packables() to find these
+            # objects, but we do not have access to that relationship
+            # at this point in the process.
+            for dcname, dcspec in self._v_specparams.device_classes.iteritems():
+                deviceclass = self.dmd.Devices.getOrganizer(dcname)
+                if deviceclass is None:
+                    LOG.warning(
+                        "DeviceClass %s has been removed at some point "
+                        "after the %s ZenPack was installed.  It will be "
+                        "reinstated if this ZenPack is upgraded or reinstalled",
+                        dcname, self.id)
+                    continue
+
+                for mtname, mtspec in dcspec.templates.iteritems():
+                    template = deviceclass.rrdTemplates._getOb(mtname)
+                    if template is None:
+                        LOG.warning(
+                            "Monitoring template %s/%s has been removed at some point "
+                            "after the %s ZenPack was installed.  It will be "
+                            "reinstated if this ZenPack is upgraded or reinstalled",
+                            dcname, mtname, self.id)
+                        continue
+
+                    installed = RRDTemplateSpecParams.fromObject(template)
+
+                    if installed != mtspec:
+                        LOG.error(
+                            "Monitoring template %s/%s has modified "
+                            "since the %s ZenPack was installed.  These local "
+                            "changes will be lost if this ZenPack is upgraded "
+                            "or reinstalled",
+                            dcname, mtname, self.id)
+                        print "Installed: %s" % yaml.dump(installed, Dumper=Dumper)
+                        print "Current: %s" % yaml.dump(mtspec, Dumper=Dumper)
+
+        else:
             dc = app.Devices
             for catalog in self.GLOBAL_CATALOGS:
                 catObj = getattr(dc, catalog, None)
@@ -1049,19 +1091,23 @@ class Spec(object):
 
         return params
 
-    def __eq__(self, other):
+    def __eq__(self, other, ignore_params=[]):
         if type(self) != type(other):
             return False
 
         params = self.init_params()
         for p in params:
+            if p in ignore_params:
+                continue
             if getattr(self, p) != getattr(other, p):
-                # LOG.debug("Comparing %s %s to %s %s, parameter %s does not match (%s != %s)",
-                #           self.__class__.__name__, self.name, other.__class__.__name__, other.name, p,
-                #           getattr(self, p), getattr(other, p))
+                LOG.error("Comparing %s to %s, parameter %s does not match (%s != %s)",
+                          self, other, p, getattr(self, p), getattr(other, p))
                 return False
 
         return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ZenPackSpec(Spec):
@@ -1135,6 +1181,15 @@ class ZenPackSpec(Spec):
             :yaml_block_style class_relationships: True
         """
         super(ZenPackSpec, self).__init__(_source_location=_source_location)
+
+        # The parameters from which this zenpackspec was originally
+        # instantiated.
+        self.specparams = ZenPackSpecParams(
+            name,
+            zProperties=zProperties,
+            classes=classes,
+            class_relationships=class_relationships,
+            device_classes=device_classes)
 
         self.name = name
         self.NEW_COMPONENT_TYPES = []
@@ -1455,6 +1510,7 @@ class ZenPackSpec(Spec):
             }
 
         attributes['device_classes'] = self.device_classes
+        attributes['_v_specparams'] = self.specparams
         attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
         attributes['NEW_RELATIONS'] = self.NEW_RELATIONS
         attributes['GLOBAL_CATALOGS'] = []
@@ -3233,7 +3289,7 @@ class RRDThresholdSpec(Spec):
             eventClass=None,
             severity=None,
             enabled=None,
-            extra_params=None,
+            extra_params={},
             _source_location=None
             ):
         """
@@ -3315,7 +3371,7 @@ class RRDDatasourceSpec(Spec):
             commandTemplate=None,
             cycletime=None,
             datapoints=None,
-            extra_params=None,
+            extra_params={},
             _source_location=None
             ):
         """
@@ -3419,7 +3475,7 @@ class RRDDatapointSpec(Spec):
             description=None,
             aliases=None,
             shorthand=None,
-            extra_params=None,
+            extra_params={},
             _source_location=None
             ):
         """
@@ -3479,6 +3535,13 @@ class RRDDatapointSpec(Spec):
             if max_match:
                 rrdmax = max_match.group(1)
                 self.rrdmax = rrdmax
+
+    def __eq__(self, other):
+        if self.shorthand:
+            # when shorthand syntax is in use, the other values are not relevant
+            return super(RRDDatapointSpec, self).__eq__(other, ignore_params=['rrdtype', 'rrdmin', 'rrdmax'])
+        else:
+            return super(RRDDatapointSpec, self).__eq__(other)
 
     def create(self, datasource_spec, datasource):
         datapoint = datasource.manage_addRRDDataPoint(self.name)
@@ -3959,9 +4022,9 @@ if YAML_INSTALLED:
         if isinstance(obj, RRDDatapointSpec) and obj.shorthand:
             # Special case- we allow for a shorthand in specifying datapoints
             # as specs as strings rather than explicitly as a map.
-            return dumper.represent_str(obj.shorthand)
+            return dumper.represent_str(str(obj.shorthand))
 
-        mapping = {}
+        mapping = OrderedDict()
         cls = obj.__class__
         param_defs = cls.init_params()
         for param in param_defs:
@@ -4341,7 +4404,6 @@ if YAML_INSTALLED:
 
             return params
 
-
     class ZenPackSpecParams(SpecParams, ZenPackSpec):
         def __init__(self, name, zProperties=None, class_relationships=None, classes=None, device_classes=None, **kwargs):
             SpecParams.__init__(self, **kwargs)
@@ -4365,10 +4427,12 @@ if YAML_INSTALLED:
                 DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True)
 
     class DeviceClassSpecParams(SpecParams, DeviceClassSpec):
-        def __init__(self, zenpack_spec, path, zProperties=None, **kwargs):
+        def __init__(self, zenpack_spec, path, zProperties=None, templates=None, **kwargs):
             SpecParams.__init__(self, **kwargs)
             self.path = path
             self.zProperties = zProperties
+            self.templates = self.specs_from_param(
+                RRDTemplateSpecParams, 'templates', templates)
 
     class ZPropertySpecParams(SpecParams, ZPropertySpec):
         def __init__(self, zenpack_spec, name, **kwargs):
@@ -4406,22 +4470,48 @@ if YAML_INSTALLED:
             SpecParams.__init__(self, **kwargs)
             self.name = name
 
-    # The following adapt their underlying model classes, to support
-    # exporting from ZODB.
     class RRDTemplateSpecParams(SpecParams, RRDTemplateSpec):
-        def __init__(self, template):
+        def __init__(self, deviceclass_spec, name, thresholds=None, datasources=None, graphs=None, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+            self.thresholds = self.specs_from_param(
+                RRDThresholdSpecParams, 'thresholds', thresholds)
+
+            self.datasources = self.specs_from_param(
+                RRDDatasourceSpecParams, 'datasources', datasources)
+
+            self.graphs = self.specs_from_param(
+                GraphDefinitionSpecParams, 'graphs', graphs)
+
+        @classmethod
+        def fromObject(cls, template):
+            self = object.__new__(cls)
             SpecParams.__init__(self)
+            template = aq_base(template)
 
             self.targetPythonClass = template.targetPythonClass
             self.description = template.description
 
-            self.thresholds = {x.id: RRDThresholdSpecParams(x) for x in template.thresholds()}
-            self.datasources = {x.id: RRDDatasourceSpecParams(x) for x in template.datasources()}
-            self.graphs = {x.id: GraphDefinitionSpecParams(x) for x in template.graphDefs()}
+            self.thresholds = {x.id: RRDThresholdSpecParams.fromObject(x) for x in template.thresholds()}
+            self.datasources = {x.id: RRDDatasourceSpecParams.fromObject(x) for x in template.datasources()}
+            self.graphs = {x.id: GraphDefinitionSpecParams.fromObject(x) for x in template.graphDefs()}
+
+            return self
 
     class RRDDatasourceSpecParams(SpecParams, RRDDatasourceSpec):
-        def __init__(self, datasource):
+        def __init__(self, template_spec, name, datapoints=None, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+            self.datapoints = self.specs_from_param(
+                RRDDatapointSpecParams, 'datapoints', datapoints)
+
+        @classmethod
+        def fromObject(cls, datasource):
+            self = object.__new__(cls)
             SpecParams.__init__(self)
+            datasource = aq_base(datasource)
 
             # Weed out any values that are the same as they would by by default.
             # We do this by instantiating a "blank" datapoint and comparing
@@ -4440,11 +4530,19 @@ if YAML_INSTALLED:
                     if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
                         self.extra_params[propname] = getattr(datasource, propname, None)
 
-            self.datapoints = {x.id: RRDDatapointSpecParams(x) for x in datasource.datapoints()}
+            self.datapoints = {x.id: RRDDatapointSpecParams.fromObject(x) for x in datasource.datapoints()}
+
+            return self
 
     class RRDThresholdSpecParams(SpecParams, RRDThresholdSpec):
-        def __init__(self, threshold):
+        def __init__(self, template_spec, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+
+        @classmethod
+        def fromObject(cls, threshold):
+            self = object.__new__(cls)
             SpecParams.__init__(self)
+            threshold = aq_base(threshold)
             sample_th = threshold.__class__(threshold.id)
 
             for propname in ('dnsnames', 'eventClass', 'severity', 'type_'):
@@ -4457,9 +4555,18 @@ if YAML_INSTALLED:
                     if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
                         self.extra_params[propname] = getattr(threshold, propname, None)
 
+            return self
+
     class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
-        def __init__(self, datapoint):
+        def __init__(self, datasource_spec, name, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+        @classmethod
+        def fromObject(cls, datapoint):
+            self = object.__new__(cls)
             SpecParams.__init__(self)
+            datapoint = aq_base(datapoint)
             sample_dp = datapoint.__class__(datapoint.id)
 
             for propname in ('name', 'rrdtype', 'createCmd', 'isrow', 'rrdmin',
@@ -4529,9 +4636,20 @@ if YAML_INSTALLED:
                     if dp_xml == sample_dp_xml:
                         self.shorthand = '_'.join(shorthand)
 
+            return self
+
     class GraphDefinitionSpecParams(SpecParams, GraphDefinitionSpec):
-        def __init__(self, graphdefinition):
+        def __init__(self, template_spec, name, graphpoints=None, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+            self.graphpoints = self.specs_from_param(
+                GraphPointSpecParams, 'graphpoints', graphpoints)
+
+        @classmethod
+        def fromObject(cls, graphdefinition):
+            self = object.__new__(cls)
             SpecParams.__init__(self)
+            graphdefinition = aq_base(graphdefinition)
             sample_gd = graphdefinition.__class__(graphdefinition.id)
 
             for propname in ('height', 'width', 'units', 'log', 'base', 'miny',
@@ -4540,16 +4658,25 @@ if YAML_INSTALLED:
                     setattr(self, propname, getattr(graphdefinition, propname, None))
 
             datapoint_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, DataPointGraphPoint)]
-            self.graphpoints = {x.id: GraphPointSpecParams(x, graphdefinition) for x in datapoint_graphpoints}
+            self.graphpoints = {x.id: GraphPointSpecParams.fromObject(x, graphdefinition) for x in datapoint_graphpoints}
 
             comment_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, CommentGraphPoint)]
             if comment_graphpoints:
                 self.comments = [y.text for y in sorted(comment_graphpoints, key=lambda x: x.id)]
 
+            return self
 
     class GraphPointSpecParams(SpecParams, GraphPointSpec):
-        def __init__(self, graphpoint, graphdefinition):
+        def __init__(self, template_spec, name, **kwargs):
+            SpecParams.__init__(self, **kwargs)
+            self.name = name
+
+        @classmethod
+        def fromObject(cls, graphpoint, graphdefinition):
+            self = object.__new__(cls)
             SpecParams.__init__(self)
+            graphpoint = aq_base(graphpoint)
+            graphdefinition = aq_base(graphdefinition)
             sample_gp = graphpoint.__class__(graphpoint.id)
 
             for propname in ('lineType', 'lineWidth', 'stacked', 'format',
@@ -4568,7 +4695,7 @@ if YAML_INSTALLED:
                         if graphpoint.dpName in threshold.dsnames:
                             self.includeThresholds = True
 
-
+            return self
 
     Dumper.add_representer(ZenPackSpecParams, represent_zenpackspec)
     Dumper.add_representer(DeviceClassSpecParams, represent_spec)
@@ -5490,7 +5617,7 @@ if __name__ == '__main__':
                     device_classes[dc_name] = {}
                     templates[dc_name] = {}
                     for template in deviceclass.getAllRRDTemplates():
-                        templates[dc_name][template.id] = RRDTemplateSpecParams(template)
+                        templates[dc_name][template.id] = RRDTemplateSpecParams.fromObject(template)
 
                 zpsp = ZenPackSpecParams(zenpack_name, device_classes=device_classes)
                 for dc_name in templates:
