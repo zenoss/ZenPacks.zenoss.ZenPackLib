@@ -247,14 +247,19 @@ class ZenPack(ZenPackBase):
                     installed = RRDTemplateSpecParams.fromObject(template)
 
                     if installed != mtspec:
+                        import time
+                        newname = "{}-upgrade-{}".format(mtname, int(time.time()))
                         LOG.error(
-                            "Monitoring template %s/%s has modified "
+                            "Monitoring template %s/%s has been modified "
                             "since the %s ZenPack was installed.  These local "
-                            "changes will be lost if this ZenPack is upgraded "
-                            "or reinstalled",
-                            dcname, mtname, self.id)
-                        print "Installed: %s" % yaml.dump(installed, Dumper=Dumper)
-                        print "Current: %s" % yaml.dump(mtspec, Dumper=Dumper)
+                            "changes will be lost as this ZenPack is upgraded "
+                            "or reinstalled.   Existing template will be "
+                            "renamed to '%s'.  Please review and reconcile "
+                            "local changes.",
+                            dcname, mtname, self.id, newname)
+                        deviceclass.rrdTemplates.manage_renameObject(template.id, newname)
+
+
 
         else:
             dc = app.Devices
