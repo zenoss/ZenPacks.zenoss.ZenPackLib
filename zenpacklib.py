@@ -1105,7 +1105,7 @@ class Spec(object):
             if p in ignore_params:
                 continue
             if getattr(self, p) != getattr(other, p):
-                LOG.error("Comparing %s to %s, parameter %s does not match (%s != %s)",
+                LOG.debug("Comparing %s to %s, parameter %s does not match (%s != %s)",
                           self, other, p, getattr(self, p), getattr(other, p))
                 return False
 
