@@ -1177,13 +1177,13 @@ class ZenPackSpec(Spec):
             :type name: str
             :param zProperties: zProperty Specs
             :type zProperties: SpecsParameter(ZPropertySpec)
-            :param classes: Class Specs
-            :type classes: SpecsParameter(ClassSpec)
-            :param device_classes: DeviceClass Specs
-            :type device_classes: SpecsParameter(DeviceClassSpec)
             :param class_relationships: Class Relationship Specs
             :type class_relationships: list(RelationshipSchemaSpec)
             :yaml_block_style class_relationships: True
+            :param device_classes: DeviceClass Specs
+            :type device_classes: SpecsParameter(DeviceClassSpec)
+            :param classes: Class Specs
+            :type classes: SpecsParameter(ClassSpec)
         """
         super(ZenPackSpec, self).__init__(_source_location=_source_location)
 
@@ -5596,6 +5596,11 @@ if __name__ == '__main__':
                 # tweak the input slightly.
                 inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
 
+                # Kludge 'from . import' into working.
+                import site
+                site.addsitedir(os.path.dirname(filename))
+                inputfile = re.sub(r'from . import', 'import', inputfile)
+
                 g = dict(zenpacklib=zenpacklib_module)
                 l = dict()
                 exec inputfile in g, l
@@ -5605,6 +5610,20 @@ if __name__ == '__main__':
 
                 # convert the cfg dictionary to yaml
                 specparams = ZenPackSpecParams(**CFG)
+
+                # Dig around in ZODB and add any defined monitoring templates
+                # to the spec.
+                self.connect()
+                templates = self.zenpack_templatespecs(zenpack_name)
+                for dc_name in templates:
+                    if dc_name not in specparams.device_classes:
+                        LOG.warning("Device class '%s' was not defined in %s - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.",
+                                    dc_name, filename)
+                        specparams.device_classes[dc_name] = DeviceClassSpecParams(specparams, dc_name)
+
+                    # And merge in the templates we found in ZODB.
+                    specparams.device_classes[dc_name].templates.update(templates[dc_name])
+
                 outputfile = yaml.dump(specparams, Dumper=Dumper)
 
                 # tweak the yaml slightly.
@@ -5614,23 +5633,10 @@ if __name__ == '__main__':
 
             elif len(args) == 2 and args[0] == 'dump_templates':
                 zenpack_name = args[1]
-
                 self.connect()
-                zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
-                if zenpack is None:
-                    LOG.error("Zenpack '%s' not found." % zenpack_name)
-                    return
 
-                device_classes = {}
-                templates = {}
-                for deviceclass in [x for x in zenpack.packables() if x.meta_type == 'DeviceClass']:
-                    dc_name = deviceclass.getOrganizerName()
-                    device_classes[dc_name] = {}
-                    templates[dc_name] = {}
-                    for template in deviceclass.getAllRRDTemplates():
-                        templates[dc_name][template.id] = RRDTemplateSpecParams.fromObject(template)
-
-                zpsp = ZenPackSpecParams(zenpack_name, device_classes=device_classes)
+                templates = self.zenpack_templatespecs(zenpack_name)
+                zpsp = ZenPackSpecParams(zenpack_name, device_classes={x: {} for x in templates})
                 for dc_name in templates:
                     zpsp.device_classes[dc_name].templates = templates[dc_name]
 
@@ -5638,6 +5644,20 @@ if __name__ == '__main__':
 
             else:
                 print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> <__init__.py> | dump_templates <zenpack_name>" % sys.argv[0]
+
+        def zenpack_templatespecs(self, zenpack_name):
+            zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
+            if zenpack is None:
+                LOG.error("Zenpack '%s' not found." % zenpack_name)
+                return
+
+            templates = {}
+            for deviceclass in [x for x in zenpack.packables() if x.meta_type == 'DeviceClass']:
+                dc_name = deviceclass.getOrganizerName()
+                templates[dc_name] = {}
+                for template in deviceclass.getAllRRDTemplates():
+                    templates[dc_name][template.id] = RRDTemplateSpecParams.fromObject(template)
+            return templates
 
     script = ZPLCommand()
     script.run()
