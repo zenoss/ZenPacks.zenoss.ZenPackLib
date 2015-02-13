@@ -3294,7 +3294,7 @@ class RRDThresholdSpec(Spec):
             eventClass=None,
             severity=None,
             enabled=None,
-            extra_params={},
+            extra_params=None,
             _source_location=None
             ):
         """
@@ -3323,7 +3323,10 @@ class RRDThresholdSpec(Spec):
         self.severity = severity
         self.enabled = enabled
         self.type_ = type_
-        self.extra_params = extra_params
+        if extra_params is None:
+            self.extra_params = {}
+        else:
+            self.extra_params = extra_params
 
     def create(self, id_, templatespec, template):
         if not self.dsnames:
@@ -3376,7 +3379,7 @@ class RRDDatasourceSpec(Spec):
             commandTemplate=None,
             cycletime=None,
             datapoints=None,
-            extra_params={},
+            extra_params=None,
             _source_location=None
             ):
         """
@@ -3417,7 +3420,10 @@ class RRDDatasourceSpec(Spec):
         self.severity = severity
         self.commandTemplate = commandTemplate
         self.cycletime = cycletime
-        self.extra_params = extra_params
+        if extra_params is None:
+            self.extra_params = {}
+        else:
+            self.extra_params = extra_params
 
         self.datapoints = self.specs_from_param(
             RRDDatapointSpec, 'datapoints', datapoints)
@@ -3480,7 +3486,7 @@ class RRDDatapointSpec(Spec):
             description=None,
             aliases=None,
             shorthand=None,
-            extra_params={},
+            extra_params=None,
             _source_location=None
             ):
         """
