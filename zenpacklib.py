@@ -155,7 +155,7 @@ class ZenPack(ZenPackBase):
         # Emable logging to stderr if the user sets the ZPL_LOG_ENABLE environment
         # variable to this zenpack's name.   (defaults to 'DEBUG', but
         # user may choose a different level with ZPL_LOG_LEVEL.
-        if self.id in os.environ.get('ZPL_LOG_ENABLE'):
+        if self.id in os.environ.get('ZPL_LOG_ENABLE', ''):
             levelName = os.environ.get('ZPL_LOG_LEVEL', 'DEBUG').upper()
             logLevel = getattr(logging, levelName)
 
@@ -4556,7 +4556,7 @@ if YAML_INSTALLED:
             threshold = aq_base(threshold)
             sample_th = threshold.__class__(threshold.id)
 
-            for propname in ('dnsnames', 'eventClass', 'severity', 'type_'):
+            for propname in ('dsnames', 'eventClass', 'severity', 'type_'):
                 if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
                     setattr(self, propname, getattr(threshold, propname, None))
 
