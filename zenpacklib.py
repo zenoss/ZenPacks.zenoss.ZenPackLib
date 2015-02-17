@@ -3356,7 +3356,7 @@ class RRDThresholdSpec(Spec):
             threshold.enabled = self.enabled
         if self.extra_params:
             for param, value in self.extra_params.iteritems():
-                if param in threshold._properties:
+                if param in [x['id'] for x in threshold._properties]:
                     setattr(threshold, param, value)
                 else:
                     raise ValueError("%s is not a valid property for threshold of type %s" % (param, type_))
@@ -3460,7 +3460,7 @@ class RRDDatasourceSpec(Spec):
 
         if self.extra_params:
             for param, value in self.extra_params.iteritems():
-                if param in datasource._properties:
+                if param in [x['id'] for x in datasource._properties]:
                     setattr(datasource, param, value)
                 else:
                     raise ValueError("%s is not a valid property for datasource of type %s" % (param, type_))
@@ -3571,7 +3571,7 @@ class RRDDatapointSpec(Spec):
             datapoint.description = self.description
         if self.extra_params:
             for param, value in self.extra_params.iteritems():
-                if param in datapoint._properties:
+                if param in [x['id'] for x in datapoint._properties]:
                     setattr(datapoint, param, value)
                 else:
                     raise ValueError("%s is not a valid property for datapoint of type %s" % (param, type_))
@@ -4387,7 +4387,10 @@ if YAML_INSTALLED:
 
     def load_yaml(yaml_filename):
         CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
-        CFG.create()
+        if CFG:
+            CFG.create()
+        else:
+            LOG.error("Unable to load %s", yaml_filename)
 
     class SpecParams(object):
         def __init__(self, **kwargs):
