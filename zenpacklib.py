@@ -5577,9 +5577,15 @@ if __name__ == '__main__':
                 except Exception, e:
                     LOG.exception(e)
 
-            elif len(args) == 3 and args[0] == 'py_to_yaml':
+            elif len(args) == 2 and args[0] == 'py_to_yaml':
                 zenpack_name = args[1]
-                filename = args[2]
+
+                self.connect()
+                zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name)
+                if zenpack is None:
+                    LOG.error("Zenpack '%s' not found." % zenpack_name)
+                    return
+                zenpack_init_py = os.path.join(os.path.dirname(inspect.getfile(zenpack.__class__)), '__init__.py')
 
                 # create a dummy zenpacklib sufficient to be used in an
                 # __init__.py, so we can capture export the data.
@@ -5590,7 +5596,7 @@ if __name__ == '__main__':
                     zenpacklib_module.CFG = dict(self)
                 zenpacklib_module.ZenPackSpec.create = zpl_create
 
-                stream = open(filename, 'r')
+                stream = open(zenpack_init_py, 'r')
                 inputfile = stream.read()
 
                 # tweak the input slightly.
@@ -5598,7 +5604,7 @@ if __name__ == '__main__':
 
                 # Kludge 'from . import' into working.
                 import site
-                site.addsitedir(os.path.dirname(filename))
+                site.addsitedir(os.path.dirname(zenpack_init_py))
                 inputfile = re.sub(r'from . import', 'import', inputfile)
 
                 g = dict(zenpacklib=zenpacklib_module)
@@ -5613,12 +5619,11 @@ if __name__ == '__main__':
 
                 # Dig around in ZODB and add any defined monitoring templates
                 # to the spec.
-                self.connect()
                 templates = self.zenpack_templatespecs(zenpack_name)
                 for dc_name in templates:
                     if dc_name not in specparams.device_classes:
                         LOG.warning("Device class '%s' was not defined in %s - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.",
-                                    dc_name, filename)
+                                    dc_name, zenpack_init_py)
                         specparams.device_classes[dc_name] = DeviceClassSpecParams(specparams, dc_name)
 
                     # And merge in the templates we found in ZODB.
@@ -5642,8 +5647,52 @@ if __name__ == '__main__':
 
                 print yaml.dump(zpsp, Dumper=Dumper)
 
+            elif len(args) == 3 and args[0] == "class_diagram":
+                diagram_type = args[1]
+                filename = args[2]
+
+                with open(filename, 'r') as stream:
+                    CFG = yaml.load(stream, Loader=Loader)
+
+                if diagram_type == 'yuml':
+                    print "# Classes"
+                    for cname in sorted(CFG.classes):
+                        print "[{}]".format(cname)
+
+                    print "\n# Inheritence"
+                    for cname in CFG.classes:
+                        cspec = CFG.classes[cname]
+                        for baseclass in cspec.bases:
+                            if type(baseclass) != str:
+                                baseclass = aq_base(baseclass).__name__
+                            print "[{}]^-[{}]".format(baseclass, cspec.name)
+
+                    print "\n# Containing Relationships"
+                    for crspec in CFG.class_relationships:
+                        if crspec.cardinality == '1:MC':
+                            print "[{}]++{}-{}[{}]".format(
+                                crspec.left_class, crspec.left_relname,
+                                crspec.right_relname, crspec.right_class)
+
+                    print "\n# Non-Containing Relationships"
+                    for crspec in CFG.class_relationships:
+                        if crspec.cardinality == '1:1':
+                            print "[{}]{}-.-{}[{}]".format(
+                                crspec.left_class, crspec.left_relname,
+                                crspec.right_relname, crspec.right_class)
+                        if crspec.cardinality == '1:M':
+                            print "[{}]{}-.-{}++[{}]".format(
+                                crspec.left_class, crspec.left_relname,
+                                crspec.right_relname, crspec.right_class)
+                        if crspec.cardinality == 'M:M':
+                            print "[{}]++{}-.-{}++[{}]".format(
+                                crspec.left_class, crspec.left_relname,
+                                crspec.right_relname, crspec.right_class)
+                else:
+                    LOG.error("Diagram type '%s' is not supported.", diagram_type)
             else:
-                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> <__init__.py> | dump_templates <zenpack_name>" % sys.argv[0]
+                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> | dump_templates <zenpack_name> | class_diagram [yuml] <file.yaml>" % sys.argv[0]
+
 
         def zenpack_templatespecs(self, zenpack_name):
             zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
