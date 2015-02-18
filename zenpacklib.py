@@ -5586,7 +5586,7 @@ if __name__ == '__main__':
                 self.connect()
                 zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name)
                 if zenpack is None:
-                    LOG.error("Zenpack '%s' not found." % zenpack_name)
+                    LOG.error("ZenPack '%s' not found." % zenpack_name)
                     return
                 zenpack_init_py = os.path.join(os.path.dirname(inspect.getfile(zenpack.__class__)), '__init__.py')
 
@@ -5696,11 +5696,10 @@ if __name__ == '__main__':
             else:
                 print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> | dump_templates <zenpack_name> | class_diagram [yuml] <file.yaml>" % sys.argv[0]
 
-
         def zenpack_templatespecs(self, zenpack_name):
             zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
             if zenpack is None:
-                LOG.error("Zenpack '%s' not found." % zenpack_name)
+                LOG.error("ZenPack '%s' not found." % zenpack_name)
                 return
 
             templates = {}
