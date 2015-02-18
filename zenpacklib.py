@@ -3271,7 +3271,7 @@ class RRDTemplateSpec(Spec):
 
         self.speclog.debug("adding {} thresholds".format(len(self.thresholds)))
         for threshold_id, threshold_spec in self.thresholds.items():
-            threshold_spec.create(threshold_id, self, template)
+            threshold_spec.create(self, template)
 
         self.speclog.debug("adding {} datasources".format(len(self.datasources)))
         for datasource_id, datasource_spec in self.datasources.items():
@@ -3289,6 +3289,7 @@ class RRDThresholdSpec(Spec):
     def __init__(
             self,
             template_spec,
+            name,
             type_='MinMaxThreshold',
             dsnames=None,
             eventClass=None,
@@ -3317,6 +3318,7 @@ class RRDThresholdSpec(Spec):
         """
         super(RRDThresholdSpec, self).__init__(_source_location=_source_location)
 
+        self.name = name
         self.template_spec = template_spec
         self.dsnames = dsnames
         self.eventClass = eventClass
@@ -3328,7 +3330,7 @@ class RRDThresholdSpec(Spec):
         else:
             self.extra_params = extra_params
 
-    def create(self, id_, templatespec, template):
+    def create(self, templatespec, template):
         if not self.dsnames:
             raise ValueError("%s: threshold has no dsnames attribute", self)
 
@@ -3340,10 +3342,10 @@ class RRDThresholdSpec(Spec):
         threshold_types = dict((y, x) for x, y in template.getThresholdClasses())
         type_ = threshold_types.get(self.type_)
         if not type_:
-            raise ValueError("'%s' is an invalid threshold type. Valid types: %s",
-                             self.type_, ', '.join(threshold_types))
+            raise ValueError("'%s' is an invalid threshold type. Valid types: %s" %
+                             (self.type_, ', '.join(threshold_types)))
 
-        threshold = template.manage_addRRDThreshold(id_, self.type_)
+        threshold = template.manage_addRRDThreshold(self.name, self.type_)
         self.speclog.debug("adding threshold")
 
         if self.dsnames is not None:
@@ -4549,8 +4551,9 @@ if YAML_INSTALLED:
             return self
 
     class RRDThresholdSpecParams(SpecParams, RRDThresholdSpec):
-        def __init__(self, template_spec, **kwargs):
+        def __init__(self, template_spec, name, foo=None, **kwargs):
             SpecParams.__init__(self, **kwargs)
+            self.name = name
 
         @classmethod
         def fromObject(cls, threshold):
