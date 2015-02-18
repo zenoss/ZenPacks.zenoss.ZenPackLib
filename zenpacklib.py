@@ -5702,11 +5702,10 @@ if __name__ == '__main__':
                 LOG.error("ZenPack '%s' not found." % zenpack_name)
                 return
 
-            templates = {}
+            templates = collections.defaultdict(dict)
             for deviceclass in [x for x in zenpack.packables() if x.meta_type == 'DeviceClass']:
-                dc_name = deviceclass.getOrganizerName()
-                templates[dc_name] = {}
                 for template in deviceclass.getAllRRDTemplates():
+                    dc_name = template.deviceClass().getOrganizerName()
                     templates[dc_name][template.id] = RRDTemplateSpecParams.fromObject(template)
             return templates
 
