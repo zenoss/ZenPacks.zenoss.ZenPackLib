@@ -155,7 +155,7 @@ class ZenPack(ZenPackBase):
         # Emable logging to stderr if the user sets the ZPL_LOG_ENABLE environment
         # variable to this zenpack's name.   (defaults to 'DEBUG', but
         # user may choose a different level with ZPL_LOG_LEVEL.
-        if self.id in os.environ.get('ZPL_LOG_ENABLE'):
+        if self.id in os.environ.get('ZPL_LOG_ENABLE', ''):
             levelName = os.environ.get('ZPL_LOG_LEVEL', 'DEBUG').upper()
             logLevel = getattr(logging, levelName)
 
@@ -1177,13 +1177,13 @@ class ZenPackSpec(Spec):
             :type name: str
             :param zProperties: zProperty Specs
             :type zProperties: SpecsParameter(ZPropertySpec)
-            :param classes: Class Specs
-            :type classes: SpecsParameter(ClassSpec)
-            :param device_classes: DeviceClass Specs
-            :type device_classes: SpecsParameter(DeviceClassSpec)
             :param class_relationships: Class Relationship Specs
             :type class_relationships: list(RelationshipSchemaSpec)
             :yaml_block_style class_relationships: True
+            :param device_classes: DeviceClass Specs
+            :type device_classes: SpecsParameter(DeviceClassSpec)
+            :param classes: Class Specs
+            :type classes: SpecsParameter(ClassSpec)
         """
         super(ZenPackSpec, self).__init__(_source_location=_source_location)
 
@@ -3356,7 +3356,7 @@ class RRDThresholdSpec(Spec):
             threshold.enabled = self.enabled
         if self.extra_params:
             for param, value in self.extra_params.iteritems():
-                if param in threshold._properties:
+                if param in [x['id'] for x in threshold._properties]:
                     setattr(threshold, param, value)
                 else:
                     raise ValueError("%s is not a valid property for threshold of type %s" % (param, type_))
@@ -3460,7 +3460,7 @@ class RRDDatasourceSpec(Spec):
 
         if self.extra_params:
             for param, value in self.extra_params.iteritems():
-                if param in datasource._properties:
+                if param in [x['id'] for x in datasource._properties]:
                     setattr(datasource, param, value)
                 else:
                     raise ValueError("%s is not a valid property for datasource of type %s" % (param, type_))
@@ -3571,7 +3571,7 @@ class RRDDatapointSpec(Spec):
             datapoint.description = self.description
         if self.extra_params:
             for param, value in self.extra_params.iteritems():
-                if param in datapoint._properties:
+                if param in [x['id'] for x in datapoint._properties]:
                     setattr(datapoint, param, value)
                 else:
                     raise ValueError("%s is not a valid property for datapoint of type %s" % (param, type_))
@@ -4387,7 +4387,10 @@ if YAML_INSTALLED:
 
     def load_yaml(yaml_filename):
         CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
-        CFG.create()
+        if CFG:
+            CFG.create()
+        else:
+            LOG.error("Unable to load %s", yaml_filename)
 
     class SpecParams(object):
         def __init__(self, **kwargs):
@@ -4556,7 +4559,7 @@ if YAML_INSTALLED:
             threshold = aq_base(threshold)
             sample_th = threshold.__class__(threshold.id)
 
-            for propname in ('dnsnames', 'eventClass', 'severity', 'type_'):
+            for propname in ('dsnames', 'eventClass', 'severity', 'type_'):
                 if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
                     setattr(self, propname, getattr(threshold, propname, None))
 
@@ -5577,9 +5580,15 @@ if __name__ == '__main__':
                 except Exception, e:
                     LOG.exception(e)
 
-            elif len(args) == 3 and args[0] == 'py_to_yaml':
+            elif len(args) == 2 and args[0] == 'py_to_yaml':
                 zenpack_name = args[1]
-                filename = args[2]
+
+                self.connect()
+                zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name)
+                if zenpack is None:
+                    LOG.error("ZenPack '%s' not found." % zenpack_name)
+                    return
+                zenpack_init_py = os.path.join(os.path.dirname(inspect.getfile(zenpack.__class__)), '__init__.py')
 
                 # create a dummy zenpacklib sufficient to be used in an
                 # __init__.py, so we can capture export the data.
@@ -5590,11 +5599,16 @@ if __name__ == '__main__':
                     zenpacklib_module.CFG = dict(self)
                 zenpacklib_module.ZenPackSpec.create = zpl_create
 
-                stream = open(filename, 'r')
+                stream = open(zenpack_init_py, 'r')
                 inputfile = stream.read()
 
                 # tweak the input slightly.
                 inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
+
+                # Kludge 'from . import' into working.
+                import site
+                site.addsitedir(os.path.dirname(zenpack_init_py))
+                inputfile = re.sub(r'from . import', 'import', inputfile)
 
                 g = dict(zenpacklib=zenpacklib_module)
                 l = dict()
@@ -5605,6 +5619,19 @@ if __name__ == '__main__':
 
                 # convert the cfg dictionary to yaml
                 specparams = ZenPackSpecParams(**CFG)
+
+                # Dig around in ZODB and add any defined monitoring templates
+                # to the spec.
+                templates = self.zenpack_templatespecs(zenpack_name)
+                for dc_name in templates:
+                    if dc_name not in specparams.device_classes:
+                        LOG.warning("Device class '%s' was not defined in %s - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.",
+                                    dc_name, zenpack_init_py)
+                        specparams.device_classes[dc_name] = DeviceClassSpecParams(specparams, dc_name)
+
+                    # And merge in the templates we found in ZODB.
+                    specparams.device_classes[dc_name].templates.update(templates[dc_name])
+
                 outputfile = yaml.dump(specparams, Dumper=Dumper)
 
                 # tweak the yaml slightly.
@@ -5614,30 +5641,73 @@ if __name__ == '__main__':
 
             elif len(args) == 2 and args[0] == 'dump_templates':
                 zenpack_name = args[1]
-
                 self.connect()
-                zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
-                if zenpack is None:
-                    LOG.error("Zenpack '%s' not found." % zenpack_name)
-                    return
 
-                device_classes = {}
-                templates = {}
-                for deviceclass in [x for x in zenpack.packables() if x.meta_type == 'DeviceClass']:
-                    dc_name = deviceclass.getOrganizerName()
-                    device_classes[dc_name] = {}
-                    templates[dc_name] = {}
-                    for template in deviceclass.getAllRRDTemplates():
-                        templates[dc_name][template.id] = RRDTemplateSpecParams.fromObject(template)
-
-                zpsp = ZenPackSpecParams(zenpack_name, device_classes=device_classes)
+                templates = self.zenpack_templatespecs(zenpack_name)
+                zpsp = ZenPackSpecParams(zenpack_name, device_classes={x: {} for x in templates})
                 for dc_name in templates:
                     zpsp.device_classes[dc_name].templates = templates[dc_name]
 
                 print yaml.dump(zpsp, Dumper=Dumper)
 
+            elif len(args) == 3 and args[0] == "class_diagram":
+                diagram_type = args[1]
+                filename = args[2]
+
+                with open(filename, 'r') as stream:
+                    CFG = yaml.load(stream, Loader=Loader)
+
+                if diagram_type == 'yuml':
+                    print "# Classes"
+                    for cname in sorted(CFG.classes):
+                        print "[{}]".format(cname)
+
+                    print "\n# Inheritence"
+                    for cname in CFG.classes:
+                        cspec = CFG.classes[cname]
+                        for baseclass in cspec.bases:
+                            if type(baseclass) != str:
+                                baseclass = aq_base(baseclass).__name__
+                            print "[{}]^-[{}]".format(baseclass, cspec.name)
+
+                    print "\n# Containing Relationships"
+                    for crspec in CFG.class_relationships:
+                        if crspec.cardinality == '1:MC':
+                            print "[{}]++{}-{}[{}]".format(
+                                crspec.left_class, crspec.left_relname,
+                                crspec.right_relname, crspec.right_class)
+
+                    print "\n# Non-Containing Relationships"
+                    for crspec in CFG.class_relationships:
+                        if crspec.cardinality == '1:1':
+                            print "[{}]{}-.-{}[{}]".format(
+                                crspec.left_class, crspec.left_relname,
+                                crspec.right_relname, crspec.right_class)
+                        if crspec.cardinality == '1:M':
+                            print "[{}]{}-.-{}++[{}]".format(
+                                crspec.left_class, crspec.left_relname,
+                                crspec.right_relname, crspec.right_class)
+                        if crspec.cardinality == 'M:M':
+                            print "[{}]++{}-.-{}++[{}]".format(
+                                crspec.left_class, crspec.left_relname,
+                                crspec.right_relname, crspec.right_class)
+                else:
+                    LOG.error("Diagram type '%s' is not supported.", diagram_type)
             else:
-                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> <__init__.py> | dump_templates <zenpack_name>" % sys.argv[0]
+                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> | dump_templates <zenpack_name> | class_diagram [yuml] <file.yaml>" % sys.argv[0]
+
+        def zenpack_templatespecs(self, zenpack_name):
+            zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
+            if zenpack is None:
+                LOG.error("ZenPack '%s' not found." % zenpack_name)
+                return
+
+            templates = collections.defaultdict(dict)
+            for deviceclass in [x for x in zenpack.packables() if x.meta_type == 'DeviceClass']:
+                for template in deviceclass.getAllRRDTemplates():
+                    dc_name = template.deviceClass().getOrganizerName()
+                    templates[dc_name][template.id] = RRDTemplateSpecParams.fromObject(template)
+            return templates
 
     script = ZPLCommand()
     script.run()
