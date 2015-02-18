@@ -4393,6 +4393,7 @@ if YAML_INSTALLED:
             CFG.create()
         else:
             LOG.error("Unable to load %s", yaml_filename)
+        return CFG
 
     class SpecParams(object):
         def __init__(self, **kwargs):
@@ -4764,14 +4765,20 @@ def enableTesting():
             import Products.ZenUI3
             zcml.load_config('configure.zcml', Products.ZenUI3)
 
-            zenpack_module_name = '.'.join(self.__module__.split('.')[:-2])
-            zenpack_module = importlib.import_module(zenpack_module_name)
+            if self.zenpack_module_name is None:
+                self.zenpack_module_name = '.'.join(self.__module__.split('.')[:-2])
+
+            try:
+                zenpack_module = importlib.import_module(self.zenpack_module_name)
+            except Exception:
+                LOG.exception("Unable to load zenpack named '%s' - is it installed? (%s)", self.zenpack_module_name)
+                raise
 
             zenpackspec = getattr(zenpack_module, 'CFG', None)
             if not zenpackspec:
                 raise NameError(
                     "name {!r} is not defined"
-                    .format('.'.join((zenpack_module_name, 'CFG'))))
+                    .format('.'.join((self.zenpack_module_name, 'CFG'))))
 
             zenpackspec.test_setup()
 
