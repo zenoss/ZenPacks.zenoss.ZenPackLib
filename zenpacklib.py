@@ -4600,6 +4600,11 @@ if YAML_INSTALLED:
                 if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
                     setattr(self, propname, getattr(datapoint, propname, None))
 
+            if self.rrdmin is not None:
+                self.rrdmin = int(self.rrdmin)
+            if self.rrdmax is not None:
+                self.rrdmax = int(self.rrdmax)
+
             self.aliases = {x.id: x.formula for x in datapoint.aliases()}
 
             self.extra_params = collections.OrderedDict()
