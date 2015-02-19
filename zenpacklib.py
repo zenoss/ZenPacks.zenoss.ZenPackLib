@@ -248,6 +248,12 @@ class ZenPack(ZenPackBase):
 
                     if installed != mtspec:
                         import time
+                        import difflib
+
+                        lines_installed = [x + '\n' for x in yaml.dump(installed, Dumper=Dumper).split('\n')]
+                        lines_mtspec = [x + '\n' for x in yaml.dump(mtspec, Dumper=Dumper).split('\n')]
+                        diff = ''.join(difflib.unified_diff(lines_installed, lines_mtspec))
+
                         newname = "{}-upgrade-{}".format(mtname, int(time.time()))
                         LOG.error(
                             "Monitoring template %s/%s has been modified "
@@ -255,8 +261,9 @@ class ZenPack(ZenPackBase):
                             "changes will be lost as this ZenPack is upgraded "
                             "or reinstalled.   Existing template will be "
                             "renamed to '%s'.  Please review and reconcile "
-                            "local changes.",
-                            dcname, mtname, self.id, newname)
+                            "local changes:\n%s",
+                            dcname, mtname, self.id, newname, diff)
+
                         deviceclass.rrdTemplates.manage_renameObject(template.id, newname)
 
 
