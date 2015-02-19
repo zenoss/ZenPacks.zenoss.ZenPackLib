@@ -4583,9 +4583,10 @@ if YAML_INSTALLED:
             return self
 
     class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
-        def __init__(self, datasource_spec, name, **kwargs):
+        def __init__(self, datasource_spec, name, shorthand=None, **kwargs):
             SpecParams.__init__(self, **kwargs)
             self.name = name
+            self.shorthand = shorthand
 
         @classmethod
         def fromObject(cls, datapoint):
