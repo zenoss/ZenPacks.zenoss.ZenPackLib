@@ -4548,7 +4548,7 @@ if YAML_INSTALLED:
                 if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
                     setattr(self, propname, getattr(datasource, propname, None))
 
-            self.extra_params = {}
+            self.extra_params = collections.OrderedDict()
             for propname in [x['id'] for x in datasource._properties]:
                 if propname not in self.init_params():
                     if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
@@ -4574,7 +4574,7 @@ if YAML_INSTALLED:
                 if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
                     setattr(self, propname, getattr(threshold, propname, None))
 
-            self.extra_params = {}
+            self.extra_params = collections.OrderedDict()
             for propname in [x['id'] for x in threshold._properties]:
                 if propname not in self.init_params():
                     if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
@@ -4601,7 +4601,7 @@ if YAML_INSTALLED:
 
             self.aliases = {x.id: x.formula for x in datapoint.aliases()}
 
-            self.extra_params = {}
+            self.extra_params = collections.OrderedDict()
             for propname in [x['id'] for x in datapoint._properties]:
                 if propname not in self.init_params():
                     if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
