@@ -4396,10 +4396,6 @@ if YAML_INSTALLED:
 
         return None
 
-    class WarningLoader(yaml.Loader):
-        warnings = True
-        yaml_errored = False
-
     # These subclasses exist so that each copy of zenpacklib installed on a
     # zenoss system provide their own loader (for add_constructor and yaml.load)
     # and its own dumper (for add_representer) so that the proper methods will
@@ -4409,6 +4405,10 @@ if YAML_INSTALLED:
 
     class Dumper(yaml.Dumper):
         pass
+
+    class WarningLoader(Loader):
+        warnings = True
+        yaml_errored = False
 
     Dumper.add_representer(ZenPackSpec, represent_zenpackspec)
     Dumper.add_representer(DeviceClassSpec, represent_spec)
@@ -5662,6 +5662,7 @@ if __name__ == '__main__':
 
                 # tweak the input slightly.
                 inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
+                inputfile = re.sub(r'__file__', '"%s"' % zenpack_init_py, inputfile)
 
                 # Kludge 'from . import' into working.
                 import site
