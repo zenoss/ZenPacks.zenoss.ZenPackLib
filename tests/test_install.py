@@ -19,12 +19,17 @@ test suite instead of in the ZenPack's.
 
 import Globals
 from Products.ZenUtils.Utils import unused, binPath
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
 unused(Globals)
 
 import os
 import subprocess
+import logging
+
+logging.basicConfig(level=logging.INFO)
+LOG = logging.getLogger('zen.zenpacklib.tests')
+
+
+from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
 
 class TestInstall(BaseTestCase):
@@ -36,10 +41,12 @@ class TestInstall(BaseTestCase):
 
     def setUp(self):
         cmd = [binPath('zenpack'), "--list"]
-        print " ".join(cmd)
+        LOG.info(" ".join(cmd))
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = p.communicate()
         p.wait()
+        LOG.debug("out=%s, err=%s", out, err)
+
 
         self.assertIs(p.returncode, 0,
                       'Error listing installed zenpacks: %s' % err)
@@ -47,10 +54,11 @@ class TestInstall(BaseTestCase):
         if self.zenpack_name in out:
             cmd = [binPath('zenpack'), "--remove", self.zenpack_name]
 
-            print " ".join(cmd)
+            LOG.info(" ".join(cmd))
             p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             out, err = p.communicate()
             p.wait()
+            LOG.debug("out=%s, err=%s", out, err)
 
             self.assertIs(p.returncode, 0,
                           'Error removing %s zenpack: %s' % (self.zenpack_name, err))
@@ -58,10 +66,11 @@ class TestInstall(BaseTestCase):
     def test_install(self):
         cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
 
-        print " ".join(cmd)
+        LOG.info(" ".join(cmd))
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = p.communicate()
         p.wait()
+        LOG.debug("out=%s, err=%s", out, err)
 
         self.assertIs(p.returncode, 0,
                       'Error installing %s zenpack: %s' % (self.zenpack_name, err))
@@ -69,20 +78,22 @@ class TestInstall(BaseTestCase):
     def test_upgrade(self):
         cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
 
-        print " ".join(cmd)
+        LOG.info(" ".join(cmd))
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = p.communicate()
         p.wait()
+        LOG.debug("out=%s, err=%s", out, err)
 
         self.assertIs(p.returncode, 0,
                       'Error installing %s zenpack: %s' % (self.zenpack_path, err))
 
         # install it a second time.  Basically a do-nothign upgrade.
 
-        print " ".join(cmd)
+        LOG.info(" ".join(cmd))
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = p.communicate()
         p.wait()
+        LOG.debug("out=%s, err=%s", out, err)
 
         self.assertIs(p.returncode, 0,
                       'Error upgrading %s zenpack: %s' % (self.zenpack_name, err))
@@ -90,12 +101,24 @@ class TestInstall(BaseTestCase):
         pass
 
     def test_uninstall(self):
-        cmd = [binPath('zenpack'), "--remove", self.zenpack_name]
+        cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
 
-        print " ".join(cmd)
+        LOG.info(" ".join(cmd))
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = p.communicate()
         p.wait()
+        LOG.debug("out=%s, err=%s", out, err)
+
+        self.assertIs(p.returncode, 0,
+                      'Error installing %s zenpack: %s' % (self.zenpack_path, err))
+
+        cmd = [binPath('zenpack'), "--remove", self.zenpack_name]
+
+        LOG.info(" ".join(cmd))
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        out, err = p.communicate()
+        p.wait()
+        LOG.debug("out=%s, err=%s", out, err)
 
         self.assertIs(p.returncode, 0,
                       'Error removing %s zenpack: %s' % (self.zenpack_name, err))
