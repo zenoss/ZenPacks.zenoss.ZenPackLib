@@ -1120,6 +1120,19 @@ class Spec(object):
             self_val_or_default = self_val or getattr(self, default_p, None)
             other_val_or_default = other_val or getattr(other, default_p, None)
 
+            # Order doesn't matter, for purposes of comparison.  Cast it away.
+            if isinstance(self_val, collections.OrderedDict):
+                self_val = dict(self_val)
+
+            if isinstance(other_val, collections.OrderedDict):
+                other_val = dict(other_val)
+
+            if isinstance(self_val_or_default, collections.OrderedDict):
+                self_val_or_default = dict(self_val_or_default)
+
+            if isinstance(other_val_or_default, collections.OrderedDict):
+                other_val_or_default = dict(other_val_or_default)
+
             if self_val == other_val:
                 continue
 

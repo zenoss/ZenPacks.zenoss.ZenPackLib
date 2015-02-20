@@ -61,12 +61,12 @@ class TestYAML(unittest.TestCase):
 
         # Now convert to yaml.
         LOG.info("Exporting from ZenPackSpecParams to YAML")
-        exported_yaml = yaml.dump(specparams)
+        exported_yaml = yaml.dump(specparams, Dumper=zenpacklib.Dumper)
         LOG.debug(exported_yaml)
 
         # now re-load this..
         LOG.info("Reloading the generated YAML from ZenPackSpecParams")
-        reloaded_spec = yaml.load(exported_yaml)
+        reloaded_spec = yaml.load(exported_yaml, Loader=zenpacklib.Loader)
 
         # We now want to confirm that the reloaded spec is equivalent to the orginal
         # spec we exported.
@@ -95,12 +95,12 @@ class TestYAML(unittest.TestCase):
         # yaml export, but let's make sure.
 
         LOG.info("Exporting from ZenPackSpec to YAML")
-        exported_yaml = yaml.dump(original_spec)
+        exported_yaml = yaml.dump(original_spec, Dumper=zenpacklib.Dumper)
         LOG.debug(exported_yaml)
 
         # now re-load this..
         LOG.info("Reloading the generated YAML from ZenPackSpec")
-        reloaded_spec = yaml.load(exported_yaml)
+        reloaded_spec = yaml.load(exported_yaml, Loader=zenpacklib.Loader)
 
         # TODO:
         # The order attribute for classes and properties are forced into a
