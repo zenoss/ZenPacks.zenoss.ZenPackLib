@@ -1113,9 +1113,19 @@ class Spec(object):
         for p in params:
             if p in ignore_params:
                 continue
-            if getattr(self, p) != getattr(other, p):
+
+            default_p = '_%s_defaultvalue' % p
+            self_val = getattr(self, p)
+            other_val = getattr(other, p)
+            self_val_or_default = self_val or getattr(self, default_p, None)
+            other_val_or_default = other_val or getattr(other, default_p, None)
+
+            if self_val == other_val:
+                continue
+
+            if self_val_or_default != other_val_or_default:
                 LOG.debug("Comparing %s to %s, parameter %s does not match (%s != %s)",
-                          self, other, p, getattr(self, p), getattr(other, p))
+                          self, other, p, self_val_or_default, other_val_or_default)
                 return False
 
         return True
@@ -4547,6 +4557,8 @@ if YAML_INSTALLED:
             self.sourcetype = datasource.sourcetype
             for propname in ('enabled', 'component', 'eventClass', 'eventKey',
                              'severity', 'commandTemplate', 'cycletime',):
+                if hasattr(sample_ds, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_ds, propname))
                 if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
                     setattr(self, propname, getattr(datasource, propname, None))
 
@@ -4573,6 +4585,8 @@ if YAML_INSTALLED:
             sample_th = threshold.__class__(threshold.id)
 
             for propname in ('dsnames', 'eventClass', 'severity', 'type_'):
+                if hasattr(sample_th, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_th, propname))
                 if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
                     setattr(self, propname, getattr(threshold, propname, None))
 
@@ -4599,6 +4613,8 @@ if YAML_INSTALLED:
 
             for propname in ('name', 'rrdtype', 'createCmd', 'isrow', 'rrdmin',
                              'rrdmax', 'description',):
+                if hasattr(sample_dp, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_dp, propname))
                 if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
                     setattr(self, propname, getattr(datapoint, propname, None))
 
@@ -4687,6 +4703,8 @@ if YAML_INSTALLED:
 
             for propname in ('height', 'width', 'units', 'log', 'base', 'miny',
                              'maxy', 'custom', 'hasSummary', 'comments'):
+                if hasattr(sample_gd, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gd, propname))
                 if getattr(graphdefinition, propname, None) != getattr(sample_gd, propname, None):
                     setattr(self, propname, getattr(graphdefinition, propname, None))
 
@@ -4714,6 +4732,8 @@ if YAML_INSTALLED:
 
             for propname in ('lineType', 'lineWidth', 'stacked', 'format',
                              'legend', 'limit', 'rpn', 'cFunc', 'color', 'dpName'):
+                if hasattr(sample_gp, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gp, propname))
                 if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
                     setattr(self, propname, getattr(graphpoint, propname, None))
 
