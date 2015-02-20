@@ -55,14 +55,14 @@ class TestSchema(zenpacklib.TestCase):
     """
 
     zenpack_module_name = 'ZenPacks.zenoss.ZPLTest1'
+    zenpack_path = os.path.join(os.path.dirname(__file__),
+                                "data/zenpacks/ZenPacks.zenoss.ZPLTest1")
     disableLogging = False
 
     def afterSetUp(self):
         try:
             super(TestSchema, self).afterSetUp()
         except ImportError, e:
-            zenpack_path = os.path.join(os.path.dirname(__file__),
-                                        "data/zenpacks/ZenPacks.zenoss.ZPLTest1")
             self.assertFalse(
                 e.message == 'No module named ZPLTest1',
                 "ZPLTest1 zenpack is not installed.  You must install it before running this test:\n   zenpack --link --install=%s" % zenpack_path
