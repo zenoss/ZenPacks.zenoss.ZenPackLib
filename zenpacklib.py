@@ -234,29 +234,38 @@ class ZenPack(ZenPackBase):
                         dcname, self.id)
                     continue
 
-                for mtname, mtspec in dcspec.templates.iteritems():
-                    template = deviceclass.rrdTemplates._getOb(mtname)
+                for orig_mtname, orig_mtspec in dcspec.templates.iteritems():
+                    template = deviceclass.rrdTemplates._getOb(orig_mtname)
                     if template is None:
                         LOG.warning(
                             "Monitoring template %s/%s has been removed at some point "
                             "after the %s ZenPack was installed.  It will be "
                             "reinstated if this ZenPack is upgraded or reinstalled",
-                            dcname, mtname, self.id)
+                            dcname, orig_mtname, self.id)
                         continue
 
                     installed = RRDTemplateSpecParams.fromObject(template)
 
-                    if installed != mtspec:
+                    if installed != orig_mtspec:
                         import time
-                        newname = "{}-upgrade-{}".format(mtname, int(time.time()))
+                        import difflib
+
+                        lines_installed = [x + '\n' for x in yaml.dump(installed, Dumper=Dumper).split('\n')]
+                        lines_orig_mtspec = [x + '\n' for x in yaml.dump(orig_mtspec, Dumper=Dumper).split('\n')]
+                        diff = ''.join(difflib.unified_diff(lines_orig_mtspec, lines_installed))
+
+                        # installed is not going to have cycletime in it, because it's the default.
+
+                        newname = "{}-upgrade-{}".format(orig_mtname, int(time.time()))
                         LOG.error(
                             "Monitoring template %s/%s has been modified "
                             "since the %s ZenPack was installed.  These local "
                             "changes will be lost as this ZenPack is upgraded "
                             "or reinstalled.   Existing template will be "
                             "renamed to '%s'.  Please review and reconcile "
-                            "local changes.",
-                            dcname, mtname, self.id, newname)
+                            "local changes:\n%s",
+                            dcname, orig_mtname, self.id, newname, diff)
+
                         deviceclass.rrdTemplates.manage_renameObject(template.id, newname)
 
 
@@ -1104,9 +1113,32 @@ class Spec(object):
         for p in params:
             if p in ignore_params:
                 continue
-            if getattr(self, p) != getattr(other, p):
+
+            default_p = '_%s_defaultvalue' % p
+            self_val = getattr(self, p)
+            other_val = getattr(other, p)
+            self_val_or_default = self_val or getattr(self, default_p, None)
+            other_val_or_default = other_val or getattr(other, default_p, None)
+
+            # Order doesn't matter, for purposes of comparison.  Cast it away.
+            if isinstance(self_val, collections.OrderedDict):
+                self_val = dict(self_val)
+
+            if isinstance(other_val, collections.OrderedDict):
+                other_val = dict(other_val)
+
+            if isinstance(self_val_or_default, collections.OrderedDict):
+                self_val_or_default = dict(self_val_or_default)
+
+            if isinstance(other_val_or_default, collections.OrderedDict):
+                other_val_or_default = dict(other_val_or_default)
+
+            if self_val == other_val:
+                continue
+
+            if self_val_or_default != other_val_or_default:
                 LOG.debug("Comparing %s to %s, parameter %s does not match (%s != %s)",
-                          self, other, p, getattr(self, p), getattr(other, p))
+                          self, other, p, self_val_or_default, other_val_or_default)
                 return False
 
         return True
@@ -3271,7 +3303,7 @@ class RRDTemplateSpec(Spec):
 
         self.speclog.debug("adding {} thresholds".format(len(self.thresholds)))
         for threshold_id, threshold_spec in self.thresholds.items():
-            threshold_spec.create(threshold_id, self, template)
+            threshold_spec.create(self, template)
 
         self.speclog.debug("adding {} datasources".format(len(self.datasources)))
         for datasource_id, datasource_spec in self.datasources.items():
@@ -3289,6 +3321,7 @@ class RRDThresholdSpec(Spec):
     def __init__(
             self,
             template_spec,
+            name,
             type_='MinMaxThreshold',
             dsnames=None,
             eventClass=None,
@@ -3317,6 +3350,7 @@ class RRDThresholdSpec(Spec):
         """
         super(RRDThresholdSpec, self).__init__(_source_location=_source_location)
 
+        self.name = name
         self.template_spec = template_spec
         self.dsnames = dsnames
         self.eventClass = eventClass
@@ -3328,7 +3362,7 @@ class RRDThresholdSpec(Spec):
         else:
             self.extra_params = extra_params
 
-    def create(self, id_, templatespec, template):
+    def create(self, templatespec, template):
         if not self.dsnames:
             raise ValueError("%s: threshold has no dsnames attribute", self)
 
@@ -3340,10 +3374,10 @@ class RRDThresholdSpec(Spec):
         threshold_types = dict((y, x) for x, y in template.getThresholdClasses())
         type_ = threshold_types.get(self.type_)
         if not type_:
-            raise ValueError("'%s' is an invalid threshold type. Valid types: %s",
-                             self.type_, ', '.join(threshold_types))
+            raise ValueError("'%s' is an invalid threshold type. Valid types: %s" %
+                             (self.type_, ', '.join(threshold_types)))
 
-        threshold = template.manage_addRRDThreshold(id_, self.type_)
+        threshold = template.manage_addRRDThreshold(self.name, self.type_)
         self.speclog.debug("adding threshold")
 
         if self.dsnames is not None:
@@ -4362,10 +4396,6 @@ if YAML_INSTALLED:
 
         return None
 
-    class WarningLoader(yaml.Loader):
-        warnings = True
-        yaml_errored = False
-
     # These subclasses exist so that each copy of zenpacklib installed on a
     # zenoss system provide their own loader (for add_constructor and yaml.load)
     # and its own dumper (for add_representer) so that the proper methods will
@@ -4375,6 +4405,10 @@ if YAML_INSTALLED:
 
     class Dumper(yaml.Dumper):
         pass
+
+    class WarningLoader(Loader):
+        warnings = True
+        yaml_errored = False
 
     Dumper.add_representer(ZenPackSpec, represent_zenpackspec)
     Dumper.add_representer(DeviceClassSpec, represent_spec)
@@ -4391,6 +4425,7 @@ if YAML_INSTALLED:
             CFG.create()
         else:
             LOG.error("Unable to load %s", yaml_filename)
+        return CFG
 
     class SpecParams(object):
         def __init__(self, **kwargs):
@@ -4535,10 +4570,12 @@ if YAML_INSTALLED:
             self.sourcetype = datasource.sourcetype
             for propname in ('enabled', 'component', 'eventClass', 'eventKey',
                              'severity', 'commandTemplate', 'cycletime',):
+                if hasattr(sample_ds, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_ds, propname))
                 if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
                     setattr(self, propname, getattr(datasource, propname, None))
 
-            self.extra_params = {}
+            self.extra_params = collections.OrderedDict()
             for propname in [x['id'] for x in datasource._properties]:
                 if propname not in self.init_params():
                     if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
@@ -4549,8 +4586,9 @@ if YAML_INSTALLED:
             return self
 
     class RRDThresholdSpecParams(SpecParams, RRDThresholdSpec):
-        def __init__(self, template_spec, **kwargs):
+        def __init__(self, template_spec, name, foo=None, **kwargs):
             SpecParams.__init__(self, **kwargs)
+            self.name = name
 
         @classmethod
         def fromObject(cls, threshold):
@@ -4560,10 +4598,12 @@ if YAML_INSTALLED:
             sample_th = threshold.__class__(threshold.id)
 
             for propname in ('dsnames', 'eventClass', 'severity', 'type_'):
+                if hasattr(sample_th, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_th, propname))
                 if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
                     setattr(self, propname, getattr(threshold, propname, None))
 
-            self.extra_params = {}
+            self.extra_params = collections.OrderedDict()
             for propname in [x['id'] for x in threshold._properties]:
                 if propname not in self.init_params():
                     if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
@@ -4572,9 +4612,10 @@ if YAML_INSTALLED:
             return self
 
     class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
-        def __init__(self, datasource_spec, name, **kwargs):
+        def __init__(self, datasource_spec, name, shorthand=None, **kwargs):
             SpecParams.__init__(self, **kwargs)
             self.name = name
+            self.shorthand = shorthand
 
         @classmethod
         def fromObject(cls, datapoint):
@@ -4585,12 +4626,19 @@ if YAML_INSTALLED:
 
             for propname in ('name', 'rrdtype', 'createCmd', 'isrow', 'rrdmin',
                              'rrdmax', 'description',):
+                if hasattr(sample_dp, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_dp, propname))
                 if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
                     setattr(self, propname, getattr(datapoint, propname, None))
 
+            if self.rrdmin is not None:
+                self.rrdmin = int(self.rrdmin)
+            if self.rrdmax is not None:
+                self.rrdmax = int(self.rrdmax)
+
             self.aliases = {x.id: x.formula for x in datapoint.aliases()}
 
-            self.extra_params = {}
+            self.extra_params = collections.OrderedDict()
             for propname in [x['id'] for x in datapoint._properties]:
                 if propname not in self.init_params():
                     if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
@@ -4668,6 +4716,8 @@ if YAML_INSTALLED:
 
             for propname in ('height', 'width', 'units', 'log', 'base', 'miny',
                              'maxy', 'custom', 'hasSummary', 'comments'):
+                if hasattr(sample_gd, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gd, propname))
                 if getattr(graphdefinition, propname, None) != getattr(sample_gd, propname, None):
                     setattr(self, propname, getattr(graphdefinition, propname, None))
 
@@ -4695,6 +4745,8 @@ if YAML_INSTALLED:
 
             for propname in ('lineType', 'lineWidth', 'stacked', 'format',
                              'legend', 'limit', 'rpn', 'cFunc', 'color', 'dpName'):
+                if hasattr(sample_gp, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gp, propname))
                 if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
                     setattr(self, propname, getattr(graphpoint, propname, None))
 
@@ -4761,14 +4813,20 @@ def enableTesting():
             import Products.ZenUI3
             zcml.load_config('configure.zcml', Products.ZenUI3)
 
-            zenpack_module_name = '.'.join(self.__module__.split('.')[:-2])
-            zenpack_module = importlib.import_module(zenpack_module_name)
+            if self.zenpack_module_name is None:
+                self.zenpack_module_name = '.'.join(self.__module__.split('.')[:-2])
+
+            try:
+                zenpack_module = importlib.import_module(self.zenpack_module_name)
+            except Exception:
+                LOG.exception("Unable to load zenpack named '%s' - is it installed? (%s)", self.zenpack_module_name)
+                raise
 
             zenpackspec = getattr(zenpack_module, 'CFG', None)
             if not zenpackspec:
                 raise NameError(
                     "name {!r} is not defined"
-                    .format('.'.join((zenpack_module_name, 'CFG'))))
+                    .format('.'.join((self.zenpack_module_name, 'CFG'))))
 
             zenpackspec.test_setup()
 
@@ -5604,6 +5662,7 @@ if __name__ == '__main__':
 
                 # tweak the input slightly.
                 inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
+                inputfile = re.sub(r'__file__', '"%s"' % zenpack_init_py, inputfile)
 
                 # Kludge 'from . import' into working.
                 import site
