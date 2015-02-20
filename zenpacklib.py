@@ -234,27 +234,29 @@ class ZenPack(ZenPackBase):
                         dcname, self.id)
                     continue
 
-                for mtname, mtspec in dcspec.templates.iteritems():
-                    template = deviceclass.rrdTemplates._getOb(mtname)
+                for orig_mtname, orig_mtspec in dcspec.templates.iteritems():
+                    template = deviceclass.rrdTemplates._getOb(orig_mtname)
                     if template is None:
                         LOG.warning(
                             "Monitoring template %s/%s has been removed at some point "
                             "after the %s ZenPack was installed.  It will be "
                             "reinstated if this ZenPack is upgraded or reinstalled",
-                            dcname, mtname, self.id)
+                            dcname, orig_mtname, self.id)
                         continue
 
                     installed = RRDTemplateSpecParams.fromObject(template)
 
-                    if installed != mtspec:
+                    if installed != orig_mtspec:
                         import time
                         import difflib
 
                         lines_installed = [x + '\n' for x in yaml.dump(installed, Dumper=Dumper).split('\n')]
-                        lines_mtspec = [x + '\n' for x in yaml.dump(mtspec, Dumper=Dumper).split('\n')]
-                        diff = ''.join(difflib.unified_diff(lines_installed, lines_mtspec))
+                        lines_orig_mtspec = [x + '\n' for x in yaml.dump(orig_mtspec, Dumper=Dumper).split('\n')]
+                        diff = ''.join(difflib.unified_diff(lines_orig_mtspec, lines_installed))
 
-                        newname = "{}-upgrade-{}".format(mtname, int(time.time()))
+                        # installed is not going to have cycletime in it, because it's the default.
+
+                        newname = "{}-upgrade-{}".format(orig_mtname, int(time.time()))
                         LOG.error(
                             "Monitoring template %s/%s has been modified "
                             "since the %s ZenPack was installed.  These local "
@@ -262,7 +264,7 @@ class ZenPack(ZenPackBase):
                             "or reinstalled.   Existing template will be "
                             "renamed to '%s'.  Please review and reconcile "
                             "local changes:\n%s",
-                            dcname, mtname, self.id, newname, diff)
+                            dcname, orig_mtname, self.id, newname, diff)
 
                         deviceclass.rrdTemplates.manage_renameObject(template.id, newname)
 
