@@ -3133,11 +3133,11 @@ class ClassRelationshipSpec(Spec):
         """Return Info properties dict."""
         properties = {}
 
-        if not isinstance(self.schema, (ToOne)):
+        if isinstance(self.schema, (ToOne)):
+            properties[self.name] = RelationshipInfoProperty(self.name)
+        else:
             relname_count = '{}_count'.format(self.name)
             properties[relname_count] = RelationshipLengthProperty(self.name)
-
-        properties[self.name] = RelationshipInfoProperty(self.name)
 
         return properties
 
