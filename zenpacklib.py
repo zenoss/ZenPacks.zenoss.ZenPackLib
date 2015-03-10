@@ -213,7 +213,6 @@ class ZenPack(ZenPackBase):
             for mtname, mtspec in dcspec.templates.iteritems():
                 mtspec.create(self.dmd)
 
-
     def remove(self, app, leaveObjects=False):
         from Products.Zuul.interfaces import ICatalogTool
         if leaveObjects:
@@ -267,8 +266,6 @@ class ZenPack(ZenPackBase):
                             dcname, orig_mtname, self.id, newname, diff)
 
                         deviceclass.rrdTemplates.manage_renameObject(template.id, newname)
-
-
 
         else:
             dc = app.Devices
