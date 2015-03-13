@@ -5234,7 +5234,7 @@ def catalog_search(scope, name, *args, **kwargs):
 
     catalog = getattr(scope, '{}Search'.format(name), None)
     if not catalog:
-        LOG.warning("Catalog %sSearch not found at %s.  It should be created when the first included component is indexed" % (name, scope))
+        LOG.debug("Catalog %sSearch not found at %s.  It should be created when the first included component is indexed" % (name, scope))
         return []
 
     if args:
