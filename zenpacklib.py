@@ -349,9 +349,7 @@ class CatalogBase(object):
         Return iterable of matching brains in named catalog.
         'name' is the catalog name (typically the name of a class)
         """
-
-        catalog = self.get_catalog(name, 'device')
-        return self._search_catalog(catalog, *args, **kwargs)
+        return catalog_search(self, name, *args, **kwargs)
 
     @classmethod
     def class_search(cls, dmd, name, *args, **kwargs):
@@ -360,8 +358,8 @@ class CatalogBase(object):
         'name' is the catalog name (typically the name of a class)
         """
 
-        catalog = cls.class_get_catalog(dmd, name, 'global')
-        return cls._search_catalog(catalog, *args, **kwargs)
+        name = cls.__module__.replace('.', '_')
+        return catalog_search(dmd.Devices, name, *args, **kwargs)
 
     @classmethod
     def get_catalog_name(cls, name, scope):
@@ -390,6 +388,7 @@ class CatalogBase(object):
 
     def get_catalog(self, name, scope, create=True):
         """Return catalog by name."""
+
         spec = self._get_catalog_spec(name)
         if not spec:
             return
@@ -565,22 +564,6 @@ class CatalogBase(object):
                 for result in results:
                     if hasattr(result.getObject(), 'index_object'):
                         result.getObject().index_object()
-
-    @classmethod
-    def _search_catalog(cls, catalog, *args, **kwargs):
-        if args:
-            if isinstance(args[0], BaseQuery):
-                return catalog.evalAdvancedQuery(args[0])
-            elif isinstance(args[0], dict):
-                return catalog(args[0])
-            else:
-                raise TypeError(
-                    "search() argument must be a BaseQuery or a dict, "
-                    "not {0!r}"
-                    .format(type(args[0]).__name__))
-
-        return catalog(**kwargs)
-
 
     def index_object(self, idxs=None):
         """Index in all configured catalogs."""
@@ -5249,10 +5232,9 @@ def update(d, u):
 def catalog_search(scope, name, *args, **kwargs):
     """Return iterable of matching brains in named catalog."""
 
-    LOG.warning("catalog_search() is deprecated.  Convert to device_or_component_class.class_search() or device_or_component.search()")
-
     catalog = getattr(scope, '{}Search'.format(name), None)
     if not catalog:
+        LOG.debug("Catalog %sSearch not found at %s.  It should be created when the first included component is indexed" % (name, scope))
         return []
 
     if args:
