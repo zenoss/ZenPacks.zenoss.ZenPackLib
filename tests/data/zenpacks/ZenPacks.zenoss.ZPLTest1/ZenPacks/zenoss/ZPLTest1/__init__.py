@@ -10,4 +10,4 @@
 from . import zenpacklib
 import os
 
-CFG = zenpacklib.load_yaml(os.path.join(os.path.dirname(__file__), 'zenpack.yaml'))
+CFG = zenpacklib.load_yaml()
