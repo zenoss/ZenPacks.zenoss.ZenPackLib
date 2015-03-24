@@ -20,6 +20,7 @@ test suite instead of in the ZenPack's.
 import logging
 import subprocess
 import os
+import re
 import Globals
 from Products.ZenUtils.Utils import unused
 unused(Globals)
@@ -70,6 +71,8 @@ class TestCommands(BaseTestCase):
             self.assertNotIn("Traceback", err)
             self.assertNotIn("Traceback", err)
 
+        return out
+
     def test_smoke_lint(self):
         self._smoke_command("lint", self.yaml_path)
 
@@ -83,6 +86,15 @@ class TestCommands(BaseTestCase):
 
     def test_smoke_class_diagram(self):
         self._smoke_command("class_diagram yuml", self.yaml_path)
+
+    def test_version(self):
+        output = self._smoke_command("version").strip()
+        version_pattern = r'^\d+\.\d+\.\d+(dev)?$'
+        match = re.match(version_pattern, output)
+        self.assertTrue(
+            match,
+            "version output {!r} doesn't match /{}/"
+            .format(output, version_pattern))
 
 
 def test_suite():

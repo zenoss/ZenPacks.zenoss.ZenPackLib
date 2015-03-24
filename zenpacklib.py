@@ -15,6 +15,10 @@ This module provides a single integration point for common ZenPacks.
 
 """
 
+# PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
+__version__ = "1.0.0dev"
+
+
 import logging
 LOG = logging.getLogger('zen.zenpacklib')
 
@@ -5688,6 +5692,28 @@ Ext.reg('ZPLRenderableDisplayField', 'Zenoss.ZPLRenderableDisplayField');
 """.strip()
 
 
+USAGE = """
+Usage: {} <command> [options]
+
+Available commands and example options:
+
+  # Check zenpack.yaml for errors.
+  link zenpack.yaml
+
+  # Print yUML (http://yuml.me/) class diagram source based on zenpack.yaml.
+  class_diagram yuml zenpack.yaml
+
+  # Export existing monitoring templates to yaml.
+  dump_templates ZenPacks.example.AlreadyInstalled
+
+  # Convert a pre-release zenpacklib.ZenPackSpec to yaml.
+  py_to_yaml ZenPacks.example.AlreadyInstalled
+
+  # Print zenpacklib version.
+  version
+""".lstrip()
+
+
 if __name__ == '__main__':
     from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
@@ -5831,8 +5857,12 @@ if __name__ == '__main__':
                                 crspec.right_relname, crspec.right_class)
                 else:
                     LOG.error("Diagram type '%s' is not supported.", diagram_type)
+
+            elif len(args) == 1 and args[0] == "version":
+                print __version__
+
             else:
-                print "Usage: %s lint <file.yaml> | py_to_yaml <zenpack name> | dump_templates <zenpack_name> | class_diagram [yuml] <file.yaml>" % sys.argv[0]
+                print USAGE.format(sys.argv[0])
 
         def zenpack_templatespecs(self, zenpack_name):
             zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
