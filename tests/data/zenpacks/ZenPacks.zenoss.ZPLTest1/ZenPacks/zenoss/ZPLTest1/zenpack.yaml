@@ -1,6 +1,5 @@
-!ZenPackSpec
 name: ZenPacks.zenoss.ZPLTest1
-zProperties: !ZenPackSpec
+zProperties:
   DEFAULTS:
     category: ZPLTest1
   zZPLTest1HealthInterval:
@@ -39,7 +38,7 @@ class_relationships:
 - VzBrCP 1:M FvRsCons
 - VzBrCP 1:M VnsGraphInst
 - VnsLDevVip 1:M VnsNodeInst
-device_classes: !ZenPackSpec
+device_classes:
   /Network/ZPLTest1:
     templates:
       APIC:
@@ -246,7 +245,7 @@ device_classes: !ZenPackSpec
               Ingress:
                 dpName: eqptIngrTotal_utilAvg
                 format: '%7.2lf%%'
-classes: !ZenPackSpec
+classes:
   DEFAULTS:
     base: [ManagedObject]
   APIC:
@@ -462,4 +461,3 @@ classes: !ZenPackSpec
     meta_type: ZPLTest1Contract
     label: Contract
     order: !!float '14'
-
