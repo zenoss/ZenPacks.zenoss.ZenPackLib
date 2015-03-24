@@ -83,9 +83,8 @@ Now that you've confirmed that your `zenpack.yaml` is valid you must edit
 .. code-block:: python
 
   from . import zenpacklib
-  import os
 
-  CFG = zenpacklib.load_yaml(os.path.join(os.path.dirname(__file__), 'zenpack.yaml'))
+  CFG = zenpacklib.load_yaml()
 
 Now you're ready to add :doc:`zProperties`, :doc:`device_classes`,
 :doc:`monitoring_templates`, and :doc:`classes_and_relationships` to your

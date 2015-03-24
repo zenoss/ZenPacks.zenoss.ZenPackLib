@@ -4500,7 +4500,17 @@ if YAML_INSTALLED:
     Dumper.add_representer(RelationshipSchemaSpec, represent_relschemaspec)
     Loader.add_constructor(u'!ZenPackSpec', construct_zenpackspec)
 
-    def load_yaml(yaml_filename):
+    def load_yaml(yaml_filename=None):
+        """Load YAML from yaml_filename.
+
+        Loads from zenpack.yaml in the current directory if
+        yaml_filename isn't specified.
+
+        """
+        if yaml_filename is None:
+            yaml_filename = os.path.join(
+                os.path.dirname(__file__), 'zenpack.yaml')
+
         CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
         if CFG:
             CFG.create()
