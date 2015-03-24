@@ -21,18 +21,36 @@ Or you can leave it non-executable and execute it through python.
 
     python zenpacklib.py
 
-In either case you will get the following single line of help.
+In either case you will get the following help.
 
 .. code-block:: text
 
-    Usage: zenpacklib.py lint <file.yaml> | py_to_yaml <zenpack name> | dump_templates <zenpack_name> | class_diagram [yuml] <file.yaml>
+    Usage: zenpacklib.py <command> [options]
 
-As you can see there are four supported actions. 
+    Available commands and example options:
+
+      # Check zenpack.yaml for errors.
+      link zenpack.yaml
+
+      # Print yUML (http://yuml.me/) class diagram source based on zenpack.yaml.
+      class_diagram yuml zenpack.yaml
+
+      # Export existing monitoring templates to yaml.
+      dump_templates ZenPacks.example.AlreadyInstalled
+
+      # Convert a pre-release zenpacklib.ZenPackSpec to yaml.
+      py_to_yaml ZenPacks.example.AlreadyInstalled
+
+      # Print zenpacklib version.
+      version
+
+As you can see there are five supported commands. 
 
 * :ref:`lint <zenpacklib-lint>`: Provides syntax and correctness on a YAML file.
 * :ref:`class_diagram <zenpacklib-class_diagram>`: Export yUML (yuml.me) class diagram from a YAML file.
-* :ref:`py_to_yaml <zenpacklib-py_to_yaml>`: Converts the Python syntax used in pre-release versions of zenpacklib to YAML.
 * :ref:`dump_templates <zenpacklib-dump_templates>`: Export existing monitoring templates to YAML.
+* :ref:`py_to_yaml <zenpacklib-py_to_yaml>`: Converts the Python syntax used in pre-release versions of zenpacklib to YAML.
+* :ref:`version <zenpacklib-version>`: Print zenpacklib version.
 
 *lint* and class_diagram require a YAML file, whereas *py_to_yaml* and
 *dump_templates* require the name of a ZenPack that's already installed because
@@ -45,7 +63,7 @@ they're designed to help convert existing ZenPacks to zenpacklib.
 lint
 ****
 
-The *lint* action will check the provided YAML file for correctness. It checks
+The *lint* command will check the provided YAML file for correctness. It checks
 that the provided file is syntactically-valid YAML, and it will also perform
 many others checks that validate that the contained entries, fields and their
 values are valid.
@@ -67,7 +85,7 @@ monitoring template.
 class_diagram
 *************
 
-The *class_diagram* action will use :doc:`classes_and_relationships` in the
+The *class_diagram* command will use :doc:`classes_and_relationships` in the
 provided YAML file to output the source for a yUML (http://yuml.me) class
 diagram. For ZenPacks with a non-trivial class model this can provide a useful
 view of the model.
@@ -128,10 +146,10 @@ into http://yuml.me to see what it looks like.
 py_to_yaml
 **********
 
-The *py_to_yaml* action is designed for a very specific purpose that most people
-will not find useful. Earlier pre-release versions of zenpacklib required that
-the ZenPack be defined via a call to zenpacklib.ZenPackSpec() with Python data
-structures instead of via a YAML file. *py_to_yaml* converts this style of
+The *py_to_yaml* command is designed for a very specific purpose that most
+people will not find useful. Earlier pre-release versions of zenpacklib required
+that the ZenPack be defined via a call to zenpacklib.ZenPackSpec() with Python
+data structures instead of via a YAML file. *py_to_yaml* converts this style of
 definition to a YAML file suitable for use with current versions of zenpacklib.
 
 Example usage:
@@ -147,7 +165,7 @@ Example usage:
 dump_templates
 **************
 
-The *dump_templates* action is designed to export monitoring templates already
+The *dump_templates* command is designed to export monitoring templates already
 loaded into your Zenoss instance and associated with a ZenPack. It will export
 them to the YAML format required for `zenpack.yaml`. It is up to you to merge
 that YAML with your existing `zenpack.yaml`. file.
@@ -157,3 +175,18 @@ Example usage:
 .. code-block:: bash
 
     python zenpacklib.py dump_templates ZenPacks.example.BetterAlreadyBeInstalled
+
+
+.. _zenpacklib-version:
+
+*******
+version
+*******
+
+The *version* command prints the zenpacklib version.
+
+Example usage:
+
+.. code-block:: bash
+
+    python zenpacklib.py version

@@ -30,3 +30,25 @@ zenpacklib Version  Zenoss Version
 Compatibility only considers <major>.<minor> versions of both zenpacklib and
 Zenoss. Maintenance or patch releases of each are always considered compatible.
 
+
+.. _determining-version:
+
+*******************
+Determining Version
+*******************
+
+You can check which version of zenpacklib you're using in two ways. The first is
+by using the *version* command line option.
+
+.. code-block:: bash
+
+    python zenpacklib.py version
+
+If you have ZenPack code that needs the version it can also be accessed from
+Python code that has imported *zenpacklib* module through the module's
+*__version__* property.
+
+.. code-block:: python
+
+    from . import zenpacklib
+    zenpacklib.__version__
