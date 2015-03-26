@@ -21,6 +21,7 @@ import logging
 import subprocess
 import os
 import re
+import shutil
 import Globals
 from Products.ZenUtils.Utils import unused
 unused(Globals)
@@ -86,6 +87,52 @@ class TestCommands(BaseTestCase):
 
     def test_smoke_class_diagram(self):
         self._smoke_command("class_diagram yuml", self.yaml_path)
+
+    def test_create(self):
+        zenpack_name = "ZenPacks.test.ZPLTestCreate"
+
+        # Cleanup from any failed previous tests.
+        shutil.rmtree(zenpack_name, ignore_errors=True)
+
+        output = self._smoke_command("create", zenpack_name)
+
+        # Test that output describes what's being created.
+        expected_terms = (
+            "setup.py", "MANIFEST.in", "zenpack.yaml", "zenpacklib.py")
+
+        for expected_term in expected_terms:
+            self.assertIn(expected_term, output)
+
+        # Test that expected directories and files were created.
+        expected_directories = (
+            "",
+            "ZenPacks",
+            "ZenPacks/test",
+            "ZenPacks/test/ZPLTestCreate",
+            )
+
+        for expected_directory in expected_directories:
+            self.assertTrue(
+                os.path.isdir(os.path.join(zenpack_name, expected_directory)),
+                "{!r} directory not created".format(expected_directory))
+
+        expected_files = (
+            "setup.py",
+            "MANIFEST.in",
+            "ZenPacks/__init__.py",
+            "ZenPacks/test/__init__.py",
+            "ZenPacks/test/ZPLTestCreate/__init__.py",
+            "ZenPacks/test/ZPLTestCreate/zenpack.yaml",
+            "ZenPacks/test/ZPLTestCreate/zenpacklib.py",
+            )
+
+        for expected_file in expected_files:
+            self.assertTrue(
+                os.path.isfile(os.path.join(zenpack_name, expected_file)),
+                "{!r} file not created".format(expected_file))
+
+        # Cleanup created directory.
+        shutil.rmtree(zenpack_name, ignore_errors=True)
 
     def test_version(self):
         output = self._smoke_command("version").strip()
