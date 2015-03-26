@@ -30,7 +30,7 @@ In either case you will get the following help.
     Available commands and example options:
 
       # Check zenpack.yaml for errors.
-      link zenpack.yaml
+      lint zenpack.yaml
 
       # Print yUML (http://yuml.me/) class diagram source based on zenpack.yaml.
       class_diagram yuml zenpack.yaml

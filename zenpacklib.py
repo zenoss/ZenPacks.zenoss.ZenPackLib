@@ -5709,8 +5709,11 @@ Usage: {} <command> [options]
 
 Available commands and example options:
 
+  # Create a new ZenPack source directory.
+  create ZenPacks.example.MyNewPack
+
   # Check zenpack.yaml for errors.
-  link zenpack.yaml
+  lint zenpack.yaml
 
   # Print yUML (http://yuml.me/) class diagram source based on zenpack.yaml.
   class_diagram yuml zenpack.yaml
