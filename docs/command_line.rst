@@ -44,17 +44,47 @@ In either case you will get the following help.
       # Print zenpacklib version.
       version
 
-As you can see there are five supported commands. 
+The following commands are supported:
 
+* :ref:`create <zenpacklib-create>`: Create a new zenpacklib-enabled ZenPack source directory.
 * :ref:`lint <zenpacklib-lint>`: Provides syntax and correctness on a YAML file.
 * :ref:`class_diagram <zenpacklib-class_diagram>`: Export yUML (yuml.me) class diagram from a YAML file.
 * :ref:`dump_templates <zenpacklib-dump_templates>`: Export existing monitoring templates to YAML.
 * :ref:`py_to_yaml <zenpacklib-py_to_yaml>`: Converts the Python syntax used in pre-release versions of zenpacklib to YAML.
 * :ref:`version <zenpacklib-version>`: Print zenpacklib version.
 
-*lint* and class_diagram require a YAML file, whereas *py_to_yaml* and
-*dump_templates* require the name of a ZenPack that's already installed because
-they're designed to help convert existing ZenPacks to zenpacklib.
+
+.. _zenpacklib-create:
+
+******
+create
+******
+
+The *create* command will create a source directory for a zenpacklib-enabled
+ZenPack. This will include a setup.py, MANIFEST.in, the namespace and module
+directories, and a zenpack.yaml in the module directory. It will also make a
+copy of zenpacklib.py inside the module directory. This ZenPack will be ready to
+be installed immediately though it will contain no functionality yet.
+
+Example usage:
+
+.. code-block:: bash
+
+    python zenpacklib.py create ZenPacks.example.MyNewPack
+
+Running the above command would result in the following output.
+
+.. code-block:: text
+
+    Creating source directory for ZenPacks.test.ZPLTest2:
+      - making directory: ZenPacks.test.ZPLTest2/ZenPacks/test/ZPLTest2
+      - creating file: ZenPacks.test.ZPLTest2/setup.py
+      - creating file: ZenPacks.test.ZPLTest2/MAINFEST.in
+      - creating file: ZenPacks.test.ZPLTest2/ZenPacks/__init__.py
+      - creating file: ZenPacks.test.ZPLTest2/ZenPacks/test/__init__.py
+      - creating file: ZenPacks.test.ZPLTest2/ZenPacks/test/ZPLTest2/__init__.py
+      - creating file: ZenPacks.test.ZPLTest2/ZenPacks/test/ZPLTest2/zenpack.yaml
+      - copying: ../../../zenpacklib.py to ZenPacks.test.ZPLTest2/ZenPacks/test/ZPLTest2
 
 
 .. _zenpacklib-lint:

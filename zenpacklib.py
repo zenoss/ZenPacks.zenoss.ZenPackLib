@@ -5574,6 +5574,85 @@ if DYNAMICVIEW_INSTALLED:
                 yield IRelatable(r)
 
 
+# Static Utilities ##########################################################
+
+def create_zenpack_srcdir(zenpack_name):
+    """Create a new ZenPack source directory."""
+    import shutil
+    import errno
+
+    print "Creating source directory for {}:".format(zenpack_name)
+
+    zenpack_name_parts = zenpack_name.split('.')
+
+    packages = reduce(
+        lambda x, y: x + ['.'.join((x[-1], y))],
+        zenpack_name_parts[1:],
+        ['ZenPacks'])
+
+    namespace_packages = packages[:-1]
+
+    # Create ZenPacks.example.Thing/ZenPacks/example/Thing directory.
+    module_directory = os.path.join(zenpack_name, *zenpack_name_parts)
+
+    try:
+        print "  - making directory: {}".format(module_directory)
+        os.makedirs(module_directory)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            sys.exit("{} directory already exists.".format(zenpack_name))
+        else:
+            sys.exit(
+                "Failed to create {!r} directory: {}"
+                .format(zenpack_name, e.strerror))
+
+    # Create setup.py.
+    setup_py_fname = os.path.join(zenpack_name, 'setup.py')
+    print "  - creating file: {}".format(setup_py_fname)
+    with open(setup_py_fname, 'w') as setup_py_f:
+        setup_py_f.write(
+            SETUP_PY.format(
+                zenpack_name=zenpack_name,
+                namespace_packages=namespace_packages,
+                packages=packages))
+
+    # Create MANIFEST.in.
+    manifest_in_fname = os.path.join(zenpack_name, 'MANIFEST.in')
+    print "  - creating file: {}".format(manifest_in_fname)
+    with open(manifest_in_fname, 'w') as manifest_in_f:
+        manifest_in_f.write("graft ZenPacks")
+
+    # Create __init__.py files in all namespace directories.
+    for namespace_package in namespace_packages:
+        namespace_init_fname = os.path.join(
+            zenpack_name,
+            os.path.join(*namespace_package.split('.')),
+            '__init__.py')
+
+        print "  - creating file: {}".format(namespace_init_fname)
+        with open(namespace_init_fname, 'w') as namespace_init_f:
+            namespace_init_f.write(
+                "__import__('pkg_resources').declare_namespace(__name__)\n")
+
+    # Create __init__.py in ZenPack module directory.
+    init_fname = os.path.join(module_directory, '__init__.py')
+    print "  - creating file: {}".format(init_fname)
+    with open(init_fname, 'w') as init_f:
+        init_f.write(
+            "from . import zenpacklib\n\n"
+            "zenpacklib.load_yaml()\n")
+
+    # Create zenpack.yaml in ZenPack module directory.
+    yaml_fname = os.path.join(module_directory, 'zenpack.yaml')
+    print "  - creating file: {}".format(yaml_fname)
+    with open(yaml_fname, 'w') as yaml_f:
+        yaml_f.write("name: {}".format(zenpack_name))
+
+    # Copy zenpacklib.py (this file) into ZenPack module directory.
+    print "  - copying: {} to {}".format(__file__, module_directory)
+    shutil.copy(__file__, module_directory)
+
+
 # Templates #################################################################
 
 JS_LINK_FROM_GRID = """
@@ -5729,6 +5808,76 @@ Available commands and example options:
 """.lstrip()
 
 
+SETUP_PY = """
+################################
+# These variables are overwritten by Zenoss when the ZenPack is exported
+# or saved.  Do not modify them directly here.
+# NB: PACKAGES is deprecated
+NAME = "{zenpack_name}"
+VERSION = "1.0.0dev"
+AUTHOR = "Your Name Here"
+LICENSE = ""
+NAMESPACE_PACKAGES = {namespace_packages}
+PACKAGES = {packages}
+INSTALL_REQUIRES = []
+COMPAT_ZENOSS_VERS = ""
+PREV_ZENPACK_NAME = ""
+# STOP_REPLACEMENTS
+################################
+# Zenoss will not overwrite any changes you make below here.
+
+from setuptools import setup, find_packages
+
+
+setup(
+    # This ZenPack metadata should usually be edited with the Zenoss
+    # ZenPack edit page.  Whenever the edit page is submitted it will
+    # overwrite the values below (the ones it knows about) with new values.
+    name=NAME,
+    version=VERSION,
+    author=AUTHOR,
+    license=LICENSE,
+
+    # This is the version spec which indicates what versions of Zenoss
+    # this ZenPack is compatible with
+    compatZenossVers=COMPAT_ZENOSS_VERS,
+
+    # previousZenPackName is a facility for telling Zenoss that the name
+    # of this ZenPack has changed.  If no ZenPack with the current name is
+    # installed then a zenpack of this name if installed will be upgraded.
+    prevZenPackName=PREV_ZENPACK_NAME,
+
+    # Indicate to setuptools which namespace packages the zenpack
+    # participates in
+    namespace_packages=NAMESPACE_PACKAGES,
+
+    # Tell setuptools what packages this zenpack provides.
+    packages=find_packages(),
+
+    # Tell setuptools to figure out for itself which files to include
+    # in the binary egg when it is built.
+    include_package_data=True,
+
+    # Indicate dependencies on other python modules or ZenPacks.  This line
+    # is modified by zenoss when the ZenPack edit page is submitted.  Zenoss
+    # tries to put add/delete the names it manages at the beginning of this
+    # list, so any manual additions should be added to the end.  Things will
+    # go poorly if this line is broken into multiple lines or modified to
+    # dramatically.
+    install_requires=INSTALL_REQUIRES,
+
+    # Every ZenPack egg must define exactly one zenoss.zenpacks entry point
+    # of this form.
+    entry_points={{
+        'zenoss.zenpacks': '%s = %s' % (NAME, NAME),
+    }},
+
+    # All ZenPack eggs must be installed in unzipped form.
+    zip_safe=False,
+)
+""".lstrip()
+
+
 if __name__ == '__main__':
     from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
@@ -5872,6 +6021,9 @@ if __name__ == '__main__':
                                 crspec.right_relname, crspec.right_class)
                 else:
                     LOG.error("Diagram type '%s' is not supported.", diagram_type)
+
+            elif len(args) == 2 and args[0] == "create":
+                create_zenpack_srcdir(args[1])
 
             elif len(args) == 1 and args[0] == "version":
                 print __version__
