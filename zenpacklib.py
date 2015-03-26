@@ -2131,10 +2131,12 @@ class ClassSpec(Spec):
 
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
-            if not spec.datapoint:
+            if spec.api_backendtype == 'property':
+                # for normal properties (not methods or datapoints, apply default value)
                 attributes[name] = spec.default  # defaults to None
-            else:
-                # Lookup the datapoint and get the value from rrd
+
+            elif spec.datapoint:
+                # Provide a method to look up the datapoint and get the value from rrd
                 def datapoint_method(self, default=spec.datapoint_default, cached=spec.datapoint_cached, datapoint=spec.datapoint):
                     if cached:
                         r = self.cacheRRDValue(datapoint, default=default)
@@ -2147,6 +2149,15 @@ class ClassSpec(Spec):
                     return default
 
                 attributes[name] = datapoint_method
+
+            else:
+                # api backendtype is 'method', and it is assumed that this
+                # pre-existing method is being inherited from a parent class
+                # or will be provided by the developer.  In any case, we want
+                # to omit it from the generated schema class, so that we don't
+                # shadow an existing method with a property with a default
+                # value of 'None.'
+                pass
 
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
