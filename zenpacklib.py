@@ -5030,7 +5030,7 @@ def relationships_from_yuml(yuml):
 
     """
     classes = []
-    match_comment = re.compile(r'^\s*//').search
+    match_comment = re.compile(r'^//').search
 
     match_line = re.compile(
         r'\[(?P<left_classname>[^\]]+)\]'
@@ -5048,13 +5048,17 @@ def relationships_from_yuml(yuml):
         yuml_lines = yuml.strip().splitlines()
 
     for line in yuml_lines:
+        line = line.strip()
+
+        if not line:
+            continue
+
         if match_comment(line):
             continue
 
         match = match_line(line)
         if not match:
-            LOG.error("parse error in relationships_from_yuml at %s" % line)
-            continue
+            raise ValueError("parse error in relationships_from_yuml at %s" % line)
 
         left_class = match.group('left_classname')
         right_class = match.group('right_classname')
