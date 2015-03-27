@@ -9,11 +9,9 @@
 #
 ##############################################################################
 
-"""Schema unit tests.
+"""Command unit tests.
 
-This is primarily testing that zenpacklib is functioning as desired. If
-zenpacklib was already mature these kinds of tests would be in its
-test suite instead of in the ZenPack's.
+This module tests command line usage of zenpacklib.py.
 
 """
 

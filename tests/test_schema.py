@@ -65,7 +65,7 @@ class TestSchema(zenpacklib.TestCase):
         except ImportError, e:
             self.assertFalse(
                 e.message == 'No module named ZPLTest1',
-                "ZPLTest1 zenpack is not installed.  You must install it before running this test:\n   zenpack --link --install=%s" % zenpack_path
+                "ZPLTest1 zenpack is not installed.  You must install it before running this test:\n   zenpack --link --install=%s" % self.zenpack_path
             )
 
     def assert_superclasses(self, obj, expected_superclasses):

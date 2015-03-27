@@ -2,18 +2,16 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2013-2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
 
-"""Schema unit tests.
+"""Install unit tests.
 
-This is primarily testing that zenpacklib is functioning as desired. If
-zenpacklib was already mature these kinds of tests would be in its
-test suite instead of in the ZenPack's.
+This module tests ZenPack install, upgrade and remove.
 
 """
 
