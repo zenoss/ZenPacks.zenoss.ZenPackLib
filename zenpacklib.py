@@ -1302,12 +1302,13 @@ class ZenPackSpec(Spec):
 
         # The parameters from which this zenpackspec was originally
         # instantiated.
-        self.specparams = ZenPackSpecParams(
-            name,
-            zProperties=zProperties,
-            classes=classes,
-            class_relationships=class_relationships,
-            device_classes=device_classes)
+        if YAML_INSTALLED:
+            self.specparams = ZenPackSpecParams(
+                name,
+                zProperties=zProperties,
+                classes=classes,
+                class_relationships=class_relationships,
+                device_classes=device_classes)
 
         self.name = name
         self.NEW_COMPONENT_TYPES = []
