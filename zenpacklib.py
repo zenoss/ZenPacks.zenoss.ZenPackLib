@@ -5649,7 +5649,7 @@ def create_zenpack_srcdir(zenpack_name):
     manifest_in_fname = os.path.join(zenpack_name, 'MANIFEST.in')
     print "  - creating file: {}".format(manifest_in_fname)
     with open(manifest_in_fname, 'w') as manifest_in_f:
-        manifest_in_f.write("graft ZenPacks")
+        manifest_in_f.write("graft ZenPacks\n")
 
     # Create __init__.py files in all namespace directories.
     for namespace_package in namespace_packages:
@@ -5675,11 +5675,11 @@ def create_zenpack_srcdir(zenpack_name):
     yaml_fname = os.path.join(module_directory, 'zenpack.yaml')
     print "  - creating file: {}".format(yaml_fname)
     with open(yaml_fname, 'w') as yaml_f:
-        yaml_f.write("name: {}".format(zenpack_name))
+        yaml_f.write("name: {}\n".format(zenpack_name))
 
     # Copy zenpacklib.py (this file) into ZenPack module directory.
     print "  - copying: {} to {}".format(__file__, module_directory)
-    shutil.copy(__file__, module_directory)
+    shutil.copy2(__file__, module_directory)
 
 
 # Templates #################################################################

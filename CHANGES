@@ -1,0 +1,22 @@
+Release 1.0.0
+=============
+
+Features added
+--------------
+
+* Added ability to define ZenPack with YAML.
+* Added support for model classes and relationships.
+* Added support for zProperties.
+* Added support for device classes.
+* Added support for monitoring templates.
+* Added *create* command for creating ZenPacks from the command line.
+* Added *lint* command to check YAML for correctness.
+* Added *class_diagram* command to create yUML class diagram from YAML.
+* Added *dump_templates* command to export monitoring templates to YAML.
+* Added *py_to_yaml* command to convert old Python specs to YAML.
+* Added *version* command to print zenpacklib's version.
+
+Documentation
+-------------
+
+* Added first pass at documentation (`<http://zenpacklib.zenoss.com/>`_).
