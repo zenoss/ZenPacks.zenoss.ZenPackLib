@@ -1309,6 +1309,8 @@ class ZenPackSpec(Spec):
                 classes=classes,
                 class_relationships=class_relationships,
                 device_classes=device_classes)
+        else:
+            self.specparams = None
 
         self.name = name
         self.NEW_COMPONENT_TYPES = []
