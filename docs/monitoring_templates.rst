@@ -212,12 +212,10 @@ graphs
   :Type: map<name, :ref:`Graph <graph-reference>`>
   :Default Value: {} *(empty map)*
 
-
 .. _datasource-reference:
 
-********************
 Datasource Reference
-********************
+====================
 
 The following fields are valid for a datasource entry.
 
@@ -282,7 +280,7 @@ depending on the value of *sourcetype*, other fields may be valid.
 .. _datasource-sourcetypes:
 
 Datasource Sourcetypes
-======================
+----------------------
 
 The following datasource sourcetypes are valid on any Zenoss system. They are
 the default sourcetypes that are part of the platform. This list is not
@@ -352,12 +350,10 @@ Built-In
 
 .. todo:: Document commonly-used sourcetypes added by ZenPacks.
 
-
 .. _datapoint-reference:
 
-*******************
 Datapoint Reference
-*******************
+===================
 
 The following fields are valid for a datapoint entry.
 
@@ -404,12 +400,10 @@ above list. This is because datapoints are an extensible type in Zenoss, and
 depending on the value of the datasource's *sourcetype*, other fields may be
 valid.
 
-
 .. _threshold-reference:
 
-*******************
 Threshold Reference
-*******************
+===================
 
 The following fields are valid for a threshold entry.
 
@@ -458,7 +452,7 @@ depending on the value of the threshold's *type*, other fields may be valid.
 .. _threshold-types:
 
 Threshold Types
-===============
+---------------
 
 The following threshold types are valid on any Zenoss system. They are the
 default types that are part of the platform. This list is not exhaustive as
@@ -485,12 +479,10 @@ ValueChangeThreshold
   :Availability: Zenoss Platform
   :Additional Fields: None
 
-
 .. _graph-reference:
 
-***************
 Graph Reference
-***************
+===============
 
 The following fields are valid for a graph entry.
 
@@ -560,12 +552,10 @@ comments
   :Type: list<string>
   :Default Value: [] *(empty list)*
 
-
 .. _graphpoint-reference:
 
-********************
 Graphpoint Reference
-********************
+====================
 
 The following fields are valid for a graphpoint entry.
 
