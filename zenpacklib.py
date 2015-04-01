@@ -194,15 +194,6 @@ class ZenPack(ZenPackBase):
             d.buildRelations()
 
     def install(self, app):
-
-        if not YAML_INSTALLED:
-            LOG.fatal('PyYAML is required by %s.  Try "easy_install PyYAML" first.' % self.id)
-            sys.exit(1)
-
-        if not OrderedDict:
-            LOG.fatal('ordereddict is required by %s. Try "easy_install ordereddict" first.' % self.id)
-            sys.exit(1)
-
         # create device classes and set zProperties on them
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
@@ -229,6 +220,9 @@ class ZenPack(ZenPackBase):
                 mtspec.create(self.dmd)
 
     def remove(self, app, leaveObjects=False):
+        if self._v_specparams is None:
+            return
+
         from Products.Zuul.interfaces import ICatalogTool
         if leaveObjects:
             # Check whether the ZPL-managed monitoring templates have
@@ -1475,6 +1469,8 @@ class ZenPackSpec(Spec):
     def register_browser_resources(self):
         """Register browser resources if they exist."""
         zenpack_path = get_zenpack_path(self.name)
+        if not zenpack_path:
+            return
 
         resource_path = os.path.join(zenpack_path, 'resources')
         if not os.path.isdir(resource_path):
@@ -4527,24 +4523,6 @@ if YAML_INSTALLED:
 
     yaml.add_path_resolver(u'!ZenPackSpec', [], Loader=Loader)
 
-    def load_yaml(yaml_filename=None):
-        """Load YAML from yaml_filename.
-
-        Loads from zenpack.yaml in the current directory if
-        yaml_filename isn't specified.
-
-        """
-        if yaml_filename is None:
-            yaml_filename = os.path.join(
-                os.path.dirname(__file__), 'zenpack.yaml')
-
-        CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
-        if CFG:
-            CFG.create()
-        else:
-            LOG.error("Unable to load %s", yaml_filename)
-        return CFG
-
     class SpecParams(object):
         def __init__(self, **kwargs):
             # Initialize with default values
@@ -4894,7 +4872,46 @@ if YAML_INSTALLED:
     Dumper.add_representer(GraphDefinitionSpecParams, represent_spec)
     Dumper.add_representer(GraphPointSpecParams, represent_spec)
 
+
 # Public Functions ##########################################################
+
+def load_yaml(yaml_filename=None):
+    """Load YAML from yaml_filename.
+
+    Loads from zenpack.yaml in the current directory if
+    yaml_filename isn't specified.
+
+    """
+    if YAML_INSTALLED:
+        if yaml_filename is None:
+            yaml_filename = os.path.join(
+                os.path.dirname(__file__), 'zenpack.yaml')
+
+        CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
+    else:
+        zenpack_name = None
+
+        # Guess ZenPack name from the path.
+        dirname = __file__
+        while dirname != '/':
+            dirname = os.path.dirname(dirname)
+            basename = os.path.basename(dirname)
+            if basename.startswith('ZenPacks.'):
+                zenpack_name = basename
+                break
+
+        LOG.error(
+            '%s requires PyYAML. Run "easy_install PyYAML".',
+            zenpack_name or 'ZenPack')
+
+        # Create a simple ZenPackSpec that should be harmless.
+        CFG = ZenPackSpec(name=zenpack_name or 'NoYAML')
+
+    if CFG:
+        CFG.create()
+    else:
+        LOG.error("Unable to load %s", yaml_filename)
+    return CFG
 
 
 def enableTesting():
@@ -5230,7 +5247,10 @@ OrderAndValue = collections.namedtuple('OrderAndValue', ['order', 'value'])
 def get_zenpack_path(zenpack_name):
     """Return filesystem path for given ZenPack."""
     zenpack_module = importlib.import_module(zenpack_name)
-    return os.path.dirname(zenpack_module.__file__)
+    if hasattr(zenpack_module, '__file__'):
+        return os.path.dirname(zenpack_module.__file__)
+    else:
+        return None
 
 
 def ordered_values(iterable):
@@ -5609,6 +5629,9 @@ def create_zenpack_srcdir(zenpack_name):
     """Create a new ZenPack source directory."""
     import shutil
     import errno
+
+    if os.path.exists(zenpack_name):
+        sys.exit("{} directory already exists.".format(zenpack_name))
 
     print "Creating source directory for {}:".format(zenpack_name)
 
