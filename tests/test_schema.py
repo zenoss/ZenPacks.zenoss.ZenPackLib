@@ -21,6 +21,7 @@ import Globals
 from Products.ZenModel.Device import Device
 from Products.ZenModel.DeviceComponent import DeviceComponent
 from Products.ZenModel.ManagedEntity import ManagedEntity
+from Products.ZenRelations.ToManyRelationship import ToManyRelationship
 from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
 from Products.ZenRelations.ToOneRelationship import ToOneRelationship
 from Products.ZenRelations.zPropertyCategory import getzPropertyCategory
@@ -211,6 +212,8 @@ class TestSchema(zenpacklib.TestCase):
         self.assert_properties(apic1, ('manageIp', 'priority'))
 
         self.assert_relationships(apic1, (
+            ('dependencies', ToManyRelationship),  # from ManagedEntity
+            ('deviceClass', ToOneRelationship),  # from Device
             ('fabricPods', ToManyContRelationship),
             ('fvTenants', ToManyContRelationship),
             ))
@@ -370,6 +373,7 @@ class TestSchema(zenpacklib.TestCase):
         self.assert_properties(pod1, ('snmpindex', 'monitor'))
 
         self.assert_relationships(pod1, (
+            ('dependencies', ToManyRelationship),  # from ManagedEntity
             ('apic', ToOneRelationship),
             ('fabricNodes', ToManyContRelationship),
             ))
