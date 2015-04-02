@@ -1,0 +1,463 @@
+name: ZenPacks.zenoss.ZPLTest1
+zProperties:
+  DEFAULTS:
+    category: ZPLTest1
+  zZPLTest1HealthInterval:
+    type: int
+    default: 300
+  zZPLTest1Password:
+    type: password
+    default: ''
+  zZPLTest1Port:
+    type: int
+    default: 443
+  zZPLTest1SSL:
+    type: boolean
+    default: true
+  zZPLTest1Username:
+    default: admin
+class_relationships:
+- APIC 1:MC FabricPod
+- APIC 1:MC FvTenant
+- FabricPod 1:MC FabricNode
+- FabricNode 1:MC L1PhysIf
+- FvTenant 1:MC FvCtx
+- FvTenant 1:MC FvBD
+- FvTenant 1:MC VzBrCP
+- FvTenant 1:MC FvAp
+- FvTenant 1:MC VnsGraphInst
+- FvTenant 1:MC VnsLDevVip
+- VnsGraphInst 1:MC VnsNodeInst
+- VnsLDevVip 1:MC VnsCDev
+- FvAp 1:MC FvAEPg
+- FvAEPg 1:MC FvRsProv
+- FvAEPg 1:MC FvRsCons
+- FvCtx 1:M FvBD
+- FvBD 1:M FvAEPg
+- VzBrCP 1:M FvRsProv
+- VzBrCP 1:M FvRsCons
+- VzBrCP 1:M VnsGraphInst
+- VnsLDevVip 1:M VnsNodeInst
+device_classes:
+  /Network/ZPLTest1:
+    templates:
+      APIC:
+        description: ZPLTest1 fabric monitoring.
+        targetPythonClass: ZenPacks.zenoss.ZPLTest1.APIC
+        datasources:
+          faults:
+            type: ZPLTest1 Faults
+            cycletime: 300
+      FabricNode:
+        description: ZPLTest1 fabric node monitoring.
+        targetPythonClass: ZenPacks.zenoss.ZPLTest1.FabricNode
+        thresholds:
+          node overall health below 75:
+            dsnames: [fabricNodeHealth_healthAvg]
+            eventClass: /Status
+            severity: err
+            minval: '75'
+        datasources:
+          fabricNodeHealth:
+            type: ZPLTest1 Stats
+            datapoints:
+              healthAvg:
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {health_avg__pct: null}
+              healthMax:
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {health_max__pct: null}
+              healthMin:
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {health_min__pct: null}
+            classname: topSystem
+            object_dn: ${here/apic_dn}/sys
+            statistic: fabricNodeHealth
+            base_dn: ${here/apic_dn}
+        graphs:
+          Node Overall Health:
+            units: score
+            miny: 0
+            maxy: 100
+            graphpoints:
+              Average:
+                dpName: fabricNodeHealth_healthAvg
+                lineWidth: 2
+                format: '%4.0lf'
+                color: 00cc00
+              Maximum:
+                dpName: fabricNodeHealth_healthMax
+                format: '%4.0lf'
+                color: '666666'
+              Minimum:
+                dpName: fabricNodeHealth_healthMin
+                format: '%4.0lf'
+                color: '666666'
+      FabricPod:
+        description: ZPLTest1 fabric pod monitoring.
+        targetPythonClass: ZenPacks.zenoss.ZPLTest1.FabricPod
+        thresholds:
+          fabric overall health below 75:
+            dsnames: [fabricOverallHealth_healthAvg]
+            eventClass: /Status
+            severity: err
+            minval: '75'
+        datasources:
+          fabricOverallHealth:
+            type: ZPLTest1 Stats
+            datapoints:
+              healthAvg:
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {health_avg__pct: null}
+              healthMax:
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {health_max__pct: null}
+              healthMin:
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {health_min__pct: null}
+            classname: fabricTopology
+            object_dn: topology
+            statistic: fabricOverallHealth
+        graphs:
+          Pod Overall Health:
+            units: score
+            miny: 0
+            maxy: 100
+            graphpoints:
+              Average:
+                dpName: fabricOverallHealth_healthAvg
+                lineWidth: 2
+                format: '%4.0lf'
+                color: 00cc00
+              Maximum:
+                dpName: fabricOverallHealth_healthMax
+                format: '%4.0lf'
+                color: '666666'
+              Minimum:
+                dpName: fabricOverallHealth_healthMin
+                format: '%4.0lf'
+                color: '666666'
+      Health:
+        description: ZPLTest1 health monitoring.
+        targetPythonClass: ZenPacks.zenoss.ZPLTest1.ManagedObject
+        thresholds:
+          health at 0:
+            dsnames: [health_cur]
+            eventClass: /Status
+            severity: crit
+            minval: '0.9'
+          health below 90:
+            dsnames: [health_cur]
+            eventClass: /Status
+            severity: err
+            minval: '90'
+        datasources:
+          health:
+            type: ZPLTest1 Health
+            datapoints:
+              cur:
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {health_current__pct: null}
+        graphs:
+          Health:
+            units: score
+            miny: 0
+            maxy: 100
+            graphpoints:
+              Current:
+                dpName: health_cur
+                lineWidth: 2
+                format: '%4.0lf'
+      L1PhysIf:
+        description: ZPLTest1 physical interface monitoring.
+        targetPythonClass: ZenPacks.zenoss.ZPLTest1.L1PhysIf
+        datasources:
+          eqptEgrTotal:
+            type: ZPLTest1 Stats
+            datapoints:
+              bytesRate:
+                rrdmin: 0
+                aliases: {if_out_bytessec: null, outputOctets__bytes: null}
+              pktsRate:
+                rrdmin: 0
+                aliases: {if_out__pktssec: null}
+              utilAvg:
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {if_out__pct: null}
+            classname: l1PhysIf
+            statistic: eqptEgrTotal
+            base_dn: ${here/node_dn}
+          eqptIngrTotal:
+            type: ZPLTest1 Stats
+            datapoints:
+              bytesRate:
+                rrdmin: 0
+                aliases: {if_in__bytessec: null, inputOctets__bytes: null}
+              pktsRate:
+                rrdmin: 0
+                aliases: {if_in__pktssec: null}
+              utilAvg:
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {if_in__pct: null}
+            classname: l1PhysIf
+            statistic: eqptIngrTotal
+            base_dn: ${here/node_dn}
+        graphs:
+          Throughput (bytes):
+            units: bytes/sec
+            miny: 0
+            graphpoints:
+              Egress:
+                dpName: eqptEgrTotal_bytesRate
+                format: '%7.2lf%s'
+              Ingress:
+                dpName: eqptIngrTotal_bytesRate
+                format: '%7.2lf%s'
+          Throughput (packets):
+            units: packets/sec
+            miny: 0
+            graphpoints:
+              Egress:
+                dpName: eqptEgrTotal_pktsRate
+                format: '%7.2lf%s'
+                rpn: 8,*
+              Ingress:
+                dpName: eqptIngrTotal_pktsRate
+                format: '%7.2lf%s'
+                rpn: 8,*
+          Utilization:
+            units: percent
+            miny: 0
+            maxy: 100
+            graphpoints:
+              Egress:
+                dpName: eqptEgrTotal_utilAvg
+                format: '%7.2lf%%'
+              Ingress:
+                dpName: eqptIngrTotal_utilAvg
+                format: '%7.2lf%%'
+classes:
+  DEFAULTS:
+    base: [ManagedObject]
+  APIC:
+    base: [zenpacklib.Device]
+    meta_type: ZPLTest1
+    label: APIC
+  FabricNode:
+    meta_type: ZPLTest1FabricNode
+    label: Fabric Node
+    label_width: 65
+    content_width: 100
+    order: !!float '31'
+    properties:
+      role:
+        label: Role
+    impacts: [node_impacts]
+    impacted_by: [node_impacted_by]
+    monitoring_templates: [FabricNode, Health]
+  FabricPod:
+    meta_type: ZPLTest1FabricPod
+    label: Fabric Pod
+    order: !!float '30'
+    impacts: [fvCtxs]
+    impacted_by: [leaf_nodes]
+  FvAEPg:
+    meta_type: ZPLTest1ApplicationEndpointGroup
+    label: Endpoint Group
+    short_label: Endpoint Group
+    order: !!float '13'
+    properties:
+      mapped_network:
+        type: entity
+        label: Mapped Network
+        label_width: 85
+        content_width: 160
+        renderer: Zenoss.render.default_uid_renderer
+        order: 4.1
+        api_only: true
+        api_backendtype: method
+      vsphere_dvportgroup_ids:
+        type: lines
+        label: VMware vSphere dvPortgroup IDs
+        index_type: keyword
+        grid_display: false
+        order: 4.2
+    impacts: [fvAp, impacts_fvAEPgs, impacts_vnsGraphInsts]
+    impacted_by: [fvBD, impacted_by_fvAEPgs, impacted_by_vnsGraphInsts, vsphere_dvportgroups,
+      vsphere_vms, devices]
+    monitoring_templates: [Health]
+  FvAp:
+    meta_type: ZPLTest1Application
+    label: Application
+    order: !!float '12'
+    impacts: [fvTenant]
+    impacted_by: [fvAEPgs]
+    monitoring_templates: [Health]
+  FvBD:
+    meta_type: ZPLTest1BridgeDomain
+    label: Bridge Domain
+    order: !!float '16'
+    impacts: [fvAEPgs]
+    impacted_by: [fvCtx]
+    monitoring_templates: [Health]
+  FvCtx:
+    meta_type: ZPLTest1PrivateNetwork
+    label: Private Network
+    order: !!float '15'
+    impacts: [fvBDs]
+    impacted_by: [fabricPods]
+    monitoring_templates: [Health]
+  FvRsCons:
+    meta_type: ZPLTest1ContractConsumed
+    label: Contract Consumed
+    plural_label: Contracts Consumed
+    short_label: Consumes
+    plural_short_label: Consumes
+    order: 14.2
+  FvRsProv:
+    meta_type: ZPLTest1ContractProvided
+    label: Contract Provided
+    plural_label: Contracts Provided
+    short_label: Provides
+    plural_short_label: Provides
+    order: 14.1
+  FvTenant:
+    meta_type: ZPLTest1Tenant
+    label: Tenant
+    order: !!float '11'
+    impacted_by: [fvAps]
+    monitoring_templates: [Health]
+  L1PhysIf:
+    meta_type: ZPLTest1L1PhysIf
+    label: Physical Interface
+    label_width: 95
+    order: !!float '36'
+    properties:
+      layer:
+        label: Layer
+        order: 4.3
+      portT:
+        label: Port Type
+        order: 4.2
+      speed:
+        type: int
+        label: Speed
+        renderer: Zenoss.render.ZPLTest1_linkSpeed
+        order: 4.1
+    monitoring_templates: [L1PhysIf, Health]
+  ManagedObject:
+    base: [zenpacklib.Component]
+    properties:
+      apic_classname:
+        label: ACI Object Class
+        grid_display: false
+        order: 4.93
+      apic_dn:
+        label: ACI Distinguished Name (DN)
+        index_type: field
+        grid_display: false
+        order: 4.91
+      apic_health_dn:
+        label: ACI Health Distinguished Name (DN)
+        grid_display: false
+        order: 4.92
+  VnsCDev:
+    meta_type: ZPLTest1VnsCDev
+    label: Service Device
+    order: !!float '20'
+    properties:
+      cmgmt_host:
+        label: Management Address
+        index_type: field
+        grid_display: false
+        order: 4.4
+      cmgmt_port:
+        label: Management Port
+        grid_display: false
+        order: 4.5
+      devCtxLbl:
+        label: Context Label
+        order: 4.1
+      vcenterName:
+        label: vCenter Name
+        order: 4.3
+      vmName:
+        label: VM Name
+        order: 4.2
+    impacts: [vnsLDevVip]
+    impacted_by: [cmgmt_devices]
+    monitoring_templates: [Health]
+  VnsGraphInst:
+    meta_type: ZPLTest1VnsGraphInst
+    label: Service Graph
+    content_width: 180
+    order: !!float '17'
+    properties:
+      graphDn:
+        label: Graph DN
+        label_width: 55
+        content_width: 230
+        order: 4.1
+    impacts: [impacts_fvAEPgs]
+    impacted_by: [impacted_by_fvAEPgs, vnsNodeInsts]
+  VnsLDevVip:
+    meta_type: ZPLTest1VnsLDevVip
+    label: Service Cluster
+    order: !!float '19'
+    properties:
+      cmgmt_host:
+        label: Management Address
+        index_type: field
+        grid_display: false
+        order: 4.6
+      cmgmt_port:
+        label: Management Port
+        grid_display: false
+        order: 4.7
+      contextAware:
+        label: Context Aware
+        order: 4.3
+      devtype:
+        label: Device Type
+        order: 4.1
+      funcType:
+        label: Function Type
+        grid_display: false
+        order: 4.5
+      mgmtType:
+        label: Management Type
+        order: 4.2
+      mode:
+        label: Mode
+        order: 4.4
+    impacts: [vnsNodeInsts]
+    impacted_by: [vnsCDevs]
+  VnsNodeInst:
+    meta_type: ZPLTest1VnsNodeInst
+    label: Service Function Node
+    short_label: Function Node
+    order: !!float '18'
+    properties:
+      funcType:
+        label: Function Type
+        order: 4.1
+      lbvserver_name:
+        label: Load Balancer Virtual Server Name
+        index_type: field
+        grid_display: false
+        order: 4.9
+    impacts: [vnsGraphInst]
+    impacted_by: [vnsLDevVip, netscaler_virtual_servers]
+  VzBrCP:
+    meta_type: ZPLTest1Contract
+    label: Contract
+    order: !!float '14'

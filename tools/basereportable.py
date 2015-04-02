@@ -109,7 +109,7 @@ must install the ZenETL zenpack in order to even run this test!)
 If this data looks reasonable, you're done.   If you find that some of the
 reportables need tweaking, you may subclass the BaseReportable class provided
 in this file and extend the reportProperties method.   If you are unhappy with
-the naming of the entities or columns, you may modify the naming in 
+the naming of the entities or columns, you may modify the naming in
 entity_class_for_class, as follows:
 
 
@@ -197,10 +197,10 @@ def un_camel(text):
     return zenetl_un_camel(text).replace(" ", "")
 
 
-def refValue(rel):
+def refValue(context, rel):
     # Given a ToOne relationship, return a proper value for reportProperties()
     if rel():
-        return IReportable(rel()).sid
+        return IReportable(context, rel()).sid
     else:
         return None
 
@@ -443,7 +443,7 @@ class BaseReportable(ETLBaseReportable):
 
             if isinstance(relation, ToOne):
                 related = getattr(self.context, relName, None)
-                yield (propname + '_key', 'reference', refValue(related), MARKER_LENGTH)
+                yield (propname + '_key', 'reference', refValue(self.context, related), MARKER_LENGTH)
             else:
                 related = getattr(self.context, relName, None)
                 try:
