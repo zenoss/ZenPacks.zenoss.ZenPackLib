@@ -314,18 +314,21 @@ class ZenPack(ZenPackBase):
         # objects, which allow us to override their behavior without disrupting
         # the original objects.
 
-        class FilteredZenPackable(zope.proxy.ProxyBase):
+        import Acquisition
+
+        class FilteredZenPackable(zope.proxy.ProxyBase, Acquisition.Explicit):
             @zope.proxy.non_overridable
             def objectValues(self):
                 # proxy the remote objects on ToManyContRelationships
-                return [FilteredZenPackable(x) for x in self._objects.values()]
+                return [FilteredZenPackable(x).__of__(x.aq_parent) for x in self._objects.values()]
 
             @zope.proxy.non_overridable
             def exportXmlRelationships(self, ofile, ignorerels=[]):
                 for rel in self.getRelationships():
                     if rel.id in ignorerels:
                         continue
-                    FilteredZenPackable(rel).exportXml(ofile, ignorerels)
+                    filtered_rel = FilteredZenPackable(rel).__of__(rel.aq_parent)
+                    filtered_rel.exportXml(ofile, ignorerels)
 
             @zope.proxy.non_overridable
             def exportXml(self, *args, **kwargs):
@@ -342,7 +345,7 @@ class ZenPack(ZenPackBase):
             @zope.proxy.non_overridable
             def packables(self):
                 packables = zope.proxy.getProxiedObject(self).packables()
-                return [FilteredZenPackable(x) for x in packables]
+                return [FilteredZenPackable(x).__of__(x.aq_parent) for x in packables]
 
         ZenPackBase.manage_exportPack(FilteredZenPack(self), args, kwargs)
 
