@@ -1006,34 +1006,6 @@ def ModelTypeFactory(name, bases):
 
     @ClassProperty
     @classmethod
-    def _properties(cls):
-        """Return _properties value.
-
-        This is implemented as a property method to deal with cases
-        where ZenPacks loaded after ours in easy-install.pth monkeypatch
-        _properties on one of our base classes.
-
-        """
-        properties = OrderedDict()
-        for base in cls.__bases__:
-            base_properties = getattr(base, '_properties', [])
-            for base_propdict in base_properties:
-                # In the case of multiple bases having properties by
-                # the same id, we want to use the first one. This is
-                # consistent with Python method resolution order.
-                properties.setdefault(base_propdict['id'], base_propdict)
-
-        if hasattr(cls, '_v_local_properties'):
-            for local_propdict in cls._v_local_properties:
-                # In the case of a local property having a property with
-                # the same id as one of the bases, we use the local
-                # property.
-                properties[local_propdict['id']] = local_propdict
-
-        return tuple(properties.values())
-
-    @ClassProperty
-    @classmethod
     def _relations(cls):
         """Return _relations property
 
@@ -1076,7 +1048,6 @@ def ModelTypeFactory(name, bases):
                 base.unindex_object(self)
 
     attributes = {
-        '_properties': _properties,
         '_relations': _relations,
         'index_object': index_object,
         'unindex_object': unindex_object,
@@ -2203,6 +2174,8 @@ class ClassSpec(Spec):
 
         # First inherit from bases.
         for base in self.resolved_bases:
+            if hasattr(base, '_properties'):
+                properties.extend(base._properties)
             if hasattr(base, '_templates'):
                 templates.extend(base._templates)
             if hasattr(base, '_catalogs'):
@@ -2264,7 +2237,7 @@ class ClassSpec(Spec):
         # Add local templates.
         templates.extend(self.monitoring_templates)
 
-        attributes['_v_local_properties'] = tuple(properties)
+        attributes['_properties'] = tuple(properties)
         attributes['_v_local_relations'] = tuple(relations)
         attributes['_templates'] = tuple(templates)
         attributes['_catalogs'] = catalogs
