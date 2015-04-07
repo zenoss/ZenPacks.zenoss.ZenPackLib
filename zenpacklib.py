@@ -767,6 +767,7 @@ class ComponentBase(ModelBase):
         for relname, relschema in self._relations:
             if issubclass(relschema.remoteType, ToManyCont):
                 return relname
+        raise ZenSchemaError("%s (%s) has no containing relationship" % (self.__class__.__name__, self))
 
     @property
     def faceting_relnames(self):
