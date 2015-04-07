@@ -767,6 +767,7 @@ class ComponentBase(ModelBase):
         for relname, relschema in self._relations:
             if issubclass(relschema.remoteType, ToManyCont):
                 return relname
+        raise ZenSchemaError("%s (%s) has no containing relationship" % (self.__class__.__name__, self))
 
     @property
     def faceting_relnames(self):
@@ -1014,13 +1015,13 @@ def ModelTypeFactory(name, bases):
 
         """
         properties = OrderedDict()
-        for base in bases:
-            if hasattr(base, '_properties'):
-                for base_propdict in base._properties:
-                    # In the case of multiple bases having properties by
-                    # the same id, we want to use the first one. This is
-                    # consistent with Python method resolution order.
-                    properties.setdefault(base_propdict['id'], base_propdict)
+        for base in cls.__bases__:
+            base_properties = getattr(base, '_properties', [])
+            for base_propdict in base_properties:
+                # In the case of multiple bases having properties by
+                # the same id, we want to use the first one. This is
+                # consistent with Python method resolution order.
+                properties.setdefault(base_propdict['id'], base_propdict)
 
         if hasattr(cls, '_v_local_properties'):
             for local_propdict in cls._v_local_properties:
@@ -1028,6 +1029,8 @@ def ModelTypeFactory(name, bases):
                 # the same id as one of the bases, we use the local
                 # property.
                 properties[local_propdict['id']] = local_propdict
+
+        return tuple(properties.values())
 
     @ClassProperty
     @classmethod
@@ -1039,15 +1042,16 @@ def ModelTypeFactory(name, bases):
         _relations on one of our base classes.
 
         """
+
         relations = OrderedDict()
-        for base in bases:
-            if hasattr(base, '_relations'):
-                for base_name, base_schema in base._relations:
-                    # In the case of multiple bases having relationships
-                    # by the same name, we want to use the first one.
-                    # This is consistent with Python method resolution
-                    # order.
-                    relations.setdefault(base_name, base_schema)
+        for base in cls.__bases__:
+            base_relations = getattr(base, '_relations', [])
+            for base_name, base_schema in base_relations:
+                # In the case of multiple bases having relationships
+                # by the same name, we want to use the first one.
+                # This is consistent with Python method resolution
+                # order.
+                relations.setdefault(base_name, base_schema)
 
         if hasattr(cls, '_v_local_relations'):
             for local_name, local_schema in cls._v_local_relations:
@@ -1072,6 +1076,7 @@ def ModelTypeFactory(name, bases):
                 base.unindex_object(self)
 
     attributes = {
+        '_properties': _properties,
         '_relations': _relations,
         'index_object': index_object,
         'unindex_object': unindex_object,
