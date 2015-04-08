@@ -788,15 +788,15 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def facet_include_relpath(self, root=None, path=None):
+    def facet_include_relpath(self, relpath):
         # default is to only include direct relationships from
         # this object.  (that is, a path length of one)
-        if len(path) == 1:
+        if '/' not in relpath:
             return True
         else:
             return False
 
-    def facet_exclude_relpath(self, root=None, path=None):
+    def facet_exclude_relpath(self, relpath):
         return False
 
     def get_facets(self, root=None, seen=None, path=None, tracker=None):
@@ -815,20 +815,20 @@ class ComponentBase(ModelBase):
             if not rel or not callable(rel):
                 continue
 
-            relpath = path + [relname]
-            should_include = self.facet_include_relpath(root=root, path=relpath)
-            should_exclude = self.facet_exclude_relpath(root=root, path=relpath)
+            relpath = "%s:%s:%s" % (
+                root.meta_type,
+                "/".join(path + [relname]),
+                rel.remoteClass().meta_type
+            )
+
+            should_include = self.facet_include_relpath(relpath)
+            should_exclude = self.facet_exclude_relpath(relpath)
 
             if tracker is not None:
-                pathspec = "%s:%s:%s" % (
-                    root.meta_type,
-                    "/".join(relpath),
-                    rel.remoteClass().meta_type
-                )
-                tracker[pathspec] = (should_include, should_exclude)
-
-            if (not should_include or should_exclude):
-                continue
+                tracker[relpath] = (should_include, should_exclude)
+            else:
+                if (not should_include or should_exclude):
+                    continue
 
             relobjs = rel()
             if not relobjs:
@@ -845,7 +845,7 @@ class ComponentBase(ModelBase):
                 yield obj
                 seen.add(obj)
 
-                for facet in obj.get_facets(root=root, seen=seen, path=relpath, tracker=tracker):
+                for facet in obj.get_facets(root=root, seen=seen, path=path + [relname], tracker=tracker):
                     yield facet
 
     def rrdPath(self):
