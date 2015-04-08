@@ -985,7 +985,8 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
                 renderer = self.renderer[item['name']]
 
                 if renderer:
-                    item['xtype'] = 'ZPLRenderableDisplayField'
+                    item['xtype'] = 'ZPL_{zenpack_id_prefix}_RenderableDisplayField'.format(
+                        zenpack_id_prefix=self.zenpack_id_prefix)
                     item['renderer'] = renderer
 
 
@@ -1362,6 +1363,8 @@ class ZenPackSpec(Spec):
             self.specparams = None
 
         self.name = name
+        self.id_prefix = name.replace(".", "_")
+
         self.NEW_COMPONENT_TYPES = []
         self.NEW_RELATIONS = collections.defaultdict(list)
 
@@ -1638,6 +1641,7 @@ class ZenPackSpec(Spec):
         if not [x for x in snippets if x]:
             return
 
+        link_code = JS_LINK_FROM_GRID.replace('{zenpack_id_prefix}', self.id_prefix)
         snippet = (
             "(function(){{\n"
             "var ZC = Ext.ns('Zenoss.component');\n"
@@ -1645,7 +1649,7 @@ class ZenPackSpec(Spec):
             "{snippets}"
             "}})();\n"
             .format(
-                link_code=JS_LINK_FROM_GRID,
+                link_code=link_code,
                 snippets=''.join(snippets)))
 
         device_classes = [
@@ -2416,6 +2420,7 @@ class ClassSpec(Spec):
                 renderer[propname] = spec.renderer
 
         attributes['renderer'] = renderer
+        attributes['zenpack_id_prefix'] = self.zenpack.id_prefix
 
         formbuilder = create_class(
             get_symbol_name(self.zenpack.name, self.name),
@@ -2577,7 +2582,8 @@ class ClassSpec(Spec):
                 continue
 
             width = max(spec.content_width + 14, spec.label_width + 20)
-            renderer = 'Zenoss.render.zenpacklib_entityLinkFromGrid'
+            renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'.format(
+                zenpack_id_prefix=self.zenpack.id_prefix)
 
             column_fields = [
                 "id: '{}'".format(spec.name),
@@ -2628,7 +2634,7 @@ class ClassSpec(Spec):
             "id: 'name',"
             "dataIndex: 'name',"
             "header: _t('Name'),"
-            "renderer: Zenoss.render.zenpacklib_entityLinkFromGrid"
+            "renderer: Zenoss.render.zenpacklib_" + self.zenpack.id_prefix + "_entityLinkFromGrid"
             "}"
         )]
 
@@ -2674,7 +2680,7 @@ class ClassSpec(Spec):
                 self.zenpack.name, self.name, width)
 
         return (
-            "ZC.{meta_type}Panel = Ext.extend(ZC.ZPLComponentGridPanel, {{"
+            "ZC.{meta_type}Panel = Ext.extend(ZC.ZPL_{zenpack_id_prefix}_ComponentGridPanel, {{"
             "    constructor: function(config) {{\n"
             "        config = Ext.applyIf(config||{{}}, {{\n"
             "            componentType: '{meta_type}',\n"
@@ -2689,6 +2695,7 @@ class ClassSpec(Spec):
             "Ext.reg('{meta_type}Panel', ZC.{meta_type}Panel);\n"
             .format(
                 meta_type=self.meta_type,
+                zenpack_id_prefix=self.zenpack.id_prefix,
                 auto_expand_column=self.auto_expand_column,
                 fields=','.join(
                     default_fields +
@@ -2874,7 +2881,8 @@ class ClassPropertySpec(Spec):
 
         # pick an appropriate default renderer for this property.
         if type_ == 'entity' and not self.renderer:
-            self.renderer = 'Zenoss.render.zenpacklib_entityLinkFromGrid'
+            self.renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'.format(
+                zenpack_id_prefix=self.class_spec.zenpack.id_prefix)
 
         self.editable = bool(editable)
         self.api_only = bool(api_only)
@@ -3230,8 +3238,10 @@ class ClassRelationshipSpec(Spec):
             self.grid_display = False
 
         if self.renderer is None:
-            self.renderer = 'Zenoss.render.zenpacklib_entityTypeLinkFromGrid' \
-                if self.render_with_type else 'Zenoss.render.zenpacklib_entityLinkFromGrid'
+            self.renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityTypeLinkFromGrid' \
+                if self.render_with_type else 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'
+
+            self.renderer = self.renderer.format(zenpack_id_prefix=self.class_.zenpack.id_prefix)
 
     @property
     def zenrelations_tuple(self):
@@ -5751,7 +5761,7 @@ def create_zenpack_srcdir(zenpack_name):
 
 JS_LINK_FROM_GRID = """
 Ext.apply(Zenoss.render, {
-    zenpacklib_entityLinkFromGrid: function(obj, metaData, record, rowIndex, colIndex) {
+    zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid: function(obj, metaData, record, rowIndex, colIndex) {
         if (!obj)
             return;
 
@@ -5780,7 +5790,7 @@ Ext.apply(Zenoss.render, {
         }
     },
 
-    zenpacklib_entityTypeLinkFromGrid: function(obj, metaData, record, rowIndex, colIndex) {
+    zenpacklib_{zenpack_id_prefix}_entityTypeLinkFromGrid: function(obj, metaData, record, rowIndex, colIndex) {
         if (!obj)
             return;
 
@@ -5811,7 +5821,7 @@ Ext.apply(Zenoss.render, {
 
 });
 
-ZC.ZPLComponentGridPanel = Ext.extend(ZC.ComponentGridPanel, {
+ZC.ZPL_{zenpack_id_prefix}_ComponentGridPanel = Ext.extend(ZC.ComponentGridPanel, {
     subComponentGridPanel: false,
 
     jumpToEntity: function(uid, meta_type) {
@@ -5861,18 +5871,25 @@ ZC.ZPLComponentGridPanel = Ext.extend(ZC.ComponentGridPanel, {
     }
 });
 
-Ext.reg('ZPLComponentGridPanel', ZC.ZPLComponentGridPanel);
+Ext.reg('ZPL_{zenpack_id_prefix}_ComponentGridPanel', ZC.ZPL_{zenpack_id_prefix}_ComponentGridPanel);
 
-Zenoss.ZPLRenderableDisplayField = Ext.extend(Zenoss.DisplayField, {
+Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField = Ext.extend(Zenoss.DisplayField, {
     constructor: function(config) {
         if (typeof(config.renderer) == 'string') {
-          config.renderer = eval(config.renderer)
+          config.renderer = eval(config.renderer);
         }
-        Zenoss.ZPLRenderableDisplayField.superclass.constructor.call(this, config);
+        Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField.superclass.constructor.call(this, config);
+    },
+    valueToRaw: function(value) {
+        if (typeof(value) == 'boolean') {
+            return value;
+        } else {
+            return Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField.superclass.valueToRaw(value);
+        }
     }
 });
 
-Ext.reg('ZPLRenderableDisplayField', 'Zenoss.ZPLRenderableDisplayField');
+Ext.reg('ZPL_{zenpack_id_prefix}_RenderableDisplayField', 'Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField');
 
 """.strip()
 
