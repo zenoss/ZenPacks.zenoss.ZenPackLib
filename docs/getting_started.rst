@@ -25,7 +25,7 @@ can be done with the following commands.
 
   su - zenoss
   wget https://raw.githubusercontent.com/zenoss/zenpacklib/master/zenpacklib.py
-  chmod 755 zenpacklib.py.
+  chmod 755 zenpacklib.py
 
 After downloading you can check the version by running the following command as
 the *zenoss* user.
