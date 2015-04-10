@@ -1,8 +1,8 @@
-.. _command-line-usage:
+.. _command-line-reference:
 
-##################
-Command Line Usage
-##################
+######################
+Command Line Reference
+######################
 
 While most of zenpacklib's functionality is as a Python module to be used as a
 library for helping build ZenPacks, `zenpacklib.py` also acts as a command line
@@ -115,7 +115,7 @@ monitoring template.
 class_diagram
 *************
 
-The *class_diagram* command will use :doc:`classes_and_relationships` in the
+The *class_diagram* command will use :ref:`classes-and-relationships` in the
 provided YAML file to output the source for a yUML (http://yuml.me) class
 diagram. For ZenPacks with a non-trivial class model this can provide a useful
 view of the model.
