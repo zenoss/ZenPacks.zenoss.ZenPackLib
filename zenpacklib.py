@@ -788,18 +788,7 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def facet_include_relpath(self, relpath):
-        # default is to only include direct relationships from
-        # this object.  (that is, a path length of one)
-        if '/' not in relpath:
-            return True
-        else:
-            return False
-
-    def facet_exclude_relpath(self, relpath):
-        return False
-
-    def get_facets(self, root=None, seen=None, path=None, tracker=None):
+    def get_facets(self, root=None, streams=None, seen=None, path=None, recurse_all=False):
         """Generate non-containing related objects for faceting."""
         if seen is None:
             seen = set()
@@ -810,25 +799,13 @@ class ComponentBase(ModelBase):
         if root is None:
             root = self
 
+        if streams is None:
+            streams = getattr(self, '_v_path_pattern_streams', [])
+
         for relname in self.get_faceting_relnames():
             rel = getattr(self, relname, None)
             if not rel or not callable(rel):
                 continue
-
-            relpath = "%s:%s:%s" % (
-                root.meta_type,
-                "/".join(path + [relname]),
-                rel.remoteClass().meta_type
-            )
-
-            should_include = self.facet_include_relpath(relpath)
-            should_exclude = self.facet_exclude_relpath(relpath)
-
-            if tracker is not None:
-                tracker[relpath] = (should_include, should_exclude)
-            else:
-                if (not should_include or should_exclude):
-                    continue
 
             relobjs = rel()
             if not relobjs:
@@ -838,6 +815,9 @@ class ComponentBase(ModelBase):
                 # This is really a single object.
                 relobjs = [relobjs]
 
+            relpath = "/".join(path + [relname])
+
+            # Always include directly-related objects.
             for obj in relobjs:
                 if obj in seen:
                     continue
@@ -845,8 +825,29 @@ class ComponentBase(ModelBase):
                 yield obj
                 seen.add(obj)
 
-                for facet in obj.get_facets(root=root, seen=seen, path=path + [relname], tracker=tracker):
+            # If 'all' mode, just include indirectly-related objects as well, in
+            # an unfiltered manner.
+            if recurse_all:
+                for facet in obj.get_facets(root=root, seen=seen, path=path + [relname], recurse_all=True):
                     yield facet
+                return
+
+            # Otherwise, look at extra_path defined path pattern streams
+            for stream in streams:
+                recurse = any([pattern.match(relpath) for pattern in stream])
+
+                LOG.debug("[%s] matching %s against %s: %s" % (root.meta_type, relpath, [x.pattern for x in stream], recurse))
+
+                if not recurse:
+                    continue
+
+                for obj in relobjs:
+                    for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path + [relname]):
+                        if facet in seen:
+                            continue
+
+                        yield facet
+                        seen.add(facet)
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
@@ -1919,6 +1920,7 @@ class ClassSpec(Spec):
             dynamicview_views=None,
             dynamicview_group=None,
             dynamicview_relations=None,
+            extra_paths=None,
             _source_location=None
             ):
         """
@@ -1977,6 +1979,9 @@ class ClassSpec(Spec):
             :param dynamicview_relations: TODO
             :type dynamicview_relations: dict
             # TODO: should make this a spec class, not a plain dict.
+            :param extra_paths: TODO
+            :type extra_paths: list(tuple)
+
         """
         super(ClassSpec, self).__init__(_source_location=_source_location)
 
@@ -2058,6 +2063,48 @@ class ClassSpec(Spec):
         else:
             # TAG_NAME: ['relationship', 'or_method']
             self.dynamicview_relations = dict(dynamicview_relations)
+
+        # Paths
+        self.path_pattern_streams = []
+        if extra_paths is not None:
+            for pattern_tuple in extra_paths:
+                # Each item in extra_paths is expressed as a tuple of
+                # regular expression patterns that are matched
+                # in order against the actual relationship path structure
+                # as it is traversed and built up get_facets.
+                #
+                # To facilitate matching, we construct a compiled set of
+                # regular expressions that can be matched against the
+                # entire path string, from root to leaf.
+                #
+                # So:
+                #
+                #   ('orgComponent', '(parentOrg)+')
+                # is transformed into a "pattern stream", which is a list
+                # of regexps that can be applied incrementally as we traverse
+                # the possible paths:
+                #   (re.compile(^orgComponent),
+                #    re.compile(^orgComponent/(parentOrg)+),
+                #    re.compile(^orgComponent/(parentOrg)+/?$')
+                #
+                # Once traversal embarks upon a stream, these patterns are
+                # matched in order as the traversal proceeds, with the
+                # first one to fail causing recursion to stop.
+                # When the final one is matched, then the objects on that
+                # relation are matched.  Note that the final one may
+                # match multiple times if recursive relationships are
+                # in play.
+
+                pattern_stream = []
+                for i, _ in enumerate(pattern_tuple, start=1):
+                    pattern = "^" + "/".join(pattern_tuple[0:i])
+                    # If we match these patterns, keep going.
+                    pattern_stream.append(re.compile(pattern))
+                if pattern_stream:
+                    # indicate that we've hit the end of the path.
+                    pattern_stream.append(re.compile("/?$"))
+
+                self.path_pattern_streams.append(pattern_stream)
 
     def create(self):
         """Implement specification."""
@@ -2283,6 +2330,10 @@ class ClassSpec(Spec):
         attributes['impacts'] = self.impacts
         attributes['impacted_by'] = self.impacted_by
         attributes['dynamicview_relations'] = self.dynamicview_relations
+
+        # And facet patterns.
+        if self.path_pattern_streams:
+            attributes['_v_path_pattern_streams'] = self.path_pattern_streams
 
         return create_schema_class(
             get_symbol_name(self.zenpack.name, 'schema'),
@@ -5947,6 +5998,10 @@ Available commands and example options:
   # Convert a pre-release zenpacklib.ZenPackSpec to yaml.
   py_to_yaml ZenPacks.example.AlreadyInstalled
 
+  # Print all possible facet paths for a given device, and whether they
+  # are currently filtered.
+  list_paths [device name]
+
   # Print zenpacklib version.
   version
 """.lstrip()
@@ -6166,23 +6221,56 @@ if __name__ == '__main__':
                 else:
                     LOG.error("Diagram type '%s' is not supported.", diagram_type)
 
-            elif len(args) == 2 and args[0] == "list_facet_paths":
+            elif len(args) == 2 and args[0] == "list_paths":
                 self.connect()
                 device = self.dmd.Devices.findDevice(args[1])
                 if device is None:
                     LOG.error("Device '%s' not found." % args[1])
                     return
 
-                tracker = collections.defaultdict()
+                from Acquisition import aq_chain
+                from Products.ZenRelations.RelationshipBase import RelationshipBase
+
+                all_paths = set()
+                included_paths = set()
+                class_summary = collections.defaultdict(set)
+
                 for component in device.getDeviceComponents():
-                    for facet in component.get_facets(tracker=tracker):
-                        pass
-                for pathspec in sorted(tracker.keys()):
-                    should_include, should_exclude = tracker.get(pathspec)
-                    code = "INCLUDE" if should_include else "NOT-INC"
-                    if should_exclude:
-                        code = "EXCLUDE"
-                    print "%s %s" % (code, pathspec)
+                    for facet in component.get_facets(recurse_all=True):
+                        path = []
+                        for obj in aq_chain(facet):
+                            if obj == component:
+                                break
+                            if isinstance(obj, RelationshipBase):
+                                path.insert(0, obj.id)
+                        all_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
+
+                    for facet in component.get_facets():
+                        path = []
+                        for obj in aq_chain(facet):
+                            if obj == component:
+                                break
+                            if isinstance(obj, RelationshipBase):
+                                path.insert(0, obj.id)
+                        included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
+                        class_summary[component.meta_type].add(facet.meta_type)
+
+                print "Paths\n-----\n"
+                for path in sorted(all_paths):
+                    if path in included_paths:
+                        if "/" not in path:
+                            # normally all direct relationships are included
+                            print "DIRECT  " + path
+                        else:
+                            # sometimes extra paths are pulled in due to extra_paths
+                            # configuration.
+                            print "EXTRA   " + path
+                    else:
+                        print "EXCLUDE " + path
+
+                print "\nClass Summary\n-------------\n"
+                for source_class in sorted(class_summary.keys()):
+                    print "%s is reachable from %s" % (source_class, ", ".join(sorted(class_summary[source_class])))
 
             elif len(args) == 2 and args[0] == "create":
                 create_zenpack_srcdir(args[1])
