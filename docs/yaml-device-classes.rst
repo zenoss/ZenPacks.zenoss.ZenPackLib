@@ -62,7 +62,7 @@ set each time the ZenPack is installed.
          zWidgeterInterval: 60
 
 The referenced zProperties must already exist in the Zenoss system, or be
-added by your ZenPack via a global :doc:`zProperties` entry.
+added by your ZenPack via a global :ref:`zProperties` entry.
 
 Adding Monitoring Templates
 ===========================
@@ -113,11 +113,11 @@ See :ref:`monitoring-templates` for more information on creating monitoring
 templates.
 
 
-.. _device-class-reference:
+.. _device-class-fields:
 
-**********************
-Device Class Reference
-**********************
+*******************
+Device Class Fields
+*******************
 
 The following fields are valid for a device class entry.
 
@@ -142,5 +142,5 @@ zProperties
 templates
   :Description: Monitoring templates to add to the device class.
   :Required: No
-  :Type: map<name, :ref:`Monitoring Template <monitoring-template-reference>`>
+  :Type: map<name, :ref:`Monitoring Template <monitoring-template-fields>`>
   :Default Value: {} *(empty map)*

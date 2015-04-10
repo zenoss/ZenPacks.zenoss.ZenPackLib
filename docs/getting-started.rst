@@ -142,6 +142,5 @@ is printed, lint thinks the YAML is correct.
 What Next?
 **********
 
-Now you're ready to add more :doc:`zProperties`, :doc:`device_classes`,
-:doc:`monitoring_templates`, and :doc:`classes_and_relationships` to your
-ZenPack.
+You can either start with some :ref:`tutorials` or jump right into the
+:ref:`yaml-reference`.

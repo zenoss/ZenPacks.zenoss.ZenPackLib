@@ -89,11 +89,11 @@ Each zProperty listed in *zProperties* will be created when the ZenPack is
 installed, and removed when the ZenPack is removed.
 
 
-.. _zProperty-reference:
+.. _zProperty-fields:
 
-*******************
-zProperty Reference
-*******************
+****************
+zProperty Fields
+****************
 
 The following fields are valid for a zProperty entry.
 
