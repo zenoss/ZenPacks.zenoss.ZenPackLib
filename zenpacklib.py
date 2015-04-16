@@ -1980,7 +1980,7 @@ class ClassSpec(Spec):
             :type dynamicview_relations: dict
             # TODO: should make this a spec class, not a plain dict.
             :param extra_paths: TODO
-            :type extra_paths: list(tuple)
+            :type extra_paths: list(ExtraPath)
 
         """
         super(ClassSpec, self).__init__(_source_location=_source_location)
@@ -4376,6 +4376,14 @@ if YAML_INSTALLED:
                     # this ZenPackSpec.
                     classes = [isinstance(x, type) and class_to_str(x) or x for x in value]
                     mapping[yaml_param] = dumper.represent_list(classes)
+                elif type_.startswith("list(ExtraPath)"):
+                    # Represent this as a list of lists of quoted strings (each on one line).
+                    paths = []
+                    for path in list(value):
+                        # Force the regular expressions to be quoted, so we don't have any issues with that.
+                        pathnodes = [dumper.represent_scalar(u'tag:yaml.org,2002:str', x, style="'") for x in path]
+                        paths.append(yaml.SequenceNode(u'tag:yaml.org,2002:seq', pathnodes, flow_style=True))
+                    mapping[yaml_param] = yaml.SequenceNode(u'tag:yaml.org,2002:seq', paths, flow_style=False)
                 elif type_.startswith("list"):
                     mapping[yaml_param] = dumper.represent_list(value)
                 elif type_ == "str":
@@ -4581,6 +4589,16 @@ if YAML_INSTALLED:
                     # class in this definition, or a class object representing
                     # an external class.
                     params[key] = classes
+                elif expected_type == 'list(ExtraPath)':
+                    if not isinstance(value_node, yaml.SequenceNode):
+                        raise yaml.constructor.ConstructorError(
+                            None, None,
+                            "expected a sequence node, but found %s" % value_node.id,
+                            value_node.start_mark)
+                    extra_paths = []
+                    for path_node in value_node.value:
+                        extra_paths.append(loader.construct_sequence(path_node))
+                    params[key] = extra_paths
                 elif expected_type == "list(RelationshipSchemaSpec)":
                     schemaspecs = []
                     for s in loader.construct_sequence(value_node):
