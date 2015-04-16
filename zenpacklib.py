@@ -2909,7 +2909,7 @@ class ClassPropertySpec(Spec):
                    calculation with a higher value.
             :type label_width: int
             :param default: Default Value
-            :type default: str
+            :type default: ZPropertyDefaultValue
             :param content_width: Optionally overrides ZPL's content width
                    calculation with a higher value.
             :type content_width: int
