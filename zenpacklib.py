@@ -6166,6 +6166,7 @@ if __name__ == '__main__':
 
                 # tweak the yaml slightly.
                 outputfile = outputfile.replace("__builtin__.object", "object")
+                outputfile = re.sub(r"!!float '(\d+)'", r"\1", outputfile)
 
                 print outputfile
 
