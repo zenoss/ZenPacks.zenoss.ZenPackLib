@@ -6120,6 +6120,8 @@ if __name__ == '__main__':
                 # __init__.py, so we can capture export the data.
                 zenpacklib_module = create_module("zenpacklib")
                 zenpacklib_module.ZenPackSpec = type('ZenPackSpec', (dict,), {})
+                zenpack_schema_module = create_module("schema")
+                zenpack_schema_module.ZenPack = ZenPackBase
 
                 def zpl_create(self):
                     zenpacklib_module.CFG = dict(self)
@@ -6130,6 +6132,7 @@ if __name__ == '__main__':
 
                 # tweak the input slightly.
                 inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
+                inputfile = re.sub(r'from .* import schema', '', inputfile)
                 inputfile = re.sub(r'__file__', '"%s"' % zenpack_init_py, inputfile)
 
                 # Kludge 'from . import' into working.
@@ -6137,7 +6140,7 @@ if __name__ == '__main__':
                 site.addsitedir(os.path.dirname(zenpack_init_py))
                 inputfile = re.sub(r'from . import', 'import', inputfile)
 
-                g = dict(zenpacklib=zenpacklib_module)
+                g = dict(zenpacklib=zenpacklib_module, schema=zenpack_schema_module)
                 l = dict()
                 exec inputfile in g, l
 
