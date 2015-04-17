@@ -275,7 +275,13 @@ filter_display
   :Required: No
   :Type: boolean
   :Default Value: true
-  
+
+filter_hide_from
+  :Description: Classes for which this class should not show in the filter dropdown.
+  :Required: No
+  :Type: list<classname>
+  :Default Value: [] *(empty list)*
+
 monitoring_templates
   :Description: List of monitoring template names to bind to components of this type.
   :Required: No
@@ -324,8 +330,15 @@ dynamicview_relations
   :Type: map<relationship_name, list<*relationship_or_method_name*>>
   :Default Value: {} *(empty map)*
 
+extra_paths
+  :Description: By default, components are indexed based upon paths that include objects they have a direct relationship to.  This option allows additional paths to be specified (this can be useful when indirect containment is used)
+  :Required: No
+  :Type: list<list<regexp>>
+  :Default Value: [] *(empty list)*
+
 .. todo:: Add section on Impact & DynamicView.
 
+.. todo:: Add more detailed explanation of extra_paths, based on comments in zenpacklib.py
 
 .. _class-property-reference:
 
