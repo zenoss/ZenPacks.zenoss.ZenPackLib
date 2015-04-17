@@ -243,7 +243,11 @@ class ZenPack(ZenPackBase):
                     continue
 
                 for orig_mtname, orig_mtspec in dcspec.templates.iteritems():
-                    template = deviceclass.rrdTemplates._getOb(orig_mtname)
+                    try:
+                        template = deviceclass.rrdTemplates._getOb(orig_mtname)
+                    except AttributeError:
+                        template = None
+
                     if template is None:
                         LOG.warning(
                             "Monitoring template %s/%s has been removed at some point "

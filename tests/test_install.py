@@ -98,6 +98,35 @@ class TestInstall(BaseTestCase):
 
         pass
 
+    def test_add_template(self):
+        cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
+
+        LOG.info(" ".join(cmd))
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        out, err = p.communicate()
+        p.wait()
+        LOG.debug("out=%s, err=%s", out, err)
+
+        self.assertIs(p.returncode, 0,
+                      'Error installing %s zenpack: %s' % (self.zenpack_path, err))
+
+        # install it a second time, with a different yaml file that simulates
+        # adding a new monitoring template
+
+        yaml_filename = os.path.join(self.zenpack_path, 'ZenPacks/zenoss/ZPLTest1/zenpack2.yaml')
+
+        LOG.info("ZPL_YAML_FILENAME=" + yaml_filename + " " + " ".join(cmd))
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             env=dict(os.environ, ZPL_YAML_FILENAME=yaml_filename))
+        out, err = p.communicate()
+        p.wait()
+        LOG.debug("out=%s, err=%s", out, err)
+
+        self.assertIs(p.returncode, 0,
+                      'Error upgrading %s zenpack: %s' % (self.zenpack_name, err))
+
+        pass
+
     def test_uninstall(self):
         cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
 
