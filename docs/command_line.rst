@@ -51,6 +51,7 @@ The following commands are supported:
 * :ref:`class_diagram <zenpacklib-class_diagram>`: Export yUML (yuml.me) class diagram from a YAML file.
 * :ref:`dump_templates <zenpacklib-dump_templates>`: Export existing monitoring templates to YAML.
 * :ref:`py_to_yaml <zenpacklib-py_to_yaml>`: Converts the Python syntax used in pre-release versions of zenpacklib to YAML.
+* :ref:`list_paths <device name>`: Using the specified device, print a report of paths between objects.
 * :ref:`version <zenpacklib-version>`: Print zenpacklib version.
 
 
@@ -187,6 +188,35 @@ Example usage:
 .. code-block:: bash
 
     python zenpacklib.py py_to_yaml ZenPacks.example.BetterAlreadyBeInstalled
+
+.. _zenpacklib_list_paths:
+
+**********
+list_paths
+**********
+
+The *list_paths* command shows the paths between defined component classes
+in the zenpack, using the device name you have specified as a sample.  To
+obtain useful results, ensure that the device has at least one component
+of each type you are interested in.
+
+The paths shown are those used to control which devices will show up in the
+bottom grid of the zenoss UI when a component is selected and a target
+class is selected from the filter dropdown.
+
+The default behavior is to show component of that type that are directly
+related to the selected component through 1:M or 1:MC relationships, but
+additional objects that are indirectly related can be added through
+the use of the 'extra_paths' configuration directive.   *list_paths* is
+primarily intended as a debugging tool during the development of extra_paths
+patterns to verify that they are having the intended effect.
+
+Example usage:
+
+.. code-block:: bash
+
+    python zenpacklib.py list_paths mydevice
+
 
 
 .. _zenpacklib-dump_templates:

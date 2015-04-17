@@ -243,7 +243,11 @@ class ZenPack(ZenPackBase):
                     continue
 
                 for orig_mtname, orig_mtspec in dcspec.templates.iteritems():
-                    template = deviceclass.rrdTemplates._getOb(orig_mtname)
+                    try:
+                        template = deviceclass.rrdTemplates._getOb(orig_mtname)
+                    except AttributeError:
+                        template = None
+
                     if template is None:
                         LOG.warning(
                             "Monitoring template %s/%s has been removed at some point "
@@ -788,10 +792,19 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def get_facets(self, seen=None):
+    def get_facets(self, root=None, streams=None, seen=None, path=None, recurse_all=False):
         """Generate non-containing related objects for faceting."""
         if seen is None:
             seen = set()
+
+        if path is None:
+            path = []
+
+        if root is None:
+            root = self
+
+        if streams is None:
+            streams = getattr(self, '_v_path_pattern_streams', [])
 
         for relname in self.get_faceting_relnames():
             rel = getattr(self, relname, None)
@@ -806,14 +819,39 @@ class ComponentBase(ModelBase):
                 # This is really a single object.
                 relobjs = [relobjs]
 
+            relpath = "/".join(path + [relname])
+
+            # Always include directly-related objects.
             for obj in relobjs:
                 if obj in seen:
                     continue
 
                 yield obj
                 seen.add(obj)
-                for facet in obj.get_facets(seen=seen):
+
+            # If 'all' mode, just include indirectly-related objects as well, in
+            # an unfiltered manner.
+            if recurse_all:
+                for facet in obj.get_facets(root=root, seen=seen, path=path + [relname], recurse_all=True):
                     yield facet
+                return
+
+            # Otherwise, look at extra_path defined path pattern streams
+            for stream in streams:
+                recurse = any([pattern.match(relpath) for pattern in stream])
+
+                LOG.log(9, "[%s] matching %s against %s: %s" % (root.meta_type, relpath, [x.pattern for x in stream], recurse))
+
+                if not recurse:
+                    continue
+
+                for obj in relobjs:
+                    for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path + [relname]):
+                        if facet in seen:
+                            continue
+
+                        yield facet
+                        seen.add(facet)
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
@@ -1883,9 +1921,11 @@ class ClassSpec(Spec):
             impacted_by=None,
             monitoring_templates=None,
             filter_display=True,
+            filter_hide_from=None,
             dynamicview_views=None,
             dynamicview_group=None,
             dynamicview_relations=None,
+            extra_paths=None,
             _source_location=None
             ):
         """
@@ -1935,15 +1975,19 @@ class ClassSpec(Spec):
             :type impacted_by: list(str)
             :param monitoring_templates: TODO
             :type monitoring_templates: list(str)
-            :param filter_display: TODO
+            :param filter_display: Should this class show in any other filter dropdowns?
             :type filter_display: bool
+            :param filter_hide_from: Classes for which this class should not show in the filter dropdown.
+            :type filter_hide_from: list(class)
             :param dynamicview_views: TODO
             :type dynamicview_views: list(str)
             :param dynamicview_group: TODO
             :type dynamicview_group: str
             :param dynamicview_relations: TODO
             :type dynamicview_relations: dict
-            # TODO: should make this a spec class, not a plain dict.
+            :param extra_paths: TODO
+            :type extra_paths: list(ExtraPath)
+
         """
         super(ClassSpec, self).__init__(_source_location=_source_location)
 
@@ -2005,6 +2049,7 @@ class ClassSpec(Spec):
             self.monitoring_templates = list(monitoring_templates)
 
         self.filter_display = filter_display
+        self.filter_hide_from = filter_hide_from
 
         # Dynamicview Views and Group
         if dynamicview_views is None:
@@ -2025,6 +2070,48 @@ class ClassSpec(Spec):
         else:
             # TAG_NAME: ['relationship', 'or_method']
             self.dynamicview_relations = dict(dynamicview_relations)
+
+        # Paths
+        self.path_pattern_streams = []
+        if extra_paths is not None:
+            for pattern_tuple in extra_paths:
+                # Each item in extra_paths is expressed as a tuple of
+                # regular expression patterns that are matched
+                # in order against the actual relationship path structure
+                # as it is traversed and built up get_facets.
+                #
+                # To facilitate matching, we construct a compiled set of
+                # regular expressions that can be matched against the
+                # entire path string, from root to leaf.
+                #
+                # So:
+                #
+                #   ('orgComponent', '(parentOrg)+')
+                # is transformed into a "pattern stream", which is a list
+                # of regexps that can be applied incrementally as we traverse
+                # the possible paths:
+                #   (re.compile(^orgComponent),
+                #    re.compile(^orgComponent/(parentOrg)+),
+                #    re.compile(^orgComponent/(parentOrg)+/?$')
+                #
+                # Once traversal embarks upon a stream, these patterns are
+                # matched in order as the traversal proceeds, with the
+                # first one to fail causing recursion to stop.
+                # When the final one is matched, then the objects on that
+                # relation are matched.  Note that the final one may
+                # match multiple times if recursive relationships are
+                # in play.
+
+                pattern_stream = []
+                for i, _ in enumerate(pattern_tuple, start=1):
+                    pattern = "^" + "/".join(pattern_tuple[0:i])
+                    # If we match these patterns, keep going.
+                    pattern_stream.append(re.compile(pattern))
+                if pattern_stream:
+                    # indicate that we've hit the end of the path.
+                    pattern_stream.append(re.compile("/?$"))
+
+                self.path_pattern_streams.append(pattern_stream)
 
     def create(self):
         """Implement specification."""
@@ -2092,6 +2179,20 @@ class ClassSpec(Spec):
                 subclass_specs.append(class_spec)
 
         return subclass_specs
+
+    @property
+    def filter_hide_from_class_specs(self):
+        specs = []
+        if self.filter_hide_from is None:
+            return specs
+
+        for classname in self.filter_hide_from:
+            if classname not in self.zenpack.classes:
+                raise ValueError("Unrecognized filter_hide_from class name '%s'" % classname)
+            class_spec = self.zenpack.classes[classname]
+            specs.append(class_spec)
+
+        return specs
 
     def inherited_properties(self):
         properties = {}
@@ -2250,6 +2351,10 @@ class ClassSpec(Spec):
         attributes['impacts'] = self.impacts
         attributes['impacted_by'] = self.impacted_by
         attributes['dynamicview_relations'] = self.dynamicview_relations
+
+        # And facet patterns.
+        if self.path_pattern_streams:
+            attributes['_v_path_pattern_streams'] = self.path_pattern_streams
 
         return create_schema_class(
             get_symbol_name(self.zenpack.name, 'schema'),
@@ -2537,7 +2642,9 @@ class ClassSpec(Spec):
 
         containing = {x.meta_type for x in self.containing_components}
         faceting = {x.meta_type for x in self.faceting_components}
-        return list(containing | faceting)
+        hidden = {x.meta_type for x in self.filter_hide_from_class_specs}
+
+        return list(containing | faceting - hidden)
 
     @property
     def containing_js_fields(self):
@@ -2825,7 +2932,7 @@ class ClassPropertySpec(Spec):
                    calculation with a higher value.
             :type label_width: int
             :param default: Default Value
-            :type default: str
+            :type default: ZPropertyDefaultValue
             :param content_width: Optionally overrides ZPL's content width
                    calculation with a higher value.
             :type content_width: int
@@ -4292,6 +4399,14 @@ if YAML_INSTALLED:
                     # this ZenPackSpec.
                     classes = [isinstance(x, type) and class_to_str(x) or x for x in value]
                     mapping[yaml_param] = dumper.represent_list(classes)
+                elif type_.startswith("list(ExtraPath)"):
+                    # Represent this as a list of lists of quoted strings (each on one line).
+                    paths = []
+                    for path in list(value):
+                        # Force the regular expressions to be quoted, so we don't have any issues with that.
+                        pathnodes = [dumper.represent_scalar(u'tag:yaml.org,2002:str', x, style="'") for x in path]
+                        paths.append(yaml.SequenceNode(u'tag:yaml.org,2002:seq', pathnodes, flow_style=True))
+                    mapping[yaml_param] = yaml.SequenceNode(u'tag:yaml.org,2002:seq', paths, flow_style=False)
                 elif type_.startswith("list"):
                     mapping[yaml_param] = dumper.represent_list(value)
                 elif type_ == "str":
@@ -4497,6 +4612,16 @@ if YAML_INSTALLED:
                     # class in this definition, or a class object representing
                     # an external class.
                     params[key] = classes
+                elif expected_type == 'list(ExtraPath)':
+                    if not isinstance(value_node, yaml.SequenceNode):
+                        raise yaml.constructor.ConstructorError(
+                            None, None,
+                            "expected a sequence node, but found %s" % value_node.id,
+                            value_node.start_mark)
+                    extra_paths = []
+                    for path_node in value_node.value:
+                        extra_paths.append(loader.construct_sequence(path_node))
+                    params[key] = extra_paths
                 elif expected_type == "list(RelationshipSchemaSpec)":
                     schemaspecs = []
                     for s in loader.construct_sequence(value_node):
@@ -5914,6 +6039,10 @@ Available commands and example options:
   # Convert a pre-release zenpacklib.ZenPackSpec to yaml.
   py_to_yaml ZenPacks.example.AlreadyInstalled
 
+  # Print all possible facet paths for a given device, and whether they
+  # are currently filtered.
+  list_paths [device name]
+
   # Print zenpacklib version.
   version
 """.lstrip()
@@ -6032,6 +6161,8 @@ if __name__ == '__main__':
                 # __init__.py, so we can capture export the data.
                 zenpacklib_module = create_module("zenpacklib")
                 zenpacklib_module.ZenPackSpec = type('ZenPackSpec', (dict,), {})
+                zenpack_schema_module = create_module("schema")
+                zenpack_schema_module.ZenPack = ZenPackBase
 
                 def zpl_create(self):
                     zenpacklib_module.CFG = dict(self)
@@ -6042,6 +6173,7 @@ if __name__ == '__main__':
 
                 # tweak the input slightly.
                 inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
+                inputfile = re.sub(r'from .* import schema', '', inputfile)
                 inputfile = re.sub(r'__file__', '"%s"' % zenpack_init_py, inputfile)
 
                 # Kludge 'from . import' into working.
@@ -6049,7 +6181,7 @@ if __name__ == '__main__':
                 site.addsitedir(os.path.dirname(zenpack_init_py))
                 inputfile = re.sub(r'from . import', 'import', inputfile)
 
-                g = dict(zenpacklib=zenpacklib_module)
+                g = dict(zenpacklib=zenpacklib_module, schema=zenpack_schema_module)
                 l = dict()
                 exec inputfile in g, l
 
@@ -6075,6 +6207,7 @@ if __name__ == '__main__':
 
                 # tweak the yaml slightly.
                 outputfile = outputfile.replace("__builtin__.object", "object")
+                outputfile = re.sub(r"!!float '(\d+)'", r"\1", outputfile)
 
                 print outputfile
 
@@ -6132,6 +6265,57 @@ if __name__ == '__main__':
                                 crspec.right_relname, crspec.right_class)
                 else:
                     LOG.error("Diagram type '%s' is not supported.", diagram_type)
+
+            elif len(args) == 2 and args[0] == "list_paths":
+                self.connect()
+                device = self.dmd.Devices.findDevice(args[1])
+                if device is None:
+                    LOG.error("Device '%s' not found." % args[1])
+                    return
+
+                from Acquisition import aq_chain
+                from Products.ZenRelations.RelationshipBase import RelationshipBase
+
+                all_paths = set()
+                included_paths = set()
+                class_summary = collections.defaultdict(set)
+
+                for component in device.getDeviceComponents():
+                    for facet in component.get_facets(recurse_all=True):
+                        path = []
+                        for obj in aq_chain(facet):
+                            if obj == component:
+                                break
+                            if isinstance(obj, RelationshipBase):
+                                path.insert(0, obj.id)
+                        all_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
+
+                    for facet in component.get_facets():
+                        path = []
+                        for obj in aq_chain(facet):
+                            if obj == component:
+                                break
+                            if isinstance(obj, RelationshipBase):
+                                path.insert(0, obj.id)
+                        included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
+                        class_summary[component.meta_type].add(facet.meta_type)
+
+                print "Paths\n-----\n"
+                for path in sorted(all_paths):
+                    if path in included_paths:
+                        if "/" not in path:
+                            # normally all direct relationships are included
+                            print "DIRECT  " + path
+                        else:
+                            # sometimes extra paths are pulled in due to extra_paths
+                            # configuration.
+                            print "EXTRA   " + path
+                    else:
+                        print "EXCLUDE " + path
+
+                print "\nClass Summary\n-------------\n"
+                for source_class in sorted(class_summary.keys()):
+                    print "%s is reachable from %s" % (source_class, ", ".join(sorted(class_summary[source_class])))
 
             elif len(args) == 2 and args[0] == "create":
                 create_zenpack_srcdir(args[1])
