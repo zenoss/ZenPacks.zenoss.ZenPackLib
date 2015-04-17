@@ -1917,6 +1917,7 @@ class ClassSpec(Spec):
             impacted_by=None,
             monitoring_templates=None,
             filter_display=True,
+            filter_hide_from=None,
             dynamicview_views=None,
             dynamicview_group=None,
             dynamicview_relations=None,
@@ -1970,15 +1971,16 @@ class ClassSpec(Spec):
             :type impacted_by: list(str)
             :param monitoring_templates: TODO
             :type monitoring_templates: list(str)
-            :param filter_display: TODO
+            :param filter_display: Should this class show in any other filter dropdowns?
             :type filter_display: bool
+            :param filter_hide_from: Classes for which this class should not show in the filter dropdown.
+            :type filter_hide_from: list(class)
             :param dynamicview_views: TODO
             :type dynamicview_views: list(str)
             :param dynamicview_group: TODO
             :type dynamicview_group: str
             :param dynamicview_relations: TODO
             :type dynamicview_relations: dict
-            # TODO: should make this a spec class, not a plain dict.
             :param extra_paths: TODO
             :type extra_paths: list(ExtraPath)
 
@@ -2043,6 +2045,7 @@ class ClassSpec(Spec):
             self.monitoring_templates = list(monitoring_templates)
 
         self.filter_display = filter_display
+        self.filter_hide_from = filter_hide_from
 
         # Dynamicview Views and Group
         if dynamicview_views is None:
@@ -2172,6 +2175,20 @@ class ClassSpec(Spec):
                 subclass_specs.append(class_spec)
 
         return subclass_specs
+
+    @property
+    def filter_hide_from_class_specs(self):
+        specs = []
+        if self.filter_hide_from is None:
+            return specs
+
+        for classname in self.filter_hide_from:
+            if classname not in self.zenpack.classes:
+                raise ValueError("Unrecognized filter_hide_from class name '%s'" % classname)
+            class_spec = self.zenpack.classes[classname]
+            specs.append(class_spec)
+
+        return specs
 
     def inherited_properties(self):
         properties = {}
@@ -2621,7 +2638,9 @@ class ClassSpec(Spec):
 
         containing = {x.meta_type for x in self.containing_components}
         faceting = {x.meta_type for x in self.faceting_components}
-        return list(containing | faceting)
+        hidden = {x.meta_type for x in self.filter_hide_from_class_specs}
+
+        return list(containing | faceting - hidden)
 
     @property
     def containing_js_fields(self):
