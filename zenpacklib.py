@@ -3992,7 +3992,7 @@ class GraphPointSpec(Spec):
             lineType=None,
             lineWidth=None,
             stacked=None,
-            format=None,
+            format_=None,
             legend=None,
             limit=None,
             rpn=None,
@@ -4013,8 +4013,8 @@ class GraphPointSpec(Spec):
             :type lineWidth: int
             :param stacked: TODO
             :type stacked: bool
-            :param format: TODO
-            :type format: str
+            :param format_: TODO
+            :type format_: str
             :param legend: TODO
             :type legend: str
             :param limit: TODO
@@ -4039,7 +4039,7 @@ class GraphPointSpec(Spec):
         self.lineType = lineType
         self.lineWidth = lineWidth
         self.stacked = stacked
-        self.format = format
+        self.format = format_
         self.legend = legend
         self.limit = limit
         self.rpn = rpn
@@ -4049,7 +4049,7 @@ class GraphPointSpec(Spec):
 
         # Shorthand for datapoints that have the same name as their datasource.
         if '_' not in dpName:
-            self.dpName = '_'.join(dpName, dpName)
+            self.dpName = '{0}_{0}'.format(dpName)
         else:
             self.dpName = dpName
 
