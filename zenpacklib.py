@@ -3992,7 +3992,7 @@ class GraphPointSpec(Spec):
             lineType=None,
             lineWidth=None,
             stacked=None,
-            format_=None,
+            format=None,
             legend=None,
             limit=None,
             rpn=None,
@@ -4013,8 +4013,8 @@ class GraphPointSpec(Spec):
             :type lineWidth: int
             :param stacked: TODO
             :type stacked: bool
-            :param format_: TODO
-            :type format_: str
+            :param format: TODO
+            :type format: str
             :param legend: TODO
             :type legend: str
             :param limit: TODO
@@ -4039,7 +4039,7 @@ class GraphPointSpec(Spec):
         self.lineType = lineType
         self.lineWidth = lineWidth
         self.stacked = stacked
-        self.format = format_
+        self.format = format
         self.legend = legend
         self.limit = limit
         self.rpn = rpn
