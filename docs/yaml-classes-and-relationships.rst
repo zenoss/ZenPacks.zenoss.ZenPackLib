@@ -182,11 +182,11 @@ Classes and their properties allow for a wide range of control. See the
 following section for details.
 
 
-.. _class-reference:
+.. _class-fields:
 
-***************
-Class Reference
-***************
+************
+Class Fields
+************
 
 The following fields are valid for a class entry.
 
@@ -291,13 +291,13 @@ monitoring_templates
 properties
   :Description: Properties for this class.
   :Required: No
-  :Type: map<name, :ref:`Class Property <class-property-reference>`>
+  :Type: map<name, :ref:`Class Property <class-property-fields>`>
   :Default Value: {} *(empty map)*
   
 relationships
   :Description: Relationship overrides for this class.
   :Required: No
-  :Type: map<name, :ref:`Relationship Override <relationship-override-reference>`>
+  :Type: map<name, :ref:`Relationship Override <relationship-override-fields>`>
   :Default Value: {} *(empty map)*
   
 impacts
@@ -340,11 +340,11 @@ extra_paths
 
 .. todo:: Add more detailed explanation of extra_paths, based on comments in zenpacklib.py
 
-.. _class-property-reference:
+.. _class-property-fields:
 
-************************
-Class Property Reference
-************************
+*********************
+Class Property Fields
+*********************
 
 The following fields are valid for a class property entry.
 
@@ -477,11 +477,11 @@ index_scope
 .. todo:: Section on indexing.
 
 
-.. _relationship-override-reference:
+.. _relationship-override-fields:
 
-*******************************
-Relationship Override Reference
-*******************************
+****************************
+Relationship Override Fields
+****************************
 
 The following fields are valid for a relationship override entry.
 

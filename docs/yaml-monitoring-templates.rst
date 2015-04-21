@@ -71,7 +71,7 @@ zProperties field because it's a standard Zenoss zProperty.
 
     Binding templates using zDeviceTemplates is only applicable for monitoring
     templates that should be bound to devices. See
-    :doc:`classes_and_relationships` for information on how monitoring
+    :ref:`classes-and-relationships` for information on how monitoring
     templates are bound to components.
 
 
@@ -102,8 +102,8 @@ There are some advantages to defining monitoring templates in YAML.
   clearer. For the same reason it can also be of benefit when multiple authors
   are working on the same ZenPack.
 
-See :doc:`command_line` for information on the `dump_templates` option if
-you're interested in exporting monitoring templates already created in the
+See :ref:`command-line-reference` for information on the `dump_templates` option
+if you're interested in exporting monitoring templates already created in the
 web interface to YAML.
 
 
@@ -168,11 +168,11 @@ Many different entry types are shown in the above example. See the references
 below for more information on each.
 
 
-.. _monitoring-template-reference:
+.. _monitoring-template-fields:
 
-*****************************
-Monitoring Template Reference
-*****************************
+**************************
+Monitoring Template Fields
+**************************
 
 The following fields are valid for a monitoring template entry.
 
@@ -197,25 +197,25 @@ targetPythonClass
 datasources
   :Description: Datasources to add to the template.
   :Required: No
-  :Type: map<name, :ref:`Datasource <datasource-reference>`>
+  :Type: map<name, :ref:`Datasource <datasource-fields>`>
   :Default Value: {} *(empty map)*
 
 thresholds
   :Description: Thresholds to add to the template.
   :Required: No
-  :Type: map<name, :ref:`Threshold <threshold-reference>`>
+  :Type: map<name, :ref:`Threshold <threshold-fields>`>
   :Default Value: {} *(empty map)*
 
 graphs
   :Description: Graphs to add to the template.
   :Required: No
-  :Type: map<name, :ref:`Graph <graph-reference>`>
+  :Type: map<name, :ref:`Graph <graph-fields>`>
   :Default Value: {} *(empty map)*
 
-.. _datasource-reference:
+.. _datasource-fields:
 
-Datasource Reference
-====================
+Datasource Fields
+=================
 
 The following fields are valid for a datasource entry.
 
@@ -270,7 +270,7 @@ cycletime
 datapoints
   :Description: Datapoints to add to the datasource.
   :Required: No
-  :Type: map<name, :ref:`Datapoint <datapoint-reference>`>
+  :Type: map<name, :ref:`Datapoint <datapoint-fields>`>
   :Default Value: {} *(empty map)*
 
 Datasources also allow other ad-hoc options to be added not referenced in the
@@ -279,8 +279,8 @@ depending on the value of *sourcetype*, other fields may be valid.
 
 .. _datasource-sourcetypes:
 
-Datasource Sourcetypes
-----------------------
+Datasource Fields
+-----------------
 
 The following datasource sourcetypes are valid on any Zenoss system. They are
 the default sourcetypes that are part of the platform. This list is not
@@ -350,10 +350,10 @@ Built-In
 
 .. todo:: Document commonly-used sourcetypes added by ZenPacks.
 
-.. _datapoint-reference:
+.. _datapoint-fields:
 
-Datapoint Reference
-===================
+Datapoint Fields
+================
 
 The following fields are valid for a datapoint entry.
 
@@ -400,10 +400,10 @@ above list. This is because datapoints are an extensible type in Zenoss, and
 depending on the value of the datasource's *sourcetype*, other fields may be
 valid.
 
-.. _threshold-reference:
+.. _threshold-fields:
 
-Threshold Reference
-===================
+Threshold Fields
+================
 
 The following fields are valid for a threshold entry.
 
@@ -479,10 +479,10 @@ ValueChangeThreshold
   :Availability: Zenoss Platform
   :Additional Fields: None
 
-.. _graph-reference:
+.. _graph-fields:
 
-Graph Reference
-===============
+Graph Fields
+============
 
 The following fields are valid for a graph entry.
 
@@ -543,7 +543,7 @@ width
 graphpoints
   :Description: Graphpoints to add to the graph.
   :Required: No
-  :Type: map<name, :ref:`Graphpoint <graphpoint-reference>`>
+  :Type: map<name, :ref:`Graphpoint <graphpoint-fields>`>
   :Default Value: {} *(empty map)*
 
 comments
@@ -552,10 +552,10 @@ comments
   :Type: list<string>
   :Default Value: [] *(empty list)*
 
-.. _graphpoint-reference:
+.. _graphpoint-fields:
 
-Graphpoint Reference
-====================
+Graphpoint Fields
+=================
 
 The following fields are valid for a graphpoint entry.
 

@@ -3,13 +3,17 @@
 .. toctree::
     :hidden:
 
-    getting_started
-    zenpack
-    zProperties
-    device_classes
-    monitoring_templates
-    classes_and_relationships
-    command_line
+    getting-started
+    development-environment
+    managing-zenpacks
+    tutorials
+    Tutorials / Monitoring an SNMP Device <tutorial-snmp-device/index>
+    Tutorials / Monitoring an HTTP API <tutorial-http-api/index>
+    troubleshooting
+    command-line-reference
+    yaml-reference
     compatibility
     changes
     license
+
+Click :ref:`Next <getting-started>` to get started!

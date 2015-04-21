@@ -1,3 +1,5 @@
+.. _zenpack:
+
 #######
 ZenPack
 #######
@@ -32,14 +34,16 @@ of every supported field.
 
 See the following for more information on each of these fields.
 
-* :doc:`zProperties`
-* :doc:`device_classes`
-* :doc:`classes_and_relationships`
+* :ref:`zProperties`
+* :ref:`device-classes`
+* :ref:`classes-and-relationships`
 
 
-*****************
-ZenPack Reference
-*****************
+.. _zenpack-fields:
+
+**************
+ZenPack Fields
+**************
 
 The following fields are valid for a ZenPack entry.
 
@@ -54,19 +58,19 @@ name
 zProperties
   :Description: zProperties added by the ZenPack
   :Required: No
-  :Type: map<name, :ref:`zProperty <zProperty-reference>`>
+  :Type: map<name, :ref:`zProperty <zProperty-fields>`>
   :Default Value: {} *(empty map)*
 
 device_classes
   :Description: Device classes added by the ZenPack.
   :Required: No
-  :Type: map<path, :ref:`Device Class <device-class-reference>`>
+  :Type: map<path, :ref:`Device Class <device-class-fields>`>
   :Default Value: {} *(empty map)*
 
 classes
   :Description: Classes for device and component types added by this ZenPack.
   :Required: No
-  :Type: map<name, :ref:`Class <class-reference>`>
+  :Type: map<name, :ref:`Class <class-fields>`>
   :Default Value: {} *(empty map)*
 
 class_relationships

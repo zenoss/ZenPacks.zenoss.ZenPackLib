@@ -81,6 +81,7 @@
       <div class="wy-side-nav-search">
 
         {% block sidebartitle %}
+          <img id="zenoss-logo" src="{{ pathto('_static/logo-isolated.png', 1) }}">
           <a href="{{ pathto(master_doc) }}" class="fa fa-home"> {{ project }}</a>
         {% endblock %}
         {% include "searchbox.html" %}
@@ -143,6 +144,8 @@
   {% endif %}
 
   <script type="text/javascript" src="{{ pathto('_static/js/theme.js', 1) }}"></script>
+
+  <img id="watermark"" src="{{ pathto('_static/macron-watermark.png', 1) }}">
 
   {# STICKY NAVIGATION #}
   {% if theme_sticky_navigation %}
