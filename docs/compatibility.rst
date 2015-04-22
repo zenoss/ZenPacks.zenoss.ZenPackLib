@@ -63,6 +63,8 @@ not a standard part of a Zenoss system until Zenoss 5. To use zenpacklib, or to
 use a ZenPack built with zenpacklib on a Zenoss 4.2 system you must first make
 sure that PyYAML is installed.
 
+.. note:: PyYAML has been added to Zenoss 4.2.5 as of SP457.
+
 Checking for PyYAML
 -------------------
 
@@ -102,11 +104,3 @@ installed when complete.
 If your Zenoss system is distributed to multiple servers for hubs, collectors,
 or any other reason you will need to update those hubs and collectors after
 installing PyYAML to make sure it also gets installed on them.
-
-.. note:: PyYAML may already be installed.
-
-  At the time of writing PyYAML was scheduled to be included in the next
-  recommended patch set (RPS) for Zenoss 4.2.4 and 4.2.5. This would be the
-  4.2.4 RPS following SP763, and the 4.2.5 RPS following SP378. Once this is
-  done it will no longer be mandatory to first install PyYAML on many Zenoss 4.2
-  systems.
