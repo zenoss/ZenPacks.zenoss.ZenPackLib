@@ -312,12 +312,15 @@ class ZenPack(ZenPackBase):
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
-    def manage_exportPack(self, *args, **kwargs):
-        # In order to control which objects are exported, we wrap the entire
-        # zenpack object, and the zenpackable objects it contains, in proxy
-        # objects, which allow us to override their behavior without disrupting
-        # the original objects.
+    def manage_exportPack(self, download="no", REQUEST=None):
+        """Export ZenPack to $ZENHOME/export directory.
 
+        In order to control which objects are exported, we wrap the
+        entire zenpack object, and the zenpackable objects it contains,
+        in proxy objects, which allow us to override their behavior
+        without disrupting the original objects.
+
+        """
         import Acquisition
 
         class FilteredZenPackable(zope.proxy.ProxyBase, Acquisition.Explicit):
@@ -351,7 +354,10 @@ class ZenPack(ZenPackBase):
                 packables = zope.proxy.getProxiedObject(self).packables()
                 return [FilteredZenPackable(x).__of__(x.aq_parent) for x in packables]
 
-        ZenPackBase.manage_exportPack(FilteredZenPack(self), args, kwargs)
+        return ZenPackBase.manage_exportPack(
+            FilteredZenPack(self),
+            download=download,
+            REQUEST=REQUEST)
 
 
 class CatalogBase(object):
