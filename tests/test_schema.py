@@ -399,7 +399,7 @@ class TestSchema(zenpacklib.TestCase):
             schema.FabricNode,
             ))
 
-        self.assert_properties(node1, ('snmpindex', 'monitor'))
+        self.assert_properties(node1, ('snmpindex', 'monitor', 'role'))
 
         self.assert_relationships(node1, (
             ('fabricPod', ToOneRelationship),

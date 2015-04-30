@@ -1,3 +1,25 @@
+Release 1.0.1
+=============
+
+Features added
+--------------
+
+* Add Class.extra_paths for controlling object path indexing.
+* Add Class.filter_hide_from option.
+
+Defects fixed
+-------------
+
+* Fix handling of class _properties and _relationships.
+* Prefix ExtJS components to avoid conflicting zenpacklib versions.
+* Fix handling of Class property types.
+* Fix py_to_yaml for ZenPacks that subclass ZenPack.
+* Remove superfluous YAML type hints from py_to_yaml conversion.
+* Fix "Unable to find TEMPLATE_ID" installation error.
+* Base component status on events in /Status event class.
+* Fix removal of objects when PyYAML isn't installed.
+
+
 Release 1.0.0
 =============
 

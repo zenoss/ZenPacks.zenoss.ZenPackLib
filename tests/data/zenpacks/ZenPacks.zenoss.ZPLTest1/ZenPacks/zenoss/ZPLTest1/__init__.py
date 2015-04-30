@@ -10,4 +10,7 @@
 from . import zenpacklib
 import os
 
-CFG = zenpacklib.load_yaml()
+if 'ZPL_YAML_FILENAME' in os.environ:
+    CFG = zenpacklib.load_yaml(os.environ['ZPL_YAML_FILENAME'])
+else:
+    CFG = zenpacklib.load_yaml()
