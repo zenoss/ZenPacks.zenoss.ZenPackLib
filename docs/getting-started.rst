@@ -24,7 +24,7 @@ can be done with the following commands.
 .. code-block:: bash
 
   su - zenoss
-  wget https://raw.githubusercontent.com/zenoss/zenpacklib/master/zenpacklib.py
+  wget http://zenpacklib.zenoss.com/zenpacklib.py
   chmod 755 zenpacklib.py
 
 After downloading you can check the version by running the following command as
