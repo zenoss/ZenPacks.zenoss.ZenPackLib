@@ -5089,12 +5089,17 @@ def load_yaml(yaml_filename=None):
     yaml_filename isn't specified.
 
     """
+    CFG = None
+
     if YAML_INSTALLED:
         if yaml_filename is None:
             yaml_filename = os.path.join(
                 os.path.dirname(__file__), 'zenpack.yaml')
 
-        CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
+        try:
+            CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
+        except Exception as e:
+            LOG.error(e)
     else:
         zenpack_name = None
 

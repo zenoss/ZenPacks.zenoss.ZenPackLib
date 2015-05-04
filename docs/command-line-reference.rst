@@ -51,7 +51,7 @@ The following commands are supported:
 * :ref:`class_diagram <zenpacklib-class_diagram>`: Export yUML (yuml.me) class diagram from a YAML file.
 * :ref:`dump_templates <zenpacklib-dump_templates>`: Export existing monitoring templates to YAML.
 * :ref:`py_to_yaml <zenpacklib-py_to_yaml>`: Converts the Python syntax used in pre-release versions of zenpacklib to YAML.
-* :ref:`list_paths <device name>`: Using the specified device, print a report of paths between objects.
+* :ref:`list_paths <zenpacklib-list_paths>`: Using the specified device, print a report of paths between objects.
 * :ref:`version <zenpacklib-version>`: Print zenpacklib version.
 
 
@@ -189,7 +189,8 @@ Example usage:
 
     python zenpacklib.py py_to_yaml ZenPacks.example.BetterAlreadyBeInstalled
 
-.. _zenpacklib_list_paths:
+
+.. _zenpacklib-list_paths:
 
 **********
 list_paths
