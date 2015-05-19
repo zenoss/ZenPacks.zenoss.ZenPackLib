@@ -308,11 +308,14 @@ class ZenPack(ZenPackBase):
             for dcname, dcspec in self.device_classes.iteritems():
                 if dcspec.remove:
                     organizerPath = '/Devices/' + dcspec.path.lstrip('/')
-                    if app.dmd.Devices.getOrganizer(organizerPath):
-                        LOG.info('Removing DeviceClass %s' % dcspec.path)
-                        app.dmd.Devices.manage_deleteOrganizer(organizerPath)
-                    else:
+                    try:
+                        app.dmd.Devices.getOrganizer(organizerPath)
+                    except KeyError:
                         LOG.warning('Unable to remove DeviceClass %s (not found)' % dcspec.path)
+                        continue
+
+                    LOG.info('Removing DeviceClass %s' % dcspec.path)
+                    app.dmd.Devices.manage_deleteOrganizer(organizerPath)
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
