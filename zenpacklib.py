@@ -3880,6 +3880,10 @@ class RRDDatapointSpec(Spec):
             datapoint.createCmd = self.createCmd
         if self.isrow is not None:
             datapoint.isrow = self.isrow
+        if self.rrdtype is None:
+            datapoint.rrdtype = 'GAUGE'
+        else:
+            datapoint.rrdtype = str(self.rrdtype)
         if self.rrdmin is not None:
             datapoint.rrdmin = str(self.rrdmin)
         if self.rrdmax is not None:
