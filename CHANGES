@@ -6,6 +6,8 @@ Defects fixed
 
 * Log YAML errors more concisely instead of full traceback. (ZEN-17681)
 * Fix "[Object]" details panel display for custom renderers. (ZEN-17732)
+* Fix handling of nested device class remove field.
+* Fix KeyError when removing non-existent device class.
 
 Release 1.0.1
 =============
