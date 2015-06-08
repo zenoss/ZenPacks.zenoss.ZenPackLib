@@ -3876,6 +3876,8 @@ class RRDDatapointSpec(Spec):
         type_ = datapoint.__class__.__name__
         self.speclog.debug("adding datapoint of type %s" % type_)
 
+        if self.rrdtype is not None:
+            datapoint.rrdtype = self.rrdtype
         if self.createCmd is not None:
             datapoint.createCmd = self.createCmd
         if self.isrow is not None:
@@ -6048,7 +6050,7 @@ Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField = Ext.extend(Zenoss.Displa
         Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField.superclass.constructor.call(this, config);
     },
     valueToRaw: function(value) {
-        if (typeof(value) == 'boolean') {
+        if (typeof(value) == 'boolean' || typeof(value) == 'object') {
             return value;
         } else {
             return Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField.superclass.valueToRaw(value);
