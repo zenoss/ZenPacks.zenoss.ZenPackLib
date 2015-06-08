@@ -3876,6 +3876,8 @@ class RRDDatapointSpec(Spec):
         type_ = datapoint.__class__.__name__
         self.speclog.debug("adding datapoint of type %s" % type_)
 
+        if self.rrdtype is not None:
+            datapoint.rrdtype = self.rrdtype
         if self.createCmd is not None:
             datapoint.createCmd = self.createCmd
         if self.isrow is not None:
