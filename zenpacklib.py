@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.1"
+__version__ = "1.0.2dev"
 
 
 import logging
@@ -307,8 +307,15 @@ class ZenPack(ZenPackBase):
 
             for dcname, dcspec in self.device_classes.iteritems():
                 if dcspec.remove:
+                    organizerPath = '/Devices/' + dcspec.path.lstrip('/')
+                    try:
+                        app.dmd.Devices.getOrganizer(organizerPath)
+                    except KeyError:
+                        LOG.warning('Unable to remove DeviceClass %s (not found)' % dcspec.path)
+                        continue
+
                     LOG.info('Removing DeviceClass %s' % dcspec.path)
-                    app.dmd.Devices.manage_deleteOrganizer(dcspec.path)
+                    app.dmd.Devices.manage_deleteOrganizer(organizerPath)
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
@@ -3869,6 +3876,8 @@ class RRDDatapointSpec(Spec):
         type_ = datapoint.__class__.__name__
         self.speclog.debug("adding datapoint of type %s" % type_)
 
+        if self.rrdtype is not None:
+            datapoint.rrdtype = self.rrdtype
         if self.createCmd is not None:
             datapoint.createCmd = self.createCmd
         if self.isrow is not None:
@@ -5089,12 +5098,17 @@ def load_yaml(yaml_filename=None):
     yaml_filename isn't specified.
 
     """
+    CFG = None
+
     if YAML_INSTALLED:
         if yaml_filename is None:
             yaml_filename = os.path.join(
                 os.path.dirname(__file__), 'zenpack.yaml')
 
-        CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
+        try:
+            CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
+        except Exception as e:
+            LOG.error(e)
     else:
         zenpack_name = None
 
@@ -6036,7 +6050,7 @@ Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField = Ext.extend(Zenoss.Displa
         Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField.superclass.constructor.call(this, config);
     },
     valueToRaw: function(value) {
-        if (typeof(value) == 'boolean') {
+        if (typeof(value) == 'boolean' || typeof(value) == 'object') {
             return value;
         } else {
             return Zenoss.ZPL_{zenpack_id_prefix}_RenderableDisplayField.superclass.valueToRaw(value);
