@@ -63,7 +63,10 @@ not a standard part of a Zenoss system until Zenoss 5. To use zenpacklib, or to
 use a ZenPack built with zenpacklib on a Zenoss 4.2 system you must first make
 sure that PyYAML is installed.
 
-.. note:: PyYAML has been added to Zenoss 4.2.5 as of SP457.
+.. note::
+
+   PyYAML has been added to Zenoss 4.2.5 as of SP457, and Zenoss 4.2.4 as of
+   SP776.
 
 Checking for PyYAML
 -------------------
