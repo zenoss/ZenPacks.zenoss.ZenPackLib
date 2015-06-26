@@ -319,14 +319,15 @@ we'll specify it in our `zenpack.yaml` instead.
        device_classes:
         /WeatherUnderground:
           templates:
-            description: Location weather monitoring using the Weather Underground API.
-            targetPythonClass: ZenPacks.training.WeatherUnderground.WundergroundLocation
+            Location:
+              description: Location weather monitoring using the Weather Underground API.
+              targetPythonClass: ZenPacks.training.WeatherUnderground.WundergroundLocation
 
-            datasources:
-              alerts:
-                type: Python
-                plugin_classname: ZenPacks.training.WeatherUnderground.dsplugins.Alerts
-                cycletime: "600"
+              datasources:
+                alerts:
+                  type: Python
+                  plugin_classname: ZenPacks.training.WeatherUnderground.dsplugins.Alerts
+                  cycletime: "600"
 
    At least some of this should be self-explanatory. The YAML vocabulary has
    been designed to be as intuitive and concise as possible. Let's walk through
