@@ -52,10 +52,38 @@ ZenPack using the Zenoss web interface, and you're more comfortable clicking
 through the web interface than create a YAML file, you probably should use
 Zenoss' built-in capabilities instead of zenpacklib.
 
+********************************
+How do I start using zenpacklib?
+********************************
 
-*************************
-What about some examples?
-*************************
+Create a skeleton ZenPack in the Zenoss UI
+
+Go to the Advanced -> Settings -> ZenPacks in the Zenoss web interface.
+Choose Create a ZenPack... from the gear menu above the list of ZenPacks.
+
+*******************
+Download zenpacklib
+*******************
+
+Creating the ZenPack will create the ZenPack’s source directory under $ZENHOME/ZenPacks/ZenPacks.acme.Widgeter. Run the following commands as the zenoss user to make this directory, and it’s important subdirectory more easily accessible:
+
+$ export ZP_TOP_DIR=$ZENHOME/ZenPacks/ZenPacks.acme.Widgeter
+$ export ZP_DIR=$ZP_TOP_DIR/ZenPacks/acme/Widgeter
+
+Then download the latest zenpacklib from GitHub into the ZenPack’s main code directory with the following commands.
+
+cd $ZP_DIR
+wget https://raw.githubusercontent.com/zenoss/zenpacklib/master/zenpacklib.py
+
+**********************
+Create the ZenPackSpec
+**********************
+
+Once zenpacklib.py is in $ZP_DIR you can create what is called a ZenPackSpec in the ZenPack’s __init__.py. This ZenPackSpec will define the specification for the ZenPack. Specifically its name, zProperties, classes and class relationships.
+
+********************
+ZenPackSpec examples
+********************
 
 The following example shows an example of adding new zProperties. Note the
 special *DEFAULTS* entry. You'll find that this is supported in many places as
