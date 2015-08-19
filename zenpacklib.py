@@ -5886,6 +5886,12 @@ def create_zenpack_srcdir(zenpack_name):
     with open(manifest_in_fname, 'w') as manifest_in_f:
         manifest_in_f.write("graft ZenPacks\n")
 
+    # Create .gitignore
+    gitignore_fname = os.path.join(zenpack_name, '.gitignore')
+    print "  - creating file: {}".format(gitignore_fname)
+    with open(gitignore_fname, 'w') as gitignore_f:
+        gitignore_f.write(GITIGNORE)
+
     # Create __init__.py files in all namespace directories.
     for namespace_package in namespace_packages:
         namespace_init_fname = os.path.join(
@@ -6152,6 +6158,26 @@ setup(
 )
 """.lstrip()
 
+GITIGNORE = """
+# GIT
+.gitignore
+
+# Python
+*.pyc
+
+# OSX
+.DS_Store
+
+# editors
+*.swp
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+""".lstrip()
 
 if __name__ == '__main__':
     from Products.ZenUtils.ZenScriptBase import ZenScriptBase
