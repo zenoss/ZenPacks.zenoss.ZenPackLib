@@ -254,7 +254,7 @@ Use the following steps to create our modeler plugin.
       argument and process it into DataMaps to return. However, in the case of
       `PythonPlugin` modeler plugins, the data returned from the `collect`
       method will be passed into `process` as the `results` argument. In this
-      case that is already complete processed data. So we just return it.
+      case that is already completely processed data. So we just return it.
 
 4. Restart Zenoss.
 
