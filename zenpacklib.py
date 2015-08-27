@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.2dev"
+__version__ = "1.0.3"
 
 
 import logging
@@ -2221,7 +2221,7 @@ class ClassSpec(Spec):
         for base in self.bases:
             if not isinstance(base, type):
                 class_spec = self.zenpack.classes[base]
-                properties.update(class_spec.properties)
+                properties.update(class_spec.inherited_properties())
 
         properties.update(self.properties)
 
@@ -2232,7 +2232,7 @@ class ClassSpec(Spec):
         for base in self.bases:
             if not isinstance(base, type):
                 class_spec = self.zenpack.classes[base]
-                relationships.update(class_spec.relationships)
+                relationships.update(class_spec.inherited_relationships())
 
         relationships.update(self.relationships)
 
@@ -3778,7 +3778,12 @@ class RRDDatasourceSpec(Spec):
         if self.extra_params:
             for param, value in self.extra_params.iteritems():
                 if param in [x['id'] for x in datasource._properties]:
-                    setattr(datasource, param, value)
+                    # handle an ui test error that expects the oid value to be a string
+                    # this is to workaround a ui bug known in 4.5 and 5.0.3
+                    if type_ == 'BasicDataSource.SNMP' and param == 'oid':
+                        setattr(datasource, param, str(value))
+                    else:
+                        setattr(datasource, param, value)
                 else:
                     raise ValueError("%s is not a valid property for datasource of type %s" % (param, type_))
 

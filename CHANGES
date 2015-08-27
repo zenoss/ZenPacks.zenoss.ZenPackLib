@@ -1,3 +1,13 @@
+Release 1.0.3
+=============
+
+Defects fixed
+-------------
+
+* Fix testing of SNMP datasources by converting OIDs to string.
+* Fix for inherited relationships and properties not appearing in UI.
+
+
 Release 1.0.2
 =============
 
@@ -9,6 +19,7 @@ Defects fixed
 * Fix handling of nested device class remove field.
 * Fix KeyError when removing non-existent device class.
 * Fix handling of datapoint rrdtype. (ZEN-18188)
+
 
 Release 1.0.1
 =============
