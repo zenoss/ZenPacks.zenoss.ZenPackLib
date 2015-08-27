@@ -2221,7 +2221,7 @@ class ClassSpec(Spec):
         for base in self.bases:
             if not isinstance(base, type):
                 class_spec = self.zenpack.classes[base]
-                properties.update(class_spec.properties)
+                properties.update(class_spec.inherited_properties())
 
         properties.update(self.properties)
 
@@ -2232,7 +2232,7 @@ class ClassSpec(Spec):
         for base in self.bases:
             if not isinstance(base, type):
                 class_spec = self.zenpack.classes[base]
-                relationships.update(class_spec.relationships)
+                relationships.update(class_spec.inherited_relationships())
 
         relationships.update(self.relationships)
 
