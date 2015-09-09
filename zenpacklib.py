@@ -5198,14 +5198,19 @@ def enableTesting():
                 import ZenPacks.zenoss.DynamicView
                 zcml.load_config('configure.zcml', ZenPacks.zenoss.DynamicView)
             except ImportError:
-                return
+                pass
 
             try:
                 import ZenPacks.zenoss.Impact
                 zcml.load_config('meta.zcml', ZenPacks.zenoss.Impact)
                 zcml.load_config('configure.zcml', ZenPacks.zenoss.Impact)
             except ImportError:
-                return
+                pass
+
+            try:
+                zcml.load_config('configure.zcml', zenpack_module)
+            except IOError:
+                pass
 
             # BaseTestCast.afterSetUp already hides transaction.commit. So we also
             # need to hide transaction.abort.
