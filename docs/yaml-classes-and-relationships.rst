@@ -413,6 +413,12 @@ order
   :Required: No
   :Type: integer
   :Default Value: 45
+
+group
+  :Description: Name of group in details.
+  :Required: No
+  :Type: string
+  :Default Value: None
   
 editable
   :Description: Should this property be editable in details?

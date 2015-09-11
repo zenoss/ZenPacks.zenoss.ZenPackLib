@@ -2925,6 +2925,7 @@ class ClassPropertySpec(Spec):
             grid_display=True,
             renderer=None,
             order=None,
+            group=None,
             editable=False,
             api_only=False,
             api_backendtype='property',
@@ -2973,6 +2974,9 @@ class ClassPropertySpec(Spec):
             :type renderer: str
             :param order: TODO
             :type order: float
+            :param group: Optional name of details group.
+            :param default: Default Value
+            :type group: str
             :param editable: TODO
             :type editable: bool
             :param api_only: TODO
@@ -3013,6 +3017,7 @@ class ClassPropertySpec(Spec):
             self.renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'.format(
                 zenpack_id_prefix=self.class_spec.zenpack.id_prefix)
 
+        self.group = group
         self.editable = bool(editable)
         self.api_only = bool(api_only)
         self.api_backendtype = api_backendtype
@@ -3092,6 +3097,7 @@ class ClassPropertySpec(Spec):
         return {
             self.name: schema_map[self.type_](
                 title=_t(self.label),
+                group=self.group,
                 alwaysEditable=self.editable,
                 order=self.order)
             }
