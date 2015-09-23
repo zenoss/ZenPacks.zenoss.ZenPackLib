@@ -1,3 +1,10 @@
+Release 1.0.4
+=============
+
+Defects fixed
+-------------
+* Fix entity grid renderer to make it possible to click links into a new tab (ZEN-19922)
+
 Release 1.0.3
 =============
 
