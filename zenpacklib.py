@@ -5958,7 +5958,7 @@ Ext.apply(Zenoss.render, {
         }
 
         if (isLink) {
-            return '<a href="javascript:Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid+'\\', \\''+obj.meta_type+'\\');">'+obj.title+'</a>';
+            return '<a href="'+obj.uid+'"onClick="Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid +'\\', \\''+obj.meta_type+'\\')return false;">'+obj.title+'</a>';
         } else {
             return obj.title;
         }
