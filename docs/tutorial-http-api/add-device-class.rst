@@ -3,7 +3,7 @@ Add a Device Class
 ******************
 
 To support adding our special `WundergroundDevice` devices that we defined in
-``__init__.py`` to Zenoss we must create a new device class. This will give us
+``zenpack.yaml`` to Zenoss we must create a new device class. This will give us
 control of the `zPythonClass` configuration property that defines what type of
 devices will be created. It will also allow us to control what modeler plugins
 and monitoring templates will be used.
