@@ -161,8 +161,8 @@ Use the following steps to create our modeler plugin.
       this relationship.
 
       Where does relname come from? It comes from the
-      ``[WundergroundDevice]++-[WundergroundLocation]`` relationship we defined
-      in ``__init__.py``. Because it's a *to-many* relationship to the
+      ``WundergroundDevice 1:MC WundergroundLocation`` relationship we defined
+      in ``zenpack.yaml``. Because it's a *to-many* relationship to the
       `WundergroundLocation` type, `zenpacklib` will name the relationship by
       lowercasing the first letter and adding an "s" to the end to make it
       plural.
@@ -237,7 +237,7 @@ Use the following steps to create our modeler plugin.
         good candidate for this. It will look something like "Austin, Texas".
 
       - `api_link` is a property we defined for the `WundergroundLocation`
-        class in ``__init__.py``. This is where we'll store the returned
+        class in ``zenpack.yaml``. This is where we'll store the returned
         *link* or `l` property. This will be important for monitoring the
         alerts and conditions of the location later on.
 
