@@ -42,6 +42,7 @@ Use the following steps to create our modeler plugin.
       
       # stdlib Imports
       import json
+      import urllib
       
       # Twisted Imports
       from twisted.internet.defer import inlineCallbacks, returnValue
@@ -94,7 +95,7 @@ Use the following steps to create our modeler plugin.
                   try:
                       response = yield getPage(
                           'http://autocomplete.wunderground.com/aq?query={query}'
-                          .format(query=location))
+                          .format(query=urllib.quote(location)))
       
                       response = json.loads(response)
                   except Exception, e:
