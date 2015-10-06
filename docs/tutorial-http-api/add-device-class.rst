@@ -114,6 +114,8 @@ Create a ``wunderground.zenbatchload`` file with the following contents.
 
     /Devices/WeatherUnderground
     wunderground.com zWundergroundAPIKey='<your-api-key>', zWundergroundLocations=['Austin, TX', 'Des Moines, IA']
+    
+Before you remodel the device, you need to remove the existing device, or its stored state will prevent remodeling.  Find your wunderground.com device in the device list.  Select it, and click the Remove Devices button (has a Do Not Enter icon).
 
 Now run the following command to load from that file.
 
