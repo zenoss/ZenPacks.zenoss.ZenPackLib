@@ -38,9 +38,8 @@ Here's an example query for Austin, TX:
   :samp:`http://autocomplete.wunderground.com/aq?query=Austin%2C%20TX`
 
 .. note::
-   "Austin%2C%20TX" is the URL encoded version of "Austin, TX". We won't have
-   to worry about that when we work with it because our HTTP library
-   automatically encodes URLs.
+   "Austin%2C%20TX" is the URL encoded version of "Austin, TX". We will url encode
+   this data when we work with it.
 
 Here's the response to that example query for Austin, TX:
 
