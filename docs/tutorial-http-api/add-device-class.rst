@@ -3,7 +3,7 @@ Add a Device Class
 ******************
 
 To support adding our special `WundergroundDevice` devices that we defined in
-``__init__.py`` to Zenoss we must create a new device class. This will give us
+``zenpack.yaml`` to Zenoss we must create a new device class. This will give us
 control of the `zPythonClass` configuration property that defines what type of
 devices will be created. It will also allow us to control what modeler plugins
 and monitoring templates will be used.
@@ -114,6 +114,8 @@ Create a ``wunderground.zenbatchload`` file with the following contents.
 
     /Devices/WeatherUnderground
     wunderground.com zWundergroundAPIKey='<your-api-key>', zWundergroundLocations=['Austin, TX', 'Des Moines, IA']
+    
+Before you remodel the device, you need to remove the existing device, or its stored state will prevent remodeling.  Find your wunderground.com device in the device list.  Select it, and click the Remove Devices button (has a Do Not Enter icon).
 
 Now run the following command to load from that file.
 
