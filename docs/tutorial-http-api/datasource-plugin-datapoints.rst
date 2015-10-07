@@ -153,7 +153,7 @@ Follow these steps to update the monitoring template:
         
               graphs:
                 Temperatures:
-                  units: degrees C.
+                  units: "degrees C."
             
                   graphpoints:
                     Temperature:
