@@ -127,113 +127,114 @@ Follow these steps to update the monitoring template:
       device_classes:
         /WeatherUnderground:
           templates:
-            description: Location weather monitoring using the Weather Underground API.
-            targetPythonClass: ZenPacks.training.WeatherUnderground.WundergroundLocation
-
-            datasources:
-              conditions:
-                type: Python
-                plugin_classname: ZenPacks.training.WeatherUnderground.dsplugins.Conditions
-                cycletime: "600"
-          
-                datapoints:
-                  temp_c: GAUGE
-                  feelslike_c: GAUGE
-                  heat_index_c: GAUGE
-                  windchill_c: GAUGE
-                  dewpoint_c: GAUGE
-                  relative_humidity: GAUGE
-                  pressure_mb: GAUGE
-                  precip_1hr_metric: GAUGE
-                  UV: GAUGE
-                  wind_kph: GAUGE
-                  wind_gust_kph: GAUGE
-                  visibility_km: GAUGE
-      
-            graphs:
-              Temperatures:
-                units: degrees C.
-          
-                graphpoints:
-                  Temperature:
-                    dpName: conditions_temp_c
-                    format: "%7.2lf"
-          
-                  Feels Like:
-                    dpName: conditions_feelslike_c
-                    format: "%7.2lf"
-          
-                  Heat Index:
-                    dpName: conditions_heat_index_c
-                    format: "%7.2lf"
-          
-                  Wind Chill:
-                    dpName: conditions_windchilltemp_c
-                    format: "%7.2lf"
-          
-                  Dewpoint:
-                    dpName: conditions_dewpoint_c
-                    format: "%7.2lf"
-          
-              Relative Humidity:
-                units: percent
-                miny: 0
-                maxy: 100
-          
-                graphpoints:
-                  Relative Humidity:
-                    dpName: conditions_relative_humidity
-                    format: "%7.2lf%%"
-          
-              Pressure:
-                units: millibars
-                miny: 0
-          
-                graphpoints:
-                  Pressure:
-                    dpName: conditions_pressure_mb
-                    format: "%7.0lf"
-          
-              Precipitation:
-                units: centimeters
-                miny: 0
-          
-                graphpoints:
-                  1 Hour:
-                    dpName: conditions_precip_1hr_metric
-                    format: "%7.2lf"
-          
-              UV Index:
-                units: UV index
-                miny: 0
-                maxy: 12
-          
-                graphpoints:
-                  UV Index:
-                    dpName: conditions_UV
-                    format: "%7.0lf"
-          
-              Wind Speed:
-                units: kph
-                miny: 0
-          
-                graphpoints:
-                  Sustained:
-                    dpName: conditions_wind_kph
-                    format: "%7.2lf"
-          
-                  Gust:
-                    dpName: conditions_wind_gust_kph
-                    format: "%7.2lf"
-          
-              Visibility:
-                units: kilometers
-                miny: 0
-          
-                graphpoints:
-                  Visibility:
-                    dpName: conditions_visibility_km
-                    format: "%7.2lf"
+            Location:
+              description: Location weather monitoring using the Weather Underground API.
+              targetPythonClass: ZenPacks.training.WeatherUnderground.WundergroundLocation
+  
+              datasources:
+                conditions:
+                  type: Python
+                  plugin_classname: ZenPacks.training.WeatherUnderground.dsplugins.Conditions
+                  cycletime: "600"
+            
+                  datapoints:
+                    temp_c: GAUGE
+                    feelslike_c: GAUGE
+                    heat_index_c: GAUGE
+                    windchill_c: GAUGE
+                    dewpoint_c: GAUGE
+                    relative_humidity: GAUGE
+                    pressure_mb: GAUGE
+                    precip_1hr_metric: GAUGE
+                    UV: GAUGE
+                    wind_kph: GAUGE
+                    wind_gust_kph: GAUGE
+                    visibility_km: GAUGE
+        
+              graphs:
+                Temperatures:
+                  units: degrees C.
+            
+                  graphpoints:
+                    Temperature:
+                      dpName: conditions_temp_c
+                      format: "%7.2lf"
+            
+                    Feels Like:
+                      dpName: conditions_feelslike_c
+                      format: "%7.2lf"
+            
+                    Heat Index:
+                      dpName: conditions_heat_index_c
+                      format: "%7.2lf"
+            
+                    Wind Chill:
+                      dpName: conditions_windchilltemp_c
+                      format: "%7.2lf"
+            
+                    Dewpoint:
+                      dpName: conditions_dewpoint_c
+                      format: "%7.2lf"
+            
+                Relative Humidity:
+                  units: percent
+                  miny: 0
+                  maxy: 100
+            
+                  graphpoints:
+                    Relative Humidity:
+                      dpName: conditions_relative_humidity
+                      format: "%7.2lf%%"
+            
+                Pressure:
+                  units: millibars
+                  miny: 0
+            
+                  graphpoints:
+                    Pressure:
+                      dpName: conditions_pressure_mb
+                      format: "%7.0lf"
+            
+                Precipitation:
+                  units: centimeters
+                  miny: 0
+            
+                  graphpoints:
+                    1 Hour:
+                      dpName: conditions_precip_1hr_metric
+                      format: "%7.2lf"
+            
+                UV Index:
+                  units: UV index
+                  miny: 0
+                  maxy: 12
+            
+                  graphpoints:
+                    UV Index:
+                      dpName: conditions_UV
+                      format: "%7.0lf"
+            
+                Wind Speed:
+                  units: kph
+                  miny: 0
+            
+                  graphpoints:
+                    Sustained:
+                      dpName: conditions_wind_kph
+                      format: "%7.2lf"
+            
+                    Gust:
+                      dpName: conditions_wind_gust_kph
+                      format: "%7.2lf"
+            
+                Visibility:
+                  units: kilometers
+                  miny: 0
+            
+                  graphpoints:
+                    Visibility:
+                      dpName: conditions_visibility_km
+                      format: "%7.2lf"
 
    You can refer to :ref:`monitoring-templates` for more information on creating
    monitoring templates in YAML.
