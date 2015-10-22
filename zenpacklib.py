@@ -441,13 +441,14 @@ class CatalogBase(object):
         """Return catalog scopes by name."""
         spec = cls._get_catalog_spec(name)
         if not spec:
-            []
-
-        scopes = [spec['indexes'][x].get('scope', 'device') for x in spec['indexes']]
-        if 'both' in scopes:
-            scopes = [x for x in scopes if x != 'both']
-            scopes.append('device')
-            scopes.append('global')
+            scopes = []
+        else:
+            scopes = [spec['indexes'][x].get('scope') for x in spec['indexes'] if 'scope' in spec['indexes'][x].keys()]
+            if 'both' in scopes:
+                scopes = [x for x in scopes if x != 'both']
+                scopes.append('device')
+                scopes.append('global')
+        
         return set(scopes)
 
     @classmethod
