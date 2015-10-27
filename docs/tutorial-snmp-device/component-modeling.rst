@@ -244,9 +244,9 @@ modeler plugin we previously created to model the sensors instead.
 
       The target `relname` we should use depends on a couple of things.  First, 
       all leading uppercase letters of the class name will be converted to lowercase,
-      i.e. `NetBotzTemperatureSensor` becomes `netBotzTemperatureSensor`.  Second, the 
+      i.e. ``NetBotzTemperatureSensor`` becomes ``netBotzTemperatureSensor``.  Second, the 
       letter 's' is added to the end if it is a ToMany* relationship, i.e. 
-      `netBotzTemperatureSensor` becomes `netBotzTemperatureSensors`
+      ``netBotzTemperatureSensor`` becomes ``netBotzTemperatureSensors``
 
       Setting `relname` to ``netBotzTemperatureSensors`` will cause the
       `self.relMap` call to create a `RelationshipMap` that will be applied to
