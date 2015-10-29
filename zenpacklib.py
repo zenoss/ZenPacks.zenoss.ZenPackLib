@@ -2980,7 +2980,7 @@ class ClassPropertySpec(Spec):
             :param api_backendtype: TODO (enum)
             :type api_backendtype: str
             :param enum: TODO
-            :type enum: list(str)
+            :type enum: dict
             :param datapoint: TODO (validate datapoint name)
             :type datapoint: str
             :param datapoint_default: TODO  - DEPRECATE (use default instead)
