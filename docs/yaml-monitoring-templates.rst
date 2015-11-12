@@ -61,8 +61,8 @@ shows how to bind the *WidgeterHealth* monitoring template to the
           zDeviceTemplates:
             - WidgeterHealth
           
-          templates:
-            WidgeterHealth: {}
+        templates:
+          WidgeterHealth: {}
 
 Note that zDeviceTemplates didn't have to be declared in the ZenPack's
 zProperties field because it's a standard Zenoss zProperty.
@@ -130,39 +130,39 @@ zDeviceTemplates.
           zDeviceTemplates:
             - WidgeterHealth
           
-          templates:
-            WidgeterHealth:
-              description: ACME Widgeter monitoring.
+        templates:
+          WidgeterHealth:
+            description: ACME Widgeter monitoring.
 
-              datasources:
-                health:
-                  type: COMMAND
-                  parser: Nagios
-                  commandTemplate: "echo OK|percent=100"
+            datasources:
+              health:
+                type: COMMAND
+                parser: Nagios
+                commandTemplate: "echo OK|percent=100"
 
-                  datapoints:
-                    percent:
-                      rrdtype: GAUGE
-                      rrdmin: 0
-                      rrdmax: 100
+                datapoints:
+                  percent:
+                    rrdtype: GAUGE
+                    rrdmin: 0
+                    rrdmax: 100
 
-              thresholds:
-                unhealthy:
-                  dsnames: [health_percent]
-                  eventClass: /Status
-                  severity: Warning
-                  minval: 90
+            thresholds:
+              unhealthy:
+                dsnames: [health_percent]
+                eventClass: /Status
+                severity: Warning
+                minval: 90
 
-              graphs:
-                Health:
-                  units: percent
-                  miny: 0
-                  maxy: 0
+            graphs:
+              Health:
+                units: percent
+                miny: 0
+                maxy: 0
 
-                  graphpoints:
-                    Health:
-                      dpName: health_percent
-                      format: "%7.2lf%%"
+                graphpoints:
+                  Health:
+                    dpName: health_percent
+                    format: "%7.2lf%%"
 
 Many different entry types are shown in the above example. See the references
 below for more information on each.
