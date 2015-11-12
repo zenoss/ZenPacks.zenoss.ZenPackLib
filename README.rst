@@ -86,42 +86,42 @@ complete with a datasource, threshold and graph.
 
     device_classes:
       /Server/ACME/Widgeter:
-          templates:
-            Device:
-              description: ACME Widgeter monitoring.
-              targetPythonClass: ZenPacks.acme.Widgeter.Widgeter
+        templates:
+          Device:
+            description: ACME Widgeter monitoring.
+            targetPythonClass: ZenPacks.acme.Widgeter.Widgeter
 
-              datasources:
-                status:
-                  type: COMMAND
-                  parser: Nagios
-                  commandTemplate: "echo OK|available=1"
+            datasources:
+              status:
+                type: COMMAND
+                parser: Nagios
+                commandTemplate: "echo OK|available=1"
 
-                  datapoints:
-                    available:
-                      rrdtype: GAUGE
-                      rrdmin: 0
-                      rrdmax: 1
+                datapoints:
+                  available:
+                    rrdtype: GAUGE
+                    rrdmin: 0
+                    rrdmax: 1
 
-              thresholds:
-                unavailable:
-                  dsnames: [status_available]
-                    eventClass: /Status
-                    severity: Critical
-                    minval: 1
+            thresholds:
+              unavailable:
+                dsnames: [status_available]
+                  eventClass: /Status
+                  severity: Critical
+                  minval: 1
 
-              graphs:
-                Availability:
-                  units: percent
-                  miny: 0
-                  maxy: 100
+            graphs:
+              Availability:
+                units: percent
+                miny: 0
+                maxy: 100
 
-                  graphpoints:
-                    Availability:
-                      dpName: status_available
-                      rpn: 100,*
-                      format: "%7.2lf%%"
-                      lineType: AREA
+                graphpoints:
+                  Availability:
+                    dpName: status_available
+                    rpn: 100,*
+                    format: "%7.2lf%%"
+                    lineType: AREA
 
 Finally we can add a new device type, component type and relationship between
 them.
