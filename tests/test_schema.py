@@ -370,7 +370,9 @@ class TestSchema(zenpacklib.TestCase):
             schema.FabricPod,
             ))
 
-        self.assert_properties(pod1, ('snmpindex', 'monitor'))
+        self.assert_properties(
+            pod1,
+            ('snmpindex', 'monitor', 'editable_boolean', 'readonly_boolean'))
 
         self.assert_relationships(pod1, (
             ('dependencies', ToManyRelationship),  # from ManagedEntity

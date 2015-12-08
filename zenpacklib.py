@@ -2096,6 +2096,7 @@ class ClassSpec(Spec):
         # Paths
         self.path_pattern_streams = []
         if extra_paths is not None:
+            self.extra_paths = extra_paths
             for pattern_tuple in extra_paths:
                 # Each item in extra_paths is expressed as a tuple of
                 # regular expression patterns that are matched
@@ -2134,6 +2135,8 @@ class ClassSpec(Spec):
                     pattern_stream.append(re.compile("/?$"))
 
                 self.path_pattern_streams.append(pattern_stream)
+        else:
+            self.extra_paths = []
 
     def create(self):
         """Implement specification."""
@@ -3141,6 +3144,9 @@ class ClassPropertySpec(Spec):
 
         if self.renderer:
             column_fields.append("renderer: {}".format(self.renderer))
+        else:
+            if self.type_ == 'boolean':
+                column_fields.append("renderer: Zenoss.render.checkbox")
 
         return [
             OrderAndValue(
