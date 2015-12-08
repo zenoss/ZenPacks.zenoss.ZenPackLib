@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 
 import logging
@@ -2096,6 +2096,7 @@ class ClassSpec(Spec):
         # Paths
         self.path_pattern_streams = []
         if extra_paths is not None:
+            self.extra_paths = extra_paths
             for pattern_tuple in extra_paths:
                 # Each item in extra_paths is expressed as a tuple of
                 # regular expression patterns that are matched
@@ -2134,6 +2135,8 @@ class ClassSpec(Spec):
                     pattern_stream.append(re.compile("/?$"))
 
                 self.path_pattern_streams.append(pattern_stream)
+        else:
+            self.extra_paths = []
 
     def create(self):
         """Implement specification."""
@@ -2980,7 +2983,7 @@ class ClassPropertySpec(Spec):
             :param api_backendtype: TODO (enum)
             :type api_backendtype: str
             :param enum: TODO
-            :type enum: list(str)
+            :type enum: dict
             :param datapoint: TODO (validate datapoint name)
             :type datapoint: str
             :param datapoint_default: TODO  - DEPRECATE (use default instead)
@@ -3141,6 +3144,9 @@ class ClassPropertySpec(Spec):
 
         if self.renderer:
             column_fields.append("renderer: {}".format(self.renderer))
+        else:
+            if self.type_ == 'boolean':
+                column_fields.append("renderer: Zenoss.render.checkbox")
 
         return [
             OrderAndValue(
@@ -5198,14 +5204,19 @@ def enableTesting():
                 import ZenPacks.zenoss.DynamicView
                 zcml.load_config('configure.zcml', ZenPacks.zenoss.DynamicView)
             except ImportError:
-                return
+                pass
 
             try:
                 import ZenPacks.zenoss.Impact
                 zcml.load_config('meta.zcml', ZenPacks.zenoss.Impact)
                 zcml.load_config('configure.zcml', ZenPacks.zenoss.Impact)
             except ImportError:
-                return
+                pass
+
+            try:
+                zcml.load_config('configure.zcml', zenpack_module)
+            except IOError:
+                pass
 
             # BaseTestCast.afterSetUp already hides transaction.commit. So we also
             # need to hide transaction.abort.
@@ -5958,7 +5969,7 @@ Ext.apply(Zenoss.render, {
         }
 
         if (isLink) {
-            return '<a href="javascript:Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid+'\\', \\''+obj.meta_type+'\\');">'+obj.title+'</a>';
+            return '<a href="'+obj.uid+'"onClick="Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid +'\\', \\''+obj.meta_type+'\\');return false;">'+obj.title+'</a>';
         } else {
             return obj.title;
         }

@@ -1,3 +1,20 @@
+Release 1.0.4
+=============
+
+Features added
+--------------
+
+* TestCase: Automatically load ZenPack's configure.zcml if it exists.
+* Default to checkbox renderer for boolean properties. (ZEN-19585)
+
+Defects fixed
+-------------
+
+* TestCase: Fix transaction error without DynamicView or Impact installed.
+* Fix entity grid renderer to make it possible to click links into a new tab. (ZEN-19922)
+* Fix enum property type. (ZEN-20769)
+
+
 Release 1.0.3
 =============
 

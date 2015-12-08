@@ -40,6 +40,8 @@ class_relationships:
 - VnsLDevVip 1:M VnsNodeInst
 device_classes:
   /Network/ZPLTest1:
+    zProperties:
+      zPythonClass: "ZenPacks.zenoss.ZPLTest1.APIC"
     templates:
       APIC:
         description: ZPLTest1 fabric monitoring.
@@ -268,6 +270,14 @@ classes:
     meta_type: ZPLTest1FabricPod
     label: Fabric Pod
     order: !!float '30'
+    properties:
+      editable_boolean:
+        type: boolean
+        label: Editable Boolean
+        editable: true
+      readonly_boolean:
+        type: boolean
+        label: Read-Only Boolean
     impacts: [fvCtxs]
     impacted_by: [leaf_nodes]
   FvAEPg:
