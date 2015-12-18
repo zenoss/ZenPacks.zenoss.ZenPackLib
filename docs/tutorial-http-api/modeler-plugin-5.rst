@@ -39,71 +39,71 @@ Use the following steps to create our modeler plugin.
    .. code-block:: python
 
       """Models locations using the Weather Underground API."""
-      
+
       # stdlib Imports
       import json
       import urllib
-      
+
       # Twisted Imports
       from twisted.internet.defer import inlineCallbacks, returnValue
       from twisted.web.client import getPage
-      
+
       # Zenoss Imports
       from Products.DataCollector.plugins.CollectorPlugin import PythonPlugin
-      
-      
+
+
       class Locations(PythonPlugin):
-      
+
           """Weather Underground locations modeler plugin."""
-      
+
           relname = 'wundergroundLocations'
           modname = 'ZenPacks.training.WeatherUnderground.WundergroundLocation'
-      
+
           requiredProperties = (
               'zWundergroundAPIKey',
               'zWundergroundLocations',
               )
-      
+
           deviceProperties = PythonPlugin.deviceProperties + requiredProperties
-      
+
           @inlineCallbacks
           def collect(self, device, log):
               """Asynchronously collect data from device. Return a deferred."""
               log.info("%s: collecting data", device.id)
-      
+
               apikey = getattr(device, 'zWundergroundAPIKey', None)
               if not apikey:
                   log.error(
                       "%s: %s not set. Get one from http://www.wunderground.com/weather/api",
                       device.id,
                       'zWundergroundAPIKey')
-      
+
                   returnValue(None)
-      
+
               locations = getattr(device, 'zWundergroundLocations', None)
               if not locations:
                   log.error(
                       "%s: %s not set.",
                       device.id,
                       'zWundergroundLocations')
-      
+
                   returnValue(None)
-      
+
               rm = self.relMap()
-      
+
               for location in locations:
                   try:
                       response = yield getPage(
                           'http://autocomplete.wunderground.com/aq?query={query}'
                           .format(query=urllib.quote(location)))
-      
+
                       response = json.loads(response)
                   except Exception, e:
                       log.error(
                           "%s: %s", device.id, e)
-      
+
                       returnValue(None)
-      
+
                   for result in response['RESULTS']:
                       rm.append(self.objectMap({
                           'id': self.prepId(result['zmw']),
@@ -112,9 +112,9 @@ Use the following steps to create our modeler plugin.
                           'country_code': result['c'],
                           'timezone': result['tzs'],
                           }))
-      
+
               returnValue(rm)
-      
+
           def process(self, device, results, log):
               """Process results. Return iterable of datamaps or None."""
               return results
@@ -259,9 +259,14 @@ Use the following steps to create our modeler plugin.
 
 4. Restart Zenoss.
 
-   After adding a new modeler plugin you must restart Zenoss. If you're
-   following the :ref:`running-a-minimal-zenoss` instructions you really only
-   need to restart `zopectl` and `zenhub`.
+   After adding a new modeler plugin you must restart Zenoss. During development
+   like this, it would be enough to just restart Zope and zenhub with the
+   following commands.
+
+   .. code-block:: bash
+
+      serviced restart zope
+      serviced restart zenhub
 
 That's it. The modeler plugin has been created. Now we just need to do some
 Zenoss configuration to allow us to use it.

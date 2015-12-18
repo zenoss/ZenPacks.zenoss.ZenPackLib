@@ -1,4 +1,4 @@
-.. _development-environment:
+.. _development-environment-4:
 
 #######################
 Development Environment
@@ -11,7 +11,7 @@ have tools or techniques that you're more comfortable with or you consider
 superior, you should use them.
 
 
-.. _installing-zenoss:
+.. _installing-zenoss-4:
 
 *****************
 Installing Zenoss
@@ -55,7 +55,7 @@ production system after they've been successfully tested in the development
 and staging systems.
 
 
-.. _running-a-minimal-zenoss:
+.. _running-a-minimal-zenoss-4:
 
 ************************
 Running a Minimal Zenoss
@@ -118,7 +118,7 @@ See the following notes for more information on what these commands are doing.
    ``daemons.txt``.
 
 
-.. _running-zenoss-in-the-foreground:
+.. _running-zenoss-in-the-foreground-4:
 
 ********************************
 Running Zenoss in the Foreground
@@ -158,7 +158,7 @@ may not have foreground visibility to it. The ``--cycle`` option to zenjobs is
 necessary to prevent it from executing all current pending jobs then exiting.
 
 
-.. _installing-zenpacks:
+.. _installing-zenpacks-4:
 
 *******************
 Installing ZenPacks
