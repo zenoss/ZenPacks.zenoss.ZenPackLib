@@ -73,29 +73,29 @@ Follow these steps to create the `Alerts` data source plugin:
    .. code-block:: python
 
       """Monitors current conditions using the Weather Underground API."""
-      
+
       # Logging
       import logging
       LOG = logging.getLogger('zen.WeatherUnderground')
-      
+
       # stdlib Imports
       import json
       import time
-      
+
       # Twisted Imports
       from twisted.internet.defer import inlineCallbacks, returnValue
       from twisted.web.client import getPage
-      
+
       # PythonCollector Imports
       from ZenPacks.zenoss.PythonCollector.datasources.PythonDataSource import (
           PythonDataSourcePlugin,
           )
-      
-      
+
+
       class Alerts(PythonDataSourcePlugin):
-      
+
           """Weather Underground alerts data source plugin."""
-      
+
           @classmethod
           def config_key(cls, datasource, context):
               return (
@@ -104,7 +104,7 @@ Follow these steps to create the `Alerts` data source plugin:
                   context.id,
                   'wunderground-alerts',
                   )
-      
+
           @classmethod
           def params(cls, datasource, context):
               return {
@@ -112,11 +112,11 @@ Follow these steps to create the `Alerts` data source plugin:
                   'api_link': context.api_link,
                   'location_name': context.title,
                   }
-      
+
           @inlineCallbacks
           def collect(self, config):
               data = self.new_data()
-      
+
               for datasource in config.datasources:
                   try:
                       response = yield getPage(
@@ -124,36 +124,36 @@ Follow these steps to create the `Alerts` data source plugin:
                           .format(
                               api_key=datasource.params['api_key'],
                               api_link=datasource.params['api_link']))
-      
+
                       response = json.loads(response)
                   except Exception:
                       LOG.exception(
                           "%s: failed to get alerts data for %s",
                           config.id,
                           datasource.location_name)
-      
+
                       continue
-      
+
                   for alert in response['alerts']:
                       severity = None
-      
+
                       if int(alert['expires_epoch']) <= time.time():
                           severity = 0
                       elif alert['significance'] in ('W', 'A'):
                           severity = 3
                       else:
                           severity = 2
-      
+
                       data['events'].append({
                           'device': config.id,
                           'component': datasource.component,
                           'severity': severity,
                           'eventKey': 'wu-alert-{}'.format(alert['type']),
                           'eventClassKey': 'wu-alert',
-      
+
                           'summary': alert['description'],
                           'message': alert['message'],
-      
+
                           'wu-description': alert['description'],
                           'wu-date': alert['date'],
                           'wu-expires': alert['expires'],
@@ -161,7 +161,7 @@ Follow these steps to create the `Alerts` data source plugin:
                           'wu-significance': alert['significance'],
                           'wu-type': alert['type'],
                           })
-      
+
               returnValue(data)
 
    Let's walk through this code to explain what is being done.
@@ -287,7 +287,7 @@ Follow these steps to create the `Alerts` data source plugin:
       * `eventClassKey`: Optional. An identifier for the *type* of event. Used during event class mapping.
       * `summary`: Mandatory: A (hopefully) short summary of the event. Truncated to 128 characters.
       * `message`: Optional: A longer text description of the event. Not truncated.
-      
+
       You will also see many `wu-*` fields being added to the event. Zenoss
       allows arbitrary fields on events so it can be a good practice to add any
       further information you get about the event in this way. It can make
@@ -299,7 +299,7 @@ Follow these steps to create the `Alerts` data source plugin:
 2. Restart Zenoss.
 
    After adding a new datasource plugin you must restart Zenoss. If you're
-   following the :ref:`running-a-minimal-zenoss` instructions you really only
+   following the :ref:`running-a-minimal-zenoss-4` instructions you really only
    need to restart `zenhub`.
 
 That's it. The datasource plugin has been created. Now we just need to do some
@@ -315,7 +315,7 @@ we'll specify it in our `zenpack.yaml` instead.
    existing `/WeatherUnderground'` device class.
 
    .. code-block:: yaml
-   
+
        device_classes:
         /WeatherUnderground:
           templates:
@@ -373,7 +373,7 @@ we'll specify it in our `zenpack.yaml` instead.
    Run the usual command to reinstall the ZenPack in development mode.
 
    .. code-block:: bash
-   
+
        zenpack --link --install $ZP_TOP_DIR
 
 3. Navigate to `Advanced` -> `Monitoring Templates` in the web interface to

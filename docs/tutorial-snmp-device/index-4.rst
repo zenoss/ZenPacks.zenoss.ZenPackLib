@@ -1,4 +1,4 @@
-.. _tutorial-snmp-device-5:
+.. _tutorial-snmp-device-4:
 
 #########################
 Monitoring an SNMP Device
@@ -12,17 +12,12 @@ For purposes of this guide we'll be building a ZenPack to support a NetBotz
 environmental sensor device. This device has a variety of sensors that monitor
 temperature, humidity, dew point, audio levels and air flow.
 
-.. note::
-
-    This tutorial assumes your system is already setup as described in
-    :ref:`development-environment-5` and :ref:`getting-started-5`.
-
 .. toctree::
     :maxdepth: 2
 
-    snmp-tools-5
-    device-monitoring-5
-    device-modeling-5
-    component-modeling-5
-    component-monitoring-5
-    snmp-traps-5
+    snmp-tools-4
+    device-monitoring-4
+    device-modeling-4
+    component-modeling-4
+    component-monitoring-4
+    snmp-traps-4

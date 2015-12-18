@@ -83,7 +83,7 @@ modeler plugin configuration, configuration property values and monitoring
 templates.
 
 1. Make sure you've already created the ZenPack.
-   
+
    See :ref:`create-zenpack` if you need help creating the ZenPack. Be sure to
    name the ZenPack *ZenPacks.training.NetBotz* as that's what we'll be
    referring to throughout this tutorial.
