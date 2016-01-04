@@ -242,6 +242,13 @@ modeler plugin we previously created to model the sensors instead.
       when the `self.relMap` and `self.objectMap` methods are called in the
       `process` method.
 
+      The target `relname` we should use depends on a couple of things.  First,
+      all leading uppercase letters of the class name will be converted to
+      lowercase, i.e. `NetBotzTemperatureSensor` becomes
+      `netBotzTemperatureSensor`.  Second, the  letter "s" is added to the end
+      if it is a to-many relationship, i.e.  `netBotzTemperatureSensor` becomes
+      `netBotzTemperatureSensors`.
+
       Setting `relname` to ``netBotzTemperatureSensors`` will cause the
       `self.relMap` call to create a `RelationshipMap` that will be applied to
       the `netBotzTemperatureSensors` relationship defined on the
@@ -262,7 +269,12 @@ modeler plugin we previously created to model the sensors instead.
       for each temperature sensor in the results. We use the `self.relMap` and
       `self.objectMap` utility methods to make this easier.
 
-2. Restart *zopectl* and *zenhub* to load the changed module.
+2. Restart *Zope* and *zenhub* to load the changed module.
+
+   .. code-block:: bash
+
+      serviced service restart zope
+      serviced service restart zenhub
 
 Test the Modeler Plugin
 -----------------------

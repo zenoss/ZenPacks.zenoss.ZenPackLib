@@ -248,16 +248,6 @@ Follow these steps to update the monitoring template:
 
        zenpack --link --install $ZP_TOP_DIR
 
-   .. note::
-
-      When you install the ZenPack after this change, you may get an error containing
-      along the lines of `AttributeError: 'ZenPack' object has no attribute '__of__'`.
-      The resolution for this is to revert or comment out your changes to zenpack.yaml
-      and dsplugins.py, then run `zenpack --uninstall=ZenPacks.training.WeatherUnderground`.
-
-      Once you do this, you should be able to reinstate your changes, and run the install
-      command above.
-
 3. Navigate to `Advanced` -> `Monitoring Templates` in the web interface to
    verify that the `Location` monitoring template has been updated with the
    `conditions` datasource and corresponding graphs.

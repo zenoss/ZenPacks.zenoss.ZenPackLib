@@ -311,7 +311,7 @@ Use the following steps to create our modeler plugin.
       *RelationshipMap* is a `list` wrapped with some meta-data and containing
       zero or more *ObjectMap* instances.
 
-4. Restart *zopectl* and *zenhub* to load the new module.
+4. Restart *Zope* and *zenhub* to load the new module.
 
    .. code-block:: bash
 

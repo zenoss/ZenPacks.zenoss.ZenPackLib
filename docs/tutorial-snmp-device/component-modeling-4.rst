@@ -100,7 +100,7 @@ attributes discovered above.
    *class_relationships* section.
 
    .. code-block:: yaml
-   
+
        classes:
          NetBotzDevice:
            base: [zenpacklib.Device]
@@ -115,13 +115,13 @@ attributes discovered above.
            properties:
              enclosure:
                label: Enclosure
-             
+
              port:
                label: Port
 
        class_relationships:
          - NetBotzDevice 1:MC NetBotzTemperatureSensor
-  
+
    1. It's important to pick class names that will be unique. The best practice
       is to use a short prefix based on the ZenPack's name followed by the type
       of thing the class represents as is being done here.
@@ -241,6 +241,13 @@ modeler plugin we previously created to model the sensors instead.
       These two settings control the meta-data that will automatically be set
       when the `self.relMap` and `self.objectMap` methods are called in the
       `process` method.
+
+      The target `relname` we should use depends on a couple of things.  First,
+      all leading uppercase letters of the class name will be converted to
+      lowercase, i.e. `NetBotzTemperatureSensor` becomes
+      `netBotzTemperatureSensor`.  Second, the  letter "s" is added to the end
+      if it is a to-many relationship, i.e.  `netBotzTemperatureSensor` becomes
+      `netBotzTemperatureSensors`.
 
       Setting `relname` to ``netBotzTemperatureSensors`` will cause the
       `self.relMap` call to create a `RelationshipMap` that will be applied to
