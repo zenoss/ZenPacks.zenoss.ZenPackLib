@@ -52,9 +52,12 @@ install on our Zenoss host.
 
    .. code-block:: bash
 
+      yum -y groupinstall "Development Tools"
+      yum -y install python-devel
       easy_install snmpsim
       mkdir -p /usr/share/snmpsim/data
       mkdir -p /var/run/snmpsim
+      useradd snmpsim
       chown snmpsim:snmpsim /var/run/snmpsim
 
 2. Run the following command as root to install a NetBotz recording.

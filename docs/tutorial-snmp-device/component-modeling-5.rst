@@ -269,7 +269,12 @@ modeler plugin we previously created to model the sensors instead.
       for each temperature sensor in the results. We use the `self.relMap` and
       `self.objectMap` utility methods to make this easier.
 
-2. Restart *zopectl* and *zenhub* to load the changed module.
+2. Restart *Zope* and *zenhub* to load the changed module.
+
+   .. code-block:: bash
+
+      serviced service restart zope
+      serviced service restart zenhub
 
 Test the Modeler Plugin
 -----------------------

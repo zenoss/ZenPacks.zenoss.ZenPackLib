@@ -201,7 +201,7 @@ The following command will quickly restart just these services.
 
 .. code-block:: bash
 
-    echo Zope zenhub zeneventd zenactiond zenjobs | xargs -n1 serviced restart
+    echo Zope zenhub zeneventd zenactiond zenjobs | xargs -n1 serviced service restart
 
 **********
 What Next?

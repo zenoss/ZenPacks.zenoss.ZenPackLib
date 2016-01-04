@@ -29,7 +29,7 @@ can work with it in the web interface.
 
 .. code-block:: bash
 
-    serviced restart Zope
+    serviced service restart Zope
 
 Create a Device Class
 =====================
