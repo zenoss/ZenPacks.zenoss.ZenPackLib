@@ -57,7 +57,7 @@ install on our Zenoss host.
       easy_install snmpsim
       mkdir -p /usr/share/snmpsim/data
       mkdir -p /var/run/snmpsim
-      useradd snmpsim
+      useradd -U snmpsim
       chown snmpsim:snmpsim /var/run/snmpsim
 
 2. Run the following command as root to install a NetBotz recording.
@@ -144,12 +144,15 @@ While this data is mostly less valuable than the decoded version above, it's
 more useful for a single reason. We can take that
 ``.1.3.6.1.4.1.5528.100.20.10.2006`` value and search the Internet for it. It's
 best to remove the leading ``.`` and search for
-``1.3.6.1.4.1.5528.100.20.10.2006`` instead.
+``1.3.6.1.4.1.5528.100.20.10.2006`` instead. This should lead you to the *NETBOTZV2-MIB* which will contain the decoding
+information we need to learn more about this device.
 
-This should lead you to the *NETBOTZV2-MIB* which will contain the decoding
-information we need to learn more about this device. Download
-``NETBOTZV2-MIB.mib`` and copy it into the ``/usr/share/snmp/mibs/`` directory of
-your Zenoss server.
+Run the following command to download `NETBOTZV2-MIB.mib` into
+`/usr/share/snmp/mibs/`.
+
+.. code-block:: bash
+
+    wget https://goo.gl/0v4Kti -O /usr/share/snmp/mibs/NETBOTZV2-MIB.mib
 
 Now we can run the original snmpwalk command again with the addition of the
 ``-m all`` option. This option tells Net-SNMP tools to use all MIBs.

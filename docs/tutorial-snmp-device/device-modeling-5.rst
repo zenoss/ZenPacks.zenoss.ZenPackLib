@@ -385,6 +385,6 @@ Follow these steps to customize the device Overview page.
 Test the Device Overview
 ------------------------
 
-That's it. We can restart *zopectl* and navigate to our NetBotz device's
+That's it. We can restart *Zope* and navigate to our NetBotz device's
 overview page in the web interface. You should see ``# Temperature Sensors``
 label with a value of 14 at the bottom of the top-left panel.

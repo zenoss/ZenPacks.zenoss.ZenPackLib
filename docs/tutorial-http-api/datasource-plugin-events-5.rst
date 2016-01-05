@@ -303,7 +303,7 @@ Follow these steps to create the `Alerts` data source plugin:
 
    .. code-block:: bash
 
-      serviced restart zenhub
+      serviced service restart zenhub
 
 That's it. The datasource plugin has been created. Now we just need to do some
 Zenoss configuration to allow us to use it.
@@ -320,17 +320,17 @@ we'll specify it in our `zenpack.yaml` instead.
    .. code-block:: yaml
 
        device_classes:
-        /WeatherUnderground:
-          templates:
-            Location:
-              description: Location weather monitoring using the Weather Underground API.
-              targetPythonClass: ZenPacks.training.WeatherUnderground.WundergroundLocation
+         /WeatherUnderground:
+           templates:
+             Location:
+               description: Location weather monitoring using the Weather Underground API.
+               targetPythonClass: ZenPacks.training.WeatherUnderground.WundergroundLocation
 
-              datasources:
-                alerts:
-                  type: Python
-                  plugin_classname: ZenPacks.training.WeatherUnderground.dsplugins.Alerts
-                  cycletime: "600"
+               datasources:
+                 alerts:
+                   type: Python
+                   plugin_classname: ZenPacks.training.WeatherUnderground.dsplugins.Alerts
+                   cycletime: "600"
 
    At least some of this should be self-explanatory. The YAML vocabulary has
    been designed to be as intuitive and concise as possible. Let's walk through

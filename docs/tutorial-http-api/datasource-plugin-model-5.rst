@@ -82,7 +82,7 @@ Follow these steps to test weather condition monitoring:
    There will be a lot of output from this command, but we're looking for the
    following line which indicates that our maps were applied::
 
-       DEBUG zen.python: Applying 1 datamaps to wunderground.com
+       DEBUG zen.python: wunderground.com 600 21401.1.99999 wunderground-conditions sending 1 datamaps
 
 2. Navigate to the `Locations` on the `wunderground.com` device and verify that
    each location shows something in its `Weather` column.
