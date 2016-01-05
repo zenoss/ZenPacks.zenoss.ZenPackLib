@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 import logging
@@ -233,7 +233,13 @@ class ZenPack(ZenPackBase):
             # objects, but we do not have access to that relationship
             # at this point in the process.
             for dcname, dcspec in self._v_specparams.device_classes.iteritems():
-                deviceclass = self.dmd.Devices.getOrganizer(dcname)
+                try:
+                    deviceclass = self.dmd.Devices.getOrganizer(dcname)
+                except KeyError:
+                    # DeviceClass.getOrganizer() can raise a KeyError if the
+                    # organizer doesn't exist.
+                    deviceclass = None
+
                 if deviceclass is None:
                     LOG.warning(
                         "DeviceClass %s has been removed at some point "
