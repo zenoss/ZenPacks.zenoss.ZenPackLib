@@ -265,8 +265,8 @@ Use the following steps to create our modeler plugin.
 
    .. code-block:: bash
 
-      serviced restart zope
-      serviced restart zenhub
+      serviced service restart zope
+      serviced service restart zenhub
 
 That's it. The modeler plugin has been created. Now we just need to do some
 Zenoss configuration to allow us to use it.

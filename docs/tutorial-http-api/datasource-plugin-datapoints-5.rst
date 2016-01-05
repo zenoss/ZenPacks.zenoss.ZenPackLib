@@ -109,7 +109,7 @@ Follow these steps to create the `Conditions` data source plugin:
 
    .. code-block:: bash
 
-      serviced restart zenhub
+      serviced service restart zenhub
 
 That's it. The datasource plugin has been created. Now we just need to do some
 Zenoss configuration to allow us to use it.
@@ -267,4 +267,4 @@ Follow these steps to test weather condition monitoring:
    for at least one datapoint being written. If one works, it's likely that
    they all work. Look for a line similar to the following::
 
-       DEBUG zen.RRDUtil: /opt/zenoss/perf/Devices/wunderground.com/80901.1.99999/conditions_temp_c.rrd: 29.8, @ N
+       DEBUG zen.MetricWriter: publishing metric wunderground.com/conditions_temp_c 14.1 1452024379
