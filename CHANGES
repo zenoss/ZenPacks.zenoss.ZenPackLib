@@ -1,3 +1,12 @@
+Release 1.0.5
+=============
+
+Defects fixed
+-------------
+
+* Fix KeyError on install after adding device class. (ZEN-21461)
+
+
 Release 1.0.4
 =============
 
