@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 
 import logging
