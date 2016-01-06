@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 
 import logging
@@ -47,6 +47,7 @@ import os
 import re
 import sys
 import math
+import types
 
 if __name__ == '__main__':
     import Globals
@@ -1540,6 +1541,7 @@ class ZenPackSpec(Spec):
         self.create_global_js_snippet()
         self.create_device_js_snippet()
         self.register_browser_resources()
+        self.apply_platform_patches()
 
     def create_product_names(self):
         """Add all classes to ZenPack's productNames list.
@@ -1640,6 +1642,27 @@ class ZenPackSpec(Spec):
                     name=self.name,
                     directory=resource_path,
                     directives=''.join(directives)))
+
+    def apply_platform_patches(self):
+        """Apply necessary patches to platform code."""
+        self.apply_zen21467_patch()
+
+    def apply_zen21467_patch(self):
+        """Patch cause of ZEN-21467 issue.
+
+        The problem is that zenpacklib sets string property values to unicode
+        strings instead of regular strings. There's a platform bug that
+        prevents unicode values from being serialized to be used by zenjmx.
+        This means that JMX datasources won't work without this patch.
+
+        """
+        try:
+            from Products.ZenHub.XmlRpcService import XmlRpcService
+            if types.UnicodeType not in XmlRpcService.PRIMITIVES:
+                XmlRpcService.PRIMITIVES.append(types.UnicodeType)
+        except Exception:
+            # The above may become wrong in future platform versions.
+            pass
 
     def create_js_snippet(self, name, snippet, classes=None):
         """Create, register and return JavaScript snippet for given classes."""
