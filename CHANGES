@@ -1,3 +1,12 @@
+Release 1.0.6
+=============
+
+Defects fixed
+-------------
+
+* Make YAML-defined JMX datasources work. (ZEN-21467)
+
+
 Release 1.0.5
 =============
 
