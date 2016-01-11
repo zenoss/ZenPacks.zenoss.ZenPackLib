@@ -6433,8 +6433,9 @@ if __name__ == '__main__':
                 return
 
             templates = collections.defaultdict(dict)
-            for deviceclass in [x for x in zenpack.packables() if x.meta_type == 'DeviceClass']:
-                for template in deviceclass.getAllRRDTemplates():
+            for ac_wrapper in [x for x in zenpack.packables() if x.meta_type == 'RRDTemplate']:
+                dc = ac_wrapper.deviceClass()
+                for template in dc.getAllRRDTemplates():
                     dc_name = template.deviceClass().getOrganizerName()
                     templates[dc_name][template.id] = RRDTemplateSpecParams.fromObject(template)
             return templates
