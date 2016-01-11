@@ -29,11 +29,13 @@ examples.
 
    .. code-block:: bash
 
-       zenmib run NETBOTZV2-MIB.mib
+       zenmib run --keepMiddleZeros NETBOTZV2-MIB.mib
 
    From which we should get the following output::
 
        Found 1 MIBs to import.
+       Unable to find a file that defines SNMPv2-SMI
+       Unable to find a file that defines SNMPv2-TC
        Parsed 214 nodes and 256 notifications from NETBOTZV2-MIB
        Loaded MIB NETBOTZV2-MIB into the DMD
        Loaded 1 MIB file(s)
@@ -74,49 +76,50 @@ Use the following steps to get your feet wet sending a basic trap.
 
 1. Make sure the `zentrap` service is running.
 
-   I prefer to only run the processes necessary for debugging. So I would run
-   *zentrap* in the foreground in a new terminal session with the following
-   commands.
+   If you have stopped the zentrap service, or if you have it configured to
+   manual launch mode, you will need to start it.
 
    .. code-block:: bash
 
-      serviced service restart zentrap # to make sure its running
-      serviced service attach zentrap # attaches to root user of container
-      su - zenoss # become zenoss user in container
+      serviced service start zentrap
 
-      # Kill the daemonized zentrap then run in the foreground.
-      pkill -f zentrap.conf ; zentrap run -v10 --cycle
+2. Identify the IP address to which traps should be sent to get to zentrap.
 
-2. Now run the following `snmptrap` command in another terminal.
+   serviced does performs port forwarding on the serviced host to route
+   received SNMP traps to the zentrap container. We're going to be sending
+   simulated SNMP traps from the serviced host, and will need to know what
+   address to send traps to so they're received by zentrap.
+
+   Run the following command to find the address.
 
    .. code-block:: bash
 
-      snmptrap 172.17.42.1 0 NETBOTZV2-MIB::netBotzTempTooHigh
+      sudo iptables -L FORWARD -n | grep 162
 
-   If you were running `zentrap` in the foreground you should have seen a log
-   message similar to the following after sending the trap. This is Zenoss using
-   the MIB to turn the trap into an event::
+   This will output something very close to the following:
 
-       Queued event (total of 1) {
-           'sysUpTime.0': 0L,
-           'firstTime': 1343072200.36731,
-           'severity': 3,
-           'eventClassKey': 'netBotzTempTooHigh',
-           'oid': '1.3.6.1.4.1.5528.100.10.2.1.0.2',
-           'component': '',
-           'community': 'public',
-           'summary': 'snmp trap netBotzTempTooHigh',
-           'eventGroup': 'trap',
-           'sysUpTime': 0L,
-           'device': '127.0.0.1',
-           'lastTime': 1343072200.36731,
-           'monitor': 'localhost'}
+   .. code-block:: plain
 
-   You can see how Zenoss has maintained the numeric OID in the event's `oid`
-   field. It has also decoded it to `netBotzTempTooHigh` using the MIB we
-   imported and used that value in the `eventClassKey` and `summary` fields.
+      ACCEPT     udp  --  0.0.0.0/0            172.17.0.29          udp dpt:162
 
-3. Find this netBotzTempTooHigh event in web interface's event console.
+   We'll be sending traps to that 172.17.0.29 address. It may be different on
+   your system.
+
+3. Send an SNMP trap.
+
+   Run the following `snmptrap` command on the serviced host.
+
+   .. code-block:: bash
+
+      sudo snmptrap 172.17.0.29 0 NETBOTZV2-MIB::netBotzTempTooHigh
+
+4. Find this netBotzTempTooHigh event in web interface's event console.
+
+   Double-click the "snmp trap netBotzTempTooHigh" event in the event console to
+   see its details. Look for the following details.
+
+   * eventClassKey: This should be netBotzTempTooHigh as decoded using the MIB.
+   * oid: This is the original undecoded OID.
 
 Send a Full Trap
 ----------------
@@ -136,7 +139,7 @@ know which one of the sensors has exceeded it's high temperature threshold.
 
    .. code-block:: bash
 
-      snmptrap 172.17.42.1 0 NETBOTZV2-MIB::netBotzTempTooHigh \
+      sudo snmptrap 172.17.0.29 0 NETBOTZV2-MIB::netBotzTempTooHigh \
           NETBOTZV2-MIB::netBotzV2TrapSensorID s 'nbHawkEnc_1_TEMP1'
 
    As you can see, this `zentrap` command starts exactly the same as in the
@@ -148,25 +151,6 @@ know which one of the sensors has exceeded it's high temperature threshold.
 
    We can continue to add sets of these three parameters to add as many other
    variable bindings to the trap as we want.
-
-   Assuming you were running `zentrap` in the foreground you should see a log
-   that looks like the following::
-
-       Queued event (total of 1) {
-           'sysUpTime.0': 0L,
-           'firstTime': 1343073249.083523,
-           'severity': 3,
-           'netBotzV2TrapSensorID': 'nbHawkEnc_1_TEMP1',
-           'eventClassKey': 'netBotzTempTooHigh',
-           'oid': '1.3.6.1.4.1.5528.100.10.2.1.0.2',
-           'component': '',
-           'community': 'public',
-           'summary': 'snmp trap netBotzTempTooHigh',
-           'eventGroup': 'trap',
-           'sysUpTime': 0L,
-           'device': '127.0.0.1',
-           'lastTime': 1343073249.083523,
-           'monitor': 'localhost'}
 
    Note that the only difference between this event and the simple event is the
    addition of the `netBotzV2TrapSensorID` field. So now you see how Zenoss take
