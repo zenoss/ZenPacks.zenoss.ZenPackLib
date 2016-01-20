@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 
 
 import logging
@@ -5859,12 +5859,23 @@ if DYNAMICVIEW_INSTALLED:
 
         def relations(self, type=TAG_ALL):
             target = IRelatable(self._adapted)
+            relations = getattr(self._adapted, 'dynamicview_relations', {})
 
-            for tag in (TAG_ALL, type):
-                relations = getattr(self._adapted, 'dynamicview_relations', {})
-                for methodname in relations.get(tag, []):
-                    for remote in self.get_remote_relatables(methodname):
-                        yield BaseRelation(target, remote, type)
+            # Group methods by type to allow easy tagging of multiple types
+            # per yielded relation. This allows supporting the special TAG_ALL
+            # type without duplicating work or relations.
+            types_by_methodname = collections.defaultdict(set)
+            if type == TAG_ALL:
+                for ltype, lmethodnames in relations.items():
+                    for lmethodname in lmethodnames:
+                        types_by_methodname[lmethodname].add(ltype)
+            else:
+                for lmethodname in relations.get(type, []):
+                    types_by_methodname[lmethodname].add(type)
+
+            for methodname, type_set in types_by_methodname.items():
+                for remote in self.get_remote_relatables(methodname):
+                    yield BaseRelation(target, remote, list(type_set))
 
         def get_remote_relatables(self, methodname):
             """Generate object relatables returned by adapted.methodname()."""
