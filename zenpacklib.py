@@ -6427,17 +6427,50 @@ if __name__ == '__main__':
                 print USAGE.format(sys.argv[0])
 
         def zenpack_templatespecs(self, zenpack_name):
+            """Return dictionary of RRDTemplateSpecParams by device_class.
+
+            Example return value:
+
+                {
+                    '/Server/Linux': {
+                        'Device': RRDTemplateSpecParams(...),
+                    },
+                    '/Server/SSH/Linux': {
+                        'Device': RRDTemplateSpecParams(...),
+                        'IpInterface': RRDTemplateSpecParams(...),
+                    },
+                }
+
+            """
             zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
             if zenpack is None:
                 LOG.error("ZenPack '%s' not found." % zenpack_name)
                 return
 
-            templates = collections.defaultdict(dict)
-            for template in [x for x in zenpack.packables() if x.meta_type == 'RRDTemplate']:
-                dc_name = template.deviceClass().getOrganizerName()
-                templates[dc_name][template.id] = RRDTemplateSpecParams.fromObject(template)
+            # Find explicitly associated templates, and templates implicitly
+            # associated through an explicitly associated device class.
+            from Products.ZenModel.DeviceClass import DeviceClass
+            from Products.ZenModel.RRDTemplate import RRDTemplate
 
-            return templates
+            templates = []
+            for packable in zenpack.packables():
+                if isinstance(packable, DeviceClass):
+                    templates.extend(packable.getAllRRDTemplates())
+                elif isinstance(packable, RRDTemplate):
+                    templates.append(packable)
+
+            # Only create specs for templates that have an associated device
+            # class. This prevents locally-overridden templates from being
+            # included.
+            specs = collections.defaultdict(dict)
+            for template in templates:
+                deviceClass = template.deviceClass()
+                if deviceClass:
+                    dc_name = deviceClass.getOrganizerName()
+                    spec = RRDTemplateSpecParams.fromObject(template)
+                    specs[dc_name][template.id] = spec
+
+            return specs
 
     script = ZPLCommand()
     script.run()
