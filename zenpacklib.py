@@ -6316,11 +6316,15 @@ if __name__ == '__main__':
                 self.connect()
 
                 templates = self.zenpack_templatespecs(zenpack_name)
-                zpsp = ZenPackSpecParams(zenpack_name, device_classes={x: {} for x in templates})
-                for dc_name in templates:
-                    zpsp.device_classes[dc_name].templates = templates[dc_name]
+                if templates:
+                    zpsp = ZenPackSpecParams(
+                        zenpack_name,
+                        device_classes={x: {} for x in templates})
 
-                print yaml.dump(zpsp, Dumper=Dumper)
+                    for dc_name in templates:
+                        zpsp.device_classes[dc_name].templates = templates[dc_name]
+
+                    print yaml.dump(zpsp, Dumper=Dumper)
 
             elif len(args) == 3 and args[0] == "class_diagram":
                 diagram_type = args[1]
