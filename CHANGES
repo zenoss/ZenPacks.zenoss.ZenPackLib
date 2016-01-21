@@ -1,3 +1,12 @@
+Release 1.0.8
+=============
+
+Defects fixed
+-------------
+
+* Fix various dump_templates issues. (ZEN-18824)
+
+
 Release 1.0.7
 =============
 
@@ -5,6 +14,7 @@ Defects fixed
 -------------
 
 * Fix dynamicview_relations type issue.
+
 
 Release 1.0.6
 =============
