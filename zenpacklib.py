@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.7"
+__version__ = "1.0.8"
 
 
 import logging
@@ -6316,11 +6316,15 @@ if __name__ == '__main__':
                 self.connect()
 
                 templates = self.zenpack_templatespecs(zenpack_name)
-                zpsp = ZenPackSpecParams(zenpack_name, device_classes={x: {} for x in templates})
-                for dc_name in templates:
-                    zpsp.device_classes[dc_name].templates = templates[dc_name]
+                if templates:
+                    zpsp = ZenPackSpecParams(
+                        zenpack_name,
+                        device_classes={x: {} for x in templates})
 
-                print yaml.dump(zpsp, Dumper=Dumper)
+                    for dc_name in templates:
+                        zpsp.device_classes[dc_name].templates = templates[dc_name]
+
+                    print yaml.dump(zpsp, Dumper=Dumper)
 
             elif len(args) == 3 and args[0] == "class_diagram":
                 diagram_type = args[1]
@@ -6427,17 +6431,50 @@ if __name__ == '__main__':
                 print USAGE.format(sys.argv[0])
 
         def zenpack_templatespecs(self, zenpack_name):
+            """Return dictionary of RRDTemplateSpecParams by device_class.
+
+            Example return value:
+
+                {
+                    '/Server/Linux': {
+                        'Device': RRDTemplateSpecParams(...),
+                    },
+                    '/Server/SSH/Linux': {
+                        'Device': RRDTemplateSpecParams(...),
+                        'IpInterface': RRDTemplateSpecParams(...),
+                    },
+                }
+
+            """
             zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
             if zenpack is None:
                 LOG.error("ZenPack '%s' not found." % zenpack_name)
                 return
 
-            templates = collections.defaultdict(dict)
-            for deviceclass in [x for x in zenpack.packables() if x.meta_type == 'DeviceClass']:
-                for template in deviceclass.getAllRRDTemplates():
-                    dc_name = template.deviceClass().getOrganizerName()
-                    templates[dc_name][template.id] = RRDTemplateSpecParams.fromObject(template)
-            return templates
+            # Find explicitly associated templates, and templates implicitly
+            # associated through an explicitly associated device class.
+            from Products.ZenModel.DeviceClass import DeviceClass
+            from Products.ZenModel.RRDTemplate import RRDTemplate
+
+            templates = []
+            for packable in zenpack.packables():
+                if isinstance(packable, DeviceClass):
+                    templates.extend(packable.getAllRRDTemplates())
+                elif isinstance(packable, RRDTemplate):
+                    templates.append(packable)
+
+            # Only create specs for templates that have an associated device
+            # class. This prevents locally-overridden templates from being
+            # included.
+            specs = collections.defaultdict(dict)
+            for template in templates:
+                deviceClass = template.deviceClass()
+                if deviceClass:
+                    dc_name = deviceClass.getOrganizerName()
+                    spec = RRDTemplateSpecParams.fromObject(template)
+                    specs[dc_name][template.id] = spec
+
+            return specs
 
     script = ZPLCommand()
     script.run()
