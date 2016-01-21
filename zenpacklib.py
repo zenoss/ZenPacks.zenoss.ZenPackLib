@@ -338,17 +338,36 @@ class ZenPack(ZenPackBase):
         import Acquisition
 
         class FilteredZenPackable(zope.proxy.ProxyBase, Acquisition.Explicit):
+
+            @classmethod
+            def wrap(cls, packable):
+                wrapped = FilteredZenPackable(packable)
+
+                if not hasattr(packable, 'aq_parent'):
+                    LOG.error("Object '%s' has no acquisition wrapper.  Export may be incomplete.")
+                    return wrapped
+
+                if not hasattr(wrapped, 'aq_parent'):
+                    # the acquisition wrapper is missing due to interaction with
+                    # the proxy wrapper. Reinstate it.
+                    wrapped = wrapped.__of__(packable.aq_parent)
+
+                if not zope.proxy.isProxy(wrapped):
+                    LOG.error("Object '%s' is missing filtering proxy.  Export may be incomplete")
+
+                return wrapped
+
             @zope.proxy.non_overridable
             def objectValues(self):
                 # proxy the remote objects on ToManyContRelationships
-                return [FilteredZenPackable(x).__of__(x.aq_parent) for x in self._objects.values()]
+                return [FilteredZenPackable.wrap(x.__of__(self)) for x in self._objects.values()]
 
             @zope.proxy.non_overridable
             def exportXmlRelationships(self, ofile, ignorerels=[]):
                 for rel in self.getRelationships():
                     if rel.id in ignorerels:
                         continue
-                    filtered_rel = FilteredZenPackable(rel).__of__(rel.aq_parent)
+                    filtered_rel = FilteredZenPackable.wrap(rel)
                     filtered_rel.exportXml(ofile, ignorerels)
 
             @zope.proxy.non_overridable
@@ -366,7 +385,7 @@ class ZenPack(ZenPackBase):
             @zope.proxy.non_overridable
             def packables(self):
                 packables = zope.proxy.getProxiedObject(self).packables()
-                return [FilteredZenPackable(x).__of__(x.aq_parent) for x in packables]
+                return [FilteredZenPackable.wrap(x) for x in packables]
 
         return ZenPackBase.manage_exportPack(
             FilteredZenPack(self),
