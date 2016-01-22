@@ -59,7 +59,6 @@ from zope.component import adapts, getGlobalSiteManager
 from zope.event import notify
 from zope.interface import classImplements, implements
 from zope.interface.interface import InterfaceClass
-import zope.proxy
 from Acquisition import aq_base
 
 from Products.AdvancedQuery import Eq, Or
@@ -331,38 +330,22 @@ class ZenPack(ZenPackBase):
 
         In order to control which objects are exported, we wrap the
         entire zenpack object, and the zenpackable objects it contains,
-        in proxy objects, which allow us to override their behavior
-        without disrupting the original objects.
+        in wrapper objects (via acquisition) which allow us to override their
+        behavior without disrupting the original objects.
 
         """
         import Acquisition
 
-        class FilteredZenPackable(zope.proxy.ProxyBase, Acquisition.Explicit):
+        class FilteredZenPackable(Acquisition.Implicit):
 
             @classmethod
             def wrap(cls, packable):
-                wrapped = FilteredZenPackable(packable)
+                return FilteredZenPackable(packable.id).__of__(packable)
 
-                if not hasattr(packable, 'aq_parent'):
-                    LOG.error("Object '%s' has no acquisition wrapper.  Export may be incomplete.")
-                    return wrapped
-
-                if not hasattr(wrapped, 'aq_parent'):
-                    # the acquisition wrapper is missing due to interaction with
-                    # the proxy wrapper. Reinstate it.
-                    wrapped = wrapped.__of__(packable.aq_parent)
-
-                if not zope.proxy.isProxy(wrapped):
-                    LOG.error("Object '%s' is missing filtering proxy.  Export may be incomplete")
-
-                return wrapped
-
-            @zope.proxy.non_overridable
             def objectValues(self):
                 # proxy the remote objects on ToManyContRelationships
                 return [FilteredZenPackable.wrap(x.__of__(self)) for x in self._objects.values()]
 
-            @zope.proxy.non_overridable
             def exportXmlRelationships(self, ofile, ignorerels=[]):
                 for rel in self.getRelationships():
                     if rel.id in ignorerels:
@@ -370,25 +353,33 @@ class ZenPack(ZenPackBase):
                     filtered_rel = FilteredZenPackable.wrap(rel)
                     filtered_rel.exportXml(ofile, ignorerels)
 
-            @zope.proxy.non_overridable
             def exportXml(self, *args, **kwargs):
-                original = zope.proxy.getProxiedObject(self).__class__.exportXml
                 path = '/'.join(self.getPrimaryPath())
 
                 if getattr(self, 'zpl_managed', False):
                     LOG.info("Excluding %s from export (ZPL-managed object)" % path)
                     return
+                else:
+                    LOG.info("Including %s from export (not a ZPL-managed object)" % path)
+                    return self.aq_parent.exportXml(*args, **kwargs)
 
-                original(self, *args, **kwargs)
+        class FilteredZenPack(ZenPackBase, Acquisition.Implicit):
 
-        class FilteredZenPack(zope.proxy.ProxyBase):
-            @zope.proxy.non_overridable
+            def __init__(self, id):
+                self.id = id
+
+            @classmethod
+            def wrap(cls, zenpack):
+                filtered = FilteredZenPack(zenpack.id).__of__(self)
+                filtered.eggPack = self.eggPack
+                return filtered
+
             def packables(self):
-                packables = zope.proxy.getProxiedObject(self).packables()
+                packables = self.aq_parent.packables()
                 return [FilteredZenPackable.wrap(x) for x in packables]
 
         return ZenPackBase.manage_exportPack(
-            FilteredZenPack(self),
+            FilteredZenPack.wrap(self),
             download=download,
             REQUEST=REQUEST)
 
