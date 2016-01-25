@@ -6,6 +6,7 @@ Defects fixed
 
 * Fix non-containing setters with standard device types. (ZEN-21747)
 * Fix filtering of YAML templates in ZenPack export. (ZEN-21697)
+* Prevent backups of unchanged monitoring templates. (ZEN-21719)
 
 
 Release 1.0.8
