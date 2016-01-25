@@ -3621,6 +3621,10 @@ class RRDTemplateSpec(Spec):
         # exported to objects.xml  (contained objects will also be excluded)
         template.zpl_managed = True
 
+        # Add this RRDTemplate to the zenpack.
+        zenpack_name = self.deviceclass_spec.zenpack_spec.name
+        template.addToZenPack(pack=zenpack_name)
+
         if not existing_template:
             self.speclog.info("adding template")
 
