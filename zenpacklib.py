@@ -344,7 +344,7 @@ class ZenPack(ZenPackBase):
 
             def objectValues(self):
                 # proxy the remote objects on ToManyContRelationships
-                return [FilteredZenPackable.wrap(x.__of__(self)) for x in self._objects.values()]
+                return [FilteredZenPackable.wrap(x.__of__(self)) for x in self.aq_acquire('_objects').values()]
 
             def exportXmlRelationships(self, ofile, ignorerels=[]):
                 for rel in self.getRelationships():
@@ -360,8 +360,7 @@ class ZenPack(ZenPackBase):
                     LOG.info("Excluding %s from export (ZPL-managed object)" % path)
                     return
                 else:
-                    LOG.info("Including %s from export (not a ZPL-managed object)" % path)
-                    return self.aq_parent.exportXml(*args, **kwargs)
+                    return self.aq_parent.exportXml.__func__(self, *args, **kwargs)
 
         class FilteredZenPack(ZenPackBase, Acquisition.Implicit):
 
@@ -375,7 +374,7 @@ class ZenPack(ZenPackBase):
                 return filtered
 
             def packables(self):
-                packables = self.aq_parent.packables()
+                packables = [p for p in self.aq_parent.packables() if not getattr(p, 'zpl_managed', False)]
                 return [FilteredZenPackable.wrap(x) for x in packables]
 
         return ZenPackBase.manage_exportPack(
