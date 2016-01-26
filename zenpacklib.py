@@ -49,6 +49,8 @@ import sys
 import math
 import types
 
+from lxml import etree
+
 if __name__ == '__main__':
     import Globals
     from Products.ZenUtils.Utils import unused
@@ -328,59 +330,72 @@ class ZenPack(ZenPackBase):
     def manage_exportPack(self, download="no", REQUEST=None):
         """Export ZenPack to $ZENHOME/export directory.
 
-        In order to control which objects are exported, we wrap the
-        entire zenpack object, and the zenpackable objects it contains,
-        in wrapper objects (via acquisition) which allow us to override their
-        behavior without disrupting the original objects.
-
+        Postprocess the generated xml files to remove references to ZPL-managed
+        objects.
         """
-        import Acquisition
+        from Products.ZenModel.ZenPackLoader import findFiles
 
-        class FilteredZenPackable(Acquisition.Implicit):
-
-            @classmethod
-            def wrap(cls, packable):
-                return FilteredZenPackable(packable.id).__of__(packable)
-
-            def objectValues(self):
-                # proxy the remote objects on ToManyContRelationships
-                return [FilteredZenPackable.wrap(x.__of__(self)) for x in self.aq_acquire('_objects').values()]
-
-            def exportXmlRelationships(self, ofile, ignorerels=[]):
-                for rel in self.getRelationships():
-                    if rel.id in ignorerels:
-                        continue
-                    filtered_rel = FilteredZenPackable.wrap(rel)
-                    filtered_rel.exportXml(ofile, ignorerels)
-
-            def exportXml(self, *args, **kwargs):
-                path = '/'.join(self.getPrimaryPath())
-
-                if getattr(self, 'zpl_managed', False):
-                    LOG.info("Excluding %s from export (ZPL-managed object)" % path)
-                    return
-                else:
-                    return self.aq_parent.exportXml.__func__(self, *args, **kwargs)
-
-        class FilteredZenPack(ZenPackBase, Acquisition.Implicit):
-
-            def __init__(self, id):
-                self.id = id
-
-            @classmethod
-            def wrap(cls, zenpack):
-                filtered = FilteredZenPack(zenpack.id).__of__(self)
-                filtered.eggPack = self.eggPack
-                return filtered
-
-            def packables(self):
-                packables = [p for p in self.aq_parent.packables() if not getattr(p, 'zpl_managed', False)]
-                return [FilteredZenPackable.wrap(x) for x in packables]
-
-        return ZenPackBase.manage_exportPack(
-            FilteredZenPack.wrap(self),
+        result = super(ZenPack, self).manage_exportPack(
             download=download,
             REQUEST=REQUEST)
+
+        for filename in findFiles(self, 'objects', lambda f: f.endswith('.xml')):
+            self.filter_xml(filename)
+
+        return result
+
+    def filter_xml(self, filename):
+        pruned = 0
+        try:
+            tree = etree.parse(filename)
+
+            path = []
+            context = etree.iterwalk(tree, events=('start', 'end'))
+            for action, elem in context:
+                if elem.tag == 'object':
+                    if action == 'start':
+                        path.append(elem.attrib.get('id'))
+
+                    elif action == 'end':
+                        obj_path = '/'.join(path)
+                        try:
+                            obj = self.dmd.getObjByPath(obj_path)
+                            if getattr(obj, 'zpl_managed', False):
+                                LOG.debug("Removing %s from %s", obj_path, filename)
+                                pruned += 1
+
+                                # if there's a comment before it with the
+                                # primary path of the object, remove that first.
+                                prev = elem.getprevious()
+                                if '<!-- ' + repr(tuple('/'.join(path).split('/'))) + ' -->' == repr(prev):
+                                    elem.getparent().remove(prev)
+
+                                # Remove the ZPL-managed object
+                                elem.getparent().remove(elem)
+
+                        except Exception:
+                            LOG.warning("Unable to postprocess %s in %s", obj_path, filename)
+
+                        path.pop()
+
+                if elem.tag == 'tomanycont':
+                    if action == 'start':
+                        path.append(elem.attrib.get('id'))
+                    elif action == 'end':
+                        path.pop()
+
+            if len(tree.getroot()) == 0:
+                LOG.info("Removing %s", filename)
+                os.remove(filename)
+            elif pruned:
+                LOG.info("Pruning %d objects from %s", pruned, filename)
+                with open(filename, 'w') as f:
+                    f.write(etree.tostring(tree))
+            else:
+                LOG.debug("Leaving %s unchanged", filename)
+
+        except Exception, e:
+            LOG.error("Unable to postprocess %s: %s", filename, e)
 
 
 class CatalogBase(object):
