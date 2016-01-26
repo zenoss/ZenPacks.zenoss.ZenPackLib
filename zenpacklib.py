@@ -716,7 +716,7 @@ class ComponentBase(ModelBase):
             return
 
         # Find and add new object to relationship.
-        for result in self.device().search('ComponentBase', id=id_):
+        for result in catalog_search(self.device(), 'ComponentBase', id=id_):
             new_obj = result.getObject()
             relationship.addRelation(new_obj)
 
@@ -760,7 +760,7 @@ class ComponentBase(ModelBase):
         query = Or(*[Eq('id', x) for x in changed_ids])
 
         obj_map = {}
-        for result in self.device().search('ComponentBase', query):
+        for result in catalog_search(self.device(), 'ComponentBase', query):
             obj_map[result.id] = result.getObject()
 
         for id_ in new_ids.symmetric_difference(current_ids):
