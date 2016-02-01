@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 
 
 import logging
@@ -49,6 +49,8 @@ import sys
 import math
 import types
 
+from lxml import etree
+
 if __name__ == '__main__':
     import Globals
     from Products.ZenUtils.Utils import unused
@@ -59,7 +61,6 @@ from zope.component import adapts, getGlobalSiteManager
 from zope.event import notify
 from zope.interface import classImplements, implements
 from zope.interface.interface import InterfaceClass
-import zope.proxy
 from Acquisition import aq_base
 
 from Products.AdvancedQuery import Eq, Or
@@ -329,49 +330,72 @@ class ZenPack(ZenPackBase):
     def manage_exportPack(self, download="no", REQUEST=None):
         """Export ZenPack to $ZENHOME/export directory.
 
-        In order to control which objects are exported, we wrap the
-        entire zenpack object, and the zenpackable objects it contains,
-        in proxy objects, which allow us to override their behavior
-        without disrupting the original objects.
-
+        Postprocess the generated xml files to remove references to ZPL-managed
+        objects.
         """
-        import Acquisition
+        from Products.ZenModel.ZenPackLoader import findFiles
 
-        class FilteredZenPackable(zope.proxy.ProxyBase, Acquisition.Explicit):
-            @zope.proxy.non_overridable
-            def objectValues(self):
-                # proxy the remote objects on ToManyContRelationships
-                return [FilteredZenPackable(x).__of__(x.aq_parent) for x in self._objects.values()]
-
-            @zope.proxy.non_overridable
-            def exportXmlRelationships(self, ofile, ignorerels=[]):
-                for rel in self.getRelationships():
-                    if rel.id in ignorerels:
-                        continue
-                    filtered_rel = FilteredZenPackable(rel).__of__(rel.aq_parent)
-                    filtered_rel.exportXml(ofile, ignorerels)
-
-            @zope.proxy.non_overridable
-            def exportXml(self, *args, **kwargs):
-                original = zope.proxy.getProxiedObject(self).__class__.exportXml
-                path = '/'.join(self.getPrimaryPath())
-
-                if getattr(self, 'zpl_managed', False):
-                    LOG.info("Excluding %s from export (ZPL-managed object)" % path)
-                    return
-
-                original(self, *args, **kwargs)
-
-        class FilteredZenPack(zope.proxy.ProxyBase):
-            @zope.proxy.non_overridable
-            def packables(self):
-                packables = zope.proxy.getProxiedObject(self).packables()
-                return [FilteredZenPackable(x).__of__(x.aq_parent) for x in packables]
-
-        return ZenPackBase.manage_exportPack(
-            FilteredZenPack(self),
+        result = super(ZenPack, self).manage_exportPack(
             download=download,
             REQUEST=REQUEST)
+
+        for filename in findFiles(self, 'objects', lambda f: f.endswith('.xml')):
+            self.filter_xml(filename)
+
+        return result
+
+    def filter_xml(self, filename):
+        pruned = 0
+        try:
+            tree = etree.parse(filename)
+
+            path = []
+            context = etree.iterwalk(tree, events=('start', 'end'))
+            for action, elem in context:
+                if elem.tag == 'object':
+                    if action == 'start':
+                        path.append(elem.attrib.get('id'))
+
+                    elif action == 'end':
+                        obj_path = '/'.join(path)
+                        try:
+                            obj = self.dmd.getObjByPath(obj_path)
+                            if getattr(obj, 'zpl_managed', False):
+                                LOG.debug("Removing %s from %s", obj_path, filename)
+                                pruned += 1
+
+                                # if there's a comment before it with the
+                                # primary path of the object, remove that first.
+                                prev = elem.getprevious()
+                                if '<!-- ' + repr(tuple('/'.join(path).split('/'))) + ' -->' == repr(prev):
+                                    elem.getparent().remove(prev)
+
+                                # Remove the ZPL-managed object
+                                elem.getparent().remove(elem)
+
+                        except Exception:
+                            LOG.warning("Unable to postprocess %s in %s", obj_path, filename)
+
+                        path.pop()
+
+                if elem.tag == 'tomanycont':
+                    if action == 'start':
+                        path.append(elem.attrib.get('id'))
+                    elif action == 'end':
+                        path.pop()
+
+            if len(tree.getroot()) == 0:
+                LOG.info("Removing %s", filename)
+                os.remove(filename)
+            elif pruned:
+                LOG.info("Pruning %d objects from %s", pruned, filename)
+                with open(filename, 'w') as f:
+                    f.write(etree.tostring(tree))
+            else:
+                LOG.debug("Leaving %s unchanged", filename)
+
+        except Exception, e:
+            LOG.error("Unable to postprocess %s: %s", filename, e)
 
 
 class CatalogBase(object):
@@ -716,7 +740,7 @@ class ComponentBase(ModelBase):
             return
 
         # Find and add new object to relationship.
-        for result in self.device().search('ComponentBase', id=id_):
+        for result in catalog_search(self.device(), 'ComponentBase', id=id_):
             new_obj = result.getObject()
             relationship.addRelation(new_obj)
 
@@ -760,7 +784,7 @@ class ComponentBase(ModelBase):
         query = Or(*[Eq('id', x) for x in changed_ids])
 
         obj_map = {}
-        for result in self.device().search('ComponentBase', query):
+        for result in catalog_search(self.device(), 'ComponentBase', query):
             obj_map[result.id] = result.getObject()
 
         for id_ in new_ids.symmetric_difference(current_ids):
@@ -3611,6 +3635,10 @@ class RRDTemplateSpec(Spec):
         # exported to objects.xml  (contained objects will also be excluded)
         template.zpl_managed = True
 
+        # Add this RRDTemplate to the zenpack.
+        zenpack_name = self.deviceclass_spec.zenpack_spec.name
+        template.addToZenPack(pack=zenpack_name)
+
         if not existing_template:
             self.speclog.info("adding template")
 
@@ -4288,8 +4316,16 @@ class RRDTemplateSpecParams(SpecParams, RRDTemplateSpec):
         SpecParams.__init__(self)
         template = aq_base(template)
 
-        self.targetPythonClass = template.targetPythonClass
-        self.description = template.description
+        # Weed out any values that are the same as they would by by default.
+        # We do this by instantiating a "blank" template and comparing
+        # to it.
+        sample_template = template.__class__(template.id)
+
+        for propname in ('targetPythonClass', 'description',):
+            if hasattr(sample_template, propname):
+                setattr(self, '_%s_defaultvalue' % propname, getattr(sample_template, propname))
+            if getattr(template, propname, None) != getattr(sample_template, propname, None):
+                setattr(self, propname, getattr(template, propname, None))
 
         self.thresholds = {x.id: RRDThresholdSpecParams.fromObject(x) for x in template.thresholds()}
         self.datasources = {x.id: RRDDatasourceSpecParams.fromObject(x) for x in template.datasources()}
