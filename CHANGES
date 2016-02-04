@@ -6,6 +6,8 @@ Release 1.0.10
 
 Fixes
 
+* Fix display of nested component container-of-container. (ZEN-21897)
+
 
 Release 1.0.9
 -------------
