@@ -2539,8 +2539,8 @@ class ClassSpec(Spec):
 
         for spec in self.containing_components:
             attr = None
-            for rel, spec in self.relationships.items():
-                if spec.remote_classname == spec.name:
+            for rel, rspec in self.relationships.items():
+                if rspec.remote_classname == spec.name:
                     attr = rel
                     continue
 
