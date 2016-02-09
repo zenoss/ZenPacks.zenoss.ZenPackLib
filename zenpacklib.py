@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.9"
+__version__ = "1.0.10"
 
 
 import logging
@@ -2539,8 +2539,8 @@ class ClassSpec(Spec):
 
         for spec in self.containing_components:
             attr = None
-            for rel, spec in self.relationships.items():
-                if spec.remote_classname == spec.name:
+            for rel, rspec in self.relationships.items():
+                if rspec.remote_classname == spec.name:
                     attr = rel
                     continue
 

@@ -579,10 +579,10 @@ dpName
 .. todo:: Better explain syntax for graphpoint.dpName.
 
 lineType
-  :Description: How to plot the data: "Line", "Area" or "Not Drawn".
+  :Description: How to plot the data: "LINE", "AREA" or "DONTDRAW".
   :Required: No
   :Type: string
-  :Default Value: Line
+  :Default Value: LINE
 
 lineWidth
   :Description: How thick the line should be for the line type.
@@ -591,7 +591,7 @@ lineWidth
   :Default Value: 1
 
 stacked
-  :Description: Should this graphpoint be stacked (added) to the last? Ideally both area "Area" types.
+  :Description: Should this graphpoint be stacked (added) to the last? Ideally both area "AREA" types.
   :Required: No
   :Type: boolean
   :Default Value: false

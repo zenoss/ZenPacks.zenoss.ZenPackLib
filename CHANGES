@@ -1,8 +1,22 @@
-Release 1.0.9
-=============
+Version 1.0
+===========
 
-Defects fixed
+Release 1.0.10
+--------------
+
+Fixes
+
+* Fix display of nested component container-of-container. (ZEN-21897)
+
+Documentation
+
+* Fix graphpoint lineType documentation.
+
+
+Release 1.0.9
 -------------
+
+Fixes
 
 * Fix non-containing setters with standard device types. (ZEN-21747)
 * Fix filtering of YAML templates in ZenPack export. (ZEN-21697)
@@ -10,52 +24,46 @@ Defects fixed
 
 
 Release 1.0.8
-=============
-
-Defects fixed
 -------------
+
+Fixes
 
 * Fix various dump_templates issues. (ZEN-18824)
 
 
 Release 1.0.7
-=============
-
-Defects fixed
 -------------
+
+Fixes
 
 * Fix dynamicview_relations type issue.
 
 
 Release 1.0.6
-=============
-
-Defects fixed
 -------------
+
+Fixes
 
 * Make YAML-defined JMX datasources work. (ZEN-21467)
 
 
 Release 1.0.5
-=============
-
-Defects fixed
 -------------
+
+Fixes
 
 * Fix KeyError on install after adding device class. (ZEN-21461)
 
 
 Release 1.0.4
-=============
+-------------
 
-Features added
---------------
+Features
 
 * TestCase: Automatically load ZenPack's configure.zcml if it exists.
 * Default to checkbox renderer for boolean properties. (ZEN-19585)
 
-Defects fixed
--------------
+Fixes
 
 * TestCase: Fix transaction error without DynamicView or Impact installed.
 * Fix entity grid renderer to make it possible to click links into a new tab. (ZEN-19922)
@@ -63,20 +71,18 @@ Defects fixed
 
 
 Release 1.0.3
-=============
-
-Defects fixed
 -------------
+
+Fixes
 
 * Fix testing of SNMP datasources by converting OIDs to string.
 * Fix for inherited relationships and properties not appearing in UI.
 
 
 Release 1.0.2
-=============
-
-Defects fixed
 -------------
+
+Fixes
 
 * Log YAML errors more concisely instead of full traceback. (ZEN-17681)
 * Fix "[Object]" details panel display for custom renderers. (ZEN-17732)
@@ -86,16 +92,14 @@ Defects fixed
 
 
 Release 1.0.1
-=============
+-------------
 
-Features added
---------------
+Features
 
 * Add Class.extra_paths for controlling object path indexing.
 * Add Class.filter_hide_from option.
 
-Defects fixed
--------------
+Fixes
 
 * Fix handling of class _properties and _relationships.
 * Prefix ExtJS components to avoid conflicting zenpacklib versions.
@@ -108,10 +112,9 @@ Defects fixed
 
 
 Release 1.0.0
-=============
+-------------
 
-Features added
---------------
+Features
 
 * Added ability to define ZenPack with YAML.
 * Added support for model classes and relationships.
@@ -126,6 +129,5 @@ Features added
 * Added *version* command to print zenpacklib's version.
 
 Documentation
--------------
 
 * Added first pass at documentation (`<http://zenpacklib.zenoss.com/>`_).
