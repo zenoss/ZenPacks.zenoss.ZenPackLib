@@ -1101,6 +1101,7 @@ def ModelTypeFactory(name, bases):
 
     @ClassProperty
     @classmethod
+    @memoize
     def _relations(cls):
         """Return _relations property
 
