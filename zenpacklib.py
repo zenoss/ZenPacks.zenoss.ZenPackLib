@@ -2476,12 +2476,14 @@ class ClassSpec(Spec):
                 bases = [IInfo]
 
         attributes = {}
-
+        
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.iinfo_schemas)
 
+        container_relationships = self.get_containing_relations(self)
+
         for i, spec in enumerate(self.containing_components):
-            attr = relname_from_classname(spec.name)
+            attr = container_relationships.get(spec.name, relname_from_classname(spec.name))
             attributes[attr] = schema.Entity(
                 title=_t(spec.label),
                 group="Relationships",
@@ -2537,17 +2539,19 @@ class ClassSpec(Spec):
             'class_short_label': ProxyProperty('class_short_label'),
             'class_plural_short_label': ProxyProperty('class_plural_short_label')
         })
-
+        
+        container_relationships = self.get_containing_relations(self)
+        
         for spec in self.containing_components:
             attr = None
             for rel, rspec in self.relationships.items():
                 if rspec.remote_classname == spec.name:
                     attr = rel
                     continue
-
+                
             if not attr:
-                attr = relname_from_classname(spec.name)
-
+                attr = container_relationships.get(spec.name, relname_from_classname(spec.name))
+            
             attributes[attr] = RelationshipInfoProperty(attr)
 
         for spec in self.inherited_properties().itervalues():
@@ -2725,6 +2729,21 @@ class ClassSpec(Spec):
 
         return list(containing | faceting - hidden)
 
+    def get_containing_relations(self, this_spec):
+        """return dictionary of containing component classes and relation names"""
+        container_rels = {}
+        # class and relation names for this spec's immediate relations
+        relations = dict([ (v.remote_classname, v.name) for v in this_spec.relationships.values()])
+        # class and possible relation names for containing components
+        container_rels = dict([ (spec.name, relations.get(spec.name)) for spec in this_spec.containing_components])
+        containers = dict([ (spec.name, spec) for spec in this_spec.containing_components])
+        for klassname, relname in container_rels.items():
+            ancestors = self.get_containing_relations(containers.get(klassname))
+            # ancestors should only include those classes that are among the container components, are not already set, and are not None themselves
+            filtered = dict([ v for v in ancestors.items() if v[0] in container_rels.keys() and v[1] is not None and container_rels.get(v[0]) is None])
+            container_rels.update(filtered)
+        return container_rels
+
     @property
     def containing_js_fields(self):
         """Return list of JavaScript fields for containing components."""
@@ -2732,12 +2751,13 @@ class ClassSpec(Spec):
 
         if self.is_device:
             return fields
-
+        
         filtered_relationships = {}
         for r in self.relationships.values():
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
-
+                
+        container_relationships = self.get_containing_relations(self)
         for spec in self.containing_components:
             # grid_display=False
             if spec.name in filtered_relationships:
@@ -2745,7 +2765,7 @@ class ClassSpec(Spec):
             fields.append(
                 "{{name: '{}'}}"
                 .format(
-                    relname_from_classname(spec.name)))
+                    container_relationships.get(spec.name, relname_from_classname(spec.name))))
 
         return fields
 
@@ -2762,6 +2782,7 @@ class ClassSpec(Spec):
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
 
+        container_relationships = self.get_containing_relations(self)
         for spec in self.containing_components:
             # grid_display=False
             if spec.name in filtered_relationships:
@@ -2773,7 +2794,7 @@ class ClassSpec(Spec):
 
             column_fields = [
                 "id: '{}'".format(spec.name),
-                "dataIndex: '{}'".format(relname_from_classname(spec.name)),
+                "dataIndex: '{}'".format(container_relationships.get(spec.name, relname_from_classname(spec.name))),
                 "header: _t('{}')".format(spec.short_label),
                 "width: {}".format(width),
                 "renderer: {}".format(renderer),
