@@ -2548,10 +2548,10 @@ class ClassSpec(Spec):
                 if rspec.remote_classname == spec.name:
                     attr = rel
                     continue
-                
+
             if not attr:
                 attr = container_relationships.get(spec.name, relname_from_classname(spec.name))
-            
+
             attributes[attr] = RelationshipInfoProperty(attr)
 
         for spec in self.inherited_properties().itervalues():
@@ -2751,12 +2751,11 @@ class ClassSpec(Spec):
 
         if self.is_device:
             return fields
-        
+
         filtered_relationships = {}
         for r in self.relationships.values():
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
-                
         container_relationships = self.get_containing_relations(self)
         for spec in self.containing_components:
             # grid_display=False
