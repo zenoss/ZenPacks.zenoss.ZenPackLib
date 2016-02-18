@@ -2476,7 +2476,7 @@ class ClassSpec(Spec):
                 bases = [IInfo]
 
         attributes = {}
-        
+
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.iinfo_schemas)
 
