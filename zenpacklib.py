@@ -2480,10 +2480,10 @@ class ClassSpec(Spec):
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.iinfo_schemas)
 
-        container_relationships = self.get_containing_relations(self)
+        container_relationships = self.get_containing_relations()
 
         for i, spec in enumerate(self.containing_components):
-            attr = container_relationships.get(spec.name, relname_from_classname(spec.name))
+            attr = container_relationships.get(spec.name)
             attributes[attr] = schema.Entity(
                 title=_t(spec.label),
                 group="Relationships",
@@ -2540,18 +2540,10 @@ class ClassSpec(Spec):
             'class_plural_short_label': ProxyProperty('class_plural_short_label')
         })
         
-        container_relationships = self.get_containing_relations(self)
+        container_relationships = self.get_containing_relations()
         
         for spec in self.containing_components:
-            attr = None
-            for rel, rspec in self.relationships.items():
-                if rspec.remote_classname == spec.name:
-                    attr = rel
-                    continue
-
-            if not attr:
-                attr = container_relationships.get(spec.name, relname_from_classname(spec.name))
-
+            attr = container_relationships.get(spec.name)
             attributes[attr] = RelationshipInfoProperty(attr)
 
         for spec in self.inherited_properties().itervalues():
@@ -2729,20 +2721,50 @@ class ClassSpec(Spec):
 
         return list(containing | faceting - hidden)
 
-    def get_containing_relations(self, this_spec):
-        """return dictionary of containing component classes and relation names"""
+    def get_containing_relations(self):
+        """return dictionary of containing component class and relation names"""
         container_rels = {}
-        # class and relation names for this spec's immediate relations
-        relations = dict([ (v.remote_classname, v.name) for v in this_spec.relationships.values()])
-        # class and possible relation names for containing components
-        container_rels = dict([ (spec.name, relations.get(spec.name)) for spec in this_spec.containing_components])
-        containers = dict([ (spec.name, spec) for spec in this_spec.containing_components])
-        for klassname, relname in container_rels.items():
-            ancestors = self.get_containing_relations(containers.get(klassname))
-            # ancestors should only include those classes that are among the container components, are not already set, and are not None themselves
-            filtered = dict([ v for v in ancestors.items() if v[0] in container_rels.keys() and v[1] is not None and container_rels.get(v[0]) is None])
-            container_rels.update(filtered)
+        # container class name and specs, some of which may be indirect ancestors
+        spec_containers = dict([ (spec.name, spec) for spec in self.containing_components])
+        # remote class and relation names for this spec
+        spec_relations = dict([ (v.remote_classname, v.name) for v in self.relationships.values()])
+        # find container specs that ARE NOT direct ancestors
+        indirect_relations = list(set(spec_containers.keys()).difference(set(spec_relations.keys())))
+        
+        direct_relations = list(set(spec_containers.keys()).intersection(set(spec_relations.keys())))
+        # for direct relations, relname is already known
+        for name in direct_relations:
+            container_rels[name] = spec_relations.get(name)
+        # for indirect relations, relname is in one of the direct relation spec relations
+        for ancestor_name in indirect_relations:
+            container_rels[ancestor_name] = None
+            for direct_name in direct_relations:
+                # no need to keep looking if we find it
+                if container_rels.get(ancestor_name): continue
+                container_rels[ancestor_name] = self.find_target_spec_relation(spec_containers.get(direct_name), ancestor_name)
+            # if this didn't work at all, give up and just use the default ZPL
+            if not container_rels.get(ancestor_name):
+                container_rels[ancestor_name] = relname_from_classname(spec.name)
         return container_rels
+
+    def find_target_spec_relation(self, spec, target):
+        """recursively search for ancestor relation name for target class"""
+        # remote class and relation names for this spec
+        spec_relations = dict([ (v.remote_classname, v.name) for v in spec.relationships.values()])
+        relname = spec_relations.get(target)
+        if relname:
+            return relname
+        else:
+            # container class name and specs, some of which may be indirect ancestors
+            spec_containers = dict([(spec.name, spec) for spec in spec.containing_components])
+            # find container specs that ARE direct ancestors
+            direct_relations = list(set(spec_containers.keys()).intersection(set(spec_relations.keys())))
+            # otherwise descend among directly related specs
+            for direct_name in direct_relations:
+                relname = self.find_target_spec_relation(spec_containers.get(direct_name), target)
+                if relname: 
+                    return relname
+        return None
 
     @property
     def containing_js_fields(self):
@@ -2756,7 +2778,7 @@ class ClassSpec(Spec):
         for r in self.relationships.values():
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
-        container_relationships = self.get_containing_relations(self)
+        container_relationships = self.get_containing_relations()
         for spec in self.containing_components:
             # grid_display=False
             if spec.name in filtered_relationships:
@@ -2764,7 +2786,7 @@ class ClassSpec(Spec):
             fields.append(
                 "{{name: '{}'}}"
                 .format(
-                    container_relationships.get(spec.name, relname_from_classname(spec.name))))
+                    container_relationships.get(spec.name)))
 
         return fields
 
@@ -2781,7 +2803,7 @@ class ClassSpec(Spec):
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
 
-        container_relationships = self.get_containing_relations(self)
+        container_relationships = self.get_containing_relations()
         for spec in self.containing_components:
             # grid_display=False
             if spec.name in filtered_relationships:
@@ -2793,7 +2815,7 @@ class ClassSpec(Spec):
 
             column_fields = [
                 "id: '{}'".format(spec.name),
-                "dataIndex: '{}'".format(container_relationships.get(spec.name, relname_from_classname(spec.name))),
+                "dataIndex: '{}'".format(container_relationships.get(spec.name)),
                 "header: _t('{}')".format(spec.short_label),
                 "width: {}".format(width),
                 "renderer: {}".format(renderer),
