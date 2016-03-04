@@ -238,7 +238,7 @@ icon
   :Description: Filename (in resources/) for icon.
   :Required: No
   :Type: string
-  :Default Value: *(same as name with a ".png" suffix)*
+  :Default Value: *(same as name with a ".png" suffix in resources/icon/)*
   
 label_width
   :Description: Width of label text in pixels.
