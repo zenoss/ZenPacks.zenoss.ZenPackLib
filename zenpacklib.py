@@ -6034,7 +6034,7 @@ def create_zenpack_srcdir(zenpack_name):
     with open(init_fname, 'w') as init_f:
         init_f.write(
             "from . import zenpacklib\n\n"
-            "zenpacklib.load_yaml()\n")
+            "CFG = zenpacklib.load_yaml()\n")
 
     # Create zenpack.yaml in ZenPack module directory.
     yaml_fname = os.path.join(module_directory, 'zenpack.yaml')

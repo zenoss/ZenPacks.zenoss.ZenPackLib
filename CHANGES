@@ -7,6 +7,8 @@ Release 1.0.11
 Fixes
 
 * Only show Dynamic View for components that support it. (ZEN-22391)
+* Fix created __init__.py to work with zenpacklib.TestCase. (ZEN-22387)
+
 
 Release 1.0.10
 --------------
