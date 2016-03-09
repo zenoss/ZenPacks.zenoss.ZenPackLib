@@ -1746,24 +1746,9 @@ class ZenPackSpec(Spec):
 
     def create_device_js_snippet(self):
         """Register device JavaScript snippet."""
-        snippets = []
-        for spec in self.ordered_classes:
-            snippets.append(spec.device_js_snippet)
-
-        # Don't register the snippet if there's nothing in it.
-        if not [x for x in snippets if x]:
+        snippet = self.device_js_snippet
+        if not snippet:
             return
-
-        link_code = JS_LINK_FROM_GRID.replace('{zenpack_id_prefix}', self.id_prefix)
-        snippet = (
-            "(function(){{\n"
-            "var ZC = Ext.ns('Zenoss.component');\n"
-            "{link_code}\n"
-            "{snippets}"
-            "}})();\n"
-            .format(
-                link_code=link_code,
-                snippets=''.join(snippets)))
 
         device_classes = [
             x.model_class
@@ -1777,6 +1762,64 @@ class ZenPackSpec(Spec):
 
         return self.create_js_snippet(
             'device', snippet, classes=device_classes)
+
+    @property
+    def device_js_snippet(self):
+        """Return device JavaScript snippet for ZenPack."""
+        snippets = []
+        for spec in self.ordered_classes:
+            snippets.append(spec.device_js_snippet)
+
+        # One DynamicView navigation snippet for all classes.
+        snippets.append(self.dynamicview_nav_js_snippet)
+
+        # Don't register the snippet if there's nothing in it.
+        if not [x for x in snippets if x]:
+            return ""
+
+        link_code = JS_LINK_FROM_GRID.replace('{zenpack_id_prefix}', self.id_prefix)
+        return (
+            "(function(){{\n"
+            "var ZC = Ext.ns('Zenoss.component');\n"
+            "{link_code}\n"
+            "{snippets}"
+            "}})();\n"
+            .format(
+                link_code=link_code,
+                snippets=''.join(snippets)))
+
+    @property
+    def dynamicview_nav_js_snippet(self):
+        if not DYNAMICVIEW_INSTALLED:
+            return ""
+
+        service_view_metatypes = set()
+        for kls in self.ordered_classes:
+            # Currently only supporting service_view.
+            if 'service_view' in (kls.dynamicview_views or []):
+                service_view_metatypes.add(kls.meta_type)
+
+        if service_view_metatypes:
+            return (
+                "Zenoss.nav.appendTo('Component', [{{\n"
+                "    id: 'subcomponent_view',\n"
+                "    text: _t('Dynamic View'),\n"
+                "    xtype: 'dynamicview',\n"
+                "    relationshipFilter: 'impacted_by',\n"
+                "    viewName: 'service_view',\n"
+                "    filterNav: function(navpanel) {{\n"
+                "        switch (navpanel.refOwner.componentType) {{\n"
+                "            {cases}\n"
+                "            default: return false;\n"
+                "        }}\n"
+                "    }}\n"
+                "}}]);\n"
+                ).format(
+                    cases=' '.join(
+                        "case '{}': return true;".format(x)
+                        for x in service_view_metatypes))
+        else:
+            return ""
 
     @property
     def zenpack_module(self):
@@ -2318,16 +2361,18 @@ class ClassSpec(Spec):
         """Return relative URL to icon."""
         icon_filename = self.icon or '{}.png'.format(self.name)
 
-        icon_path = os.path.join(
-            get_zenpack_path(self.zenpack.name),
-            'resources',
-            'icon',
-            icon_filename)
+        zenpack_path = get_zenpack_path(self.zenpack.name)
+        if zenpack_path:
+            icon_path = os.path.join(
+                get_zenpack_path(self.zenpack.name),
+                'resources',
+                'icon',
+                icon_filename)
 
-        if os.path.isfile(icon_path):
-            return '/++resource++{zenpack_name}/icon/{filename}'.format(
-                zenpack_name=self.zenpack.name,
-                filename=icon_filename)
+            if os.path.isfile(icon_path):
+                return '/++resource++{zenpack_name}/icon/{filename}'.format(
+                    zenpack_name=self.zenpack.name,
+                    filename=icon_filename)
 
         return '/zport/dmd/img/icons/noicon.png'
 
@@ -2924,27 +2969,11 @@ class ClassSpec(Spec):
                 cases=' '.join(cases)))
 
     @property
-    def dynamicview_nav_js_snippet(self):
-        if DYNAMICVIEW_INSTALLED:
-            return (
-                "Zenoss.nav.appendTo('Component', [{\n"
-                "    id: 'subcomponent_view',\n"
-                "    text: _t('Dynamic View'),\n"
-                "    xtype: 'dynamicview',\n"
-                "    relationshipFilter: 'impacted_by',\n"
-                "    viewName: 'service_view'\n"
-                "}]);\n"
-                )
-        else:
-            return ""
-
-    @property
     def device_js_snippet(self):
         """Return device JavaScript snippet."""
         return ''.join((
             self.component_grid_panel_js_snippet,
             self.subcomponent_nav_js_snippet,
-            self.dynamicview_nav_js_snippet,
             ))
 
     def test_setup(self):
