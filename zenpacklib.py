@@ -1751,6 +1751,8 @@ class ZenPackSpec(Spec):
         for spec in self.ordered_classes:
             snippets.append(spec.device_js_snippet)
 
+        snippets.append(self.dynamicview_nav_js_snippet)
+
         # Don't register the snippet if there's nothing in it.
         if not [x for x in snippets if x]:
             return
@@ -1778,6 +1780,33 @@ class ZenPackSpec(Spec):
 
         return self.create_js_snippet(
             'device', snippet, classes=device_classes)
+
+    @property
+    def dynamicview_nav_js_snippet(self):
+        if DYNAMICVIEW_INSTALLED:
+            cases = []
+            for kls in self.ordered_classes:
+                if kls.dynamicview_relations:
+                    cases.append(
+                        "case '{}': return true;".format(kls.meta_type))
+
+            return (
+                "Zenoss.nav.appendTo('Component', [{{\n"
+                "    id: 'subcomponent_view',\n"
+                "    text: _t('Dynamic View'),\n"
+                "    xtype: 'dynamicview',\n"
+                "    relationshipFilter: 'impacted_by',\n"
+                "    viewName: 'service_view',\n"
+                "    filterNav: function(navpanel) {{\n"
+                "        switch (navpanel.refOwner.componentType) {{\n"
+                "            {cases}\n"
+                "            default: return false;\n"
+                "        }}\n"
+                "    }}\n"
+                "}}]);\n"
+                .format(cases=' '.join(cases)))
+        else:
+            return ""
 
     @property
     def zenpack_module(self):
@@ -2925,27 +2954,11 @@ class ClassSpec(Spec):
                 cases=' '.join(cases)))
 
     @property
-    def dynamicview_nav_js_snippet(self):
-        if DYNAMICVIEW_INSTALLED:
-            return (
-                "Zenoss.nav.appendTo('Component', [{\n"
-                "    id: 'subcomponent_view',\n"
-                "    text: _t('Dynamic View'),\n"
-                "    xtype: 'dynamicview',\n"
-                "    relationshipFilter: 'impacted_by',\n"
-                "    viewName: 'service_view'\n"
-                "}]);\n"
-                )
-        else:
-            return ""
-
-    @property
     def device_js_snippet(self):
         """Return device JavaScript snippet."""
         return ''.join((
             self.component_grid_panel_js_snippet,
             self.subcomponent_nav_js_snippet,
-            self.dynamicview_nav_js_snippet,
             ))
 
     def test_setup(self):
