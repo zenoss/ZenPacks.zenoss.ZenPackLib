@@ -6,6 +6,7 @@ Release 1.0.12
 
 Fixes 
 
+* Fix tracebacks due to stale catalog entries. (ZEN-22592)
 * Fix hidden zenpacklib errors due to unitialized logging.
 
 Documentation
