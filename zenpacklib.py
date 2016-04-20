@@ -634,7 +634,7 @@ class CatalogBase(object):
                         if hasattr(ob, 'index_object'):
                             ob.index_object()
                     except:
-                        LOG.ERROR('Problem indexing bad catalog entry: %s' % result.getPath())
+                        LOG.error('Problem indexing bad catalog entry: %s' % result.getPath())
                         # not sure if this is appropriate to do here or not.
                         # but these bad paths didn't show up in dmd.global_catalog
                         # without using ICatalogTool
