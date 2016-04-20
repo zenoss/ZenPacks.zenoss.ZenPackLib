@@ -589,8 +589,11 @@ class CatalogBase(object):
         from Products.Zuul.interfaces import ICatalogTool
         catalog = zcatalog._catalog
 
-        classname = spec.get(
-            'class', 'Products.ZenModel.DeviceComponent.DeviceComponent')
+        # I think this is the original intent for setting classname, not sure why it would fail
+        try:
+            classname = '%s.%s' % (cls.__module__, cls.__class__.__name__)
+        except:
+            classname = 'Products.ZenModel.DeviceComponent.DeviceComponent'
 
         for propname, propdata in spec['indexes'].items():
             index_type = propdata.get('type')
@@ -622,8 +625,16 @@ class CatalogBase(object):
                 # catalog.
                 results = ICatalogTool(context).search(types=(classname,))
                 for result in results:
-                    if hasattr(result.getObject(), 'index_object'):
-                        result.getObject().index_object()
+                    try:
+                        ob = result.getObject()
+                        if hasattr(ob, 'index_object'):
+                            ob.index_object()
+                    except:
+                        LOG.ERROR('Problem indexing %s' % result.getPath())
+                        # not sure if this is appropriate to do here or not.
+                        # but these bad paths didn't show up in dmd.global_catalog
+                        # without using ICatalogTool
+                        zcatalog.uncatalog_object(result.getPath())
 
     def index_object(self, idxs=None):
         """Index in all configured catalogs."""
