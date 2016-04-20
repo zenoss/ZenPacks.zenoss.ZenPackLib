@@ -624,17 +624,21 @@ class CatalogBase(object):
                 # reindex all objects of this type so they are added to the
                 # catalog.
                 results = ICatalogTool(context).search(types=(classname,))
+
+                # global catalog (I think) for removing bad entries
+                #zcat = context.getDmd().global_catalog
+
                 for result in results:
                     try:
                         ob = result.getObject()
                         if hasattr(ob, 'index_object'):
                             ob.index_object()
                     except:
-                        LOG.ERROR('Problem indexing %s' % result.getPath())
+                        LOG.ERROR('Problem indexing bad catalog entry: %s' % result.getPath())
                         # not sure if this is appropriate to do here or not.
                         # but these bad paths didn't show up in dmd.global_catalog
                         # without using ICatalogTool
-                        zcatalog.uncatalog_object(result.getPath())
+                        # zcat.uncatalog_object(result.getPath())
 
     def index_object(self, idxs=None):
         """Index in all configured catalogs."""
