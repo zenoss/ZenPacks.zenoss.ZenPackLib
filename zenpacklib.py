@@ -584,7 +584,7 @@ class CatalogBase(object):
         return zcatalog
 
     @classmethod
-    def _create_indexes(cls, zcatalog, spec):
+    def _create_indexes(cls, zcatalog, spec, leaveObjects=True):
         from Products.ZCatalog.Catalog import CatalogError
         from Products.Zuul.interfaces import ICatalogTool
         catalog = zcatalog._catalog
@@ -592,7 +592,7 @@ class CatalogBase(object):
         # I think this is the original intent for setting classname, not sure why it would fail
         try:
             classname = '%s.%s' % (cls.__module__, cls.__class__.__name__)
-        except:
+        except Exception:
             classname = 'Products.ZenModel.DeviceComponent.DeviceComponent'
 
         for propname, propdata in spec['indexes'].items():
@@ -626,19 +626,21 @@ class CatalogBase(object):
                 results = ICatalogTool(context).search(types=(classname,))
 
                 # global catalog (I think) for removing bad entries
-                #zcat = context.getDmd().global_catalog
+                zcat = context.getDmd().global_catalog
 
                 for result in results:
                     try:
                         ob = result.getObject()
                         if hasattr(ob, 'index_object'):
                             ob.index_object()
-                    except:
+                    except Exception:
                         LOG.error('Problem indexing bad catalog entry: %s' % result.getPath())
                         # not sure if this is appropriate to do here or not.
                         # but these bad paths didn't show up in dmd.global_catalog
                         # without using ICatalogTool
-                        # zcat.uncatalog_object(result.getPath())
+                        if not leaveObjects:
+                            LOG.info('Removing bad catalog entry: %s' % result.getPath())
+                            zcat.uncatalog_object(result.getPath())
 
     def index_object(self, idxs=None):
         """Index in all configured catalogs."""
