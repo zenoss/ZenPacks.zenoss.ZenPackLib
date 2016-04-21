@@ -300,8 +300,13 @@ class ZenPack(ZenPackBase):
                 LOG.info('Removing %s components' % self.id)
                 cat = ICatalogTool(app.zport.dmd)
                 for brain in cat.search(types=self.NEW_COMPONENT_TYPES):
-                    component = brain.getObject()
-                    component.getPrimaryParent()._delObject(component.id)
+                    try:
+                        component = brain.getObject()
+                    except Exception as e:
+                        LOG.error("Trying to remove non-existent object %s", e)
+                        continue
+                    else:
+                        component.getPrimaryParent()._delObject(component.id)
 
                 # Remove our Device relations additions.
                 from Products.ZenUtils.Utils import importClass
@@ -584,7 +589,7 @@ class CatalogBase(object):
         return zcatalog
 
     @classmethod
-    def _create_indexes(cls, zcatalog, spec, leaveObjects=True):
+    def _create_indexes(cls, zcatalog, spec):
         from Products.ZCatalog.Catalog import CatalogError
         from Products.Zuul.interfaces import ICatalogTool
         catalog = zcatalog._catalog
@@ -625,22 +630,14 @@ class CatalogBase(object):
                 # catalog.
                 results = ICatalogTool(context).search(types=(classname,))
 
-                # global catalog (I think) for removing bad entries
-                zcat = context.getDmd().global_catalog
-
                 for result in results:
                     try:
                         ob = result.getObject()
+                    except Exception as e:
+                        LOG.error("Trying to index non-existent object %s", e)
+                    else:
                         if hasattr(ob, 'index_object'):
                             ob.index_object()
-                    except Exception:
-                        LOG.error('Problem indexing bad catalog entry: %s' % result.getPath())
-                        # not sure if this is appropriate to do here or not.
-                        # but these bad paths didn't show up in dmd.global_catalog
-                        # without using ICatalogTool
-                        if not leaveObjects:
-                            LOG.info('Removing bad catalog entry: %s' % result.getPath())
-                            zcat.uncatalog_object(result.getPath())
 
     def index_object(self, idxs=None):
         """Index in all configured catalogs."""
@@ -758,8 +755,12 @@ class ComponentBase(ModelBase):
 
         # Find and add new object to relationship.
         for result in catalog_search(self.device(), 'ComponentBase', id=id_):
-            new_obj = result.getObject()
-            relationship.addRelation(new_obj)
+            try:
+                new_obj = result.getObject()
+            except Exception as e:
+                LOG.error("Trying to access non-existent object %s", e)
+            else:
+                relationship.addRelation(new_obj)
 
             # Index remote object. It might have a custom path reporter.
             notify(IndexingEvent(new_obj.primaryAq(), 'path', False))
@@ -802,7 +803,12 @@ class ComponentBase(ModelBase):
 
         obj_map = {}
         for result in catalog_search(self.device(), 'ComponentBase', query):
-            obj_map[result.id] = result.getObject()
+            try:
+                component = result.getObject()
+            except Exception as e:
+                LOG.error("Trying to access non-existent object %s", e)
+            else:
+                obj_map[result.id] = component
 
         for id_ in new_ids.symmetric_difference(current_ids):
             obj = obj_map.get(id_)
