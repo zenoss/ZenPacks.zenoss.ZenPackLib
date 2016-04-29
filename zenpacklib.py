@@ -208,6 +208,9 @@ class ZenPack(ZenPackBase):
 
             dcObject = self.dmd.Devices.getOrganizer(dcspec.path)
             for zprop, value in dcspec.zProperties.iteritems():
+                if dcObject.getPropertyType(zprop) is None:
+                    LOG.error("Unable to set zProperty %s on %s (undefined zProperty)", zprop, dcspec.path)
+                    continue
                 LOG.info('Setting zProperty %s on %s' % (zprop, dcspec.path))
                 dcObject.setZenProperty(zprop, value)
 
