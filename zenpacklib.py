@@ -35,7 +35,8 @@ LOG = logging.getLogger('zen.zenpacklib')
 
 # Suppresses "No handlers could be found for logger" errors if logging
 # hasn't been configured.
-LOG.addHandler(logging.NullHandler())
+if len(LOG.handlers) == 0:
+    LOG.addHandler(logging.NullHandler())
 
 import collections
 import imp
@@ -5214,6 +5215,10 @@ def load_yaml(yaml_filename=None):
         try:
             CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
         except Exception as e:
+            if not [x for x in LOG.handlers if not isinstance(x, logging.NullHandler)]:
+                # Logging has not ben initialized yet- LOG.error may not be
+                # seen.
+                logging.basicConfig()
             LOG.error(e)
     else:
         zenpack_name = None
