@@ -9,6 +9,7 @@ Fixes
 * Fix tracebacks due to stale catalog entries. (ZEN-22592)
 * Fix hidden zenpacklib errors due to unitialized logging.
 * Prevent setting values on undefined zProperties.
+* Drastically reduce catalog creation time.
 
 Documentation
 
