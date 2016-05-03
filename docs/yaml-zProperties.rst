@@ -104,13 +104,34 @@ name
   :Default Value: *implied from key in zProperties map*
 
 type
-  :Description: Type of property: *string*, *password*, *lines* or *boolean*.
+  :Description:
+      Type of property. Valid types:
+
+      * `boolean`
+      * `date`
+      * `float`
+      * `int`
+      * `lines`
+      * `long`
+      * `password`
+      * `string`
+      * `selection`
+
   :Required: No
   :Type: string
   :Default Value: string
 
 default
-  :Description: Default value. The default value depends on the type: string="", password="", lines=[], boolean=false.
+  :Description:
+
+      Default value for property. Default value depends on the type:
+
+      * boolean: `false`
+      * lines: `[]`
+      * password: `""` (empty string)
+      * string: `""` (empty string)
+      * all others: `null` (None)
+
   :Required: No
   :Type: *varies*
   :Default Value: *varies*
