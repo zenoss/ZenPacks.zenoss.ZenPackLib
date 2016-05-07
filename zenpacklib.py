@@ -304,8 +304,13 @@ class ZenPack(ZenPackBase):
                 LOG.info('Removing %s components' % self.id)
                 cat = ICatalogTool(app.zport.dmd)
                 for brain in cat.search(types=self.NEW_COMPONENT_TYPES):
-                    component = brain.getObject()
-                    component.getPrimaryParent()._delObject(component.id)
+                    try:
+                        component = brain.getObject()
+                    except Exception as e:
+                        LOG.error("Trying to remove non-existent object %s", e)
+                        continue
+                    else:
+                        component.getPrimaryParent()._delObject(component.id)
 
                 # Remove our Device relations additions.
                 from Products.ZenUtils.Utils import importClass
@@ -593,8 +598,11 @@ class CatalogBase(object):
         from Products.Zuul.interfaces import ICatalogTool
         catalog = zcatalog._catalog
 
-        classname = spec.get(
-            'class', 'Products.ZenModel.DeviceComponent.DeviceComponent')
+        # I think this is the original intent for setting classname, not sure why it would fail
+        try:
+            classname = '%s.%s' % (cls.__module__, cls.__class__.__name__)
+        except Exception:
+            classname = 'Products.ZenModel.DeviceComponent.DeviceComponent'
 
         for propname, propdata in spec['indexes'].items():
             index_type = propdata.get('type')
@@ -626,8 +634,14 @@ class CatalogBase(object):
                 # catalog.
                 results = ICatalogTool(context).search(types=(classname,))
                 for result in results:
-                    if hasattr(result.getObject(), 'index_object'):
-                        result.getObject().index_object()
+                    try:
+                        new_obj = result.getObject()
+                    except Exception as e:
+                        LOG.error("Trying to index non-existent object %s", e)
+                        continue
+                    else:
+                        if hasattr(new_obj, 'index_object'):
+                            new_obj.index_object()
 
     def index_object(self, idxs=None):
         """Index in all configured catalogs."""
@@ -745,8 +759,12 @@ class ComponentBase(ModelBase):
 
         # Find and add new object to relationship.
         for result in catalog_search(self.device(), 'ComponentBase', id=id_):
-            new_obj = result.getObject()
-            relationship.addRelation(new_obj)
+            try:
+                new_obj = result.getObject()
+            except Exception as e:
+                LOG.error("Trying to add relation to non-existent object %s", e)
+            else:
+                relationship.addRelation(new_obj)
 
             # Index remote object. It might have a custom path reporter.
             notify(IndexingEvent(new_obj.primaryAq(), 'path', False))
@@ -789,7 +807,12 @@ class ComponentBase(ModelBase):
 
         obj_map = {}
         for result in catalog_search(self.device(), 'ComponentBase', query):
-            obj_map[result.id] = result.getObject()
+            try:
+                component = result.getObject()
+            except Exception as e:
+                LOG.error("Trying to access non-existent object %s", e)
+            else:
+                obj_map[result.id] = component
 
         for id_ in new_ids.symmetric_difference(current_ids):
             obj = obj_map.get(id_)
