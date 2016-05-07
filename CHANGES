@@ -1,6 +1,21 @@
 Version 1.0
 ===========
 
+Release 1.0.12
+--------------
+
+Fixes 
+
+* Fix tracebacks due to stale catalog entries. (ZEN-22592)
+* Fix hidden zenpacklib errors due to unitialized logging.
+* Prevent setting values on undefined zProperties.
+* Drastically reduce catalog creation time.
+
+Documentation
+
+* Add missing types to zProperty documentation.
+
+
 Release 1.0.11
 --------------
 
