@@ -318,11 +318,17 @@ dynamicview_views
   :Type: list<*dynamicview_view_name*>
   :Default Value: [] *(empty list)*
   
-dynamicview_groups
-  :Description: Dynamic View group name for objects of this class.
+dynamicview_group
+  :Description: Dynamic View group name for objects of this class. Can be overridden by implementing getDynamicViewGroup() method on class.
   :Required: No
   :Type: string
   :Default Value: *(same as plural_short_label)*
+
+dynamicview_weight
+  :Description: Dynamic View weight for objects of this class. Higher numbers are further to the right. Can be overridden by implementing getDynamicViewGroup() method on class.
+  :Required: No
+  :Type: float or int
+  :Default: 1000 + (order * 100)
   
 dynamicview_relations
   :Description: Map of Dynamic View relationships for this class and the relationship or method names that when called populate them.

@@ -1,3 +1,20 @@
+Version 1.1
+===========
+
+Release 1.1.0
+-------------
+
+Features
+
+* Add dynamicview_weight class field.
+* Add overridable getDynamicViewGroup method to generated classes.
+* Class icons beginning with / will be treated as absolute URL paths.
+
+Documentation
+
+* Fix YAML reference for dynamicview_group class field.
+
+
 Version 1.0
 ===========
 
