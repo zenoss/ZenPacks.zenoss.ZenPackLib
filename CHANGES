@@ -13,6 +13,7 @@ Features
 Documentation
 
 * Fix YAML reference for dynamicview_group class field.
+* Fix documentation of default value for dynamicview_views.
 
 
 Version 1.0
