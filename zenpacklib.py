@@ -2434,6 +2434,7 @@ class ClassSpec(Spec):
             'class_plural_label': self.plural_label,
             'class_short_label': self.short_label,
             'class_plural_short_label': self.plural_short_label,
+            'dynamicview_views': self.dynamicview_views,
             'dynamicview_group': {
                 'name': self.dynamicview_group,
                 'weight': self.dynamicview_weight,
@@ -5956,6 +5957,12 @@ if DYNAMICVIEW_INSTALLED:
             self._adapted = adapted
 
         def getGroup(self, viewName):
+            group = self._adapted
+            entity = group._adapted
+
+            if viewName not in entity.dynamicview_views:
+                return
+
             data = self._adapted.group_data
             if data:
                 return BaseGroup(

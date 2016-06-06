@@ -316,7 +316,7 @@ dynamicview_views
   :Description: Names of Dynamic Views objects of this class can appear in.
   :Required: No
   :Type: list<*dynamicview_view_name*>
-  :Default Value: [] *(empty list)*
+  :Default Value: [service_view]
   
 dynamicview_group
   :Description: Dynamic View group name for objects of this class. Can be overridden by implementing getDynamicViewGroup() method on class.
