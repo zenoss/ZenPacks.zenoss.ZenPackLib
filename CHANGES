@@ -9,6 +9,7 @@ Features
 * Add dynamicview_weight class field.
 * Add overridable getDynamicViewGroup method to generated classes.
 * Class icons beginning with / will be treated as absolute URL paths.
+* Improve performance of entity properties in component grids.
 
 Documentation
 
