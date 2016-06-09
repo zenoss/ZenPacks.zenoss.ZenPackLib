@@ -92,6 +92,7 @@ from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
 from Products.ZenUtils.Utils import monkeypatch, importClass
 
 from Products import Zuul
+from Products.Zuul import marshal
 from Products.Zuul.catalog.events import IndexingEvent
 from Products.Zuul.catalog.global_catalog import ComponentWrapper as BaseComponentWrapper
 from Products.Zuul.catalog.global_catalog import DeviceWrapper as BaseDeviceWrapper
@@ -3215,8 +3216,9 @@ class ClassPropertySpec(Spec):
     def info_properties(self):
         """Return Info properties dict."""
         if self.api_backendtype == 'method':
+            isEntity = self.type_ == 'entity'
             return {
-                self.name: MethodInfoProperty(self.name),
+                self.name: MethodInfoProperty(self.name, entity=isEntity),
                 }
         else:
             if not self.enum:
@@ -5503,7 +5505,7 @@ def relationships_from_yuml(yuml):
     return classes
 
 
-def MethodInfoProperty(method_name):
+def MethodInfoProperty(method_name, entity=False):
     """Return a property with the Infos for object(s) returned by a method.
 
     A list of Info objects is returned for methods returning a list, or a single
@@ -5511,10 +5513,18 @@ def MethodInfoProperty(method_name):
     """
     def getter(self):
         try:
-            return Zuul.info(getattr(self._object, method_name)())
+            result = Zuul.info(getattr(self._object, method_name)())
         except TypeError:
             # If not callable avoid the traceback and send the property
-            return Zuul.info(getattr(self._object, method_name))
+            result = Zuul.info(getattr(self._object, method_name))
+        if entity:
+            # rather than returning entire object(s), return just
+            # the fields needed by the UI renderer for creating links.
+            return marshal(
+                result,
+                keys=('name', 'meta_type', 'class_label', 'uid'))
+        else:
+            return result
 
     return property(getter)
 
@@ -5543,7 +5553,11 @@ def RelationshipInfoProperty(relationship_name):
 
     """
     def getter(self):
-        return Zuul.info(getattr(self._object, relationship_name)())
+        # rather than returning entire object(s), return just the fields
+        # required by the UI renderer for creating links.
+        return marshal(
+            Zuul.info(getattr(self._object, relationship_name)()),
+            keys=('name', 'meta_type', 'class_label', 'uid'))
 
     return property(getter)
 
