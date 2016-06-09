@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.12"
+__version__ = "1.0.13"
 
 
 import logging
@@ -3712,8 +3712,8 @@ class RRDTemplateSpec(Spec):
             datasource_spec.create(self, template)
 
         self.speclog.debug("adding {} graphs".format(len(self.graphs)))
-        for graph_id, graph_spec in self.graphs.items():
-            graph_spec.create(self, template)
+        for i, (graph_id, graph_spec) in enumerate(self.graphs.items()):
+            graph_spec.create(self, template, sequence=i)
 
 
 class RRDThresholdSpec(Spec):
@@ -4092,10 +4092,12 @@ class GraphDefinitionSpec(Spec):
 
         # TODO fix comments parsing - must always be a list.
 
-    def create(self, templatespec, template):
+    def create(self, templatespec, template, sequence=None):
         graph = template.manage_addGraphDefinition(self.name)
         self.speclog.debug("adding graph")
 
+        if sequence:
+            graph.sequence = sequence
         if self.height is not None:
             graph.height = self.height
         if self.width is not None:
@@ -4125,8 +4127,8 @@ class GraphDefinitionSpec(Spec):
                 comment.text = comment_text
 
         self.speclog.debug("adding {} graphpoints".format(len(self.graphpoints)))
-        for graphpoint_id, graphpoint_spec in self.graphpoints.items():
-            graphpoint_spec.create(self, graph)
+        for i, (graphpoint_id, graphpoint_spec) in enumerate(self.graphpoints.items()):
+            graphpoint_spec.create(self, graph, sequence=i)
 
 
 class GraphPointSpec(Spec):
@@ -4222,12 +4224,14 @@ class GraphPointSpec(Spec):
                 raise ValueError("'%s' is not a valid graphpoint lineType. Valid lineTypes: %s" % (
                                  lineType, ', '.join(valid_linetypes)))
 
-    def create(self, graph_spec, graph):
+    def create(self, graph_spec, graph, sequence=None):
         graphpoint = graph.createGraphPoint(DataPointGraphPoint, self.name)
         self.speclog.debug("adding graphpoint")
 
         graphpoint.dpName = self.dpName
 
+        if sequence:
+            graphpoint.sequence = sequence
         if self.lineType is not None:
             graphpoint.lineType = self.lineType
         if self.lineWidth is not None:
