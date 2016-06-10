@@ -413,8 +413,10 @@ class BaseReportable(ETLBaseReportable):
             base_eclass = self.entity_class_for_class(base_class)
             yield (base_eclass + "_key", 'reference', self.sid, MARKER_LENGTH)
 
+        # Filter out eclass_title entries because they are duplicated in eclass_name
         for entry in super(BaseReportable, self).reportProperties():
-            yield entry
+            if entry[0] != eclass + '_title':
+                yield entry
 
     def _getProperty(self, propspec):
         prop = super(BaseReportable, self)._getProperty(propspec)
