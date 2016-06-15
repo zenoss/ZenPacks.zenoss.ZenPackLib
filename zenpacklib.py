@@ -6130,15 +6130,12 @@ def create_zenpack_srcdir(zenpack_name):
 
 JS_LINK_FROM_GRID = """
 Ext.apply(Zenoss.render, {
-    zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid: function(obj, metaData, record, rowIndex, colIndex) {
-        if (!obj)
+    zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid: function(value, metaData, record, rowIndex, colIndex) {
+        if (!value)
             return;
 
-        if (typeof(obj) == 'string')
-            obj = record.data;
-
-        if (!obj.title && obj.name)
-            obj.title = obj.name;
+        if (typeof(value) == 'string')
+            value = record.data;
 
         var isLink = false;
 
@@ -6152,22 +6149,30 @@ Ext.apply(Zenoss.render, {
                 isLink = true;
         }
 
-        if (isLink) {
-            return '<a href="'+obj.uid+'"onClick="Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid +'\\', \\''+obj.meta_type+'\\');return false;">'+obj.title+'</a>';
-        } else {
-            return obj.title;
-        }
+        var results = [];
+        Ext.each(value, function(obj) {
+            if (!obj.title && obj.name)
+                obj.title = obj.name;
+
+            if (isLink) {
+                results.push('<a href="'+obj.uid+'"onClick="Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid +'\\', \\''+obj.meta_type+'\\');return false;">'+obj.title+'</a>');
+            } else {
+                results.push(obj.title);
+            }
+        });
+
+        return results.join(" | ");
     },
 
-    zenpacklib_{zenpack_id_prefix}_entityTypeLinkFromGrid: function(obj, metaData, record, rowIndex, colIndex) {
-        if (!obj)
+    zenpacklib_{zenpack_id_prefix}_entityTypeLinkFromGrid: function(value, metaData, record, rowIndex, colIndex) {
+        if (!value)
             return;
 
-        if (typeof(obj) == 'string')
-            obj = record.data;
+        if (typeof(value) == 'string')
+            value = record.data;
 
-        if (!obj.title && obj.name)
-            obj.title = obj.name;
+        if (!value.title && value.name)
+            value.title = value.name;
 
         var isLink = false;
 
@@ -6181,11 +6186,19 @@ Ext.apply(Zenoss.render, {
                 isLink = true;
         }
 
-        if (isLink) {
-            return '<a href="javascript:Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid+'\\', \\''+obj.meta_type+'\\');">'+obj.title+'</a> (' + obj.class_label + ')';
-        } else {
-            return obj.title;
-        }
+        var results = [];
+        Ext.each(value, function(obj) {
+            if (!obj.title && obj.name)
+                obj.title = obj.name;
+
+            if (isLink) {
+                results.push('<a href="javascript:Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid+'\\', \\''+obj.meta_type+'\\');">'+obj.title+'</a> (' + obj.class_label + ')');
+            } else {
+                results.push(obj.title);
+            }
+        });
+
+        return results.join(" | ");
     }
 
 });
