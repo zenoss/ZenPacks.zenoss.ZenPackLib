@@ -10,6 +10,7 @@ Features
 * Add overridable getDynamicViewGroup method to generated classes.
 * Class icons beginning with / will be treated as absolute URL paths.
 * Improve performance of entity properties in component grids.
+* Simplify what device status means to critical event(s) in /Status.
 
 Documentation
 
