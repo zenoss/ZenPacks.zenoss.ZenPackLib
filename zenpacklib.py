@@ -3040,6 +3040,7 @@ class ClassPropertySpec(Spec):
             details_display=True,
             grid_display=True,
             renderer=None,
+            render_with_type=False,
             order=None,
             editable=False,
             api_only=False,
@@ -3087,6 +3088,13 @@ class ClassPropertySpec(Spec):
                    to this property, rather than passing the text through
                    unformatted.
             :type renderer: str
+            :param render_with_type: For use with a 'type' of 'entity',
+                   Indicates that when an object is linked to,
+                   it should be shown along with its type.  This is particularly
+                   useful when the linked object may be of several types, such
+                   that the target object's name is not sufficiently descriptive
+                   on its own.
+            :type render_with_type: bool
             :param order: TODO
             :type order: float
             :param editable: TODO
@@ -3123,11 +3131,17 @@ class ClassPropertySpec(Spec):
         self.details_display = details_display
         self.grid_display = grid_display
         self.renderer = renderer
+        self.render_with_type = render_with_type
+
+        if render_with_type and type_ != 'entity':
+            raise TypeError(
+                "Property '%s': render_with_type can not be used unless 'type' is 'entity'"
+                % name)
 
         # pick an appropriate default renderer for this property.
         if type_ == 'entity' and not self.renderer:
-            self.renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'.format(
-                zenpack_id_prefix=self.class_spec.zenpack.id_prefix)
+            self.renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityTypeLinkFromGrid' \
+                if self.render_with_type else 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'
 
         self.editable = bool(editable)
         self.api_only = bool(api_only)
