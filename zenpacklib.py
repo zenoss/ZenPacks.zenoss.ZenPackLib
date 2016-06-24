@@ -52,73 +52,145 @@ import types
 
 from lxml import etree
 
-if __name__ == '__main__':
-    import Globals
-    from Products.ZenUtils.Utils import unused
-    unused(Globals)
-
-from zope.browser.interfaces import IBrowserView
 from zope.component import adapts, getGlobalSiteManager
-from zope.event import notify
 from zope.interface import classImplements, implements
-from zope.interface.interface import InterfaceClass
-from Acquisition import aq_base
 
-from Products.AdvancedQuery import Eq, Or
-from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
-from Products.Five import zcml
+LINTING = False
+if __name__ == '__main__':
+    if len(sys.argv) == 3 and sys.argv[1] == 'lint':
+        LINTING = True
+    else:
+        import Globals
+        from Products.ZenUtils.Utils import unused
+        unused(Globals)
 
-from Products.ZenModel.Device import Device as BaseDevice
-from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
-from Products.ZenModel.HWComponent import HWComponent as BaseHWComponent
-from Products.ZenModel.ManagedEntity import ManagedEntity as BaseManagedEntity
-from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
-from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
-from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
-from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
-from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
-from Products.ZenModel.GraphPoint import GraphPoint
-from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
-from Products.ZenRelations.Exceptions import ZenSchemaError
-from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
-from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
-from Products.ZenRelations.ToManyRelationship import ToManyRelationship
-from Products.ZenRelations.ToOneRelationship import ToOneRelationship
-from Products.ZenRelations.zPropertyCategory import setzPropertyCategory
-from Products.ZenUI3.browser.interfaces import IMainSnippetManager
-from Products.ZenUI3.utils.javascript import JavaScriptSnippet
-from Products.ZenUtils.guid.interfaces import IGlobalIdentifier
-from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
-from Products.ZenUtils.Utils import monkeypatch, importClass
+if LINTING:
+    # When we are linting, we can avoid bootstrapping the zenoss system
+    # and supply dummy versions of classes and interfaces that ZPL would
+    # normally need.  This is because lint only needs to go as far as parsing
+    # the YAML file and creating Spec objects.
+    #
+    # So by avoiding 'import Globals', it runs much faster, and avoids
+    # situations where you are editing a yaml file in an installed zenpack,
+    # break zenoss's ability to start up, but can't tell what is wrong
+    # with the yaml.
 
-from Products import Zuul
-from Products.Zuul import marshal
-from Products.Zuul.catalog.events import IndexingEvent
-from Products.Zuul.catalog.global_catalog import ComponentWrapper as BaseComponentWrapper
-from Products.Zuul.catalog.global_catalog import DeviceWrapper as BaseDeviceWrapper
-from Products.Zuul.catalog.interfaces import IIndexableWrapper, IPathReporter
-from Products.Zuul.catalog.paths import DefaultPathReporter, relPath
-from Products.Zuul.decorators import info, memoize
-from Products.Zuul.form import schema
-from Products.Zuul.form.interfaces import IFormBuilder
-from Products.Zuul.infos import InfoBase, ProxyProperty
-from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
-from Products.Zuul.infos.component import ComponentFormBuilder as BaseComponentFormBuilder
-from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
-from Products.Zuul.interfaces import IInfo
-from Products.Zuul.interfaces.component import IComponentInfo as IBaseComponentInfo
-from Products.Zuul.interfaces.device import IDeviceInfo as IBaseDeviceInfo
-from Products.Zuul.routers.device import DeviceRouter
-from Products.Zuul.utils import ZuulMessageFactory as _t
+    # constants
+    ZEN_CHANGE_DEVICE = 'Change Device'
 
-from zope.publisher.interfaces.browser import IDefaultBrowserLayer
-from zope.viewlet.interfaces import IViewlet
+    # Decorators
+    memoize = lambda x: None
+    info = lambda x: None
 
-from zenoss.protocols.protobufs.zep_pb2 import (
-    STATUS_NEW, STATUS_ACKNOWLEDGED,
-    SEVERITY_CRITICAL,
-    )
+    # Classes
+    for classname in ('ZenPackBase', 'BaseDevice', 'BaseDeviceComponent', 'BaseManagedEntity', 'BaseDeviceWrapper', 'BaseComponentInfo', 'BaseComponentWrapper', 'BaseComponentFormBuilder', 'BaseHWComponent', 'DefaultPathReporter'):
+        globals()[classname] = type(classname, (object,), {})
 
+    # Interfaces
+    from zope.interface import Interface
+    for classname in ('IIndexableWrapper', 'IPathReporter', 'IFormBuilder', 'IInfo', 'IBaseComponentInfo'):
+        globals()[classname] = Interface
+
+    # Relationship Schemas
+    class RelSchema:
+        def __init__(self, remoteType, remoteClass, remoteName):
+            self.remoteType = remoteType
+            self.remoteClass = remoteClass
+            self.remoteName = remoteName 
+    ToOne = RelSchema
+    ToMany = RelSchema
+    ToManyCont = RelSchema
+
+    # Info Schemas
+    from zope.schema._field import Text as ZSText
+    schema = imp.new_module('schema')
+    schema.Entity = ZSText
+
+    # Functions
+    def importClass(modulePath, classname=""):
+        """
+        Import a class from the module given.
+
+        @param modulePath: path to module in sys.modules
+        @type modulePath: string
+        @param classname: name of a class
+        @type classname: string
+        @return: the class in the module
+        @rtype: class
+        """
+        try:
+            if not classname: classname = modulePath.split(".")[-1]
+            try:
+                __import__(modulePath, globals(), locals(), classname)
+                mod = sys.modules[modulePath]
+            except (ValueError, ImportError, KeyError), ex:
+                raise ex
+
+            return getattr(mod, classname)
+        except AttributeError:
+            raise ImportError("Failed while importing class %s from module %s" % (
+                                classname, modulePath))
+
+else:
+    from zope.interface.interface import InterfaceClass
+    from zope.browser.interfaces import IBrowserView
+    from zope.event import notify
+    from Acquisition import aq_base
+
+    from Products.AdvancedQuery import Eq, Or
+    from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
+    from Products.Five import zcml
+
+    from Products.ZenModel.Device import Device as BaseDevice
+    from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
+    from Products.ZenModel.HWComponent import HWComponent as BaseHWComponent
+    from Products.ZenModel.ManagedEntity import ManagedEntity as BaseManagedEntity
+    from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
+    from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
+    from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
+    from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
+    from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
+    from Products.ZenModel.GraphPoint import GraphPoint
+    from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
+    from Products.ZenRelations.Exceptions import ZenSchemaError
+    from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
+    from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
+    from Products.ZenRelations.ToManyRelationship import ToManyRelationship
+    from Products.ZenRelations.ToOneRelationship import ToOneRelationship
+    from Products.ZenRelations.zPropertyCategory import setzPropertyCategory
+    from Products.ZenUI3.browser.interfaces import IMainSnippetManager
+    from Products.ZenUI3.utils.javascript import JavaScriptSnippet
+    from Products.ZenUtils.guid.interfaces import IGlobalIdentifier
+    from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
+    from Products.ZenUtils.Utils import monkeypatch, importClass
+
+    from Products import Zuul
+    from Products.Zuul import marshal
+    from Products.Zuul.catalog.events import IndexingEvent
+    from Products.Zuul.catalog.global_catalog import ComponentWrapper as BaseComponentWrapper
+    from Products.Zuul.catalog.global_catalog import DeviceWrapper as BaseDeviceWrapper
+    from Products.Zuul.catalog.interfaces import IIndexableWrapper, IPathReporter
+    from Products.Zuul.catalog.paths import DefaultPathReporter, relPath
+    from Products.Zuul.decorators import info, memoize
+    from Products.Zuul.form import schema
+    from Products.Zuul.form.interfaces import IFormBuilder
+    from Products.Zuul.infos import InfoBase, ProxyProperty
+    from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
+    from Products.Zuul.infos.component import ComponentFormBuilder as BaseComponentFormBuilder
+    from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
+    from Products.Zuul.interfaces import IInfo
+    from Products.Zuul.interfaces.component import IComponentInfo as IBaseComponentInfo
+    from Products.Zuul.interfaces.device import IDeviceInfo as IBaseDeviceInfo
+    from Products.Zuul.routers.device import DeviceRouter
+    from Products.Zuul.utils import ZuulMessageFactory as _t
+
+    from zope.publisher.interfaces.browser import IDefaultBrowserLayer
+    from zope.viewlet.interfaces import IViewlet
+
+    from zenoss.protocols.protobufs.zep_pb2 import (
+        STATUS_NEW, STATUS_ACKNOWLEDGED,
+        SEVERITY_CRITICAL,
+        )
 
 try:
     import yaml
@@ -6426,35 +6498,37 @@ setup(
 
 
 if __name__ == '__main__':
+    if LINTING:
+        filename = sys.argv[2]
+
+        with open(filename, 'r') as file:
+            linecount = len(file.readlines())
+
+        # Change our logging output format.
+        logging.getLogger().handlers = []
+        for logger in logging.Logger.manager.loggerDict.values():
+            logger.handlers = []
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter(
+            fmt='%s:%s:0: %%(message)s' % (filename, linecount))
+        handler.setFormatter(formatter)
+        logging.getLogger().addHandler(handler)
+
+        try:
+            with open(filename, 'r') as stream:
+                yaml.load(stream, Loader=WarningLoader)                                
+        except Exception, e:
+            LOG.exception(e)
+            sys.exit(1)
+        sys.exit(0)            
+
     from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
     class ZPLCommand(ZenScriptBase):
         def run(self):
             args = sys.argv[1:]
 
-            if len(args) == 2 and args[0] == 'lint':
-                filename = args[1]
-
-                with open(filename, 'r') as file:
-                    linecount = len(file.readlines())
-
-                # Change our logging output format.
-                logging.getLogger().handlers = []
-                for logger in logging.Logger.manager.loggerDict.values():
-                    logger.handlers = []
-                handler = logging.StreamHandler(sys.stdout)
-                formatter = logging.Formatter(
-                    fmt='%s:%s:0: %%(message)s' % (filename, linecount))
-                handler.setFormatter(formatter)
-                logging.getLogger().addHandler(handler)
-
-                try:
-                    with open(filename, 'r') as stream:
-                        yaml.load(stream, Loader=WarningLoader)
-                except Exception, e:
-                    LOG.exception(e)
-
-            elif len(args) == 2 and args[0] == 'py_to_yaml':
+            if len(args) == 2 and args[0] == 'py_to_yaml':
                 zenpack_name = args[1]
 
                 self.connect()
