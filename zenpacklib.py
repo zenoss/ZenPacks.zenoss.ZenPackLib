@@ -2518,7 +2518,7 @@ class ClassSpec(Spec):
                     if cached:
                         r = self.cacheRRDValue(datapoint, default=default)
                     else:
-                        r = self.getRRDValue(datapoint, default=default)
+                        r = self.getRRDValue(datapoint)
 
                     if r is not None:
                         if not math.isnan(float(r)):
