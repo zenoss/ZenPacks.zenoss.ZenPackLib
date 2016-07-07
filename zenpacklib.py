@@ -3178,6 +3178,10 @@ class ClassPropertySpec(Spec):
         self.grid_display = grid_display
         self.renderer = renderer
 
+        if not self.display:
+            self.details_display = False
+            self.grid_display = False
+
         # pick an appropriate default renderer for this property.
         if type_ == 'entity' and not self.renderer:
             self.renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'.format(
