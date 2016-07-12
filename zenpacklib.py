@@ -2468,7 +2468,7 @@ class ClassSpec(Spec):
                 relname = self.find_target_spec_relation(spec_containers.get(direct_name), target)
                 if relname: 
                     return relname
-    return None
+        return None
 
     def is_a(self, type_):
         """Return True if this class is a subclass of type_."""
