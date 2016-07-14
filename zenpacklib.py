@@ -957,6 +957,9 @@ class ComponentBase(ModelBase):
 
             relpath = "/".join(path + [relname])
 
+            if relname not in path:
+                path.append(relname)
+
             # Always include directly-related objects.
             for obj in relobjs:
                 if obj in seen:
@@ -965,29 +968,27 @@ class ComponentBase(ModelBase):
                 yield obj
                 seen.add(obj)
 
-            # If 'all' mode, just include indirectly-related objects as well, in
-            # an unfiltered manner.
-            if recurse_all:
-                for facet in obj.get_facets(root=root, seen=seen, path=path + [relname], recurse_all=True):
-                    yield facet
-                return
+                # If 'all' mode, just include indirectly-related objects as well, in
+                # an unfiltered manner.
+                if recurse_all:
+                    for facet in obj.get_facets(root=root, seen=seen, path=path, recurse_all=True):
+                        yield facet
 
-            # Otherwise, look at extra_path defined path pattern streams
-            for stream in streams:
-                recurse = any([pattern.match(relpath) for pattern in stream])
+                else:
+                    # Otherwise, look at extra_path defined path pattern streams
+                    for stream in streams:
+                        recurse = any([pattern.match(relpath) for pattern in stream])
 
-                LOG.log(9, "[%s] matching %s against %s: %s" % (root.meta_type, relpath, [x.pattern for x in stream], recurse))
+                        LOG.log(9, "[%s] matching %s against %s: %s" % (root.meta_type, relpath, [x.pattern for x in stream], recurse))
 
-                if not recurse:
-                    continue
-
-                for obj in relobjs:
-                    for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path + [relname]):
-                        if facet in seen:
+                        if not recurse:
                             continue
 
-                        yield facet
-                        seen.add(facet)
+                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path):
+                            if facet in seen:
+                                continue
+                            yield facet
+                            seen.add(facet)
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
