@@ -1580,19 +1580,52 @@ class ZenPackSpec(Spec):
                         if 'schema' in relationships[relationship]:
                             raise ValueError("Class '%s': 'schema' may not be defined or modified in an individual class's relationship.  Use the zenpack's class_relationships instead." % classname)
 
-        for class_ in self.classes.values():
+        def find_relation_in_bases(bases, relname):
+            '''return inherited relationship spec'''
+            for base in bases:
+                base_cls = self.classes.get(base)
+                if relname in base_cls.relationships:
+                    return base_cls.relationships.get(relname)
+            return None
 
+        def get_bases(cls, bases=[]):
+            '''find all available base classes for this class'''
+            for base in cls.bases:
+                base_cls = self.classes.get(base)
+                if not base_cls:
+                    continue
+                if base not in bases:
+                    bases.append(base)
+                bases = get_bases(base_cls, bases)
+            return bases
+
+        for class_ in self.classes.values():
+            # list of all base classes for this class
+            bases = get_bases(class_)
             # Link the appropriate predefined (class_relationships) schema into place on this class's relationships list.
             for rel in self.class_relationships:
-                if class_.name == rel.left_class:
-                    if rel.left_relname not in class_.relationships:
-                        class_.relationships[rel.left_relname] = ClassRelationshipSpec(class_, rel.left_relname)
-                    class_.relationships[rel.left_relname].schema = rel.left_schema
+                # handle both directions
+                for direction in ['left', 'right']:
+                    target_class = getattr(rel, '%s_class' % direction)
+                    target_relname = getattr(rel, '%s_relname' % direction)
+                    target_schema = getattr(rel, '%s_schema' % direction)
+                    # these are directly specified for the class in yaml
+                    if class_.name == target_class:
+                        if target_relname not in class_.relationships:
+                            class_.relationships[target_relname] = ClassRelationshipSpec(class_, target_relname)
 
-                if class_.name == rel.right_class:
-                    if rel.right_relname not in class_.relationships:
-                        class_.relationships[rel.right_relname] = ClassRelationshipSpec(class_, rel.right_relname)
-                    class_.relationships[rel.right_relname].schema = rel.right_schema
+                    # look for relations inherited from base classes
+                    elif target_class in bases:
+                        # we need to inherit in this case
+                        if target_relname not in class_.relationships:
+                            # if we can find a relationspec to inherit, then we use it
+                            found_rel = find_relation_in_bases(bases, target_relname)
+                            if found_rel:
+                                class_.relationships[target_relname] = found_rel
+
+                    # make sure we have the schema defined
+                    if target_relname in class_.relationships:
+                        class_.relationships[target_relname].schema = target_schema
 
             # Plumb _relations
             for relname, relationship in class_.relationships.iteritems():
