@@ -49,6 +49,7 @@ import re
 import sys
 import math
 import types
+import time
 
 from lxml import etree
 
@@ -2552,7 +2553,7 @@ class ClassSpec(Spec):
                     if cached:
                         r = self.cacheRRDValue(datapoint, default=default)
                     else:
-                        r = self.getRRDValue(datapoint)
+                        r = self.getRRDValue(datapoint, start=time.time()-1800)
 
                     if r is not None:
                         if not math.isnan(float(r)):
