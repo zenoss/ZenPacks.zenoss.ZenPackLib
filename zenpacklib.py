@@ -49,6 +49,7 @@ import re
 import sys
 import math
 import types
+import time
 
 from lxml import etree
 
@@ -2552,8 +2553,10 @@ class ClassSpec(Spec):
                     if cached:
                         r = self.cacheRRDValue(datapoint, default=default)
                     else:
-                        r = self.getRRDValue(datapoint)
-
+                        if is_zenoss_4():
+                            r = self.getRRDValue(datapoint, start=time.time()-1800)
+                        else:
+                            r = self.getRRDValue(datapoint, start=time.time()-1800)
                     if r is not None:
                         if not math.isnan(float(r)):
                             return r
@@ -5721,6 +5724,14 @@ OrderAndValue = collections.namedtuple('OrderAndValue', ['order', 'value'])
 
 
 # Private Functions #########################################################
+def is_zenoss_4():
+    '''return True if Zenoss is version 4.x or below'''
+    from Products.ZenModel.ZVersion import VERSION
+    from Products.ZenUtils.Version import Version
+    if Version.parse('Zenoss %s' % VERSION) < Version.parse('Zenoss 5'):
+        return True
+    return False
+
 
 def get_zenpack_path(zenpack_name):
     """Return filesystem path for given ZenPack."""
