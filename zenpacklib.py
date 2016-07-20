@@ -1626,7 +1626,8 @@ class ZenPackSpec(Spec):
 
                     # make sure we have the schema defined
                     if target_relname in class_.relationships:
-                        class_.relationships[target_relname].schema = target_schema
+                        if not class_.relationships[target_relname].schema:
+                            class_.relationships[target_relname].schema = target_schema
 
             # Plumb _relations
             for relname, relationship in class_.relationships.iteritems():
