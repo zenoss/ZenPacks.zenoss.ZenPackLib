@@ -1602,7 +1602,7 @@ class ZenPackSpec(Spec):
 
         for class_ in self.classes.values():
             # list of all base classes for this class
-            bases = get_bases(class_)
+            bases = get_bases(class_, bases=[])
             # Link the appropriate predefined (class_relationships) schema into place on this class's relationships list.
             for rel in self.class_relationships:
                 # handle both directions
