@@ -928,7 +928,7 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def get_facets(self, root=None, streams=None, seen=None, path=None, recurse_all=False):
+    def get_facets(self, root=None, streams=None, seen=None, path=None, skip=None, recurse_all=False):
         """Generate non-containing related objects for faceting."""
         if seen is None:
             seen = set()
@@ -939,13 +939,20 @@ class ComponentBase(ModelBase):
         if root is None:
             root = self
 
+        if skip is None:
+            skip = []
+
         if streams is None:
             streams = getattr(self, '_v_path_pattern_streams', [])
 
         for relname in self.get_faceting_relnames():
+            if relname in skip:
+                continue
+
             rel = getattr(self, relname, None)
             if not rel or not callable(rel):
                 continue
+            reverse_relname = rel.remoteName()
 
             relobjs = rel()
             if not relobjs:
@@ -971,7 +978,7 @@ class ComponentBase(ModelBase):
                 # If 'all' mode, just include indirectly-related objects as well, in
                 # an unfiltered manner.
                 if recurse_all:
-                    for facet in obj.get_facets(root=root, seen=seen, path=path, recurse_all=True):
+                    for facet in obj.get_facets(root=root, seen=seen, path=path, skip=[reverse_relname], recurse_all=True):
                         yield facet
 
                 else:
@@ -984,7 +991,7 @@ class ComponentBase(ModelBase):
                         if not recurse:
                             continue
 
-                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path):
+                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, skip=[reverse_relname]):
                             if facet in seen:
                                 continue
                             yield facet
@@ -6631,6 +6638,22 @@ if __name__ == '__main__':
                 class_summary = collections.defaultdict(set)
 
                 for component in device.getDeviceComponents():
+
+                    # containment
+                    obj = component
+                    for i in xrange(200):
+                        obj = obj.getPrimaryParent()
+                        if isinstance(obj, BaseDevice):
+                            break
+                        if not isinstance(obj, BaseDeviceComponent):
+                            continue
+
+                        path_spec = component.meta_type + ":" + obj.meta_type
+                        included_paths.add(path_spec)
+                        all_paths.add(path_spec)
+                        class_summary[component.meta_type].add(obj.meta_type)
+
+                    # facets
                     for facet in component.get_facets(recurse_all=True):
                         path = []
                         for obj in aq_chain(facet):
@@ -6638,7 +6661,8 @@ if __name__ == '__main__':
                                 break
                             if isinstance(obj, RelationshipBase):
                                 path.insert(0, obj.id)
-                        all_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
+                        path_spec = component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type
+                        all_paths.add(path_spec)
 
                     for facet in component.get_facets():
                         path = []
@@ -6647,15 +6671,21 @@ if __name__ == '__main__':
                                 break
                             if isinstance(obj, RelationshipBase):
                                 path.insert(0, obj.id)
-                        included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
+                        pathspec = component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type
+                        included_paths.add(pathspec)
+                        all_paths.add(pathspec)
                         class_summary[component.meta_type].add(facet.meta_type)
 
                 print "Paths\n-----\n"
                 for path in sorted(all_paths):
                     if path in included_paths:
                         if "/" not in path:
-                            # normally all direct relationships are included
-                            print "DIRECT  " + path
+                            if path.count(":") == 1:
+                                # direct/indirect containment relationships are included
+                                print "CONTAIN " + path
+                            else:
+                                # normally all direct relationships are included
+                                print "DIRECT  " + path
                         else:
                             # sometimes extra paths are pulled in due to extra_paths
                             # configuration.
