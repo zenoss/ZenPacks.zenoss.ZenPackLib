@@ -16,4 +16,4 @@ THISDIR=`dirname $MYPATH`
 PRGHOME=`dirname $THISDIR`
 PRGNAME=zenpacklib.py
 
-python $PRGHOME/$PRGNAME
+python $PRGHOME/$PRGNAME $@
