@@ -183,7 +183,7 @@ class ZenPackSpec(Spec):
 
         for class_ in self.classes.values():
             # list of all base classes for this class
-            bases = get_bases(class_)
+            bases = get_bases(class_, bases=[])
             # Link the appropriate predefined (class_relationships) schema into place on this class's relationships list.
             for rel in self.class_relationships:
                 # handle both directions
@@ -195,20 +195,23 @@ class ZenPackSpec(Spec):
                     if class_.name == target_class:
                         if target_relname not in class_.relationships:
                             class_.relationships[target_relname] = ClassRelationshipSpec(class_, target_relname)
-
-                    # look for relations inherited from base classes
-                    elif target_class in bases:
-                        # we need to inherit in this case
-                        if target_relname not in class_.relationships:
-                            # if we can find a relationspec to inherit, then we use it
-                            found_rel = find_relation_in_bases(bases, target_relname)
-                            if found_rel:
-                                class_.relationships[target_relname] = found_rel
-
-                    # make sure we have the schema defined
-                    if target_relname in class_.relationships:
                         if not class_.relationships[target_relname].schema:
                             class_.relationships[target_relname].schema = target_schema
+                    # look for relations inherited from base classes
+                    # go through these in order
+                    else:
+                        # these are in order from nearest to farthest
+                        for base in bases:
+                            if target_class == base:
+                                # see if we have an existing relspec
+                                found_rel = find_relation_in_bases(bases, target_relname)
+                                # we need to inherit in this case
+                                if found_rel:
+                                    if target_relname not in class_.relationships:
+                                        class_.relationships[target_relname] = found_rel
+                                    if not class_.relationships[target_relname].schema:
+                                        class_.relationships[target_relname].schema = target_schema
+                                    continue
 
             # Plumb _relations
             for relname, relationship in class_.relationships.iteritems():
