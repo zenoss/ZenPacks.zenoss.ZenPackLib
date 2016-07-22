@@ -418,12 +418,30 @@ class ZPLCommand(ZenScriptBase):
 
         from Acquisition import aq_chain
         from Products.ZenRelations.RelationshipBase import RelationshipBase
+        from Products.ZenModel.Device import Device as BaseDevice
+        from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
 
         all_paths = set()
         included_paths = set()
         class_summary = collections.defaultdict(set)
 
         for component in device.getDeviceComponents():
+
+            # containment
+            obj = component
+            for i in xrange(200):
+                obj = obj.getPrimaryParent()
+                if isinstance(obj, BaseDevice):
+                    break
+                if not isinstance(obj, BaseDeviceComponent):
+                    continue
+
+                path_spec = component.meta_type + ":" + obj.meta_type
+                included_paths.add(path_spec)
+                all_paths.add(path_spec)
+                class_summary[component.meta_type].add(obj.meta_type)
+
+            # facets
             for facet in component.get_facets(recurse_all=True):
                 path = []
                 for obj in aq_chain(facet):
@@ -431,7 +449,9 @@ class ZPLCommand(ZenScriptBase):
                         break
                     if isinstance(obj, RelationshipBase):
                         path.insert(0, obj.id)
-                all_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
+
+                path_spec = component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type
+                all_paths.add(path_spec)
 
             for facet in component.get_facets():
                 path = []
@@ -440,15 +460,21 @@ class ZPLCommand(ZenScriptBase):
                         break
                     if isinstance(obj, RelationshipBase):
                         path.insert(0, obj.id)
-                included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
+                pathspec = component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type
+                included_paths.add(pathspec)
+                all_paths.add(pathspec)
                 class_summary[component.meta_type].add(facet.meta_type)
 
         print "Paths\n-----\n"
         for path in sorted(all_paths):
             if path in included_paths:
                 if "/" not in path:
-                    # normally all direct relationships are included
-                    print "DIRECT  " + path
+                    if path.count(":") == 1:
+                        # direct/indirect containment relationships are included
+                        print "CONTAIN " + path
+                    else:
+                        # normally all direct relationships are included
+                        print "DIRECT  " + path
                 else:
                     # sometimes extra paths are pulled in due to extra_paths
                     # configuration.
