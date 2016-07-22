@@ -51,9 +51,8 @@ class TestCommands(BaseTestCase):
             )
 
     def _smoke_command(self, *args):
-        cmd = (self.zenpacklib_path,) + args
+        cmd = ('python', self.zenpacklib_path,) + args
         cmdstr = " ".join(cmd)
-
         LOG.info("Running %s" % cmdstr)
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = p.communicate()
@@ -73,7 +72,7 @@ class TestCommands(BaseTestCase):
         return out
 
     def test_smoke_lint(self):
-        self._smoke_command("lint", self.yaml_path)
+        self._smoke_command("--lint", self.yaml_path)
 
     # Can't be tested with ZPLTest1, because that is already using YAML.
     # Need to build another small zenpack if we want to do that.
@@ -81,10 +80,10 @@ class TestCommands(BaseTestCase):
     #     self._smoke_command("py_to_yaml", self.zenpack_name)
 
     def test_smoke_dump_templates(self):
-        self._smoke_command("dump_templates", self.zenpack_name)
+        self._smoke_command("--dump-templates", self.zenpack_name)
 
     def test_smoke_class_diagram(self):
-        self._smoke_command("class_diagram yuml", self.yaml_path)
+        self._smoke_command("--diagram", self.yaml_path)
 
     def test_create(self):
         zenpack_name = "ZenPacks.test.ZPLTestCreate"
@@ -92,11 +91,11 @@ class TestCommands(BaseTestCase):
         # Cleanup from any failed previous tests.
         shutil.rmtree(zenpack_name, ignore_errors=True)
 
-        output = self._smoke_command("create", zenpack_name)
+        output = self._smoke_command("--create", zenpack_name)
 
         # Test that output describes what's being created.
         expected_terms = (
-            "setup.py", "MANIFEST.in", "zenpack.yaml", "zenpacklib.py")
+            "setup.py", "MANIFEST.in", "zenpack.yaml")
 
         for expected_term in expected_terms:
             self.assertIn(expected_term, output)
@@ -121,7 +120,6 @@ class TestCommands(BaseTestCase):
             "ZenPacks/test/__init__.py",
             "ZenPacks/test/ZPLTestCreate/__init__.py",
             "ZenPacks/test/ZPLTestCreate/zenpack.yaml",
-            "ZenPacks/test/ZPLTestCreate/zenpacklib.py",
             )
 
         for expected_file in expected_files:
@@ -133,7 +131,7 @@ class TestCommands(BaseTestCase):
         shutil.rmtree(zenpack_name, ignore_errors=True)
 
     def test_version(self):
-        output = self._smoke_command("version").strip()
+        output = self._smoke_command("--version").strip()
         version_pattern = r'^\d+\.\d+\.\d+(dev)?$'
         match = re.match(version_pattern, output)
         self.assertTrue(

@@ -1,0 +1,102 @@
+name: ZenPacks.zenoss.PS.SA.UGE
+
+class_relationships:
+  - UnivaGrid 1:MC UGEFilesystem
+  - UnivaGrid 1:MC ECCNetwork
+  - UnivaGrid 1:MC UGEServer
+  - UnivaGrid 1:MC UGEQueue
+  - UnivaGrid 1:MC HPC
+  - HPC(hpctapelibraries) 1:MC HPCTapeLibrary
+  - HPC 1:MC HPCFilesystem
+  - HPC 1:MC HPCCluster
+  - HPCCluster 1:MC HPCNode
+  - HPCCluster 1:MC HPCNetwork
+  - HPCNetwork(hpcswitches) 1:MC HPCSwitch
+  - UGEQueue M:M HPCNode
+
+classes:
+  UnivaGrid:
+    base: [zenpacklib.Device]
+    label: Univa Grid Engine
+    properties:
+      version:
+        type: string
+        label: Version
+        order: 10
+
+  UGEQueue:
+    base: [zenpacklib.Component]
+    label: UGE Queue
+    order: 45
+    properties:
+      status:
+        type: string
+        label: Status
+        order: 10
+
+  UGEFilesystem:
+    base: [zenpacklib.Component]
+    label: UGE Filesystem
+    order: 30
+
+  UGEServer:
+    base: [zenpacklib.Component]
+    label: UGE Server
+    order: 40
+
+  ECCNetwork:
+    base: [zenpacklib.Component]
+    label: ECC Network
+    order: 40
+
+  HPC:
+    base: [zenpacklib.Component]
+    label: HPC Infrastructure
+    order: 50
+
+  HPCCluster:
+    base: [zenpacklib.Component]
+    label: HPC Cluster
+    order: 55
+
+  HPCSwitch:
+    base: [zenpacklib.Component]
+    label: HPC Switch
+    plural_label: HPC Switches
+    order: 65
+
+  HPCNode:
+    base: [zenpacklib.Component]
+    label: HPC Node
+    order: 70
+    properties:
+      status:
+        type: string
+        label: Version
+        order: 10
+    extra_paths:
+    - ['ugequeues', 'hpcnodes']
+
+  HPCFilesystem:
+    base: [zenpacklib.Component]
+    label: HPC Filesystem
+    order: 52
+
+  HPCNetwork:
+    base: [zenpacklib.Component]
+    label: HPC Network
+    order: 60
+
+  HPCTapeLibrary:
+    base: [zenpacklib.Component]
+    label: HPC TapeLibrary
+    plural_label: HPC TapeLibraries
+    order: 53
+
+device_classes:
+  /UGE:
+    zProperties:
+      zPythonClass: ZenPacks.zenoss.PS.SA.UGE.UnivaGrid
+      zPingMonitorIgnore: true
+      zSnmpMonitorIgnore: true
+
