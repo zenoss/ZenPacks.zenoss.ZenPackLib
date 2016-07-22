@@ -206,7 +206,7 @@ class ClassPropertySpec(Spec):
         if self.api_backendtype == 'method':
             isEntity = self.type_ == 'entity'
             return {
-                self.name: MethodInfoProperty(self.name, entity=isEntity),
+                self.name: MethodInfoProperty(self.name, entity=isEntity, enum=self.enum),
                 }
         else:
             if not self.enum:
