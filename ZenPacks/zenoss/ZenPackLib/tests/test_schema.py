@@ -38,15 +38,16 @@ logging.basicConfig(level=logging.INFO)
 
 site.addsitedir(os.path.join(os.path.dirname(__file__), '..'))
 
-from ZenPacks.zenoss.ZPLTest1 import zenpacklib
+from ZenPacks.zenoss.ZenPackLib import zenpacklib
+from ZenPacks.zenoss.ZenPackLib.lib.tests.TestCase import TestCase
+
 from ZenPacks.zenoss.ZPLTest1 import schema
 from ZenPacks.zenoss.ZPLTest1.ManagedObject import ManagedObject
 
 # Required before zenpacklib.TestCase can be used.
-zenpacklib.enableTesting()
 
 
-class TestSchema(zenpacklib.TestCase):
+class TestSchema(TestCase):
 
     """Test suite for ZenPack's schema.
 
