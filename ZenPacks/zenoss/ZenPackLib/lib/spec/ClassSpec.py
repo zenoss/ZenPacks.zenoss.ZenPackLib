@@ -42,7 +42,15 @@ from .Spec import Spec, DeviceInfoStatusProperty, \
 from .ClassPropertySpec import ClassPropertySpec
 from .ClassRelationshipSpec import ClassRelationshipSpec
 
+try:
+    from Products.Zuul.facades import metricfacade  # noqa: imported only to test that it can be imported
+except ImportError:
+    HAS_METRICFACADE = False
+else:
+    HAS_METRICFACADE = True
+
 GSM=get_gsm()
+
 
 class ClassSpec(Spec):
 
@@ -511,7 +519,10 @@ class ClassSpec(Spec):
                     if cached:
                         r = self.cacheRRDValue(datapoint, default=default)
                     else:
-                        r = self.getRRDValue(datapoint)
+                        if HAS_METRICFACADE:
+                            r = self.getRRDValue(datapoint)
+                        else:
+                            r = self.getRRDValue(datapoint, start=time.time()-1800)
 
                     if r is not None:
                         if not math.isnan(float(r)):
