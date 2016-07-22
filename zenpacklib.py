@@ -114,6 +114,13 @@ from zope.publisher.interfaces.browser import IDefaultBrowserLayer
 from zope.viewlet.interfaces import IViewlet
 
 try:
+    from Products.Zuul.facades import metricfacade  # noqa: imported only to test that it can be imported
+except ImportError:
+    HAS_METRICFACADE = False
+else:
+    HAS_METRICFACADE = True
+
+try:
     import yaml
     import yaml.constructor
     YAML_INSTALLED = True
@@ -2448,10 +2455,11 @@ class ClassSpec(Spec):
                     if cached:
                         r = self.cacheRRDValue(datapoint, default=default)
                     else:
-                        if is_pre_zenoss_5():
-                            r = self.getRRDValue(datapoint, start=time.time()-1800)
-                        else:
+                        if HAS_METRICFACADE:
                             r = self.getRRDValue(datapoint)
+                        else:
+                            r = self.getRRDValue(datapoint, start=time.time()-1800)
+
                     if r is not None:
                         if not math.isnan(float(r)):
                             return r
@@ -5611,15 +5619,6 @@ OrderAndValue = collections.namedtuple('OrderAndValue', ['order', 'value'])
 
 
 # Private Functions #########################################################
-
-def is_pre_zenoss_5():
-    '''return True if Zenoss is version 4.x or below'''
-    from Products.ZenModel.ZVersion import VERSION
-    from Products.ZenUtils.Version import Version
-    if Version.parse('Zenoss %s' % VERSION) < Version.parse('Zenoss 5'):
-        return True
-    return False
-
 
 def get_zenpack_path(zenpack_name):
     """Return filesystem path for given ZenPack."""
