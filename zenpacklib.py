@@ -1016,7 +1016,7 @@ class ComponentBase(ModelBase):
     def getRRDTemplateName(self):
         """Return name of primary template to bind to this component."""
         if self._templates:
-            return self._templates[0]
+            return self._templates[-1]
 
         return ''
 
