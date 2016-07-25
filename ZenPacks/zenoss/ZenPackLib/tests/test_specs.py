@@ -27,7 +27,7 @@ import Globals  # noqa
 
 # zenpacklib Imports
 site.addsitedir(os.path.join(os.path.dirname(__file__), '..'))
-import zenpacklib
+from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 LINUX_YAML = """
 name: ZenPacks.zenpacklib.TestLinuxStorage
