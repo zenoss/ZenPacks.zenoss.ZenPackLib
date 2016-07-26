@@ -365,7 +365,6 @@ class ZPLTestHarness(ZenScriptBase):
                             passed = False
                 for th in t.thresholds():
                     if not self.check_ob_vs_yaml(th, y_t.get('thresholds')):
-                        import pdb ; pdb.set_trace()
                         passed = False
                 for gd in t.graphDefs():
                     if not self.check_ob_vs_yaml(gd, y_t.get('graphs')):
