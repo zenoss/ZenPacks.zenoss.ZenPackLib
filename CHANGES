@@ -11,6 +11,7 @@ Features
 * Class icons beginning with / will be treated as absolute URL paths.
 * Improve performance of entity properties in component grids.
 * Simplify what device status means to critical event(s) in /Status.
+* Add detection of reserved words
 
 Fixes
 * Fix tracebacks caused by property datapoint_cached. (ZEN-22287)
