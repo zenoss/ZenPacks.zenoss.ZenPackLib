@@ -319,8 +319,8 @@ class ZPLTestHarness(ZenScriptBase):
             return False
         if template.description != spec.description:
             return False
-        if tcs.targetPythonClass:
-            if tcs.targetPythonClass != t.targetPythonClass:
+        if spec.targetPythonClass:
+            if spec.targetPythonClass != template.targetPythonClass:
                 return False
         return True
 
