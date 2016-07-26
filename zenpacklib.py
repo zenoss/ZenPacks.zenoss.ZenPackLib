@@ -49,6 +49,7 @@ import re
 import sys
 import math
 import types
+import keyword
 
 from lxml import etree
 
@@ -165,6 +166,19 @@ TestCase = None
 
 # Required for registering ZCSA adapters.
 GSM = getGlobalSiteManager()
+
+
+def getZenossKeywords(klasses):
+    kwset = set()
+    for klass in klasses:
+        kwset = kwset.union(set(dir(klass)))
+    return list(kwset)
+
+ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
+                                     BaseDeviceComponent,
+                                     BaseDeviceInfo,
+                                     BaseComponentInfo])
+KEYWORDS = keyword.kwlist + ZENOSS_KEYWORDS
 
 
 # Public Classes ############################################################
@@ -4907,6 +4921,12 @@ if YAML_INSTALLED:
         for spec_key_node, spec_value_node in node.value:
             try:
                 spec_key = str(loader.construct_scalar(spec_key_node))
+                if spec_key in KEYWORDS:
+                    yaml_error(loader, yaml.constructor.ConstructorError(
+                        None, None,
+                        "Found reserved keyword '{}' while processing {}".format(spec_key, spec_class.__name__),
+                        spec_key_node.start_mark))
+                    continue
             except yaml.MarkedYAMLError, e:
                 yaml_error(loader, e)
 
@@ -5127,6 +5147,12 @@ if YAML_INSTALLED:
         for key_node, value_node in node.value:
             yaml_key = str(loader.construct_scalar(key_node))
 
+            if yaml_key in KEYWORDS and yaml_key != 'name':
+                yaml_error(loader, yaml.constructor.ConstructorError(
+                    None, None,
+                    "Found reserved keyword '{}' while processing {}".format(yaml_key, cls.__name__),
+                    key_node.start_mark))
+                continue
             if yaml_key not in param_name_map:
                 if extra_params:
                     # If an 'extra_params' parameter is defined for this spec,
