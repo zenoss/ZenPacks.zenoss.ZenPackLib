@@ -1,4 +1,4 @@
-import inspect
+import yaml
 from Products.ZenRelations.Exceptions import RelationshipExistsError
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -6,12 +6,21 @@ log = logging.getLogger('zen.zenpacklib.tests')
 
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
+import Globals
+from Products.ZenUtils.Utils import unused
+unused(Globals)
 
-class ZPLTestHarness(object):
+from Products.ZenUtils.ZenScriptBase import ZenScriptBase
+
+
+class ZPLTestHarness(ZenScriptBase):
     '''Class containing methods to build out dummy objects representing YAML class instances'''
 
-    def __init__(self, filename):
+    def __init__(self, filename, connect=False):
+        ''''''
+        ZenScriptBase.__init__(self)
         self.cfg = zenpacklib.load_yaml(filename)
+        self.yaml = yaml.load(open(filename, 'r'))
         self.zp = self.cfg.zenpack_module
         self.schema = self.zp.schema
         self.build_cfg_obs()
@@ -122,7 +131,7 @@ class ZPLTestHarness(object):
 
     def is_device(self, ob):
         '''return True if device'''
-        if hasattr(d, 'deviceClass'):
+        if hasattr(ob, 'deviceClass'):
             return True
         return False
 
@@ -169,11 +178,11 @@ class ZPLTestHarness(object):
         spec_s_from = self.classname(rspec.left_schema)
         spec_s_to = self.classname(rspec.right_schema)
         # checking classes
-        if cls_from != spec_from:# and spec_from not in bases_from:
+        if cls_from != spec_from and spec_from not in bases_from:
             print self.rel_spec_info(rspec)
             print 'Remote left class mismatch between spec (%s) and relation (%s)' % (spec_from, cls_from)
             return False
-        if cls_to != spec_to: # and spec_to not in bases_to:
+        if cls_to != spec_to and spec_to not in bases_to:
             print self.rel_spec_info(rspec)
             print 'Remote right class mismatch between spec (%s) and relation (%s)' % (spec_to, cls_to)
             return False
@@ -265,6 +274,116 @@ class ZPLTestHarness(object):
             # check for intended versus actual type
             if intended_type != actual_type:
                 print '%s (%s) type mismatch spec (%s) vs class (%s)'% (cls_id, name, intended_type, actual_type)
+                passed = False
+        return passed
+
+    def check_templates_vs_specs(self):
+        '''check that template objects match the specs'''
+        self.connect()
+        passed = True
+        for dcid, dcs in self.cfg.device_classes.items():
+            for tid, tcs in dcs.templates.items():
+                # create a dummy template object
+                t = tcs.create(self.dmd, False)
+                print t.id, '-' * 80
+                for th in t.thresholds():
+                    thcs = tcs.thresholds.get(th.id)
+                    test, msg = self.compare_template_ob_to_spec(th, thcs)
+                    if not test:
+                        print '%s threshold %s failed (%s)' % (t.id, th.id, msg)
+                        passed = False
+                for gd in t.graphDefs():
+                    gdcs = tcs.graphs.get(gd.id)
+                    test, msg = self.compare_template_ob_to_spec(gd, gdcs)
+                    if not test:
+                        print '%s graph %s failed (%s)' % (t.id, gd.id, msg)
+                        passed = False
+                for ds in t.datasources():
+                    dscs = tcs.datasources.get(ds.id)
+                    test, msg = self.compare_template_ob_to_spec(ds, dscs)
+                    if not test:
+                        print '%s datasource %s failed (%s)' % (t.id, ds.id, msg)
+                        passed = False
+                    for dp in ds.datapoints():
+                        dpcs = dscs.datapoints.get(dp.id)
+                        test, msg = self.compare_template_ob_to_spec(dp, dpcs)
+                        if not test:
+                            print '%s %s datapoint %s failed (%s)' % (t.id, ds.id, dp.id, msg)
+                            passed = False
+        return passed
+
+    def compare_template_to_spec(self, template, spec):
+        '''compare template to spec'''
+        if template.id != spec.name:
+            return False
+        if template.description != spec.description:
+            return False
+        if spec.targetPythonClass:
+            if spec.targetPythonClass != template.targetPythonClass:
+                return False
+        return True
+
+    def compare_template_ob_to_spec(self, ob, dscs):
+        '''compare template object to spec'''
+        passed = True
+        cls = self.classname(ob)
+        msg = '%s passed inspection' % cls
+        for p in ob._properties:
+            id = p.get('id')
+            default = getattr(ob, id)
+            spec_default = getattr(dscs, id, getattr(dscs,'extra_params',{}).get(id))
+            # skip if not defined:
+            if not spec_default:
+                continue
+            print "comparing %s %s (%s) to %s (%s)" % (id, default, type(default), spec_default, type(spec_default))
+            if default != spec_default:
+                msg = '%s property %s mismatch between class (%s) and spec (%s)  and default' % (ob.id, id, default, spec_default)
+                passed = False
+        return (passed, msg)
+
+    def check_templates_vs_yaml(self):
+        '''check that template objects match the yaml'''
+        self.connect()
+        passed = True
+        for dcid, dcs in self.cfg.device_classes.items():
+            # get data from unparsed, loaded yaml
+            y_dcs = self.yaml.get('device_classes').get(dcid)
+            y_templates = y_dcs.get('templates')
+            for tid, tcs in dcs.templates.items():
+                y_t = y_templates.get(tid)
+                # create a dummy template object
+                t = tcs.create(self.dmd, False)
+                if not self.check_ob_vs_yaml(t, y_templates):
+                    passed = False
+                for ds in t.datasources():
+                    y_ds = y_t.get('datasources').get(ds.id)
+                    if not self.check_ob_vs_yaml(ds, y_t.get('datasources')):
+                        passed = False
+                    for dp in ds.datapoints():
+                        if not self.check_ob_vs_yaml(dp, y_ds.get('datapoints')):
+                            passed = False
+                for th in t.thresholds():
+                    if not self.check_ob_vs_yaml(th, y_t.get('thresholds')):
+                        passed = False
+                for gd in t.graphDefs():
+                    if not self.check_ob_vs_yaml(gd, y_t.get('graphs')):
+                        passed = False
+        return passed
+
+    def check_ob_vs_yaml(self, ob, data):
+        '''compare object values to YAML'''
+        passed = True
+        ob_data = data.get(ob.id)
+        ob_data.update(data.get('DEFAULTS',{}))
+        for k, v in ob_data.items():
+            if isinstance(v, dict):
+                continue
+            if k == 'type':
+                k = 'sourcetype'
+            expected = v
+            actual = getattr(ob, k)
+            if expected != actual:
+                print '%s (%s) property %s: acutal (%s) did not match expected (%s)' % (ob.id, ob.meta_type, k, actual, expected)
                 passed = False
         return passed
 
