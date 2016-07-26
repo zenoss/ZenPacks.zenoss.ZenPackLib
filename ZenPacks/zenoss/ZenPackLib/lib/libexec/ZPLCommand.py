@@ -31,7 +31,7 @@ from ..helpers.Loader import Loader
 class ZPLCommand(ZenScriptBase):
     '''ZPLCommand'''
     
-    def __init__(self, noopts=0, app=None, connect=True, version=None):
+    def __init__(self, noopts=0, app=None, connect=False, version=None):
         ''''''
         if not version:
             from ZenPacks.zenoss.ZenPackLib import zenpacklib
