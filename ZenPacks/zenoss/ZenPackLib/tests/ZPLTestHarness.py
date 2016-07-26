@@ -20,9 +20,8 @@ class ZPLTestHarness(ZenScriptBase):
     def __init__(self, filename, connect=False):
         ''''''
         ZenScriptBase.__init__(self)
-        self.filename = filename
-        self.cfg = zenpacklib.load_yaml(self.filename)
-        self.yaml = yaml.load(open(self.filename, 'r'))
+        self.cfg = zenpacklib.load_yaml(filename)
+        self.yaml = yaml.load(open(filename, 'r'))
         self.zp = self.cfg.zenpack_module
         self.schema = self.zp.schema
         self.build_cfg_obs()

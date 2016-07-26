@@ -31,27 +31,6 @@ from .ZPLTestHarness import ZPLTestHarness
 import Globals  # noqa
 
 
-dynamicview_js = '''Zenoss.nav.appendTo('Component', [{
-    id: 'subcomponent_view',
-    text: _t('Dynamic View'),
-    xtype: 'dynamicview',
-    relationshipFilter: 'impacted_by',
-    viewName: 'service_view',
-    filterNav: function(navpanel) {
-        switch (navpanel.refOwner.componentType) {
-'''
-
-ibm_component = '''ZC.LogicalPartitionsPanel = Ext.extend(ZC.ZPL_ZenPacks_zenoss_IBM_Power_ComponentGridPanel, {    constructor: function(config) {
-        config = Ext.applyIf(config||{}, {
-            componentType: 'LogicalPartitions',
-            autoExpandColumn: 'name',
-            fields: [{name: 'uid'},{name: 'name'},{name: 'meta_type'},{name: 'class_label'},{name: 'status'},{name: 'severity'},{name: 'usesMonitorAttribute'},{name: 'monitame: 'locking'},{name: 'hmcserver'},{name: 'getManagedSystemStatusText'},{name: 'managedSystem'}],
-            columns: [{id: 'severity',dataIndex: 'severity',header: _t('Events'),renderer: Zenoss.render.severity,width: 50},{id: 'name',dataIndex: 'name',header: _t('Name'r: Zenoss.render.zenpacklib_ZenPacks_zenoss_IBM_Power_entityLinkFromGrid},{id: 'HMCServer',dataIndex: 'hmcserver',header: _t('HMC Server'),width: 100,renderer: Zenoss.rendelib_ZenPacks_zenoss_IBM_Power_entityLinkFromGrid},{id: 'managedSystem',dataIndex: 'managedSystem',header: _t('Managed System'),width: 100,renderer: Zenoss.render.zenpacklib_zenoss_IBM_Power_entityLinkFromGrid},{id: 'getManagedSystemStatusText',dataIndex: 'getManagedSystemStatusText',header: _t('Managed System Status'),width: 130},{id: 'monitoIndex: 'monitored',header: _t('Monitored'),renderer: Zenoss.render.checkbox,width: 70},{id: 'locking',dataIndex: 'locking',header: _t('Locking'),renderer: Zenoss.render.locs,width: 65}]
-        });
-        ZC.LogicalPartitionsPanel.superclass.constructor.call(this, config);
-    }
-});
-'''
 
 class TestClasses(unittest.TestCase):
 
@@ -63,9 +42,7 @@ class TestClasses(unittest.TestCase):
         for f in os.listdir(fdir):
             if '.yaml' not in f:
                 continue
-        #for file in ['ms_windows.yaml', 'bigipmonitor.yaml', 'ibm_power.yaml', 'hp_proliant.yaml']:
             file = os.path.join(os.path.dirname(__file__), 'data/yaml/%s' % f)
-            print "LOADING FILE: %s" % file
             log.info("loading file: %s" % file)
             self.zps.append(ZPLTestHarness(file))
 
@@ -85,21 +62,21 @@ class TestClasses(unittest.TestCase):
         for zp in self.zps:
             self.assertTrue(zp.check_cfg_relations(),"Test Failed")
 
-#     def test_DynamicViewComponentNav(self):
-#         
-#         for zp in self.zps:
-#             # dynamicview_nav_js_snippet is only used internally by zenpacklib, but
-#             # it should match exactly and be an easier test to make.
-#             self.assertMultiLineEqual(
-#                 zp.cfg.dynamicview_nav_js_snippet.strip(),
-#                 dynamicview_js.strip())
-# 
-#             # device_js_snippet is actually used to create the JavaScript snippet,
-#             # and should contain our subcomponent_view among many other things.
-# #             self.assertIn(
-# #                 EXPECTED_SUBCOMPONENT_VIEW.strip(),
-# #                 zenpack.device_js_snippet.strip())
+    def test_Templates_YAML(self):
+        '''
+        check that class relations follow the spec
+        '''
+        log.info("Checking relations")
+        for zp in self.zps:
+            self.assertTrue(zp.check_templates_vs_yaml(),"Test Failed")
 
+    def test_Templates_Spec(self):
+        '''
+        check that class relations follow the spec
+        '''
+        log.info("Checking relations")
+        for zp in self.zps:
+            self.assertTrue(zp.check_templates_vs_specs(),"Test Failed")
 
 def test_suite():
     """Return test suite for this module."""
