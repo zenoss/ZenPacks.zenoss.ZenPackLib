@@ -5122,7 +5122,7 @@ if YAML_INSTALLED:
                     return map.get(k,'str')(node.value)
                 except:
                     pass
-    return loader.construct_shorthand(node)
+    return loader.construct_scalar(node)
 
     def construct_spec(cls, loader, node):
         """
