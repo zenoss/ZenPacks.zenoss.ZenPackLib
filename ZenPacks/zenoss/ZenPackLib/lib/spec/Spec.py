@@ -185,6 +185,8 @@ class Spec(object):
                 defaults = dictionary.pop('DEFAULTS')
             for k, v in dictionary.iteritems():
                 dictionary[k] = dict(defaults, **v)
+                if 'extra_params' in  dictionary[k].keys():
+                    dictionary[k]['extra_params'].update(defaults.get('extra_params',{}))
 
     def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False):
         """Return a normalized dictionary of spec_type instances."""
