@@ -185,7 +185,7 @@ class Spec(object):
                 defaults = dictionary.pop('DEFAULTS')
             for k, v in dictionary.iteritems():
                 dictionary[k] = dict(defaults, **v)
-                if 'extra_params' in  dictionary[k].keys():
+                if 'extra_params' in dictionary[k].keys():
                     extra_params = defaults.get('extra_params',{})
                     dictionary_params = dictionary[k]['extra_params']
                     for i, j in extra_params.items():
