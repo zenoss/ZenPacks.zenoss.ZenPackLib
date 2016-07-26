@@ -5831,7 +5831,12 @@ def apply_defaults(dictionary, default_defaults=None, leave_defaults=False):
             defaults = dictionary.pop('DEFAULTS')
         for k, v in dictionary.iteritems():
             dictionary[k] = dict(defaults, **v)
-
+            if 'extra_params' in  dictionary[k].keys():
+                extra_params = defaults.get('extra_params',{})
+                dictionary_params = dictionary[k]['extra_params']
+                for i, j in extra_params.items():
+                    if i not in dictionary_params.keys():
+                        dictionary_params[i] = j
 
 def get_symbol_name(*args):
     """Return fully-qualified symbol name given path args.
