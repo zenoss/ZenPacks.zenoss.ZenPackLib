@@ -167,9 +167,18 @@ TestCase = None
 # Required for registering ZCSA adapters.
 GSM = getGlobalSiteManager()
 
-# Use OTHERS for any other words we shouldn't use
-OTHERS = ['uuid', ]
-KEYWORDS = keyword.kwlist + list(set(dir(BaseDevice)).union(set(dir(BaseDeviceComponent)))) + OTHERS
+
+def getZenossKeywords(klasses):
+    kwset = set()
+    for klass in klasses:
+        kwset = kwset.union(set(dir(klass)))
+    return list(kwset)
+
+ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
+                                     BaseDeviceComponent,
+                                     BaseDeviceInfo,
+                                     BaseComponentInfo])
+KEYWORDS = keyword.kwlist + ZENOSS_KEYWORDS
 
 
 # Public Classes ############################################################
