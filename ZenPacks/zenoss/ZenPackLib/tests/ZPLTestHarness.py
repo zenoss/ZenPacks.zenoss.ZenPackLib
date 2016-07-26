@@ -1,4 +1,3 @@
-import inspect
 import yaml
 from Products.ZenRelations.Exceptions import RelationshipExistsError
 import logging
@@ -132,7 +131,7 @@ class ZPLTestHarness(ZenScriptBase):
 
     def is_device(self, ob):
         '''return True if device'''
-        if hasattr(d, 'deviceClass'):
+        if hasattr(ob, 'deviceClass'):
             return True
         return False
 
@@ -179,11 +178,11 @@ class ZPLTestHarness(ZenScriptBase):
         spec_s_from = self.classname(rspec.left_schema)
         spec_s_to = self.classname(rspec.right_schema)
         # checking classes
-        if cls_from != spec_from:# and spec_from not in bases_from:
+        if cls_from != spec_from and spec_from not in bases_from:
             print self.rel_spec_info(rspec)
             print 'Remote left class mismatch between spec (%s) and relation (%s)' % (spec_from, cls_from)
             return False
-        if cls_to != spec_to: # and spec_to not in bases_to:
+        if cls_to != spec_to and spec_to not in bases_to:
             print self.rel_spec_info(rspec)
             print 'Remote right class mismatch between spec (%s) and relation (%s)' % (spec_to, cls_to)
             return False
