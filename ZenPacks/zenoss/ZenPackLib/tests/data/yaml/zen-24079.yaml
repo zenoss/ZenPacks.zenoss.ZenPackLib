@@ -1,0 +1,20 @@
+name: ZenPacks.community.TestDEFAULSonDatasource
+
+device_classes:
+  /Device:
+    templates:
+      TESTTEMPLATE:
+        description: Testing that Duration threshold accepts integer values
+        datasources:
+          currentReading:
+            type: SNMP
+            datapoints:
+              currentReading: {}
+            oid: .1.3.6.1.4.1.232.6.2.6.8.1.4
+        thresholds:
+          DurationThreshold:
+            type: DurationThreshold
+            dsnames: [currentReading_currentReading]
+            violationPercentage: 10
+            timePeriod: 2 days
+
