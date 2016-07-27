@@ -21,13 +21,38 @@ Distributed Usage
 To bundle zenpacklib with a given ZenPack (and remove central dependency), copy the 
 "ZenPackLib" folder and its contents to
 
-/ZenPacks.something.theother/ZenPacks/something/theother/ZenPackLib
+	/ZenPacks.something.theother/ZenPacks/something/theother/ZenPackLib
 
 and change the __init__.py to read:
 
 import os
-from .ZPL import zenpacklib
-# from ZenPacks.zenoss.ZenPackLib import zenpacklib
+from .ZenPackLib import zenpacklib
+YAML = os.path.join(os.path.dirname(__file__), 'zenpack.yaml')
+CFG = zenpacklib.load_yaml(YAML)
+
+************************
+Older Versions of zenpacklib.py
+************************
+
+Older versions of ZenPackLib can be used within the new ZenPack.  To support this functionality, the 
+
+	/ZenPacks/zenoss/ZenPackLib/archive/VERSION 
+directories have been added, and can contain archive or customized
+versions of zenpacklib.py.  
+
+To use an archive version of zenpacklib.py with your ZenPack, simply change the import path in the ZenPack's
+__init__.py file to read:
+
+from ZenPacks.zenoss.ZenPackLib.archive.[VERSION] import zenpacklib
+
+for example:
+
+from ZenPacks.zenoss.ZenPackLib.archive.v_1_0_13 import zenpacklib
+
+will import and zenpacklib.py version 1.0.13.
+
+import os
+from ZenPacks.zenoss.ZenPackLib.archive.v_1_0_13 import zenpacklib
 YAML = os.path.join(os.path.dirname(__file__), 'zenpack.yaml')
 CFG = zenpacklib.load_yaml(YAML)
 
