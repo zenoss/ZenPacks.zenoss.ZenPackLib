@@ -521,11 +521,13 @@ def construct_specsparameters(loader, node, spectype):
             spec_key = str(loader.construct_scalar(spec_key_node))
 
             if spec_key in KEYWORDS:
+                print "Found reserved keyword '{}' while processing {}".format(spec_key, spec_class.__name__)
+                loader.warnings = True
                 yaml_error(loader, yaml.constructor.ConstructorError(
                     None, None,
                     "Found reserved keyword '{}' while processing {}".format(spec_key, spec_class.__name__),
                     spec_key_node.start_mark))
-                continue
+
         except yaml.MarkedYAMLError, e:
             yaml_error(loader, e)
 
@@ -749,11 +751,12 @@ def construct_spec(cls, loader, node):
         yaml_key = str(loader.construct_scalar(key_node))
 
         if yaml_key in KEYWORDS and yaml_key != 'name':
+            print "Found reserved keyword '{}' while processing {}".format(yaml_key, cls.__name__)
+            loader.warnings = True
             yaml_error(loader, yaml.constructor.ConstructorError(
                 None, None,
                 "Found reserved keyword '{}' while processing {}".format(yaml_key, cls.__name__),
                 key_node.start_mark))
-            continue
 
         if yaml_key not in param_name_map:
             if extra_params:
