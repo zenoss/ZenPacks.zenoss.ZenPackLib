@@ -12,6 +12,10 @@ Features
 * Improve performance of entity properties in component grids.
 * Simplify what device status means to critical event(s) in /Status.
 
+Fixes
+* Fix tracebacks caused by property datapoint_cached. (ZEN-22287)
+* Fix 'display' property to honor initialized values. (ZEN-19798)
+
 Documentation
 
 * Fix YAML reference for dynamicview_group class field.
