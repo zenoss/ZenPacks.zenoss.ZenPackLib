@@ -17,6 +17,10 @@ Fixes
 * Fix tracebacks caused by property datapoint_cached. (ZEN-22287)
 * Fix 'display' property to honor initialized values. (ZEN-19798)
 
+Fixes
+* Fix tracebacks caused by property datapoint_cached. (ZEN-22287)
+* Fix 'display' property to honor initialized values. (ZEN-19798)
+
 Documentation
 
 * Fix YAML reference for dynamicview_group class field.
