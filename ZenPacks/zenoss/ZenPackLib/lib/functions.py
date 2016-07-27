@@ -7,7 +7,7 @@ import operator
 import re
 import yaml
 import time
-
+import keyword
 
 from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
 
@@ -299,6 +299,24 @@ def relationships_from_yuml(yuml):
     return classes
 
 # Public Functions #########################################################
+def getZenossKeywords(klasses):
+    kwset = set()
+    for klass in klasses:
+        kwset = kwset.union(set(dir(klass)))
+    return list(kwset)
+
+
+from Products.ZenModel.Device import Device as BaseDevice
+from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
+from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
+from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
+
+ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
+                                     BaseDeviceComponent,
+                                     BaseDeviceInfo,
+                                     BaseComponentInfo])
+
+KEYWORDS = keyword.kwlist + ZENOSS_KEYWORDS
 
 
 def relschemaspec_to_str(spec):
@@ -499,6 +517,12 @@ def construct_specsparameters(loader, node, spectype):
     for spec_key_node, spec_value_node in node.value:
         try:
             spec_key = str(loader.construct_scalar(spec_key_node))
+            if spec_key in KEYWORDS:
+                yaml_error(loader, yaml.constructor.ConstructorError(
+                    None, None,
+                    "Found reserved keyword '{}' while processing {}".format(spec_key, spec_class.__name__),
+                    spec_key_node.start_mark))
+                continue
         except yaml.MarkedYAMLError, e:
             yaml_error(loader, e)
 
@@ -720,6 +744,13 @@ def construct_spec(cls, loader, node):
 
     for key_node, value_node in node.value:
         yaml_key = str(loader.construct_scalar(key_node))
+
+        if yaml_key in KEYWORDS and yaml_key != 'name':
+            yaml_error(loader, yaml.constructor.ConstructorError(
+                None, None,
+                "Found reserved keyword '{}' while processing {}".format(yaml_key, cls.__name__),
+                key_node.start_mark))
+            continue
 
         if yaml_key not in param_name_map:
             if extra_params:
