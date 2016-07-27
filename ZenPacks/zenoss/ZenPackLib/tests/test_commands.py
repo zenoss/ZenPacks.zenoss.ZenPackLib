@@ -16,7 +16,6 @@ This module tests command line usage of zenpacklib.py.
 """
 
 import logging
-import subprocess
 import os
 import re
 import shutil
@@ -27,16 +26,14 @@ unused(Globals)
 logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger('zen.zenpacklib.tests')
 
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
+from .BaseTestCommand import BaseTestCommand
 
 
-class TestCommands(BaseTestCase):
+class TestCommands(BaseTestCommand):
 
     zenpack_name = 'ZenPacks.zenoss.ZPLTest1'
     zenpack_path = os.path.join(os.path.dirname(__file__),
                                 "data/zenpacks/ZenPacks.zenoss.ZPLTest1")
-    zenpacklib_path = os.path.join(os.path.dirname(__file__),
-                                   "../zenpacklib.py")
     yaml_path = os.path.join(zenpack_path, 'ZenPacks/zenoss/ZPLTest1/zenpack.yaml')
 
     disableLogging = False
@@ -49,27 +46,6 @@ class TestCommands(BaseTestCase):
                 e.message == 'No module named ZPLTest1',
                 "ZPLTest1 zenpack is not installed.  You must install it before running this test:\n   zenpack --link --install=%s" % self.zenpack_path
             )
-
-    def _smoke_command(self, *args):
-        cmd = ('python', self.zenpacklib_path,) + args
-        cmdstr = " ".join(cmd)
-        LOG.info("Running %s" % cmdstr)
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        p.wait()
-        LOG.debug("Stdout: %s\nStderr: %s", out, err)
-
-        self.assertIs(p.returncode, 0,
-                      'Error running %s: %s%s' % (cmdstr, err, out))
-
-        if out is not None:
-            self.assertNotIn("Error", out)
-            self.assertNotIn("Error", out)
-        if err is not None:
-            self.assertNotIn("Traceback", err)
-            self.assertNotIn("Traceback", err)
-
-        return out
 
     def test_smoke_lint(self):
         self._smoke_command("--lint", self.yaml_path)

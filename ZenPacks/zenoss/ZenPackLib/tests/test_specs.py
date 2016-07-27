@@ -21,9 +21,11 @@ import os
 import unittest
 import site
 import tempfile
+from Products.ZenUtils.Utils import unused
 
 # Zenoss Imports
 import Globals  # noqa
+unused(Globals)
 
 # zenpacklib Imports
 site.addsitedir(os.path.join(os.path.dirname(__file__), '..'))

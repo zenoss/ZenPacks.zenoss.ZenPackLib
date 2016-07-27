@@ -19,8 +19,6 @@ between YAML and Zenoss functionality.
 # stdlib Imports
 import os
 import unittest
-import site
-
 import logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('zen.zenpacklib.tests')
@@ -29,7 +27,8 @@ from .ZPLTestHarness import ZPLTestHarness
 
 # Zenoss Imports
 import Globals  # noqa
-
+from Products.ZenUtils.Utils import unused
+unused(Globals)
 
 
 class TestClasses(unittest.TestCase):
