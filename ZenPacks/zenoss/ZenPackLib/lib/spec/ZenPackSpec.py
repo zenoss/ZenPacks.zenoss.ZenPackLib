@@ -230,7 +230,12 @@ class ZenPackSpec(Spec):
                     remote_relname = relationship.zenrelations_tuple[0]  # products_zenmodel_device_device
 
                     if relname not in (x[0] for x in remoteClassObj._relations):
-                        remoteClassObj._relations += ((relname, remoteType(localType, modname, remote_relname)),)
+                        rel = ((relname, remoteType(localType, modname, remote_relname)),)
+                        # do this differently if it's on a ZPL-based class
+                        if hasattr(remoteClassObj, '_v_local_relations'):
+                            remoteClassObj._v_local_relations += rel
+                        else:
+                            remoteClassObj._relations += rel
 
                     remote_module_id = remoteClassObj.__module__
                     if relname not in self.NEW_RELATIONS[remote_module_id]:
