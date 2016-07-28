@@ -172,13 +172,12 @@ def getZenossKeywords(klasses):
     kwset = set()
     for klass in klasses:
         kwset = kwset.union(set(dir(klass)))
-    return list(kwset)
+    return kwset
 
 ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
                                      BaseDeviceComponent,
                                      BaseDeviceInfo,
                                      BaseComponentInfo])
-KEYWORDS = keyword.kwlist + ZENOSS_KEYWORDS
 
 
 # Public Classes ############################################################
@@ -4866,6 +4865,31 @@ if YAML_INSTALLED:
 
         return severity
 
+    def format_message(e):
+        message = []
+
+        mark = e.context_mark or e.problem_mark
+        if mark:
+            position = "{}:{}:{}".format(mark.name, mark.line + 1, mark.column + 1)
+        else:
+            position = "[unknown]"
+        if e.context is not None:
+            message.append(e.context)
+
+        if e.problem is not None:
+            message.append(e.problem)
+
+        if e.note is not None:
+            message.append("(note: " + e.note + ")")
+
+        return "{}: {}".format(position, message)
+
+    def yaml_warning(loader, e):
+        # Given a MarkedYAMLError exception, either log or raise
+        # the error, depending on the 'fatal' argument.
+
+        print format_message(e)
+
     def yaml_error(loader, e, exc_info=None):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
@@ -4882,23 +4906,33 @@ if YAML_INSTALLED:
         if fatal:
             raise e
 
-        message = []
+        print format_message(e)
 
-        mark = e.context_mark or e.problem_mark
-        if mark:
-            position = "%s:%s:%s" % (mark.name, mark.line+1, mark.column+1)
-        else:
-            position = "[unknown]"
-        if e.context is not None:
-            message.append(e.context)
+    def verify_key(loader, cls, params, key, start_mark):
+        # always ok to use a param name (description, name, etc.)
+        if key in params.keys():
+            return True
 
-        if e.problem is not None:
-            message.append(e.problem)
+        # never use a python reserved word
+        if key in keyword.kwlist:
+            yaml_error(loader, yaml.constructor.ConstructorError(
+                None, None,
+                "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+                start_mark))
+        elif key in ZENOSS_KEYWORDS:
+            # should be ok to use a zenoss word to define these
+            # some items, like sysUpTime are pretty common datapoints
+            if cls not in [RRDDatasourceSpec,
+                           RRDDatapointSpec,
+                           RRDTemplateSpec,
+                           GraphDefinitionSpec,
+                           GraphPointSpec]:
+                yaml_warning(loader, yaml.constructor.ConstructorError(
+                    None, None,
+                    "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+                    start_mark))
 
-        if e.note is not None:
-            message.append("(note: " + e.note + ")")
-
-        print "%s: %s" % (position, ",".join(message))
+        return False
 
     def construct_specsparameters(loader, node, spectype):
         spec_class = {x.__name__: x for x in Spec.__subclasses__()}.get(spectype, None)
@@ -4917,16 +4951,12 @@ if YAML_INSTALLED:
                 node.start_mark))
             return
 
+        param_defs = spec_class.init_params()
         specs = OrderedDict()
         for spec_key_node, spec_value_node in node.value:
             try:
                 spec_key = str(loader.construct_scalar(spec_key_node))
-                if spec_key in KEYWORDS:
-                    yaml_error(loader, yaml.constructor.ConstructorError(
-                        None, None,
-                        "Found reserved keyword '{}' while processing {}".format(spec_key, spec_class.__name__),
-                        spec_key_node.start_mark))
-                    continue
+                verify_key(loader, spec_class, param_defs, spec_key, spec_key_node.start_mark)
             except yaml.MarkedYAMLError, e:
                 yaml_error(loader, e)
 
@@ -5147,12 +5177,7 @@ if YAML_INSTALLED:
         for key_node, value_node in node.value:
             yaml_key = str(loader.construct_scalar(key_node))
 
-            if yaml_key in KEYWORDS and yaml_key != 'name':
-                yaml_error(loader, yaml.constructor.ConstructorError(
-                    None, None,
-                    "Found reserved keyword '{}' while processing {}".format(yaml_key, cls.__name__),
-                    key_node.start_mark))
-                continue
+            verify_key(loader, cls, param_defs, yaml_key, key_node.start_mark)
             if yaml_key not in param_name_map:
                 if extra_params:
                     # If an 'extra_params' parameter is defined for this spec,
