@@ -25,7 +25,9 @@ from BaseTestCommand import BaseTestCommand
 unused(Globals)
 log = logging.getLogger('zen.zenpacklib.tests')
 
+
 RESERVED_YAML = """name: ZenPacks.zenoss.Example
+
 classes:
     ExampleDevice:
         base: [zenpacklib.Device]
@@ -41,23 +43,32 @@ classes:
         properties:
             prop1:
                 label: yield
+
+zProperties:
+    zCommandUsername:
+        default: ''
+
 device_classes:
     /Server/SSH:
         templates:
-            breadCrumbs:
+            lambda:
                 description: Poorly named template
+
                 datasources:
                     health:
                         type: COMMAND
                         parser: Nagios
                         commandTemplate: "echo OK|percent=100"
+
                         datapoints:
                           percent:
                             rrdtype: GAUGE
                             rrdmin: 0
                             rrdmax: 100
+
 """
 NO_RESERVED_YAML = """name: ZenPacks.zenoss.Example
+
 classes:
     ExampleDevice:
         base: [zenpacklib.Device]
@@ -71,6 +82,28 @@ classes:
         properties:
             prop1:
                 label: Property One
+
+zProperties:
+    zCommandUsername:
+        default: ''
+
+device_classes:
+    /Server/SSH:
+        templates:
+            ProperComponentHealth:
+                description: Properly named template
+
+                datasources:
+                    health:
+                        type: COMMAND
+                        parser: Nagios
+                        commandTemplate: "echo OK|percent=100"
+
+                        datapoints:
+                          percent:
+                            rrdtype: GAUGE
+                            rrdmin: 0
+                            rrdmax: 100
 """
 
 
@@ -80,13 +113,13 @@ class TestKeywords(BaseTestCommand):
         with tempfile.NamedTemporaryFile() as f:
             f.write(RESERVED_YAML.strip())
             f.flush()
-            out = self._smoke_command('--lint', f.name).split('\n')
+            out = self._smoke_command('--lint', f.name).strip().split('\n')
             log.debug('Lint results: {}'.format(out))
-            self.assertEquals(5, len(out))
+            self.assertEquals(4, len(out))
             self.assertIn("Found reserved keyword 'uuid'", out[0])
             self.assertIn("Found reserved keyword 'yield'", out[1])
             self.assertIn("Found reserved keyword 'lambda'", out[2])
-            self.assertIn("Found reserved keyword 'breadCrumbs'", out[3])
+            self.assertIn("Found reserved keyword 'lambda'", out[3])
 
             f.close()
 
