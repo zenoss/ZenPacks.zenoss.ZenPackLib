@@ -970,9 +970,6 @@ class ComponentBase(ModelBase):
 
             relpath = "/".join(path + [relname])
 
-            if relname not in path:
-                path.append(relname)
-
             # Always include directly-related objects.
             for obj in relobjs:
                 if obj in seen:
