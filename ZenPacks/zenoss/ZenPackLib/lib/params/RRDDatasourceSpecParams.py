@@ -10,7 +10,7 @@ class RRDDatasourceSpecParams(SpecParams, RRDDatasourceSpec):
         self.name = name
 
         self.datapoints = self.specs_from_param(
-            RRDDatapointSpecParams, 'datapoints', datapoints)
+            RRDDatapointSpecParams, 'datapoints', datapoints, log=self.LOG)
 
     @classmethod
     def fromObject(cls, datasource):

@@ -1,15 +1,14 @@
 import collections
 from zope.interface import implements
 from zope.component import adapts
-from .utils import LOG
-
-
+from .functions import LOG
 from ZenPacks.zenoss.DynamicView import BaseRelation, BaseGroup
 from ZenPacks.zenoss.DynamicView import TAG_ALL
 from ZenPacks.zenoss.DynamicView.interfaces import IRelatable, IRelationsProvider
 from ZenPacks.zenoss.DynamicView.interfaces import IGroupMappingProvider
 from ZenPacks.zenoss.DynamicView.model.adapters import BaseRelatable
 from ZenPacks.zenoss.DynamicView.model.adapters import BaseRelationsProvider
+
 
 class DynamicViewRelatable(BaseRelatable):
     """Generic DynamicView Relatable adapter (IRelatable)
@@ -41,6 +40,7 @@ class DynamicViewRelatable(BaseRelatable):
     def group_data(self):
         return self._adapted.getDynamicViewGroup()
 
+
 class DynamicViewGroupMappingProvider(object):
     """Generic DynamicView IGroupMappingProvider adapter.
 
@@ -68,6 +68,7 @@ class DynamicViewGroupMappingProvider(object):
                 weight=data.get('weight', 999),
                 type=data.get('type', 'Unknown'),
                 icon=data.get('icon', '/zport/dmd/img/icons/noicon.png'))
+
 
 class DynamicViewRelationsProvider(BaseRelationsProvider):
     """Generic DynamicView RelationsProvider subscription adapter (IRelationsProvider)
@@ -123,4 +124,3 @@ class DynamicViewRelationsProvider(BaseRelationsProvider):
 
         except TypeError:
             yield IRelatable(r)
-

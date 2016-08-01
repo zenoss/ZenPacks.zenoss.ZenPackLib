@@ -1,12 +1,14 @@
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
 from ..functions import catalog_search
-from ..utils import LOG
+from ..functions import LOG
+
 
 class CatalogBase(object):
     """Base class that implements cataloging a property"""
 
     # By Default there is no default catalog created.
     _catalogs = {}
+    LOG=LOG
 
     def search(self, name, *args, **kwargs):
         """

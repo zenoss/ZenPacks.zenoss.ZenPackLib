@@ -1,5 +1,7 @@
 from ..base.ClassProperty import ClassProperty
 from ..helpers.OrderedDict import OrderedDict
+from ..functions import LOG
+
 
 def ModelTypeFactory(name, bases):
     """Return a "ZenPackified" model class given name and bases tuple."""
@@ -51,6 +53,7 @@ def ModelTypeFactory(name, bases):
         '_relations': _relations,
         'index_object': index_object,
         'unindex_object': unindex_object,
+        'LOG': LOG
         }
 
     return type(name, bases, attributes)

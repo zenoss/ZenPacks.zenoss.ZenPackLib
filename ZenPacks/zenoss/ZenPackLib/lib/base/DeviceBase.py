@@ -57,4 +57,3 @@ class DeviceBase(ModelBase):
             return None
 
         return int(result['total'])
-# __init__.py

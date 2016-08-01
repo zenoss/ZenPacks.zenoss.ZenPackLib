@@ -4,11 +4,13 @@ from Products.ZenRelations.RelSchema import ToManyCont, ToOne
 
 from .Spec import Spec, RelationshipInfoProperty, RelationshipLengthProperty
 from ..helpers.OrderAndValue import OrderAndValue
+from ..functions import LOG
 
 
 class ClassRelationshipSpec(Spec):
+    """ClassRelationshipSpec"""
 
-    """TODO."""
+    LOG = LOG
 
     def __init__(
             self,
@@ -25,7 +27,8 @@ class ClassRelationshipSpec(Spec):
             renderer=None,
             render_with_type=False,
             order=None,
-            _source_location=None
+            _source_location=None,
+            log=LOG
             ):
         """
         Create a Class Relationship Specification
@@ -69,6 +72,7 @@ class ClassRelationshipSpec(Spec):
 
         """
         super(ClassRelationshipSpec, self).__init__(_source_location=_source_location)
+        self.LOG=log
 
         self.class_ = class_
         self.name = name

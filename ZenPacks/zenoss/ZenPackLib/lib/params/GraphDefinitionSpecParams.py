@@ -12,7 +12,7 @@ class GraphDefinitionSpecParams(SpecParams, GraphDefinitionSpec):
         SpecParams.__init__(self, **kwargs)
         self.name = name
         self.graphpoints = self.specs_from_param(
-            GraphPointSpecParams, 'graphpoints', graphpoints)
+            GraphPointSpecParams, 'graphpoints', graphpoints, log=self.LOG)
 
     @classmethod
     def fromObject(cls, graphdefinition):

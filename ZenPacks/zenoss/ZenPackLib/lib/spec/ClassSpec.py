@@ -17,10 +17,11 @@ from Products.Zuul.interfaces.device import IDeviceInfo
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
 from ..info import HardwareComponentInfo
 from ..interfaces import IHardwareComponentInfo
-from ..utils import LOG, impact_installed, dynamicview_installed, FACET_BLACKLIST
+from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
+
 from ..gsm import get_gsm
 from ..functions import pluralize, get_symbol_name, relname_from_classname, \
-    get_zenpack_path, ordered_values
+    get_zenpack_path, ordered_values, LOG
 
 from ..base.HardwareComponent import HardwareComponent
 from ..base.Component import Component
@@ -42,20 +43,13 @@ from .Spec import Spec, DeviceInfoStatusProperty, \
 from .ClassPropertySpec import ClassPropertySpec
 from .ClassRelationshipSpec import ClassRelationshipSpec
 
-try:
-    from Products.Zuul.facades import metricfacade  # noqa: imported only to test that it can be imported
-except ImportError:
-    HAS_METRICFACADE = False
-else:
-    HAS_METRICFACADE = True
+HAS_METRICFACADE = has_metricfacade()
 
 GSM=get_gsm()
 
 
 class ClassSpec(Spec):
-
-    """TODO.
-
+    """ClassSpec.
 
     'impacts' and 'impacted_by' will cause impact adapters to be registered, so the
     relationship is shown in impact, but not in dynamicview. If you would like to
@@ -99,6 +93,8 @@ class ClassSpec(Spec):
     to double adapters doing the same thing.
     """
 
+    LOG = LOG
+
     def __init__(
             self,
             zenpack,
@@ -127,7 +123,8 @@ class ClassSpec(Spec):
             dynamicview_weight=None,
             dynamicview_relations=None,
             extra_paths=None,
-            _source_location=None
+            _source_location=None,
+            log=LOG
             ):
         """
             Create a Class Specification
@@ -193,6 +190,7 @@ class ClassSpec(Spec):
 
         """
         super(ClassSpec, self).__init__(_source_location=_source_location)
+        self.LOG = log
         self.zenpack = zenpack
         self.name = name
 
@@ -232,11 +230,11 @@ class ClassSpec(Spec):
 
         # Properties.
         self.properties = self.specs_from_param(
-            ClassPropertySpec, 'properties', properties)
+            ClassPropertySpec, 'properties', properties, log=self.LOG)
 
         # Relationships.
         self.relationships = self.specs_from_param(
-            ClassRelationshipSpec, 'relationships', relationships)
+            ClassRelationshipSpec, 'relationships', relationships, log=self.LOG)
 
         # Impact.
         self.impacts = impacts
@@ -994,7 +992,7 @@ class ClassSpec(Spec):
             width += spec.js_columns_width
 
         if width > 750:
-            LOG.warning(
+            self.LOG.warning(
                 "%s: %s custom columns exceed 750 pixels (%s)",
                 self.zenpack.name, self.name, width)
 

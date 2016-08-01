@@ -8,21 +8,35 @@ import re
 import yaml
 import time
 import keyword
+import logging
 
 from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
 
-from .utils import LOG, logging, yaml_installed
+from .utils import yaml_installed
 from .helpers.OrderedDict import OrderedDict
 from .helpers.Loader import Loader
 
+from .helpers.ZenPackLibLog import ZenPackLibLog
+ZPLOG = ZenPackLibLog()
+LOG = ZPLOG.defaultlog
 
-def load_yaml(yaml_filename=None):
+
+# Default log settings
+QUIET=True
+LEVEL=0
+
+
+def load_yaml(yaml_filename=None, verbose=False, level=0):
     """Load YAML from yaml_filename.
-
     Loads from zenpack.yaml in the current directory if
     yaml_filename isn't specified.
-
     """
+
+    # these control logging on a per-ZenPack basis
+    global QUIET, LEVEL
+    QUIET = not verbose
+    LEVEL = level
+
     start = time.time()
     CFG = None
     if yaml_installed():
@@ -68,6 +82,8 @@ def load_yaml(yaml_filename=None):
     end = time.time() - start
     LOG.info("Loaded %s in %0.2f s" % (yaml_filename, end))
     return CFG
+
+
 # Private Functions #########################################################
 
 
@@ -302,22 +318,38 @@ def relationships_from_yuml(yuml):
 
 
 def getZenossKeywords(klasses):
-    kwset = set()
+    kwset = set(['_properties', '_relations'])
     for klass in klasses:
-        kwset = kwset.union(set(dir(klass)))
+        kwset = kwset.union(get_class_reserved(klass))
     return kwset
 
+
+def get_class_reserved(cls):
+    '''return reserved words for given class'''
+    reserved = []
+    cls_keys = cls.__dict__.keys()
+    for d in dir(cls):
+        if d in cls_keys:
+            reserved.append(d)
+        else:
+            if callable(getattr(cls, d)):
+                reserved.append(d)
+    return set(reserved)
 
 from Products.ZenModel.Device import Device as BaseDevice
 from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
 from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
 from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
 
-ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
-                                     BaseDeviceComponent,
-                                     BaseDeviceInfo,
-                                     BaseComponentInfo])
+KLASSES = [BaseDevice, BaseDeviceComponent, BaseDeviceInfo, BaseComponentInfo]
+ZENOSS_KEYWORDS = getZenossKeywords(KLASSES)
 
+def find_keyword_cls(keyword):
+    names = []
+    for k in KLASSES:
+        if keyword in dir(k):
+            names.append(k.__name__)
+    return names
 
 
 def relschemaspec_to_str(spec):
@@ -465,7 +497,8 @@ def format_message(e):
 
     mark = e.context_mark or e.problem_mark
     if mark:
-        position = "{}:{}:{}".format(mark.name, mark.line + 1, mark.column + 1)
+        name = mark.name.split('/')[-1]
+        position = "({} line {}:{})".format(name, mark.line + 1, mark.column + 1)
     else:
         position = "[unknown]"
     if e.context is not None:
@@ -477,18 +510,22 @@ def format_message(e):
     if e.note is not None:
         message.append("(note: " + e.note + ")")
 
-    return "{}: {}".format(position, message)
+    return "{} {}".format(position, ' '.join(message))
+
 
 def yaml_warning(loader, e):
-    # Given a MarkedYAMLError exception, either log or raise
-    # the error, depending on the 'fatal' argument.
-
-    print format_message(e)
+    """
+        Given a MarkedYAMLError exception, log
+        the error
+    """
+    LOG.warn(format_message(e))
 
 
 def yaml_error(loader, e, exc_info=None):
-    # Given a MarkedYAMLError exception, either log or raise
-    # the error, depending on the 'fatal' argument.
+    """
+        Given a MarkedYAMLError exception, either log or raise
+        the error, depending on the 'fatal' argument.
+    """
     fatal = not getattr(loader, 'warnings', False)
     setattr(loader, 'yaml_errored', True)
 
@@ -502,7 +539,7 @@ def yaml_error(loader, e, exc_info=None):
     if fatal:
         raise e
 
-    print format_message(e)
+    LOG.error(format_message(e))
 
 
 def verify_key(loader, cls, params, key, start_mark):
@@ -514,7 +551,7 @@ def verify_key(loader, cls, params, key, start_mark):
     if key in keyword.kwlist:
         yaml_error(loader, yaml.constructor.ConstructorError(
             None, None,
-            "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+            "Found reserved python keyword '{}' while processing {}".format(key, cls.__name__),
             start_mark))
     elif key in ZENOSS_KEYWORDS:
         # should be ok to use a zenoss word to define these
@@ -524,9 +561,10 @@ def verify_key(loader, cls, params, key, start_mark):
                                 'RRDTemplateSpec',
                                 'GraphDefinitionSpec',
                                 'GraphPointSpec']:
+            klasses = ', '.join(find_keyword_cls(key))
             yaml_warning(loader, yaml.constructor.ConstructorError(
                 None, None,
-                "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+                "Found reserved Zenoss keyword '{}' from {}".format(key, klasses),
                 start_mark))
 
     return False
@@ -921,10 +959,19 @@ def represent_zenpackspec(dumper, obj):
 
 
 def construct_zenpackspec(loader, node):
+    # create a unique log for this ZenPack
+    name = find_name_from_node(loader)
+    if name:
+        log = ZPLOG.add_log(name, QUIET, LEVEL)
+        # set the global LOG variable to ths instance for things like YAML errors
+        global LOG
+        LOG = log
+
     from spec.ZenPackSpec import ZenPackSpec
 
     params = construct_spec(ZenPackSpec, loader, node)
     name = params.pop("name")
+    params['log'] = LOG
 
     fatal = not getattr(loader, 'warnings', False)
     yaml_errored = getattr(loader, 'yaml_errored', False)
@@ -939,6 +986,15 @@ def construct_zenpackspec(loader, node):
 
     return None
 
+def find_name_from_node(loader):
+    '''determine zenpack name'''
+    for k in loader.recursive_objects.keys():
+        for v in k.value:
+            if isinstance(v, tuple) and len(v) == 2:
+                key, value = str(v[0].value), str(v[1].value)
+                if key == 'name':
+                    return value
+    return None
 
 def relname_from_classname(classname, plural=False):
     """Return relationship name given classname and plural flag."""

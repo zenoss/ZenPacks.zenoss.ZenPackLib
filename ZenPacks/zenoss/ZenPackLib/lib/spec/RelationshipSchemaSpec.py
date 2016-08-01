@@ -2,10 +2,13 @@ from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 from Products.ZenRelations.Exceptions import ZenSchemaError
 from ..functions import relname_from_classname
 from .Spec import Spec
+from ..functions import LOG
 
 
 class RelationshipSchemaSpec(Spec):
-    """TODO."""
+    """RelationshipSchemaSpec"""
+
+    LOG = LOG
 
     def __init__(
         self,
@@ -16,7 +19,8 @@ class RelationshipSchemaSpec(Spec):
         right_type=None,
         right_class=None,
         right_relname=None,
-        _source_location=None
+        _source_location=None,
+        log=LOG
     ):
         """
             Create a Relationship Schema specification.  This describes both sides
@@ -37,6 +41,7 @@ class RelationshipSchemaSpec(Spec):
 
         """
         super(RelationshipSchemaSpec, self).__init__(_source_location=_source_location)
+        self.LOG=log
 
         if not RelationshipSchemaSpec.valid_orientation(left_type, right_type):
             raise ZenSchemaError("In %s(%s) - (%s)%s, invalid orientation- left and right may be reversed." % (left_class, left_relname, right_relname, right_class))

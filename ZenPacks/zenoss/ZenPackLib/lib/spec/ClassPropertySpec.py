@@ -3,11 +3,12 @@ from Products.Zuul.utils import ZuulMessageFactory as _t
 from Products.Zuul.infos import ProxyProperty
 from ..helpers.OrderAndValue import OrderAndValue
 from .Spec import Spec, MethodInfoProperty, EnumInfoProperty
-
+from ..functions import LOG
 
 class ClassPropertySpec(Spec):
+    """ClassPropertySpec"""
 
-    """TODO."""
+    LOG = LOG
 
     def __init__(
             self,
@@ -33,7 +34,8 @@ class ClassPropertySpec(Spec):
             datapoint_default=None,
             datapoint_cached=True,
             index_scope='device',
-            _source_location=None
+            _source_location=None,
+            log=LOG
             ):
         """
         Create a Class Property Specification
@@ -92,7 +94,7 @@ class ClassPropertySpec(Spec):
 
         """
         super(ClassPropertySpec, self).__init__(_source_location=_source_location)
-
+        self.LOG = log
         self.class_spec = class_spec
         self.name = name
         self.default = default

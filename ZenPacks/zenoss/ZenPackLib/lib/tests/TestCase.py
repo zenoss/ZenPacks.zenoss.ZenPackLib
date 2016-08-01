@@ -1,5 +1,5 @@
 import importlib
-from ..utils import LOG
+from ..functions import LOG
 
 
 """Enable test mode. Only call from code under tests/.
@@ -20,6 +20,8 @@ class TestCase(BaseTestCase):
     # set disableLogging = False in your subclass.  This is
     # recommended during active development, but is too noisy
     # to leave as the default.
+    LOG = LOG
+
     disableLogging = True
 
     def afterSetUp(self):
@@ -37,7 +39,7 @@ class TestCase(BaseTestCase):
         try:
             zenpack_module = importlib.import_module(self.zenpack_module_name)
         except Exception:
-            LOG.exception("Unable to load zenpack named '%s' - is it installed? (%s)", self.zenpack_module_name)
+            self.LOG.exception("Unable to load zenpack named '%s' - is it installed? (%s)", self.zenpack_module_name)
             raise
 
         zenpackspec = getattr(zenpack_module, 'CFG', None)

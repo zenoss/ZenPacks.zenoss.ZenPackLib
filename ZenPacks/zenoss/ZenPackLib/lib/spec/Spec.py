@@ -1,16 +1,14 @@
 import inspect
 import re
 import collections
-
+import logging
 from Products import Zuul
 from Products.Zuul import marshal
 from Products.Zuul.infos import ProxyProperty
 from Products.ZenRelations import ToOneRelationship, ToManyRelationship
 from zope.interface.interface import InterfaceClass
 from Products.Zuul.interfaces import IInfo
-
-from ..utils import logging, LOG
-from ..functions import fix_kwargs, create_module
+from ..functions import fix_kwargs, create_module, LOG
 from ..helpers.OrderedDict import OrderedDict
 
 
@@ -128,14 +126,16 @@ class Spec(object):
     source_location = None
     speclog = None
 
-    def __init__(self, _source_location=None):
+    LOG = LOG
 
+    def __init__(self, _source_location=None, log=LOG):
+        self.LOG = log
         class LogAdapter(logging.LoggerAdapter):
             def process(self, msg, kwargs):
                 return '%s %s' % (self.extra['context'], msg), kwargs
 
         self.source_location = _source_location
-        self.speclog = LogAdapter(LOG, {'context': self})
+        self.speclog = LogAdapter(self.LOG, {'context': self})
 
     def __str__(self):
         parts = []
@@ -192,8 +192,9 @@ class Spec(object):
                         if i not in dictionary_params.keys():
                             dictionary_params[i] = j
 
-    def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False):
+    def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False, log=LOG):
         """Return a normalized dictionary of spec_type instances."""
+        #log.info('specs_from_param: %s', spec_type)
         if param_dict is None:
             param_dict = {}
         elif not isinstance(param_dict, dict):
@@ -208,7 +209,9 @@ class Spec(object):
 
         specs = OrderedDict()
         for k, v in param_dict.iteritems():
-            specs[k] = spec_type(self, k, **(fix_kwargs(v)))
+            args = fix_kwargs(v)
+            args['log'] = log
+            specs[k] = spec_type(self, k, **(args))
 
         return specs
 
