@@ -41,7 +41,7 @@ class ZPLTestHarness(ZenScriptBase):
     def build_ob(self, cls_name, inst=0):
         '''build an instance object from schema class'''
         cls = self.get_cls(cls_name)
-        ob = cls('%s-%s' % (cls_name.lower(), inst))
+        ob = cls('{}-{}'.format(cls_name.lower(), inst))
         return ob
 
     def build_cfg_obs(self):
@@ -189,24 +189,24 @@ class ZPLTestHarness(ZenScriptBase):
         spec_s_to = self.classname(rspec.right_schema)
         # checking classes
         if cls_from != spec_from and spec_from not in bases_from:
-            log.warn('Remote left class mismatch between spec (%s) and relation (%s)' % (spec_from, cls_from))
+            log.warn('Remote left class mismatch between spec ({}) and relation ({})'.format(spec_from, cls_from))
             return False
         if cls_to != spec_to and spec_to not in bases_to:
-            log.warn('Remote right class mismatch between spec (%s) and relation (%s)' % (spec_to, cls_to))
+            log.warn('Remote right class mismatch between spec ({}) and relation ({})'.format(spec_to, cls_to))
             return False
         # rel name
         if relname_from != spec_r_from:
-            log.warn('Relation left id mismatch between spec (%s) and relation (%s)' % (spec_r_from, relname_from))
+            log.warn('Relation left id mismatch between spec ({}) and relation ({})'.format(spec_r_from, relname_from))
             return False
         if relname_to != spec_r_to:
-            log.warn('Relation right id mismatch between spec (%s) and relation (%s)' % (spec_r_to, relname_to))
+            log.warn('Relation right id mismatch between spec ({}) and relation ({})'.format(spec_r_to, relname_to))
             return False
         # schema type
         if schema_from != spec_s_from:
-            log.warn('Relation left schema type mismatch between spec (%s) and relation (%s)' % (spec_s_from, schema_from))
+            log.warn('Relation left schema type mismatch between spec ({}) and relation ({})'.format(spec_s_from, schema_from))
             return False
         if schema_to != spec_s_to:
-            log.warn('Relation right schema type mismatch between spec (%s) and relation (%s)' % (spec_s_to, schema_to))
+            log.warn('Relation right schema type mismatch between spec ({}) and relation ({})'.format(spec_s_to, schema_to))
             return False
         return True
 
@@ -219,20 +219,20 @@ class ZPLTestHarness(ZenScriptBase):
         '''
         passed = True
         for name, spec in self.cfg.classes.items():
-            log.info('%s %s %s' % ('-'*40, name, '-'*40))
+            log.info('{} {} {}'.format('-'*40, name, '-'*40))
             cls = self.get_cls(name)
             bases = self.get_bases(cls)
             for relname, rspec in spec.relationships.items():
                 rel_class = rspec.class_.name
                 if name != rel_class:
                     if rel_class not in bases:
-                        log.warn('%s has relation %s inherited from invalid base class: %s' % (name, relname, rel_class))
+                        log.warn('{} has relation {} inherited from invalid base class: {}'.format(name, relname, rel_class))
                         passed = False
                 # check class rel spec
                 fwd = self.rel_cls_spec_info(rspec)
                 rwd = self.rel_cls_spec_info(rspec, reverse=True)
                 if not self.has_cfg_relation(fwd, rwd):
-                    log.warn('Problem with %s RelationshipSchemaSpec "%s"' % (name, fwd))
+                    log.warn('Problem with {} RelationshipSchemaSpec "{}"'.format(name, fwd))
                     passed = False
                 # if inherited class, replace with this class for future matches
                 if name != rel_class:
@@ -243,14 +243,14 @@ class ZPLTestHarness(ZenScriptBase):
                 c_fwd = self.rel_cls_info(cls, relname)
                 c_rwd = self.rel_cls_info(cls, relname, reverse=True)
                 if c_fwd != fwd or c_rwd != rwd:
-                    log.warn('Problem with %s class relation "%s"' % (name, c_fwd))
+                    log.warn('Problem with {} class relation "{}"'.format(name, c_fwd))
                     passed = False
                 # check relation on object
                 ob = self.build_ob(name)
                 ob_fwd = self.rel_ob_info(ob, relname)
                 ob_rwd = self.rel_ob_info(ob, relname, reverse=True)
                 if ob_fwd != fwd or ob_rwd != rwd:
-                    log.warn('Problem with %s object relation: "%s"' % (name, ob_fwd))
+                    log.warn('Problem with {} object relation: "{}"'.format(name, ob_fwd))
                     passed = False
         return passed
 
@@ -269,9 +269,9 @@ class ZPLTestHarness(ZenScriptBase):
             actual_type = ob.getPropertyType(name)
             # check for None vs "None"
             if intended == 'None':
-                log.info('%s (%s) has default value of "None" (string)' % (cls_id, name))
+                log.info('{} ({}) has default value of "None" (string)'.format(cls_id, name))
             # mismatch between intended and actual
-            errmsg = '%s (%s) type or value mismatch between spec "%s" (%s) and class "%s" (%s)'% (cls_id, name, 
+            errmsg = '{} ({}) type or value mismatch between spec "{}" ({}) and class "{}" ({})'.format(cls_id, name, 
                                                                                                    intended, type(intended).__name__,
                                                                                                    actual, type(actual).__name__)
             if intended is None:
@@ -280,7 +280,7 @@ class ZPLTestHarness(ZenScriptBase):
                     passed = False
             # check for intended versus actual type
             if intended_type != actual_type:
-                log.warn('%s (%s) type mismatch spec (%s) vs class (%s)'% (cls_id, name, intended_type, actual_type))
+                log.warn('{} ({}) type mismatch spec ({}) vs class ({})'.format(cls_id, name, intended_type, actual_type))
                 passed = False
         return passed
 
@@ -296,25 +296,25 @@ class ZPLTestHarness(ZenScriptBase):
                     thcs = tcs.thresholds.get(th.id)
                     test, msg = self.compare_template_ob_to_spec(th, thcs)
                     if not test:
-                        log.warn('%s threshold %s failed (%s)' % (t.id, th.id, msg))
+                        log.warn('{} threshold {} failed ({})'.format(t.id, th.id, msg))
                         passed = False
                 for gd in t.graphDefs():
                     gdcs = tcs.graphs.get(gd.id)
                     test, msg = self.compare_template_ob_to_spec(gd, gdcs)
                     if not test:
-                        log.warn('%s graph %s failed (%s)' % (t.id, gd.id, msg))
+                        log.warn('{} graph {} failed ({})'.format(t.id, gd.id, msg))
                         passed = False
                 for ds in t.datasources():
                     dscs = tcs.datasources.get(ds.id)
                     test, msg = self.compare_template_ob_to_spec(ds, dscs)
                     if not test:
-                        log.warn('%s datasource %s failed (%s)' % (t.id, ds.id, msg))
+                        log.warn('{} datasource {} failed ({})'.format(t.id, ds.id, msg))
                         passed = False
                     for dp in ds.datapoints():
                         dpcs = dscs.datapoints.get(dp.id)
                         test, msg = self.compare_template_ob_to_spec(dp, dpcs)
                         if not test:
-                            log.warn('%s %s datapoint %s failed (%s)' % (t.id, ds.id, dp.id, msg))
+                            log.warn('{} {} datapoint {} failed ({})'.format(t.id, ds.id, dp.id, msg))
                             passed = False
         return passed
 
@@ -333,7 +333,7 @@ class ZPLTestHarness(ZenScriptBase):
         '''compare template object to spec'''
         passed = True
         cls = self.classname(ob)
-        msg = '%s passed inspection' % cls
+        msg = '{} passed inspection'.format(cls)
         for p in ob._properties:
             id = p.get('id')
             default = getattr(ob, id)
@@ -342,7 +342,7 @@ class ZPLTestHarness(ZenScriptBase):
             if not spec_default:
                 continue
             if default != spec_default:
-                msg = '%s property %s mismatch between class (%s) and spec (%s)  and default' % (ob.id, id, default, spec_default)
+                msg = '{} property {} mismatch between class ({}) and spec ({})  and default'.format(ob.id, id, default, spec_default)
                 passed = False
         return (passed, msg)
 
@@ -409,7 +409,7 @@ class ZPLTestHarness(ZenScriptBase):
                 if k in ['rrdmin', 'rrdmax']:
                     if str(expected) == str(actual):
                         continue
-                log.warn('%s (%s) property %s: acutal: %s (%s) did not match expected: %s (%s)' % (ob.id, ob.meta_type, k, 
+                log.warn('{} ({}) property {}: acutal: {} ({}) did not match expected: {} ({})'.format(ob.id, ob.meta_type, k, 
                                                                                                 actual, type(actual).__name__, 
                                                                                                 expected, type(expected).__name__))
                 passed = False
@@ -435,11 +435,11 @@ class ZPLTestHarness(ZenScriptBase):
 
     def rel_string(self, cls_f, rel_f, type_f, type_t, rel_t, cls_t, reverse=False):
         '''return a basic string representation of a relation'''
-        base_string = '%s (%s) %s : %s (%s) %s'
+        base_string = '{} ({}) {} : {} ({}) {}'
         if reverse:
-            return base_string % (cls_t, rel_t, type_t,
+            return base_string.format(cls_t, rel_t, type_t,
                                   type_f, rel_f, cls_f)
-        return base_string % (cls_f, rel_f, type_f, 
+        return base_string.format(cls_f, rel_f, type_f, 
                               type_t, rel_t, cls_t)
 
     def print_relations(self):
@@ -508,10 +508,10 @@ class ZPLTestHarness(ZenScriptBase):
 
     def print_attrs(self, data):
         for name, spec in data.items():
-            print '#### %s' % name
+            print '#### {}'.format(name)
             for k,v in spec.__dict__.items():
                 if v is None: continue
-                print '  %s: %s' % (k,v)
+                print '  {}: {}'.format(k,v)
             print ''
 
     def list_all_paths(self):
@@ -554,13 +554,13 @@ class ZPLTestHarness(ZenScriptBase):
             if path in included_paths:
                 if "/" not in path:
                     # normally all direct relationships are included
-                    print "DIRECT  " + path
+                    print "DIRECT {}".format(path)
                 else:
                     # sometimes extra paths are pulled in due to extra_paths
                     # configuration.
-                    print "EXTRA   " + path
+                    print "EXTRA {}".format(path)
             else:
-                print "EXCLUDE " + path
+                print "EXCLUDE {}".format(path)
         print "\nClass Summary\n-------------\n"
         for source_class in sorted(class_summary.keys()):
-            print "%s is reachable from %s" % (source_class, ", ".join(sorted(class_summary[source_class])))
+            print "{} is reachable from {}".format(source_class, ", ".join(sorted(class_summary[source_class])))

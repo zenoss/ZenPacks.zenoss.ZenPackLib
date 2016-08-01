@@ -1,5 +1,5 @@
-import collections
 from Acquisition import aq_base
+from collections import OrderedDict
 from .SpecParams import SpecParams
 from ..spec.RRDDatasourceSpec import RRDDatasourceSpec
 from .RRDDatapointSpecParams import RRDDatapointSpecParams
@@ -10,7 +10,7 @@ class RRDDatasourceSpecParams(SpecParams, RRDDatasourceSpec):
         self.name = name
 
         self.datapoints = self.specs_from_param(
-            RRDDatapointSpecParams, 'datapoints', datapoints)
+            RRDDatapointSpecParams, 'datapoints', datapoints, log=self.LOG)
 
     @classmethod
     def fromObject(cls, datasource):
@@ -31,7 +31,7 @@ class RRDDatasourceSpecParams(SpecParams, RRDDatasourceSpec):
             if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
                 setattr(self, propname, getattr(datasource, propname, None))
 
-        self.extra_params = collections.OrderedDict()
+        self.extra_params = OrderedDict()
         for propname in [x['id'] for x in datasource._properties]:
             if propname not in self.init_params():
                 if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):

@@ -1,6 +1,7 @@
 import inspect
 import re
-import collections
+import logging
+from collections import OrderedDict
 
 from Products import Zuul
 from Products.Zuul import marshal
@@ -9,9 +10,7 @@ from Products.ZenRelations import ToOneRelationship, ToManyRelationship
 from zope.interface.interface import InterfaceClass
 from Products.Zuul.interfaces import IInfo
 
-from ..utils import logging, LOG
-from ..functions import fix_kwargs, create_module
-from ..helpers.OrderedDict import OrderedDict
+from ..functions import fix_kwargs, create_module, LOG
 
 
 def MethodInfoProperty(method_name, entity=False):
@@ -71,8 +70,8 @@ def RelationshipGetter(relationship_name):
                 return self.getIdForRelationship(relationship)
         except Exception:
             LOG.error(
-                "error getting %s ids for %s",
-                relationship_name, self.getPrimaryUrlPath())
+                "error getting {} ids for {}".format(
+                relationship_name, self.getPrimaryUrlPath()))
             raise
 
     return getter
@@ -88,8 +87,8 @@ def RelationshipSetter(relationship_name):
                 self.setIdForRelationship(relationship, id_or_ids)
         except Exception:
             LOG.error(
-                "error setting %s ids for %s",
-                relationship_name, self.getPrimaryUrlPath())
+                "error setting {} ids for {}".format(
+                relationship_name, self.getPrimaryUrlPath()))
             raise
 
     return setter
@@ -128,14 +127,16 @@ class Spec(object):
     source_location = None
     speclog = None
 
-    def __init__(self, _source_location=None):
+    LOG = LOG
 
+    def __init__(self, _source_location=None, log=LOG):
+        self.LOG = log
         class LogAdapter(logging.LoggerAdapter):
             def process(self, msg, kwargs):
-                return '%s %s' % (self.extra['context'], msg), kwargs
+                return '{} {}'.format(self.extra['context'], msg), kwargs
 
         self.source_location = _source_location
-        self.speclog = LogAdapter(LOG, {'context': self})
+        self.speclog = LogAdapter(self.LOG, {'context': self})
 
     def __str__(self):
         parts = []
@@ -150,7 +151,7 @@ class Spec(object):
         else:
             parts.append(super(Spec, self).__str__())
 
-        return "%s(%s)" % (self.__class__.__name__, ' - '.join(parts))
+        return "{}({})".format(self.__class__.__name__, ' - '.join(parts))
 
     def apply_data_defaults(self, dictionary, default_defaults=None, leave_defaults=False):
         """Modify dictionary to put values from DEFAULTS key into other keys.
@@ -192,7 +193,7 @@ class Spec(object):
                         if i not in dictionary_params.keys():
                             dictionary_params[i] = j
 
-    def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False):
+    def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False, log=LOG):
         """Return a normalized dictionary of spec_type instances."""
         if param_dict is None:
             param_dict = {}
@@ -208,7 +209,9 @@ class Spec(object):
 
         specs = OrderedDict()
         for k, v in param_dict.iteritems():
-            specs[k] = spec_type(self, k, **(fix_kwargs(v)))
+            args = fix_kwargs(v)
+            args['log'] = log
+            specs[k] = spec_type(self, k, **(args))
 
         return specs
 
@@ -267,31 +270,31 @@ class Spec(object):
             if p in ignore_params:
                 continue
 
-            default_p = '_%s_defaultvalue' % p
+            default_p = '_{}_defaultvalue'.format(p)
             self_val = getattr(self, p)
             other_val = getattr(other, p)
             self_val_or_default = self_val or getattr(self, default_p, None)
             other_val_or_default = other_val or getattr(other, default_p, None)
 
             # Order doesn't matter, for purposes of comparison.  Cast it away.
-            if isinstance(self_val, collections.OrderedDict):
+            if isinstance(self_val, OrderedDict):
                 self_val = dict(self_val)
 
-            if isinstance(other_val, collections.OrderedDict):
+            if isinstance(other_val, OrderedDict):
                 other_val = dict(other_val)
 
-            if isinstance(self_val_or_default, collections.OrderedDict):
+            if isinstance(self_val_or_default, OrderedDict):
                 self_val_or_default = dict(self_val_or_default)
 
-            if isinstance(other_val_or_default, collections.OrderedDict):
+            if isinstance(other_val_or_default, OrderedDict):
                 other_val_or_default = dict(other_val_or_default)
 
             if self_val == other_val:
                 continue
 
             if self_val_or_default != other_val_or_default:
-                LOG.debug("Comparing %s to %s, parameter %s does not match (%s != %s)",
-                          self, other, p, self_val_or_default, other_val_or_default)
+                LOG.debug("Comparing {} to {}, parameter {} does not match ({} != {})".format(
+                          self, other, p, self_val_or_default, other_val_or_default))
                 return False
 
         return True

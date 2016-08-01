@@ -1,3 +1,4 @@
+from ..functions import LOG
 
 class ClassProperty(property):
 
@@ -7,6 +8,8 @@ class ClassProperty(property):
     @ClassProperty decorator does, but only for getters.
 
     """
+    LOG=LOG
+
     def __get__(self, cls, owner):
         return self.fget.__get__(None, owner)()
 

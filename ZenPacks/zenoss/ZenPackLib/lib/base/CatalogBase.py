@@ -1,12 +1,14 @@
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
 from ..functions import catalog_search
-from ..utils import LOG
+from ..functions import LOG
+
 
 class CatalogBase(object):
     """Base class that implements cataloging a property"""
 
     # By Default there is no default catalog created.
     _catalogs = {}
+    LOG=LOG
 
     def search(self, name, *args, **kwargs):
         """
@@ -118,20 +120,20 @@ class CatalogBase(object):
     @classmethod
     def _get_catalog_spec(cls, name):
         if not hasattr(cls, '_catalogs'):
-            LOG.error("%s has no catalogs defined", cls)
+            LOG.error("{} has no catalogs defined".format(cls))
             return
 
         spec = cls._catalogs.get(name)
         if not spec:
-            LOG.error("%s catalog definition is missing", name)
+            LOG.error("{} catalog definition is missing".format(name))
             return
 
         if not isinstance(spec, dict):
-            LOG.error("%s catalog definition is not a dict", name)
+            LOG.error("{} catalog definition is not a dict".format(name))
             return
 
         if not spec.get('indexes'):
-            LOG.error("%s catalog definition has no indexes", name)
+            LOG.error("{} catalog definition has no indexes".format(name))
             return
 
         return spec
@@ -195,14 +197,14 @@ class CatalogBase(object):
 
         # I think this is the original intent for setting classname, not sure why it would fail
         try:
-            classname = '%s.%s' % (cls.__module__, cls.__class__.__name__)
+            classname = '{}.{}'.format(cls.__module__, cls.__class__.__name__)
         except Exception:
             classname = 'Products.ZenModel.DeviceComponent.DeviceComponent'
 
         for propname, propdata in spec['indexes'].items():
             index_type = propdata.get('type')
             if not index_type:
-                LOG.error("%s index has no type", propname)
+                LOG.error("{} index has no type".format(propname))
                 return
 
             index_factory = {
@@ -211,7 +213,7 @@ class CatalogBase(object):
                 }.get(index_type.lower())
 
             if not index_factory:
-                LOG.error("%s is not a valid index type", index_type)
+                LOG.error("{} is not a valid index type".format(index_type))
                 return
 
             try:
@@ -232,7 +234,7 @@ class CatalogBase(object):
                     try:
                         new_obj = result.getObject()
                     except Exception as e:
-                        LOG.error("Trying to index non-existent object %s", e)
+                        LOG.error("Trying to index non-existent object {}".format(e))
                         continue
                     else:
                         if hasattr(new_obj, 'index_object'):

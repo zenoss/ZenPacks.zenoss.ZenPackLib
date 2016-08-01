@@ -8,21 +8,35 @@ import re
 import yaml
 import time
 import keyword
-
+import logging
+from collections import OrderedDict
 from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
 
-from .utils import LOG, logging, yaml_installed
-from .helpers.OrderedDict import OrderedDict
+from .utils import yaml_installed
 from .helpers.Loader import Loader
+from .helpers.ZenPackLibLog import ZenPackLibLog
 
 
-def load_yaml(yaml_filename=None):
+ZPLOG = ZenPackLibLog()
+LOG = ZPLOG.defaultlog
+
+
+# Default log settings
+QUIET=True
+LEVEL=0
+
+
+def load_yaml(yaml_filename=None, verbose=False, level=0):
     """Load YAML from yaml_filename.
-
     Loads from zenpack.yaml in the current directory if
     yaml_filename isn't specified.
-
     """
+
+    # these control logging on a per-ZenPack basis
+    global QUIET, LEVEL
+    QUIET = not verbose
+    LEVEL = level
+
     start = time.time()
     CFG = None
     if yaml_installed():
@@ -68,6 +82,8 @@ def load_yaml(yaml_filename=None):
     end = time.time() - start
     LOG.info("Loaded %s in %0.2f s" % (yaml_filename, end))
     return CFG
+
+
 # Private Functions #########################################################
 
 
@@ -300,24 +316,36 @@ def relationships_from_yuml(yuml):
 
 # Public Functions #########################################################
 
-
-def getZenossKeywords(klasses):
-    kwset = set()
-    for klass in klasses:
-        kwset = kwset.union(set(dir(klass)))
-    return kwset
-
-
 from Products.ZenModel.Device import Device as BaseDevice
 from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
 from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
 from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
 
-ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
-                                     BaseDeviceComponent,
-                                     BaseDeviceInfo,
-                                     BaseComponentInfo])
+def getZenossKeywords(klasses):
+    kwset = set()
+    for klass in klasses:
+        for k in klass.__dict__.keys():
+            if callable(getattr(klass, k)):
+                kwset = kwset.union([k])
+        for attribute in dir(klass):
+            if callable(getattr(klass, attribute)):
+                kwset = kwset.union([attribute])
+    return kwset
 
+ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
+                                    BaseDeviceInfo,
+                                    BaseDeviceComponent,
+                                    BaseComponentInfo])
+
+JS_WORDS = set(['uuid', 'uid', 'meta_type', 'monitor', 'severity', 'monitored', 'locking'])
+
+
+def find_keyword_cls(keyword):
+    names = []
+    for k in [BaseDevice, BaseDeviceComponent, BaseDeviceInfo, BaseComponentInfo]:
+        if keyword in dir(k):
+            names.append(k.__name__)
+    return names
 
 
 def relschemaspec_to_str(spec):
@@ -350,15 +378,15 @@ def str_to_relschemaspec(schemastr):
 
     m = schema_pattern.search(schemastr)
     if not m:
-        raise ValueError("RelationshipSchemaSpec '%s' is not valid" % schemastr)
+        raise ValueError("RelationshipSchemaSpec '{}' is not valid".format(schemastr))
 
     ml = class_rel_pattern.search(m.group('left'))
     if not ml:
-        raise ValueError("RelationshipSchemaSpec '%s' left side is not valid" % m.group('left'))
+        raise ValueError("RelationshipSchemaSpec '{}' left side is not valid".format(m.group('left')))
 
     mr = class_rel_pattern.search(m.group('right'))
     if not mr:
-        raise ValueError("RelationshipSchemaSpec '%s' right side is not valid" % m.group('right'))
+        raise ValueError("RelationshipSchemaSpec '{}' right side is not valid".format(m.group('right')))
 
     reltypes = {
         '1:1': ('ToOne', 'ToOne'),
@@ -414,7 +442,7 @@ def str_to_class(classstr):
     try:
         class_ = getattr(importlib.import_module(modname), classname)
     except Exception, e:
-        raise ValueError("Class '%s' is not valid: %s" % (classstr, e))
+        raise ValueError("Class '{}' is not valid: {}".format(classstr, e))
 
     return class_
 
@@ -433,7 +461,7 @@ def severity_to_str(value):
         }.get(value, None)
 
     if severity is None:
-        raise ValueError("'%s' is not a valid value for severity.", value)
+        raise ValueError("'{}' is not a valid value for severity.".format(value))
 
     return severity
 
@@ -455,7 +483,7 @@ def str_to_severity(value):
             }.get(value.lower())
 
     if severity is None:
-        raise ValueError("'%s' is not a valid value for severity." % value)
+        raise ValueError("'{}' is not a valid value for severity.".format(value))
 
     return severity
 
@@ -465,7 +493,8 @@ def format_message(e):
 
     mark = e.context_mark or e.problem_mark
     if mark:
-        position = "{}:{}:{}".format(mark.name, mark.line + 1, mark.column + 1)
+        name = mark.name.split('/')[-1]
+        position = "({} line {}:{})".format(name, mark.line + 1, mark.column + 1)
     else:
         position = "[unknown]"
     if e.context is not None:
@@ -477,18 +506,22 @@ def format_message(e):
     if e.note is not None:
         message.append("(note: " + e.note + ")")
 
-    return "{}: {}".format(position, message)
+    return "{} {}".format(position, ' '.join(message))
+
 
 def yaml_warning(loader, e):
-    # Given a MarkedYAMLError exception, either log or raise
-    # the error, depending on the 'fatal' argument.
-
-    print format_message(e)
+    """
+        Given a MarkedYAMLError exception, log
+        the error
+    """
+    LOG.warn(format_message(e))
 
 
 def yaml_error(loader, e, exc_info=None):
-    # Given a MarkedYAMLError exception, either log or raise
-    # the error, depending on the 'fatal' argument.
+    """
+        Given a MarkedYAMLError exception, either log or raise
+        the error, depending on the 'fatal' argument.
+    """
     fatal = not getattr(loader, 'warnings', False)
     setattr(loader, 'yaml_errored', True)
 
@@ -502,7 +535,7 @@ def yaml_error(loader, e, exc_info=None):
     if fatal:
         raise e
 
-    print format_message(e)
+    LOG.error(format_message(e))
 
 
 def verify_key(loader, cls, params, key, start_mark):
@@ -514,9 +547,9 @@ def verify_key(loader, cls, params, key, start_mark):
     if key in keyword.kwlist:
         yaml_error(loader, yaml.constructor.ConstructorError(
             None, None,
-            "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+            "Found reserved python keyword '{}' while processing {}".format(key, cls.__name__),
             start_mark))
-    elif key in ZENOSS_KEYWORDS:
+    elif key in ZENOSS_KEYWORDS.union(JS_WORDS):
         # should be ok to use a zenoss word to define these
         # some items, like sysUpTime are pretty common datapoints
         if cls.__name__ not in ['RRDDatasourceSpec',
@@ -524,9 +557,10 @@ def verify_key(loader, cls, params, key, start_mark):
                                 'RRDTemplateSpec',
                                 'GraphDefinitionSpec',
                                 'GraphPointSpec']:
+            klasses = ', '.join(find_keyword_cls(key))
             yaml_warning(loader, yaml.constructor.ConstructorError(
                 None, None,
-                "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+                "Found reserved Zenoss keyword '{}' from {}".format(key, klasses),
                 start_mark))
 
     return False
@@ -921,10 +955,19 @@ def represent_zenpackspec(dumper, obj):
 
 
 def construct_zenpackspec(loader, node):
+    # create a unique log for this ZenPack
+    name = find_name_from_node(loader)
+    if name:
+        log = ZPLOG.add_log(name, QUIET, LEVEL)
+        # set the global LOG variable to ths instance for things like YAML errors
+        global LOG
+        LOG = log
+
     from spec.ZenPackSpec import ZenPackSpec
 
     params = construct_spec(ZenPackSpec, loader, node)
     name = params.pop("name")
+    params['log'] = LOG
 
     fatal = not getattr(loader, 'warnings', False)
     yaml_errored = getattr(loader, 'yaml_errored', False)
@@ -939,6 +982,15 @@ def construct_zenpackspec(loader, node):
 
     return None
 
+def find_name_from_node(loader):
+    '''determine zenpack name'''
+    for k in loader.recursive_objects.keys():
+        for v in k.value:
+            if isinstance(v, tuple) and len(v) == 2:
+                key, value = str(v[0].value), str(v[1].value)
+                if key == 'name':
+                    return value
+    return None
 
 def relname_from_classname(classname, plural=False):
     """Return relationship name given classname and plural flag."""
