@@ -1,0 +1,31 @@
+name: ZenPacks.zenoss.SomeZenPack
+
+class_relationships:
+- BaseDevice 1:MC BaseComponent
+
+
+classes:
+  BaseDevice:
+    base: [zenpacklib.Device]
+    relationships:
+      baseComponents: {}
+      # this doesn't exist
+      auxComponents: {}
+      # These exist but aren't defined in this schema
+      systems: {}
+      deviceClass: {}
+
+  BaseComponent:
+    # Component Base Type
+    base: [zenpacklib.Component]
+    relationships:
+      baseDevice: {}
+      # this doesn't exist
+      auxComponents: {}
+
+  AuxComponent:
+    # Component Base Type
+    base: [zenpacklib.Component]
+    relationships:
+      # this exists but isn't defined in this schema
+      dependents: {}

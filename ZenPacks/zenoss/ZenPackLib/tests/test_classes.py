@@ -41,6 +41,9 @@ class TestClasses(unittest.TestCase):
         for f in os.listdir(fdir):
             if '.yaml' not in f:
                 continue
+            #these should fail
+            if 'fail' in f:
+                continue
             file = os.path.join(os.path.dirname(__file__), 'data/yaml/%s' % f)
             log.info("loading file: %s" % file)
             self.zps.append(ZPLTestHarness(file))
