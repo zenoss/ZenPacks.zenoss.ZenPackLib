@@ -440,6 +440,7 @@ class ZPLCommand(ZenScriptBase):
                         break
                     if isinstance(obj, RelationshipBase):
                         path.insert(0, obj.id)
+                all_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
                 included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
                 class_summary[component.meta_type].add(facet.meta_type)
 
