@@ -941,8 +941,25 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def get_facets(self, root=None, streams=None, seen=None, path=None, recurse_all=False):
+    def get_facets(self, root=None, streams=None, seen=None, depth=0, path=None, recurse_all=False):
         """Generate non-containing related objects for faceting."""
+
+        if recurse_all:
+            # recurse_all is only used for list_paths to show all possible paths
+            # from this object to any other object, so in the interest of time
+            # and keeping noise to a minimum, don't bother traversing deeper
+            # than 15 levels.
+            if depth > 15:
+                return
+        else:
+            # in non-recurse_all mode, deep traverals only occur when an
+            # extra_paths expression directs it to keep going down a specific
+            # path.  It is assumed that this will generally be of limited depth
+            # anyway, but just in case, put an absolute limit on it, of the
+            # maximum depth supported by zenpacklib's device() method.
+            if depth > 200:
+                return
+
         if seen is None:
             seen = set()
 
@@ -970,21 +987,19 @@ class ComponentBase(ModelBase):
 
             relpath = "/".join(path + [relname])
 
-            if relname not in path:
-                path.append(relname)
-
             # Always include directly-related objects.
             for obj in relobjs:
-                if obj in seen:
+                if (self.id, relname, obj.id) in seen:
+                    # avoid a cycle
                     continue
 
                 yield obj
-                seen.add(obj)
+                seen.add((self.id, relname, obj.id))
 
                 # If 'all' mode, just include indirectly-related objects as well, in
                 # an unfiltered manner.
                 if recurse_all:
-                    for facet in obj.get_facets(root=root, seen=seen, path=path, recurse_all=True):
+                    for facet in obj.get_facets(root=root, seen=seen, path=path, depth=depth+1, recurse_all=True):
                         yield facet
 
                 else:
@@ -997,11 +1012,12 @@ class ComponentBase(ModelBase):
                         if not recurse:
                             continue
 
-                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path):
-                            if facet in seen:
+                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, depth=depth+1):
+                            if (self.id, relname, facet.id) in seen:
+                                # avoid a cycle
                                 continue
                             yield facet
-                            seen.add(facet)
+                            seen.add((self.id, relname, facet.id))
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
@@ -6711,6 +6727,7 @@ if __name__ == '__main__':
                                 break
                             if isinstance(obj, RelationshipBase):
                                 path.insert(0, obj.id)
+                        all_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
                         included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
                         class_summary[component.meta_type].add(facet.meta_type)
 
