@@ -216,7 +216,8 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def get_facets(self, root=None, streams=None, seen=None, path=None, recurse_all=False):
+
+    def get_facets(self, root=None, streams=None, seen=None, path=None, skip=None, recurse_all=False):
         """Generate non-containing related objects for faceting."""
         if seen is None:
             seen = set()
@@ -227,13 +228,20 @@ class ComponentBase(ModelBase):
         if root is None:
             root = self
 
+        if skip is None:
+            skip = []
+
         if streams is None:
             streams = getattr(self, '_v_path_pattern_streams', [])
 
         for relname in self.get_faceting_relnames():
+            if relname in skip:
+                continue
+
             rel = getattr(self, relname, None)
             if not rel or not callable(rel):
                 continue
+            reverse_relname = rel.remoteName()
 
             relobjs = rel()
             if not relobjs:
@@ -252,13 +260,14 @@ class ComponentBase(ModelBase):
             for obj in relobjs:
                 if obj in seen:
                     continue
+
                 yield obj
                 seen.add(obj)
 
                 # If 'all' mode, just include indirectly-related objects as well, in
                 # an unfiltered manner.
                 if recurse_all:
-                    for facet in obj.get_facets(root=root, seen=seen, path=path, recurse_all=True):
+                    for facet in obj.get_facets(root=root, seen=seen, path=path, skip=[reverse_relname], recurse_all=True):
                         yield facet
 
                 else:
@@ -267,10 +276,11 @@ class ComponentBase(ModelBase):
                         recurse = any([pattern.match(relpath) for pattern in stream])
 
                         LOG.log(9, "[%s] matching %s against %s: %s" % (root.meta_type, relpath, [x.pattern for x in stream], recurse))
+
                         if not recurse:
                             continue
 
-                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path):
+                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, skip=[reverse_relname]):
                             if facet in seen:
                                 continue
                             yield facet
