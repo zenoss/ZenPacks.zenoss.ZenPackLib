@@ -1,4 +1,4 @@
-name: ZenPacks.community.TestDEFAULSonDatasource
+name: ZenPacks.zenoss.ZenPackLib
 
 device_classes:
   /Device:
