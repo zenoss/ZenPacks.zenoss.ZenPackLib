@@ -480,7 +480,7 @@ classes:
     monitoring_templates: [AzureTable]
 
 
-device_classes: !ZenPackSpec
+device_classes:
   /Azure:
     remove: true
     zProperties:

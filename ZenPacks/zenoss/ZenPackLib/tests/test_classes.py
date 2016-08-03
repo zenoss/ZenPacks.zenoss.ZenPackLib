@@ -18,20 +18,21 @@ between YAML and Zenoss functionality.
 
 # stdlib Imports
 import os
-import unittest
 import logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('zen.zenpacklib.tests')
-
-from .ZPLTestHarness import ZPLTestHarness
 
 # Zenoss Imports
 import Globals  # noqa
 from Products.ZenUtils.Utils import unused
 unused(Globals)
 
+from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
-class TestClasses(unittest.TestCase):
+from .ZPLTestHarness import ZPLTestHarness
+
+
+class TestClasses(BaseTestCase):
 
     """Specs test suite."""
     zps = []
