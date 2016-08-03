@@ -2,29 +2,26 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
 
-"""
-    This is designed to test whether or not a relation added to a 
-    zenpacklib.Device subclass wipes out other relations added to 
-    Products.ZenModel.Device (ZEN-29127)
-"""
+"""extra_paths unit tests
 
+This module tests zenpacklib 'extra_paths' and path reporters.
+
+"""
 # stdlib Imports
 import os
-import unittest
-import logging
+import site
+import tempfile
 import traceback
 from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger('zen.zenpacklib.tests')
-
+# zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 # Zenoss Imports
@@ -33,21 +30,55 @@ from Products.ZenUtils.Utils import unused
 unused(Globals)
 
 
-class TestZen21927(unittest.TestCase):
+YAML = """
+name: ZenPacks.zenoss.SomeZenPack
 
-    """Specs test suite."""
-    zps = []
+class_relationships:
+- BaseDevice 1:MC BaseComponent
 
-    def setUp(self):
-        fdir = '%s/data/yaml' % os.path.dirname(__file__)
-        self._file = '%s/%s' % (fdir, 'zen-21927-fail.yaml')
+
+classes:
+  BaseDevice:
+    base: [zenpacklib.Device]
+    relationships:
+      baseComponents: {}
+      # this doesn't exist
+      auxComponents: {}
+      # These exist but aren't defined in this schema
+      systems: {}
+      deviceClass: {}
+
+  BaseComponent:
+    # Component Base Type
+    base: [zenpacklib.Component]
+    relationships:
+      baseDevice: {}
+      # this doesn't exist
+      auxComponents: {}
+
+  AuxComponent:
+    # Component Base Type
+    base: [zenpacklib.Component]
+    relationships:
+      # this exists but isn't defined in this schema
+dependents: {}
+"""
+
+
+class TestZen21927(BaseTestCase):
+    """Test removal of undefined relations"""
 
     def test_undefined_relations(self):
-        try:
-            cfg = zenpacklib.load_yaml(self._file)
-        except:
-            msg = traceback.format_exc(limit=0)
-            self.fail(msg)
+        ''''''
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(YAML.strip())
+            f.flush()
+            try:
+                cfg = zenpacklib.load_yaml(f.name)
+            except:
+                msg = traceback.format_exc(limit=0)
+                self.fail(msg)
+
 
 def test_suite():
     """Return test suite for this module."""
