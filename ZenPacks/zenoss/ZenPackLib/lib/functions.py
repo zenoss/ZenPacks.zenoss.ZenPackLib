@@ -8,11 +8,11 @@ import re
 import yaml
 import time
 import keyword
+from collections import OrderedDict
 
 from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
 
 from .utils import LOG, logging, yaml_installed
-from .helpers.OrderedDict import OrderedDict
 from .helpers.Loader import Loader
 
 
