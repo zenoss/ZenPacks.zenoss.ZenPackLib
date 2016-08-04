@@ -2,6 +2,7 @@ from Products.ZenModel.GraphPoint import GraphPoint
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
 from .Spec import Spec
+from ..functions import LOG
 
 
 class GraphPointSpec(Spec):
@@ -23,7 +24,8 @@ class GraphPointSpec(Spec):
             colorindex=None,
             color=None,
             includeThresholds=False,
-            _source_location=None
+            _source_location=None,
+            log=LOG
             ):
         """
         Create a GraphPoint Specification
@@ -55,6 +57,7 @@ class GraphPointSpec(Spec):
 
         """
         super(GraphPointSpec, self).__init__(_source_location=_source_location)
+        self.LOG=log
 
         self.template_spec = template_spec
         self.name = name
@@ -79,6 +82,7 @@ class GraphPointSpec(Spec):
         # Allow color to be specified by color_index instead of directly. This is
         # useful when you want to keep the normal progression of colors, but need
         # to add some DONTDRAW graphpoints for calculations.
+        self.colorindex = colorindex
         if colorindex:
             try:
                 colorindex = int(colorindex) % len(GraphPoint.colors)

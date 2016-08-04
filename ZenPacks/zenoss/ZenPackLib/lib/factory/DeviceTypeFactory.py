@@ -1,6 +1,6 @@
-
 from .ModelTypeFactory import ModelTypeFactory
 from ..base.DeviceBase import DeviceBase
+
 
 def DeviceTypeFactory(name, bases):
     """Return a "ZenPackified" device class given bases tuple."""

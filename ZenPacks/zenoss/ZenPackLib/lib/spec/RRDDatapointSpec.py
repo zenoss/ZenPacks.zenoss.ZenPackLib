@@ -1,9 +1,12 @@
 import re
 from .Spec import Spec
+from ..functions import LOG
+
 
 class RRDDatapointSpec(Spec):
+    """RRDDatapointSpec"""
 
-    """TODO."""
+    LOG = LOG
 
     def __init__(
             self,
@@ -18,7 +21,8 @@ class RRDDatapointSpec(Spec):
             aliases=None,
             shorthand=None,
             extra_params=None,
-            _source_location=None
+            _source_location=None,
+            log=LOG
             ):
         """
         Create an RRDDatapoint Specification
@@ -42,6 +46,7 @@ class RRDDatapointSpec(Spec):
 
         """
         super(RRDDatapointSpec, self).__init__(_source_location=_source_location)
+        self.LOG=log
 
         self.datasource_spec = datasource_spec
         self.name = name
@@ -63,8 +68,8 @@ class RRDDatapointSpec(Spec):
             self.aliases = aliases
         else:
             raise ValueError("aliases must be specified as a dict")
-
-        if shorthand:
+        self.shorthand = shorthand
+        if self.shorthand:
             if 'DERIVE' in shorthand.upper():
                 self.rrdtype = 'DERIVE'
 
@@ -88,7 +93,7 @@ class RRDDatapointSpec(Spec):
     def create(self, datasource_spec, datasource):
         datapoint = datasource.manage_addRRDDataPoint(self.name)
         type_ = datapoint.__class__.__name__
-        self.speclog.debug("adding datapoint of type %s" % type_)
+        self.speclog.debug("adding datapoint of type {}".format(type_))
 
         if self.rrdtype is not None:
             datapoint.rrdtype = self.rrdtype
