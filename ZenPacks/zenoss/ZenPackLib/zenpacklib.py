@@ -33,68 +33,17 @@ __version__ = "1.1.0dev"
 # BaseTestCase which puts Zope into testing mode.
 TestCase = None
 
-import yaml
-
 import Globals
 from Products.ZenUtils.Utils import unused
 unused(Globals)
 
-from lib.functions import load_yaml, represent_spec, \
-    represent_zenpackspec,  represent_relschemaspec, \
-    construct_zenpackspec, relationships_from_yuml
-from lib.helpers.Loader import Loader
-from lib.helpers.Dumper import Dumper
+# ZenPacks use these to load their YAML files
+from lib.helpers.utils import load_yaml
 
 # these are the base classes for zenpacklib.Device, zenpacklib.Component, zenpacklib.HardwareComponent
 from lib.base.Device import Device
 from lib.base.Component import Component
 from lib.base.HardwareComponent import HardwareComponent
-
-
-from lib.spec.ZenPackSpec import ZenPackSpec
-from lib.spec.DeviceClassSpec import DeviceClassSpec
-from lib.spec.ZPropertySpec import ZPropertySpec
-from lib.spec.ClassSpec import ClassSpec
-from lib.spec.ClassPropertySpec import ClassPropertySpec
-from lib.spec.ClassRelationshipSpec import ClassRelationshipSpec
-from lib.spec.RelationshipSchemaSpec import RelationshipSchemaSpec
-
-from lib.params.ZenPackSpecParams import ZenPackSpecParams
-from lib.params.DeviceClassSpecParams import DeviceClassSpecParams
-from lib.params.ZPropertySpecParams import ZPropertySpecParams
-from lib.params.ClassSpecParams import ClassSpecParams
-from lib.params.ClassPropertySpecParams import ClassPropertySpecParams
-from lib.params.ClassRelationshipSpecParams import ClassRelationshipSpecParams
-from lib.params.RRDTemplateSpecParams import RRDTemplateSpecParams
-from lib.params.RRDThresholdSpecParams import RRDThresholdSpecParams
-from lib.params.RRDDatasourceSpecParams import RRDDatasourceSpecParams
-from lib.params.RRDDatapointSpecParams import RRDDatapointSpecParams
-from lib.params.GraphDefinitionSpecParams import GraphDefinitionSpecParams
-from lib.params.GraphPointSpecParams import GraphPointSpecParams
-
-Dumper.add_representer(ZenPackSpec, represent_zenpackspec)
-Dumper.add_representer(DeviceClassSpec, represent_spec)
-Dumper.add_representer(ZPropertySpec, represent_spec)
-Dumper.add_representer(ClassSpec, represent_spec)
-Dumper.add_representer(ClassPropertySpec, represent_spec)
-Dumper.add_representer(ClassRelationshipSpec, represent_spec)
-Dumper.add_representer(RelationshipSchemaSpec, represent_relschemaspec)
-Loader.add_constructor(u'!ZenPackSpec', construct_zenpackspec)
-
-yaml.add_path_resolver(u'!ZenPackSpec', [], Loader=Loader)
-
-Dumper.add_representer(ZenPackSpecParams, represent_zenpackspec)
-Dumper.add_representer(DeviceClassSpecParams, represent_spec)
-Dumper.add_representer(ZPropertySpecParams, represent_spec)
-Dumper.add_representer(ClassSpecParams, represent_spec)
-Dumper.add_representer(ClassPropertySpecParams, represent_spec)
-Dumper.add_representer(ClassRelationshipSpecParams, represent_spec)
-Dumper.add_representer(RRDTemplateSpecParams, represent_spec)
-Dumper.add_representer(RRDThresholdSpecParams, represent_spec)
-Dumper.add_representer(RRDDatasourceSpecParams, represent_spec)
-Dumper.add_representer(RRDDatapointSpecParams, represent_spec)
-Dumper.add_representer(GraphDefinitionSpecParams, represent_spec)
-Dumper.add_representer(GraphPointSpecParams, represent_spec)
 
 
 if __name__ == '__main__':

@@ -8,7 +8,7 @@ AUTHOR = ""
 LICENSE = ""
 NAMESPACE_PACKAGES = ['ZenPacks', 'ZenPacks.zenoss']
 PACKAGES = ['ZenPacks', 'ZenPacks.zenoss', 'ZenPacks.zenoss.ZenPackLib']
-INSTALL_REQUIRES = []
+INSTALL_REQUIRES = ['PyYAML>=3.11']
 COMPAT_ZENOSS_VERS = ""
 PREV_ZENPACK_NAME = ""
 # STOP_REPLACEMENTS

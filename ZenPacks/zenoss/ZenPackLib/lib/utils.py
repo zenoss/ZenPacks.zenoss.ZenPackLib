@@ -1,6 +1,6 @@
 from .helpers.ZenPackLibLog import ZenPackLibLog
-ZPLOG = ZenPackLibLog()
-LOG = ZPLOG.defaultlog
+from .functions import LOG
+
 
 FACET_BLACKLIST = (
     'dependencies',
@@ -12,18 +12,6 @@ FACET_BLACKLIST = (
 
 
 ### functions to determine conditional imports elsewhere
-
-def yaml_installed():
-    '''Return True if Impact is installed'''
-    try:
-        import yaml
-        import yaml.constructor
-    except ImportError:
-        LOG.critical('PyYAML is required but not installed. Run "easy_install PyYAML" or "pip install PyYAML"')
-        pass
-    else:
-        return True
-    return False
 
 
 def impact_installed():

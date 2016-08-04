@@ -15,13 +15,27 @@ from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
 # change this to use other versions of zenpacklib
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
-from ZenPacks.zenoss.ZenPackLib.lib.functions import str_to_severity
 
-def file_from_string(s):
-    with tempfile.NamedTemporaryFile() as f:
-        f.write(s.strip())
-        f.flush()
-        return f
+
+def str_to_severity(value):
+    '''
+    Return numeric severity given a string representation of severity.
+    '''
+    try:
+        severity = int(value)
+    except (TypeError, ValueError):
+        severity = {
+            'crit': 5, 'critical': 5,
+            'err': 4, 'error': 4,
+            'warn': 3, 'warning': 3,
+            'info': 2, 'information': 2, 'informational': 2,
+            'debug': 1, 'debugging': 1,
+            'clear': 0,
+            }.get(value.lower())
+    if severity is None:
+        raise ValueError("'%s' is not a valid value for severity." % value)
+    return severity
+
 
 class ZPLTestHarness(ZenScriptBase):
     '''Class containing methods to build out dummy objects representing YAML class instances'''
