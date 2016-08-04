@@ -1,6 +1,6 @@
 from .helpers.ZenPackLibLog import ZenPackLibLog
-ZPLOG = ZenPackLibLog()
-LOG = ZPLOG.defaultlog
+from .functions import LOG
+
 
 FACET_BLACKLIST = (
     'dependencies',
@@ -12,6 +12,7 @@ FACET_BLACKLIST = (
 
 
 ### functions to determine conditional imports elsewhere
+
 
 def yaml_installed():
     '''Return True if Impact is installed'''

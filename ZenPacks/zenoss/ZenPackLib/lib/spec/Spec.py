@@ -196,7 +196,7 @@ class Spec(object):
     def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False, log=LOG):
         """Return a normalized dictionary of spec_type instances."""
         if param_dict is None:
-            param_dict = {}
+            param_dict = OrderedDict()
         elif not isinstance(param_dict, dict):
             raise TypeError(
                 "{!r} argument must be dict or None, not {!r}"
@@ -208,7 +208,10 @@ class Spec(object):
                 self.apply_data_defaults(param_dict, leave_defaults=leave_defaults)
 
         specs = OrderedDict()
-        for k, v in param_dict.iteritems():
+        keys = param_dict.keys()
+        keys.sort()
+        for k in keys:
+            v = param_dict.get(k)
             args = fix_kwargs(v)
             args['log'] = log
             specs[k] = spec_type(self, k, **(args))

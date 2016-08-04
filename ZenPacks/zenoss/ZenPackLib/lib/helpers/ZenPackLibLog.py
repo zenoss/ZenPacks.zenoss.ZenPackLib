@@ -1,5 +1,6 @@
 import logging
 
+
 def new_log(id):
     '''create and return a new log file'''
     log = logging.getLogger(id)
@@ -14,11 +15,13 @@ def new_log(id):
         logging.basicConfig()
     return log
 
+LOG = new_log('zpl.zenpacklib')
+
 
 class ZenPackLibLog(object):
     ''''''
     zenpacks = {}
-    defaultlog = new_log('zpl.zenpacklib')
+    defaultlog = LOG
 
     def get_log(self, id):
         if id in self.zenpacks.keys():
@@ -35,5 +38,8 @@ class ZenPackLibLog(object):
             # set to error if quiet is True (default)
             log.setLevel('ERROR' if quiet else level)
             self.zenpacks[id] = {'log': log, 'quiet': quiet, 'level':level}
-        self.defaultlog.info("Added {} (level {})".format(id, log.level))
+        else:
+            log = self.get_log(id)
         return log
+
+ZPLOG = ZenPackLibLog()
