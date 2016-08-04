@@ -1,5 +1,6 @@
+from collections import OrderedDict
 from ..base.ClassProperty import ClassProperty
-from ..helpers.OrderedDict import OrderedDict
+
 
 def ModelTypeFactory(name, bases):
     """Return a "ZenPackified" model class given name and bases tuple."""

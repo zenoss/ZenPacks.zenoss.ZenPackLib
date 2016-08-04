@@ -5,6 +5,7 @@ import inspect
 import sys
 import yaml
 import collections
+import logging
 from optparse import OptionGroup
 
 import Globals
@@ -17,8 +18,7 @@ from Products.ZenModel.ZenPack import ZenPack
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
 
-from ..utils import logging, LOG
-from ..functions import create_module
+from ..functions import LOG, create_module
 from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
@@ -26,6 +26,7 @@ from ..resources.templates import SETUP_PY
 from ..helpers.WarningLoader import WarningLoader
 from ..helpers.Dumper import Dumper
 from ..helpers.Loader import Loader
+from ..helpers.utils import optimize_yaml
 
 
 class ZPLCommand(ZenScriptBase):
@@ -74,7 +75,10 @@ class ZPLCommand(ZenScriptBase):
                     dest="lint",
                     action="store_true",
                     help="check zenpack.yaml syntax for errors")
-
+        group.add_option("-o", "--optimize",
+                    dest="optimize",
+                    action="store_true",
+                    help="optimize zenpack.yaml format and DEFAULTS")
         group.add_option("-d", "--diagram",
                     dest="diagram",
                     action="store_true",
@@ -136,7 +140,7 @@ class ZPLCommand(ZenScriptBase):
             self.parser.print_help()
             self.parser.exit(1)
 
-        if self.options.lint or self.options.diagram:
+        if self.options.lint or self.options.diagram or self.options.optimize:
 
             self.parser.usage = "%prog [options] FILENAME"
             if len(self.args) != 1:
@@ -180,11 +184,22 @@ class ZPLCommand(ZenScriptBase):
         elif self.options.lint:
             self.lint(self.options.filename)
 
+        elif self.options.optimize:
+            self.optimize(self.options.filename)
+
         elif self.options.diagram:
             self.class_diagram('yuml', self.options.filename)
 
         elif self.options.paths:
             self.list_paths()
+
+    def optimize(self, filename):
+        '''return formatted YAML with DEFAULTS optimized'''
+        try:
+            new_yaml = optimize_yaml(filename)
+            print new_yaml
+        except Exception, e:
+            LOG.exception(e)
 
     def lint(self, filename):
         '''parse YAML file and check syntax'''
@@ -209,7 +224,6 @@ class ZPLCommand(ZenScriptBase):
 
     def create_zenpack_srcdir(self, zenpack_name):
         """Create a new ZenPack source directory."""
-        import shutil
         import errno
 
         if os.path.exists(zenpack_name):
@@ -283,10 +297,6 @@ class ZPLCommand(ZenScriptBase):
         print "  - creating file: {}".format(yaml_fname)
         with open(yaml_fname, 'w') as yaml_f:
             yaml_f.write("name: {}\n".format(zenpack_name))
-
-        # Copy zenpacklib.py (this file) into ZenPack module directory.
-        #print "  - copying: {} to {}".format(__file__, module_directory)
-        #shutil.copy2(__file__, module_directory)
 
     def py_to_yaml(self, zenpack_name):
         '''Create YAML based on existing ZenPack'''

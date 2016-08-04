@@ -1,7 +1,6 @@
 import inspect
 import re
-import collections
-
+from collections import OrderedDict
 from Products import Zuul
 from Products.Zuul import marshal
 from Products.Zuul.infos import ProxyProperty
@@ -11,7 +10,6 @@ from Products.Zuul.interfaces import IInfo
 
 from ..utils import logging, LOG
 from ..functions import fix_kwargs, create_module
-from ..helpers.OrderedDict import OrderedDict
 
 
 def MethodInfoProperty(method_name, entity=False):
@@ -195,7 +193,7 @@ class Spec(object):
     def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False):
         """Return a normalized dictionary of spec_type instances."""
         if param_dict is None:
-            param_dict = {}
+            param_dict = OrderedDict()
         elif not isinstance(param_dict, dict):
             raise TypeError(
                 "{!r} argument must be dict or None, not {!r}"
@@ -207,7 +205,10 @@ class Spec(object):
                 self.apply_data_defaults(param_dict, leave_defaults=leave_defaults)
 
         specs = OrderedDict()
-        for k, v in param_dict.iteritems():
+        keys = param_dict.keys()
+        keys.sort()
+        for k in keys:
+            v = param_dict.get(k)
             specs[k] = spec_type(self, k, **(fix_kwargs(v)))
 
         return specs
@@ -274,16 +275,16 @@ class Spec(object):
             other_val_or_default = other_val or getattr(other, default_p, None)
 
             # Order doesn't matter, for purposes of comparison.  Cast it away.
-            if isinstance(self_val, collections.OrderedDict):
+            if isinstance(self_val, OrderedDict):
                 self_val = dict(self_val)
 
-            if isinstance(other_val, collections.OrderedDict):
+            if isinstance(other_val, OrderedDict):
                 other_val = dict(other_val)
 
-            if isinstance(self_val_or_default, collections.OrderedDict):
+            if isinstance(self_val_or_default, OrderedDict):
                 self_val_or_default = dict(self_val_or_default)
 
-            if isinstance(other_val_or_default, collections.OrderedDict):
+            if isinstance(other_val_or_default, OrderedDict):
                 other_val_or_default = dict(other_val_or_default)
 
             if self_val == other_val:

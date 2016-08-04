@@ -79,6 +79,7 @@ class GraphPointSpec(Spec):
         # Allow color to be specified by color_index instead of directly. This is
         # useful when you want to keep the normal progression of colors, but need
         # to add some DONTDRAW graphpoints for calculations.
+        self.colorindex = colorindex
         if colorindex:
             try:
                 colorindex = int(colorindex) % len(GraphPoint.colors)

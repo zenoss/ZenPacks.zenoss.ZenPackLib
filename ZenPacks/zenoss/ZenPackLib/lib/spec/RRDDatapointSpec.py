@@ -63,8 +63,8 @@ class RRDDatapointSpec(Spec):
             self.aliases = aliases
         else:
             raise ValueError("aliases must be specified as a dict")
-
-        if shorthand:
+        self.shorthand = shorthand
+        if self.shorthand:
             if 'DERIVE' in shorthand.upper():
                 self.rrdtype = 'DERIVE'
 
