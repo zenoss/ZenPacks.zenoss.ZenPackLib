@@ -736,6 +736,28 @@ def represent_spec(dumper, obj, yaml_tag=u'tag:yaml.org,2002:map', defaults=None
     return node
 
 
+def type_map(loader, node):
+    '''map yaml node to python data type'''
+    map = {'int': int,
+           'float': float, 
+           'str': str,
+           'unicode': unicode,
+           'bool': bool,
+           'binary': str,
+           'set': set,
+           'seq': list,
+           'map': dict}
+    if 'null' in node.tag:
+        return None
+    for k in map.keys():
+        if k in node.tag:
+            try:
+                return map.get(k,'str')(node.value)
+            except:
+                pass
+    return loader.construct_scalar(node)
+
+
 def construct_spec(cls, loader, node):
     """
     Generic constructor for deserializing specs from YAML.   Should be
@@ -789,7 +811,7 @@ def construct_spec(cls, loader, node):
                 #
                 # Note that the values of these extra parameters need to be
                 # scalars, not nested maps or something like that.
-                params[extra_params][yaml_key] = loader.construct_scalar(value_node)
+                params[extra_params][yaml_key] = type_map(loader, value_node)
                 continue
             else:
                 yaml_error(loader, yaml.constructor.ConstructorError(
