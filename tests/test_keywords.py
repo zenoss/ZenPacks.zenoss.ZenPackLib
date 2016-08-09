@@ -36,12 +36,18 @@ classes:
                 label: UUID
             yield:
                 label: Yield
+            name:
+                label: Name
+            memory:
+                label: Memory
     lambda:
         base: [zenpacklib.Component]
         label: Lambda
         properties:
             prop1:
                 label: yield
+            uuid:
+                label: UUID
 
 zProperties:
     zCommandUsername:
@@ -64,6 +70,7 @@ device_classes:
                             rrdtype: GAUGE
                             rrdmin: 0
                             rrdmax: 100
+                            breadCrumbs: 0
 
 """
 NO_RESERVED_YAML = """name: ZenPacks.zenoss.Example
@@ -113,11 +120,13 @@ class TestKeywords(BaseTestCommand):
             f.write(RESERVED_YAML.strip())
             f.flush()
             out = self._smoke_command('lint', f.name).strip().split('\n')
-            self.assertEquals(4, len(out))
+            self.assertEquals(6, len(out))
             self.assertIn("Found reserved keyword 'uuid'", out[0])
             self.assertIn("Found reserved keyword 'yield'", out[1])
-            self.assertIn("Found reserved keyword 'lambda'", out[2])
+            self.assertIn("Found reserved keyword 'name'", out[2])
             self.assertIn("Found reserved keyword 'lambda'", out[3])
+            self.assertIn("Found reserved keyword 'uuid'", out[4])
+            self.assertIn("Found reserved keyword 'lambda'", out[5])
 
             f.close()
 
