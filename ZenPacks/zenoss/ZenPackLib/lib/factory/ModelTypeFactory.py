@@ -1,5 +1,5 @@
+from collections import OrderedDict
 from ..base.ClassProperty import ClassProperty
-from ..helpers.OrderedDict import OrderedDict
 from ..functions import LOG
 
 

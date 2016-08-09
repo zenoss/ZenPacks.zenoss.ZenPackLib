@@ -9,14 +9,14 @@ import yaml
 import time
 import keyword
 import logging
-
+from collections import OrderedDict
 from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
 
 from .utils import yaml_installed
-from .helpers.OrderedDict import OrderedDict
 from .helpers.Loader import Loader
-
 from .helpers.ZenPackLibLog import ZenPackLibLog
+
+
 ZPLOG = ZenPackLibLog()
 LOG = ZPLOG.defaultlog
 

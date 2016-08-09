@@ -1,15 +1,16 @@
 import inspect
 import re
-import collections
 import logging
+from collections import OrderedDict
+
 from Products import Zuul
 from Products.Zuul import marshal
 from Products.Zuul.infos import ProxyProperty
 from Products.ZenRelations import ToOneRelationship, ToManyRelationship
 from zope.interface.interface import InterfaceClass
 from Products.Zuul.interfaces import IInfo
+
 from ..functions import fix_kwargs, create_module, LOG
-from ..helpers.OrderedDict import OrderedDict
 
 
 def MethodInfoProperty(method_name, entity=False):
@@ -277,16 +278,16 @@ class Spec(object):
             other_val_or_default = other_val or getattr(other, default_p, None)
 
             # Order doesn't matter, for purposes of comparison.  Cast it away.
-            if isinstance(self_val, collections.OrderedDict):
+            if isinstance(self_val, OrderedDict):
                 self_val = dict(self_val)
 
-            if isinstance(other_val, collections.OrderedDict):
+            if isinstance(other_val, OrderedDict):
                 other_val = dict(other_val)
 
-            if isinstance(self_val_or_default, collections.OrderedDict):
+            if isinstance(self_val_or_default, OrderedDict):
                 self_val_or_default = dict(self_val_or_default)
 
-            if isinstance(other_val_or_default, collections.OrderedDict):
+            if isinstance(other_val_or_default, OrderedDict):
                 other_val_or_default = dict(other_val_or_default)
 
             if self_val == other_val:

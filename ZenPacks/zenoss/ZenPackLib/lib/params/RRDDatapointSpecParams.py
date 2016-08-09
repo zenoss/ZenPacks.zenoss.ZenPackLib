@@ -1,6 +1,6 @@
 import StringIO
-import collections
 from Acquisition import aq_base
+from collections import OrderedDict
 from ..spec.RRDDatapointSpec import RRDDatapointSpec
 from .SpecParams import SpecParams
 
@@ -32,7 +32,7 @@ class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
 
         self.aliases = {x.id: x.formula for x in datapoint.aliases()}
 
-        self.extra_params = collections.OrderedDict()
+        self.extra_params = OrderedDict()
         for propname in [x['id'] for x in datapoint._properties]:
             if propname not in self.init_params():
                 if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):

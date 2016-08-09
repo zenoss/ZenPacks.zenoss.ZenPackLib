@@ -1,5 +1,5 @@
-import collections
 from Acquisition import aq_base
+from collections import OrderedDict
 from .SpecParams import SpecParams
 from ..spec.RRDThresholdSpec import RRDThresholdSpec
 
@@ -22,7 +22,7 @@ class RRDThresholdSpecParams(SpecParams, RRDThresholdSpec):
             if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
                 setattr(self, propname, getattr(threshold, propname, None))
 
-        self.extra_params = collections.OrderedDict()
+        self.extra_params = OrderedDict()
         for propname in [x['id'] for x in threshold._properties]:
             if propname not in self.init_params():
                 if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
