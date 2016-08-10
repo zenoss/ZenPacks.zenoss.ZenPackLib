@@ -93,7 +93,7 @@ class RRDDatapointSpec(Spec):
     def create(self, datasource_spec, datasource):
         datapoint = datasource.manage_addRRDDataPoint(self.name)
         type_ = datapoint.__class__.__name__
-        self.speclog.debug("adding datapoint of type %s" % type_)
+        self.speclog.debug("adding datapoint of type {}".format(type_))
 
         if self.rrdtype is not None:
             datapoint.rrdtype = self.rrdtype

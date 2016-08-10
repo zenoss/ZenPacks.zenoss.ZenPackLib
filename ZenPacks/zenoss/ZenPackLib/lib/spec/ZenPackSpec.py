@@ -115,9 +115,10 @@ class ZenPackSpec(Spec):
             zProperties=zProperties,
             classes=classes,
             class_relationships=class_relationships,
-            device_classes=device_classes, log=self.LOG)
+            device_classes=device_classes, 
+            log=self.LOG)
         self.name = name
-        self.LOG.debug("------ %s ------" % self.name)
+        self.LOG.debug("------ {} ------".format(self.name))
         self.id_prefix = name.replace(".", "_")
 
         self.NEW_COMPONENT_TYPES = []
@@ -132,7 +133,6 @@ class ZenPackSpec(Spec):
         if class_relationships:
             if not isinstance(class_relationships, list):
                 raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
- 
             for rel in class_relationships:
                 rel['log'] = self.LOG
                 self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
@@ -221,7 +221,7 @@ class ZenPackSpec(Spec):
             # Plumb _relations
             for relname, relationship in class_.relationships.iteritems():
                 if not relationship.schema:
-                    self.LOG.error("Removing invalid display config for relationship %s from  %s.%s" % (relname, self.name, class_.name))
+                    self.LOG.error("Removing invalid display config for relationship {} from  {}.{}".format(relname, self.name, class_.name))
                     class_.relationships.pop(relname)
                     continue
 

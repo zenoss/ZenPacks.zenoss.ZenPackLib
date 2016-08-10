@@ -38,8 +38,8 @@ class TestCase(BaseTestCase):
 
         try:
             zenpack_module = importlib.import_module(self.zenpack_module_name)
-        except Exception:
-            self.LOG.exception("Unable to load zenpack named '%s' - is it installed? (%s)", self.zenpack_module_name)
+        except Exception as e:
+            self.LOG.exception("Unable to load zenpack named '{}' - is it installed? ({})".format(self.zenpack_module_name, e))
             raise
 
         zenpackspec = getattr(zenpack_module, 'CFG', None)

@@ -102,7 +102,7 @@ class ComponentBase(ModelBase):
             try:
                 new_obj = result.getObject()
             except Exception as e:
-                self.LOG.error("Trying to add relation to non-existent object %s", e)
+                self.LOG.error("Trying to add relation to non-existent object {}".format(e))
             else:
                 relationship.addRelation(new_obj)
 
@@ -115,7 +115,7 @@ class ComponentBase(ModelBase):
             new_obj.index_object()
             return
 
-        self.LOG.error("setIdForRelationship (%s): No target found matching id=%s", relationship, id_)
+        self.LOG.error("setIdForRelationship ({}): No target found matching id={}".format(relationship, id_))
 
     def getIdsInRelationship(self, relationship):
         """Return a list of object ids in relationship.
@@ -150,7 +150,7 @@ class ComponentBase(ModelBase):
             try:
                 component = result.getObject()
             except Exception as e:
-                self.LOG.error("Trying to access non-existent object %s", e)
+                self.LOG.error("Trying to access non-existent object {}".format(e))
             else:
                 obj_map[result.id] = component
 
@@ -158,19 +158,19 @@ class ComponentBase(ModelBase):
             obj = obj_map.get(id_)
             if not obj:
                 self.LOG.error(
-                    "setIdsInRelationship (%s): No targets found matching "
-                    "id=%s", relationship, id_)
+                    "setIdsInRelationship ({}): No targets found matching "
+                    "id={}".format(relationship, id_))
 
                 continue
 
             if id_ in new_ids:
-                self.LOG.debug("Adding %s to %s" % (obj, relationship))
+                self.LOG.debug("Adding {} to {}".format(obj, relationship))
                 relationship.addRelation(obj)
 
                 # Index remote object. It might have a custom path reporter.
                 notify(IndexingEvent(obj, 'path', False))
             else:
-                self.LOG.debug("Removing %s from %s" % (obj, relationship))
+                self.LOG.debug("Removing {} from {}".format(obj, relationship))
                 relationship.removeRelation(obj)
 
                 # If the object was not deleted altogether..
@@ -281,7 +281,7 @@ class ComponentBase(ModelBase):
                     for stream in streams:
                         recurse = any([pattern.match(relpath) for pattern in stream])
 
-                        self.LOG.log(9, "[%s] matching %s against %s: %s" % (root.meta_type, relpath, [x.pattern for x in stream], recurse))
+                        self.LOG.log(9, "[{}] matching {} against {}: {}".format(root.meta_type, relpath, [x.pattern for x in stream], recurse))
                         if not recurse:
                             continue
 

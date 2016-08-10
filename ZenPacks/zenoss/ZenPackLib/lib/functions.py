@@ -318,7 +318,7 @@ def relationships_from_yuml(yuml):
 
 
 def getZenossKeywords(klasses):
-    kwset = set(['_properties', '_relations'])
+    kwset = set()
     for klass in klasses:
         kwset = kwset.union(get_class_reserved(klass))
     return kwset
@@ -382,15 +382,15 @@ def str_to_relschemaspec(schemastr):
 
     m = schema_pattern.search(schemastr)
     if not m:
-        raise ValueError("RelationshipSchemaSpec '%s' is not valid" % schemastr)
+        raise ValueError("RelationshipSchemaSpec '{}' is not valid".format(schemastr))
 
     ml = class_rel_pattern.search(m.group('left'))
     if not ml:
-        raise ValueError("RelationshipSchemaSpec '%s' left side is not valid" % m.group('left'))
+        raise ValueError("RelationshipSchemaSpec '{}' left side is not valid".format(m.group('left')))
 
     mr = class_rel_pattern.search(m.group('right'))
     if not mr:
-        raise ValueError("RelationshipSchemaSpec '%s' right side is not valid" % m.group('right'))
+        raise ValueError("RelationshipSchemaSpec '{}' right side is not valid".format(m.group('right')))
 
     reltypes = {
         '1:1': ('ToOne', 'ToOne'),
@@ -446,7 +446,7 @@ def str_to_class(classstr):
     try:
         class_ = getattr(importlib.import_module(modname), classname)
     except Exception, e:
-        raise ValueError("Class '%s' is not valid: %s" % (classstr, e))
+        raise ValueError("Class '{}' is not valid: {}".format(classstr, e))
 
     return class_
 
@@ -465,7 +465,7 @@ def severity_to_str(value):
         }.get(value, None)
 
     if severity is None:
-        raise ValueError("'%s' is not a valid value for severity.", value)
+        raise ValueError("'{}' is not a valid value for severity.".format(value))
 
     return severity
 
@@ -487,7 +487,7 @@ def str_to_severity(value):
             }.get(value.lower())
 
     if severity is None:
-        raise ValueError("'%s' is not a valid value for severity." % value)
+        raise ValueError("'{}' is not a valid value for severity.".format(value))
 
     return severity
 

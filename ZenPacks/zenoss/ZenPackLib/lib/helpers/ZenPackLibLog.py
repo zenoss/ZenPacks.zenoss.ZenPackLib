@@ -23,21 +23,17 @@ class ZenPackLibLog(object):
     def get_log(self, id):
         if id in self.zenpacks.keys():
             log = self.zenpacks.get(id).get('log')
-            self.defaultlog.info('get_log (zp): %s' % id)
             return log
-        self.defaultlog.info('get_log (default): %s' % id)
         return self.defaultlog
 
     def add_log(self, id, quiet=True, level=0):
         '''add a new log'''
-        self.defaultlog.info('%s verbose: %s level: %s' % (id, quiet, level))
         id = str(id)
         if id not in self.zenpacks.keys():
             log = new_log(id)
             log.setLevel(level)
             # set to error if quiet is True (default)
-            if quiet:
-                log.setLevel('ERROR')
+            log.setLevel('ERROR' if quiet else level)
             self.zenpacks[id] = {'log': log, 'quiet': quiet, 'level':level}
-        self.defaultlog.info("ADDED %s (level %s) %s" % (id, log.level, log.handlers))
+        self.defaultlog.info("Added {} (level {})".format(id, log.level))
         return log

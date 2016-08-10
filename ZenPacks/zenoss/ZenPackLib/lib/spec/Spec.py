@@ -70,8 +70,8 @@ def RelationshipGetter(relationship_name):
                 return self.getIdForRelationship(relationship)
         except Exception:
             LOG.error(
-                "error getting %s ids for %s",
-                relationship_name, self.getPrimaryUrlPath())
+                "error getting {} ids for {}".format(
+                relationship_name, self.getPrimaryUrlPath()))
             raise
 
     return getter
@@ -87,8 +87,8 @@ def RelationshipSetter(relationship_name):
                 self.setIdForRelationship(relationship, id_or_ids)
         except Exception:
             LOG.error(
-                "error setting %s ids for %s",
-                relationship_name, self.getPrimaryUrlPath())
+                "error setting {} ids for {}".format(
+                relationship_name, self.getPrimaryUrlPath()))
             raise
 
     return setter
@@ -133,7 +133,7 @@ class Spec(object):
         self.LOG = log
         class LogAdapter(logging.LoggerAdapter):
             def process(self, msg, kwargs):
-                return '%s %s' % (self.extra['context'], msg), kwargs
+                return '{} {}'.format(self.extra['context'], msg), kwargs
 
         self.source_location = _source_location
         self.speclog = LogAdapter(self.LOG, {'context': self})
@@ -151,7 +151,7 @@ class Spec(object):
         else:
             parts.append(super(Spec, self).__str__())
 
-        return "%s(%s)" % (self.__class__.__name__, ' - '.join(parts))
+        return "{}({})".format(self.__class__.__name__, ' - '.join(parts))
 
     def apply_data_defaults(self, dictionary, default_defaults=None, leave_defaults=False):
         """Modify dictionary to put values from DEFAULTS key into other keys.
@@ -195,7 +195,6 @@ class Spec(object):
 
     def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False, log=LOG):
         """Return a normalized dictionary of spec_type instances."""
-        #log.info('specs_from_param: %s', spec_type)
         if param_dict is None:
             param_dict = {}
         elif not isinstance(param_dict, dict):
@@ -271,7 +270,7 @@ class Spec(object):
             if p in ignore_params:
                 continue
 
-            default_p = '_%s_defaultvalue' % p
+            default_p = '_{}_defaultvalue'.format(p)
             self_val = getattr(self, p)
             other_val = getattr(other, p)
             self_val_or_default = self_val or getattr(self, default_p, None)
@@ -294,8 +293,8 @@ class Spec(object):
                 continue
 
             if self_val_or_default != other_val_or_default:
-                LOG.debug("Comparing %s to %s, parameter %s does not match (%s != %s)",
-                          self, other, p, self_val_or_default, other_val_or_default)
+                LOG.debug("Comparing {} to {}, parameter {} does not match ({} != {})".format(
+                          self, other, p, self_val_or_default, other_val_or_default))
                 return False
 
         return True

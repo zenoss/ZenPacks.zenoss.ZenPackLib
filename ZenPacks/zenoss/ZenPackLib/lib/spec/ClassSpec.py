@@ -993,8 +993,8 @@ class ClassSpec(Spec):
 
         if width > 750:
             self.LOG.warning(
-                "%s: %s custom columns exceed 750 pixels (%s)",
-                self.zenpack.name, self.name, width)
+                "{}: {} custom columns exceed 750 pixels ({})".format(
+                self.zenpack.name, self.name, width))
 
         return (
             "ZC.{meta_type}Panel = Ext.extend(ZC.ZPL_{zenpack_id_prefix}_ComponentGridPanel, {{"

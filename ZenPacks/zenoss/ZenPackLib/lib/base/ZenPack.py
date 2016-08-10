@@ -35,8 +35,7 @@ class ZenPack(ZenPack):
                 h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
                 self.LOG.addHandler(h)
             else:
-                self.LOG.error("Unrecognized ZPL_LOG_LEVEL '%s'" %
-                          os.environ.get('ZPL_LOG_LEVEL'))
+                self.LOG.error("Unrecognized ZPL_LOG_LEVEL '{}'".format(os.environ.get('ZPL_LOG_LEVEL')))
 
     # NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in
     # via zenpacklib when this class is instantiated.
@@ -54,21 +53,21 @@ class ZenPack(ZenPack):
                 try:
                     self.dmd.Devices.getOrganizer(dcspec.path)
                 except KeyError:
-                    self.LOG.info('Creating DeviceClass %s' % dcspec.path)
+                    self.LOG.info('Creating DeviceClass {}'.format(dcspec.path))
                     app.dmd.Devices.createOrganizer(dcspec.path)
 
             dcObject = self.dmd.Devices.getOrganizer(dcspec.path)
             for zprop, value in dcspec.zProperties.iteritems():
                 if dcObject.getPropertyType(zprop) is None:
-                    self.LOG.error("Unable to set zProperty %s on %s (undefined zProperty)", zprop, dcspec.path)
+                    self.LOG.error("Unable to set zProperty {} on {} (undefined zProperty)".format(zprop, dcspec.path))
                     continue
-                self.LOG.info('Setting zProperty %s on %s' % (zprop, dcspec.path))
+                self.LOG.info('Setting zProperty {} on {}'.format(zprop, dcspec.path))
                 dcObject.setZenProperty(zprop, value)
 
         # Load objects.xml now
         super(ZenPack, self).install(app)
         if self.NEW_COMPONENT_TYPES:
-            self.LOG.info('Adding %s relationships to existing devices' % self.id)
+            self.LOG.info('Adding {} relationships to existing devices'.format(self.id))
             self._buildDeviceRelations()
 
         # load monitoring templates
@@ -99,10 +98,10 @@ class ZenPack(ZenPack):
 
                 if deviceclass is None:
                     self.LOG.warning(
-                        "DeviceClass %s has been removed at some point "
-                        "after the %s ZenPack was installed.  It will be "
-                        "reinstated if this ZenPack is upgraded or reinstalled",
-                        dcname, self.id)
+                        "DeviceClass {} has been removed at some point "
+                        "after the {} ZenPack was installed.  It will be "
+                        "reinstated if this ZenPack is upgraded or reinstalled".format(
+                        dcname, self.id))
                     continue
 
                 for orig_mtname, orig_mtspec in dcspec.templates.iteritems():
@@ -113,10 +112,10 @@ class ZenPack(ZenPack):
 
                     if template is None:
                         self.LOG.warning(
-                            "Monitoring template %s/%s has been removed at some point "
-                            "after the %s ZenPack was installed.  It will be "
-                            "reinstated if this ZenPack is upgraded or reinstalled",
-                            dcname, orig_mtname, self.id)
+                            "Monitoring template {}/{} has been removed at some point "
+                            "after the {} ZenPack was installed.  It will be "
+                            "reinstated if this ZenPack is upgraded or reinstalled".format(
+                            dcname, orig_mtname, self.id))
                         continue
 
                     installed = RRDTemplateSpecParams.fromObject(template)
@@ -131,13 +130,13 @@ class ZenPack(ZenPack):
 
                         newname = "{}-upgrade-{}".format(orig_mtname, int(time.time()))
                         self.LOG.error(
-                            "Monitoring template %s/%s has been modified "
+                            "Monitoring template {}/{} has been modified "
                             "since the %s ZenPack was installed.  These local "
                             "changes will be lost as this ZenPack is upgraded "
                             "or reinstalled.   Existing template will be "
-                            "renamed to '%s'.  Please review and reconcile "
-                            "local changes:\n%s",
-                            dcname, orig_mtname, self.id, newname, diff)
+                            "renamed to '{}'.  Please review and reconcile "
+                            "local changes:\n{}".format(
+                            dcname, orig_mtname, self.id, newname, diff))
 
                         deviceclass.rrdTemplates.manage_renameObject(template.id, newname)
 
@@ -146,17 +145,17 @@ class ZenPack(ZenPack):
             for catalog in self.GLOBAL_CATALOGS:
                 catObj = getattr(dc, catalog, None)
                 if catObj:
-                    self.LOG.info('Removing Catalog %s' % catalog)
+                    self.LOG.info('Removing Catalog {}'.format(catalog))
                     dc._delObject(catalog)
 
             if self.NEW_COMPONENT_TYPES:
-                self.LOG.info('Removing %s components' % self.id)
+                self.LOG.info('Removing {} components'.format(self.id))
                 cat = ICatalogTool(app.zport.dmd)
                 for brain in cat.search(types=self.NEW_COMPONENT_TYPES):
                     try:
                         component = brain.getObject()
                     except Exception as e:
-                        self.LOG.error("Trying to remove non-existent object %s", e)
+                        self.LOG.error("Trying to remove non-existent object {}".format(e))
                         continue
                     else:
                         component.getPrimaryParent()._delObject(component.id)
@@ -168,7 +167,7 @@ class ZenPack(ZenPack):
                     Device._relations = tuple([x for x in Device._relations
                                                if x[0] not in self.NEW_RELATIONS[device_module_id]])
 
-                self.LOG.info('Removing %s relationships from existing devices.' % self.id)
+                self.LOG.info('Removing {} relationships from existing devices.'.format(self.id))
                 self._buildDeviceRelations()
 
             for dcname, dcspec in self.device_classes.iteritems():
@@ -177,10 +176,10 @@ class ZenPack(ZenPack):
                     try:
                         app.dmd.Devices.getOrganizer(organizerPath)
                     except KeyError:
-                        self.LOG.warning('Unable to remove DeviceClass %s (not found)' % dcspec.path)
+                        self.LOG.warning('Unable to remove DeviceClass {} (not found)'.format(dcspec.path))
                         continue
 
-                    self.LOG.info('Removing DeviceClass %s' % dcspec.path)
+                    self.LOG.info('Removing DeviceClass {}'.format(dcspec.path))
                     app.dmd.Devices.manage_deleteOrganizer(organizerPath)
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
@@ -219,7 +218,7 @@ class ZenPack(ZenPack):
                         try:
                             obj = self.dmd.getObjByPath(obj_path)
                             if getattr(obj, 'zpl_managed', False):
-                                self.LOG.debug("Removing %s from %s", obj_path, filename)
+                                self.LOG.debug("Removing {} from {}".format(obj_path, filename))
                                 pruned += 1
 
                                 # if there's a comment before it with the
@@ -232,7 +231,7 @@ class ZenPack(ZenPack):
                                 elem.getparent().remove(elem)
 
                         except Exception:
-                            self.LOG.warning("Unable to postprocess %s in %s", obj_path, filename)
+                            self.LOG.warning("Unable to postprocess {} in {}".format(obj_path, filename))
 
                         path.pop()
 
@@ -243,14 +242,15 @@ class ZenPack(ZenPack):
                         path.pop()
 
             if len(tree.getroot()) == 0:
-                self.LOG.info("Removing %s", filename)
+                self.LOG.info("Removing {}".format(filename))
                 os.remove(filename)
             elif pruned:
-                self.LOG.info("Pruning %d objects from %s", pruned, filename)
+                self.LOG.info("Pruning {} objects from {}".format(pruned, filename))
                 with open(filename, 'w') as f:
                     f.write(etree.tostring(tree))
             else:
-                self.LOG.debug("Leaving %s unchanged", filename)
+                self.LOG.debug("Leaving {} unchanged".format(filename))
 
         except Exception, e:
-            self.LOG.error("Unable to postprocess %s: %s", filename, e)
+            self.LOG.error("Unable to postprocess {}: {}".format(filename, e))
+

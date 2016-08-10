@@ -16,7 +16,6 @@ class GraphDefinitionSpec(Spec):
             height=None,
             width=None,
             units=None,
-            log=None,
             base=None,
             miny=None,
             maxy=None,
@@ -25,6 +24,7 @@ class GraphDefinitionSpec(Spec):
             graphpoints=None,
             comments=None,
             _source_location=None,
+            log=LOG,
             ):
         """
         Create a GraphDefinition Specification
