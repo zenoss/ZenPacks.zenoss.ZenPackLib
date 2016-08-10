@@ -5,7 +5,7 @@ import sys
 import importlib
 import keyword
 from collections import OrderedDict
-from ..functions import LOG, ZENOSS_KEYWORDS, relname_from_classname
+from ..functions import LOG, ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .Dumper import get_zproperty_type
 
 
@@ -50,14 +50,14 @@ class Loader(yaml.Loader):
         if not spec_class:
             self.yaml_error(yaml.constructor.ConstructorError(
                 None, None,
-                "Unrecognized Spec class %s" % spectype,
+                "Unrecognized Spec class {}".format(spectype),
                 node.start_mark))
             return
 
         if not isinstance(node, yaml.MappingNode):
             self.yaml_error(yaml.constructor.ConstructorError(
                 None, None,
-                "expected a mapping node, but found %s" % node.id,
+                "expected a mapping node, but found {}".format(node.id),
                 node.start_mark))
             return
 
@@ -91,10 +91,10 @@ class Loader(yaml.Loader):
         if not isinstance(node, yaml.MappingNode):
             self.yaml_error(yaml.constructor.ConstructorError(
                 None, None,
-                "expected a mapping node, but found %s" % node.id,
+                "expected a mapping node, but found {}".format(node.id),
                 node.start_mark))
 
-        params['_source_location'] = "%s: %s-%s" % (
+        params['_source_location'] = "{}: {}-{}".format(
             os.path.basename(node.start_mark.name),
             node.start_mark.line+1,
             node.end_mark.line+1)
@@ -134,7 +134,7 @@ class Loader(yaml.Loader):
                 else:
                     self.yaml_error(yaml.constructor.ConstructorError(
                         None, None,
-                        "Unrecognized parameter '%s' found while processing %s" % (yaml_key, cls.__name__),
+                        "Unrecognized parameter '{}' found while processing {}".format(yaml_key, cls.__name__),
                         key_node.start_mark))
                     continue
 
@@ -157,7 +157,7 @@ class Loader(yaml.Loader):
                 except KeyError:
                     self.yaml_error(yaml.constructor.ConstructorError(
                         None, None,
-                        "Invalid zProperty type_ '%s' for property %s found while processing %s" % (zPropType, key, cls.__name__),
+                        "Invalid zProperty type_ '{}' for property {} found while processing {}".format(zPropType, key, cls.__name__),
                         key_node.start_mark))
                     continue
 
@@ -172,7 +172,7 @@ class Loader(yaml.Loader):
                         if not isinstance(node, yaml.MappingNode):
                             self.yaml_error(yaml.constructor.ConstructorError(
                                 None, None,
-                                "expected a mapping node, but found %s" % node.id,
+                                "expected a mapping node, but found {}".format(node.id),
                                 node.start_mark))
                             continue
                         specs = OrderedDict()
@@ -182,7 +182,7 @@ class Loader(yaml.Loader):
                             specs[spec_key] = self.construct_specsparameters(spec_value_node, spectype)
                         params[key] = specs
                     else:
-                        raise Exception("Unable to determine specs parameter type in '%s'" % expected_type)
+                        raise Exception("Unable to determine specs parameter type in '{}'".format(expected_type))
                 elif expected_type.startswith("dict"):
                     params[key] = self.construct_mapping(value_node)
                 elif expected_type == "float":
@@ -210,7 +210,7 @@ class Loader(yaml.Loader):
                     if not isinstance(value_node, yaml.SequenceNode):
                         raise yaml.constructor.ConstructorError(
                             None, None,
-                            "expected a sequence node, but found %s" % value_node.id,
+                            "expected a sequence node, but found {}".format(value_node.id),
                             value_node.start_mark)
                     extra_paths = []
                     for path_node in value_node.value:
@@ -237,14 +237,14 @@ class Loader(yaml.Loader):
                         spectype = m.group(1)
                         params[key] = self.construct_specsparameters(value_node, spectype)
                     else:
-                        raise Exception("Unhandled type '%s'" % expected_type)
+                        raise Exception("Unhandled type '{}'".format(expected_type))
 
             except yaml.constructor.ConstructorError, e:
                 self.yaml_error(e)
             except Exception, e:
                 self.yaml_error(yaml.constructor.ConstructorError(
                     None, None,
-                    "Unable to deserialize %s object (param %s): %s" % (cls.__name__, key_node.value, e),
+                    "Unable to deserialize {} object (param {}): {}".format(cls.__name__, key_node.value, e),
                     value_node.start_mark), exc_info=sys.exc_info())
 
         return params
@@ -263,7 +263,7 @@ class Loader(yaml.Loader):
             return ZenPackSpec(name, **params)
         except Exception, e:
             if yaml_errored and not fatal:
-                LOG.error("(possibly because of earlier errors) %s" % e)
+                LOG.error("(possibly because of earlier errors) {}".format(e))
             else:
                 raise
 
@@ -297,7 +297,7 @@ class Loader(yaml.Loader):
         try:
             class_ = getattr(importlib.import_module(modname), classname)
         except Exception, e:
-            raise ValueError("Class '%s' is not valid: %s" % (classstr, e))
+            raise ValueError("Class '{}' is not valid: {}".format(classstr, e))
 
         return class_
 
@@ -316,15 +316,15 @@ class Loader(yaml.Loader):
 
         m = schema_pattern.search(schemastr)
         if not m:
-            raise ValueError("RelationshipSchemaSpec '%s' is not valid" % schemastr)
+            raise ValueError("RelationshipSchemaSpec '{}' is not valid" .format(schemastr))
 
         ml = class_rel_pattern.search(m.group('left'))
         if not ml:
-            raise ValueError("RelationshipSchemaSpec '%s' left side is not valid" % m.group('left'))
+            raise ValueError("RelationshipSchemaSpec '{}' left side is not valid".format(m.group('left')))
 
         mr = class_rel_pattern.search(m.group('right'))
         if not mr:
-            raise ValueError("RelationshipSchemaSpec '%s' right side is not valid" % m.group('right'))
+            raise ValueError("RelationshipSchemaSpec '{}' right side is not valid".format(m.group('right')))
 
         reltypes = {
             '1:1': ('ToOne', 'ToOne'),
@@ -372,7 +372,7 @@ class Loader(yaml.Loader):
                 }.get(value.lower())
 
         if severity is None:
-            raise ValueError("'%s' is not a valid value for severity." % value)
+            raise ValueError("'{}' is not a valid value for severity.".format(value))
 
         return severity
 
@@ -391,7 +391,7 @@ class Loader(yaml.Loader):
             message.append(e.problem)
 
         if e.note is not None:
-            message.append("(note: " + e.note + ")")
+            message.append("(note: {})".format(e.note))
 
         return "{}: {}".format(position, message)
 
@@ -409,7 +409,7 @@ class Loader(yaml.Loader):
             # When we're given the original exception (which was wrapped in
             # a MarkedYAMLError), we can provide more context for debugging.
             from traceback import format_exc
-            e.note = "\nOriginal exception:\n" + format_exc(exc_info)
+            e.note = "\nOriginal exception:\n{}".format(format_exc(exc_info))
         if fatal:
             raise e
         LOG.error(self.format_message(e))
@@ -424,7 +424,7 @@ class Loader(yaml.Loader):
                 None, None,
                 "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
                 start_mark))
-        elif key in ZENOSS_KEYWORDS:
+        elif key in ZENOSS_KEYWORDS.union(JS_WORDS):
             # should be ok to use a zenoss word to define these
             # some items, like sysUpTime are pretty common datapoints
             if cls.__name__ not in ['RRDDatasourceSpec',
@@ -432,9 +432,10 @@ class Loader(yaml.Loader):
                                     'RRDTemplateSpec',
                                     'GraphDefinitionSpec',
                                     'GraphPointSpec']:
+                klasses = ', '.join(find_keyword_cls(key))
                 self.yaml_warning(yaml.constructor.ConstructorError(
                     None, None,
-                    "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+                    "Found reserved Zenoss keyword '{}' from {}".format(key, klasses),
                     start_mark))
         return False
 

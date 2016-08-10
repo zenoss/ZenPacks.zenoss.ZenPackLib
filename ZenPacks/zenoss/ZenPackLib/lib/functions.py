@@ -25,9 +25,8 @@ QUIET=True
 LEVEL=0
 
 
-"""
-Private Functions
-"""
+# Private Functions ######################################################### 
+
 
 def getZenossKeywords(klasses):
     kwset = set()
@@ -116,7 +115,7 @@ def catalog_search(scope, name, *args, **kwargs):
 
     catalog = getattr(scope, '{}Search'.format(name), None)
     if not catalog:
-        LOG.debug("Catalog %sSearch not found at %s.  It should be created when the first included component is indexed" % (name, scope))
+        LOG.debug("Catalog {}Search not found at {}.  It should be created when the first included component is indexed".format(name, scope))
         return []
 
     if args:
@@ -244,7 +243,7 @@ def relationships_from_yuml(yuml):
 
         match = match_line(line)
         if not match:
-            raise ValueError("parse error in relationships_from_yuml at %s" % line)
+            raise ValueError("parse error in relationships_from_yuml at {}".format(line))
 
         left_class = match.group('left_classname')
         right_class = match.group('right_classname')

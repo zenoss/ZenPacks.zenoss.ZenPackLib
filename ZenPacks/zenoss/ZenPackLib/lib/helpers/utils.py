@@ -20,7 +20,7 @@ def load_yaml(yaml_filename=None):
         LOG.error("No YAML file specified")
 
     try:
-        LOG.info("Loading YAML from %s" % yaml_filename)
+        LOG.info("Loading YAML from {}".format(yaml_filename))
         CFG = yaml.load(file(yaml_filename, 'r'), Loader=Loader)
     except Exception as e:
         if not [x for x in LOG.handlers if not isinstance(x, logging.NullHandler)]:
@@ -32,10 +32,10 @@ def load_yaml(yaml_filename=None):
     if CFG:
         CFG.create()
     else:
-        LOG.error("Unable to load %s", yaml_filename)
+        LOG.error("Unable to load {}".format(yaml_filename))
 
     end = time.time() - start
-    LOG.info("Loaded %s in %0.2f s" % (yaml_filename, end))
+    LOG.info("Loaded {} in {:0.2f}s".format(yaml_filename, end))
     return CFG
 
 
@@ -57,7 +57,7 @@ def load_yaml_multi(files=[]):
             # if we already have a ZP id, but this yaml
             # has a different one, then there's a problem.
             if name and name != zp_id:
-                LOG.error('Skipping %s because multiple ZenPack names found: %s vs %s (%s)' % (f, zp_id, name))
+                LOG.error('Skipping {} because multiple ZenPack names found: {} vs {}'.format(f, zp_id, name))
                 continue
         # update the python dict
         cfg_data.update(f_cfg)
@@ -75,7 +75,7 @@ def load_yaml_dir(dir):
     for f in os.listdir(fdir):
         if '.yaml' not in f:
             continue
-        files.append('%s/%s' % (dir,f))
+        files.append('{}/{}'.format(dir,f))
     return load_yaml_multi(files)
 
 
@@ -130,9 +130,9 @@ def dict_compare(d1, d2):
     removed = d2_keys - d1_keys
     modified = {o : (d1[o], d2[o]) for o in intersect_keys if d1[o] != d2[o]}
     same = set(o for o in intersect_keys if d1[o] == d2[o])
-    LOG.warn('ADDED: %s' % added)
-    LOG.warn('REMOVED: %s' % removed)
-    LOG.warn('MODIFIED: %s' % modified)
+    LOG.warn('ADDED: {}'.format(added))
+    LOG.warn('REMOVED: {}'.format(removed))
+    LOG.warn('MODIFIED: {}'.format(modified))
 
 
 def get_optimized_yaml(data):

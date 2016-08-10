@@ -76,14 +76,14 @@ class Dumper(yaml.Dumper):
                 for key, spec in value.items():
                     if type(spec).__name__ != spectype:
                         raise yaml.representer.RepresenterError(
-                            "Unable to serialize %s object (%s):  Expected an object of type %s" %
-                            (type(spec).__name__, key, spectype))
+                            "Unable to serialize {} object ({}):  Expected an object of type {}".format(
+                            type(spec).__name__, key, spectype))
                     else:
                         specmapping[self.represent_str(key)] = self.represent_spec(spec, defaults=defaults)
                 return self.dict_representer(specmapping)
 
             else:
-                LOG.info("Using represent_data for %s (%s)" % (value, v_type))
+                LOG.info("Using represent_data for {} ({})".format(value, v_type))
                 return self.represent_data(value)
 
         return None
@@ -128,8 +128,8 @@ class Dumper(yaml.Dumper):
                 value = getattr(obj, p_name)
             except AttributeError:
                 raise yaml.representer.RepresenterError(
-                    "Unable to serialize %s object: %s, a supported parameter, is not accessible as a property." %
-                    (cls.__name__, p_name))
+                    "Unable to serialize {} object: {}, a supported parameter, is not accessible as a property.".format(
+                    cls.__name__, p_name))
                 continue
 
             # Figure out what the default value is.  First, consider the default
@@ -182,8 +182,8 @@ class Dumper(yaml.Dumper):
                 raise
             except Exception, e:
                 raise yaml.representer.RepresenterError(
-                    "Unable to serialize %s object (param %s, type %s, value %s): %s" %
-                    (cls.__name__, p_name, type_, value, e))
+                    "Unable to serialize {} object (param {}, type {}, value {}): {}".format(
+                    cls.__name__, p_name, type_, value, e))
 
             if p_name in param_defs and p_data.get('yaml_block_style'):
                 mapping[yaml_param].flow_style = False
@@ -203,10 +203,10 @@ class Dumper(yaml.Dumper):
 
     def relschemaspec_to_str(self, spec):
         # Omit relation names that are their defaults.
-        left_optrelname = "" if spec.left_relname == spec.default_left_relname else "(%s)" % spec.left_relname
-        right_optrelname = "" if spec.right_relname == spec.default_right_relname else "(%s)" % spec.right_relname
+        left_optrelname = "" if spec.left_relname == spec.default_left_relname else "({})".format(spec.left_relname)
+        right_optrelname = "" if spec.right_relname == spec.default_right_relname else "({})".format(spec.right_relname)
 
-        return "%s%s %s:%s %s%s" % (
+        return "{}{} {}:{} {}{}".format(
             spec.left_class,
             left_optrelname,
             spec.left_cardinality,
@@ -229,7 +229,7 @@ class Dumper(yaml.Dumper):
             }.get(value, None)
 
         if severity is None:
-            raise ValueError("'%s' is not a valid value for severity.", value)
+            raise ValueError("'{}' is not a valid value for severity.".format(value))
 
         return severity
 
