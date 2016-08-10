@@ -549,7 +549,7 @@ def verify_key(loader, cls, params, key, start_mark):
             None, None,
             "Found reserved python keyword '{}' while processing {}".format(key, cls.__name__),
             start_mark))
-    elif key in ZENOSS_KEYWORDS:
+    elif key in ZENOSS_KEYWORDS.union(JS_WORDS):
         # should be ok to use a zenoss word to define these
         # some items, like sysUpTime are pretty common datapoints
         if cls.__name__ not in ['RRDDatasourceSpec',
