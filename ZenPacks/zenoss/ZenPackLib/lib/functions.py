@@ -316,37 +316,33 @@ def relationships_from_yuml(yuml):
 
 # Public Functions #########################################################
 
-
-def getZenossKeywords(klasses):
-    kwset = set()
-    for klass in klasses:
-        kwset = kwset.union(get_class_reserved(klass))
-    return kwset
-
-
-def get_class_reserved(cls):
-    '''return reserved words for given class'''
-    reserved = []
-    cls_keys = cls.__dict__.keys()
-    for d in dir(cls):
-        if d in cls_keys:
-            reserved.append(d)
-        else:
-            if callable(getattr(cls, d)):
-                reserved.append(d)
-    return set(reserved)
-
 from Products.ZenModel.Device import Device as BaseDevice
 from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
 from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
 from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
 
-KLASSES = [BaseDevice, BaseDeviceComponent, BaseDeviceInfo, BaseComponentInfo]
-ZENOSS_KEYWORDS = getZenossKeywords(KLASSES)
+def getZenossKeywords(klasses):
+    kwset = set()
+    for klass in klasses:
+        for k in klass.__dict__.keys():
+            if callable(getattr(klass, k)):
+                kwset = kwset.union([k])
+        for attribute in dir(klass):
+            if callable(getattr(klass, attribute)):
+                kwset = kwset.union([attribute])
+    return kwset
+
+ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
+                                    BaseDeviceInfo,
+                                    BaseDeviceComponent,
+                                    BaseComponentInfo])
+
+JS_WORDS = set(['uuid', 'uid', 'meta_type', 'monitor', 'severity', 'monitored', 'locking'])
+
 
 def find_keyword_cls(keyword):
     names = []
-    for k in KLASSES:
+    for k in [BaseDevice, BaseDeviceComponent, BaseDeviceInfo, BaseComponentInfo]:
         if keyword in dir(k):
             names.append(k.__name__)
     return names

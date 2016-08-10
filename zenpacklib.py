@@ -171,14 +171,20 @@ GSM = getGlobalSiteManager()
 def getZenossKeywords(klasses):
     kwset = set()
     for klass in klasses:
-        kwset = kwset.union(set(dir(klass)))
+        for k in klass.__dict__.keys():
+            if callable(getattr(klass, k)):
+                kwset = kwset.union([k])
+        for attribute in dir(klass):
+            if callable(getattr(klass, attribute)):
+                kwset = kwset.union([attribute])
     return kwset
 
 ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
-                                     BaseDeviceComponent,
-                                     BaseDeviceInfo,
-                                     BaseComponentInfo])
+                                    BaseDeviceInfo,
+                                    BaseDeviceComponent,
+                                    BaseComponentInfo])
 
+JS_WORDS = set(['uuid', 'uid', 'meta_type', 'monitor', 'severity', 'monitored', 'locking'])
 
 # Public Classes ############################################################
 
@@ -1661,10 +1667,12 @@ class ZenPackSpec(Spec):
                                         class_.relationships[target_relname].schema = target_schema
                                     continue
 
+        for class_ in self.classes.values():
             # Plumb _relations
             for relname, relationship in class_.relationships.iteritems():
                 if not relationship.schema:
-                    LOG.error("Class '%s': no relationship schema has been defined for relationship '%s'" % (class_.name, relname))
+                    LOG.error("Removing invalid display config for relationship %s from  %s.%s" % (relname, self.name, class_.name))
+                    class_.relationships.pop(relname)
                     continue
 
                 if relationship.schema.remoteClass in self.imported_classes.keys():
@@ -4940,7 +4948,7 @@ if YAML_INSTALLED:
                 None, None,
                 "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
                 start_mark))
-        elif key in ZENOSS_KEYWORDS:
+        elif key in ZENOSS_KEYWORDS.union(JS_WORDS):
             # should be ok to use a zenoss word to define these
             # some items, like sysUpTime are pretty common datapoints
             if cls not in [RRDDatasourceSpec,
