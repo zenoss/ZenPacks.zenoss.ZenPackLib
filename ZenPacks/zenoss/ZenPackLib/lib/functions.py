@@ -304,19 +304,20 @@ def relationships_from_yuml(yuml):
 def getZenossKeywords(klasses):
     kwset = set()
     for klass in klasses:
-        kwset = kwset.union(set(dir(klass)))
+        for k in klass.__dict__.keys():
+            if callable(getattr(klass, k)):
+                kwset = kwset.union([k])
+        for attribute in dir(klass):
+            if callable(getattr(klass, attribute)):
+                kwset = kwset.union([attribute])
     return kwset
 
-
-from Products.ZenModel.Device import Device as BaseDevice
-from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
-from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
-from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
-
 ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
-                                     BaseDeviceComponent,
-                                     BaseDeviceInfo,
-                                     BaseComponentInfo])
+                                    BaseDeviceInfo,
+                                    BaseDeviceComponent,
+                                    BaseComponentInfo])
+
+JS_WORDS = set(['uuid', 'uid', 'meta_type', 'monitor', 'severity', 'monitored', 'locking'])
 
 
 
@@ -516,7 +517,7 @@ def verify_key(loader, cls, params, key, start_mark):
             None, None,
             "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
             start_mark))
-    elif key in ZENOSS_KEYWORDS:
+    elif key in ZENOSS_KEYWORDS.union(JS_WORDS):
         # should be ok to use a zenoss word to define these
         # some items, like sysUpTime are pretty common datapoints
         if cls.__name__ not in ['RRDDatasourceSpec',
