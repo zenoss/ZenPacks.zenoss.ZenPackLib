@@ -11,9 +11,6 @@ name: ZenPacks.zenoss.ZenPackLib
 classes:
   BasicDeviceComponent:
     base: [zenpacklib.Component]
-    properties:
-      something:
-        label: Something
 
 class_relationships:
 - Products.ZenModel.Device.Device 1:MC BasicDeviceComponent

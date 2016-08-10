@@ -24,6 +24,7 @@ from ..resources.templates import SETUP_PY
 from ..helpers.WarningLoader import WarningLoader
 from ..helpers.Dumper import Dumper
 from ..helpers.Loader import Loader
+from ..helpers.utils import optimize_yaml
 
 
 class ZPLCommand(ZenScriptBase):
@@ -72,7 +73,10 @@ class ZPLCommand(ZenScriptBase):
                     dest="lint",
                     action="store_true",
                     help="check zenpack.yaml syntax for errors")
-
+        group.add_option("-o", "--optimize",
+                    dest="optimize",
+                    action="store_true",
+                    help="optimize zenpack.yaml format and DEFAULTS")
         group.add_option("-d", "--diagram",
                     dest="diagram",
                     action="store_true",
@@ -134,7 +138,7 @@ class ZPLCommand(ZenScriptBase):
             self.parser.print_help()
             self.parser.exit(1)
 
-        if self.options.lint or self.options.diagram:
+        if self.options.lint or self.options.diagram or self.options.optimize:
 
             self.parser.usage = "%prog [options] FILENAME"
             if len(self.args) != 1:
@@ -164,7 +168,7 @@ class ZPLCommand(ZenScriptBase):
         ''''''
         if self.options.convert or self.options.dump:
             if not self.is_valid_zenpack():
-                self.parser.error('{} was not found'.format(self.options.zenpack))
+                self.parser.error('%s was not found' % self.options.zenpack)
 
         if self.options.create:
             self.create_zenpack_srcdir(self.options.zenpack)
@@ -178,11 +182,22 @@ class ZPLCommand(ZenScriptBase):
         elif self.options.lint:
             self.lint(self.options.filename)
 
+        elif self.options.optimize:
+            self.optimize(self.options.filename)
+
         elif self.options.diagram:
             self.class_diagram('yuml', self.options.filename)
 
         elif self.options.paths:
             self.list_paths()
+
+    def optimize(self, filename):
+        '''return formatted YAML with DEFAULTS optimized'''
+        try:
+            new_yaml = optimize_yaml(filename)
+            print new_yaml
+        except Exception, e:
+            LOG.exception(e)
 
     def lint(self, filename):
         '''parse YAML file and check syntax'''
@@ -195,7 +210,7 @@ class ZPLCommand(ZenScriptBase):
             logger.handlers = []
         handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
-            fmt='{}:{}:0: %%(message)s'.format(filename, linecount))
+            fmt='%s:%s:0: %%(message)s' % (filename, linecount))
         handler.setFormatter(formatter)
         logging.getLogger().addHandler(handler)
 
@@ -207,7 +222,6 @@ class ZPLCommand(ZenScriptBase):
 
     def create_zenpack_srcdir(self, zenpack_name):
         """Create a new ZenPack source directory."""
-        import shutil
         import errno
 
         if os.path.exists(zenpack_name):
@@ -282,16 +296,12 @@ class ZPLCommand(ZenScriptBase):
         with open(yaml_fname, 'w') as yaml_f:
             yaml_f.write("name: {}\n".format(zenpack_name))
 
-        # Copy zenpacklib.py (this file) into ZenPack module directory.
-        #print "  - copying: {} to {}".format(__file__, module_directory)
-        #shutil.copy2(__file__, module_directory)
-
     def py_to_yaml(self, zenpack_name):
         '''Create YAML based on existing ZenPack'''
         self.connect()
         zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name)
         if zenpack is None:
-            LOG.error("ZenPack '{}' not found.".format(zenpack_name))
+            LOG.error("ZenPack '%s' not found." % zenpack_name)
             return
         zenpack_init_py = os.path.join(os.path.dirname(inspect.getfile(zenpack.__class__)), '__init__.py')
 
@@ -312,7 +322,7 @@ class ZPLCommand(ZenScriptBase):
         # tweak the input slightly.
         inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
         inputfile = re.sub(r'from .* import schema', '', inputfile)
-        inputfile = re.sub(r'__file__', '"{}"'.format(zenpack_init_py), inputfile)
+        inputfile = re.sub(r'__file__', '"%s"' % zenpack_init_py, inputfile)
 
         # Kludge 'from . import' into working.
         import site
@@ -334,8 +344,8 @@ class ZPLCommand(ZenScriptBase):
         templates = self.zenpack_templatespecs(zenpack_name)
         for dc_name in templates:
             if dc_name not in specparams.device_classes:
-                LOG.warning("Device class '{}' was not defined in {} - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.".format(
-                            dc_name, zenpack_init_py))
+                LOG.warning("Device class '%s' was not defined in %s - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.",
+                            dc_name, zenpack_init_py)
                 specparams.device_classes[dc_name] = DeviceClassSpecParams(specparams, dc_name)
 
             # And merge in the templates we found in ZODB.
@@ -404,14 +414,14 @@ class ZPLCommand(ZenScriptBase):
                         crspec.left_class, crspec.left_relname,
                         crspec.right_relname, crspec.right_class)
         else:
-            LOG.error("Diagram type '{}' is not supported.".format(diagram_type))
+            LOG.error("Diagram type '%s' is not supported.", diagram_type)
 
     def list_paths(self):
         ''''''
         self.connect()
         device = self.dmd.Devices.findDevice(self.options.device)
         if device is None:
-            LOG.error("Device '{}' not found.".format(self.options.device))
+            LOG.error("Device '%s' not found." % self.options.device)
             return
 
         from Acquisition import aq_chain
@@ -457,7 +467,7 @@ class ZPLCommand(ZenScriptBase):
 
         print "\nClass Summary\n-------------\n"
         for source_class in sorted(class_summary.keys()):
-            print "{} is reachable from {}".format(source_class, ", ".join(sorted(class_summary[source_class])))
+            print "%s is reachable from %s" % (source_class, ", ".join(sorted(class_summary[source_class])))
 
     def zenpack_templatespecs(self, zenpack_name):
         """Return dictionary of RRDTemplateSpecParams by device_class.
@@ -478,7 +488,7 @@ class ZPLCommand(ZenScriptBase):
         self.connect()
         zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
         if zenpack is None:
-            LOG.error("ZenPack '{}' not found.".format(zenpack_name))
+            LOG.error("ZenPack '%s' not found." % zenpack_name)
             return
 
         # Find explicitly associated templates, and templates implicitly
