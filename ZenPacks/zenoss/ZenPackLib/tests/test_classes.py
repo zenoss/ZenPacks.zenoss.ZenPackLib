@@ -43,7 +43,7 @@ class TestClasses(BaseTestCase):
             if '.yaml' not in f:
                 continue
             file = os.path.join(os.path.dirname(__file__), 'data/yaml/%s' % f)
-            log.info("loading file: %s" % file)
+            log.info("loading file: {}".format(file))
             self.zps.append(ZPLTestHarness(file))
 
     def test_ClassProperties(self):

@@ -3,7 +3,6 @@ import collections
 import importlib
 import operator
 import types
-
 from Products.Five import zcml
 from Products.Zuul.decorators import memoize
 from Products.ZenUtils.Utils import monkeypatch, importClass
@@ -13,12 +12,10 @@ from zope.viewlet.interfaces import IViewlet
 from zope.browser.interfaces import IBrowserView
 from Products.ZenUI3.browser.interfaces import IMainSnippetManager
 from Products.ZenUI3.utils.javascript import JavaScriptSnippet
-
-from ..utils import LOG, dynamicview_installed
-from ..functions import get_symbol_name, get_zenpack_path
+from ..utils import dynamicview_installed
+from ..functions import get_symbol_name, get_zenpack_path, LOG
 from ..resources.templates import JS_LINK_FROM_GRID
 from ..gsm import get_gsm
-
 from ..base.Device import Device
 from ..base.ZenPack import ZenPack
 from .Spec import Spec
@@ -31,6 +28,7 @@ from .ZPropertySpec import ZPropertySpec
 DYNAMICVIEW_INSTALLED = dynamicview_installed()
 
 GSM = get_gsm()
+
 
 class ZenPackSpec(Spec):
 
@@ -80,6 +78,8 @@ class ZenPackSpec(Spec):
     #####
     """
 
+    LOG = LOG
+
     def __init__(
             self,
             name,
@@ -87,7 +87,8 @@ class ZenPackSpec(Spec):
             classes=None,
             class_relationships=None,
             device_classes=None,
-            _source_location=None):
+            _source_location=None,
+            log=LOG):
         """
             Create a ZenPack Specification
 
@@ -104,6 +105,7 @@ class ZenPackSpec(Spec):
             :type classes: SpecsParameter(ClassSpec)
         """
         super(ZenPackSpec, self).__init__(_source_location=_source_location)
+        self.LOG = log
 
         # The parameters from which this zenpackspec was originally
         # instantiated.
@@ -113,9 +115,10 @@ class ZenPackSpec(Spec):
             zProperties=zProperties,
             classes=classes,
             class_relationships=class_relationships,
-            device_classes=device_classes)
-
+            device_classes=device_classes, 
+            log=self.LOG)
         self.name = name
+        self.LOG.debug("------ {} ------".format(self.name))
         self.id_prefix = name.replace(".", "_")
 
         self.NEW_COMPONENT_TYPES = []
@@ -123,19 +126,20 @@ class ZenPackSpec(Spec):
 
         # zProperties
         self.zProperties = self.specs_from_param(
-            ZPropertySpec, 'zProperties', zProperties)
+            ZPropertySpec, 'zProperties', zProperties, log=self.LOG)
 
         # Class Relationship Schema
-        self.class_relationships = []
+        self.class_relationships = self.specparams.class_relationships
         if class_relationships:
             if not isinstance(class_relationships, list):
                 raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
-
             for rel in class_relationships:
+                rel['log'] = self.LOG
                 self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
 
         # Classes
-        self.classes = self.specs_from_param(ClassSpec, 'classes', classes)
+        self.classes = self.specs_from_param(ClassSpec, 'classes', classes, log=self.LOG)
+        
         self.imported_classes = {}
 
         # Import any external classes referred to in the schema
@@ -217,7 +221,7 @@ class ZenPackSpec(Spec):
             # Plumb _relations
             for relname, relationship in class_.relationships.iteritems():
                 if not relationship.schema:
-                    LOG.error("Removing invalid display config for relationship %s from  %s.%s" % (relname, self.name, class_.name))
+                    self.LOG.error("Removing invalid display config for relationship {} from  {}.{}".format(relname, self.name, class_.name))
                     class_.relationships.pop(relname)
                     continue
 
@@ -249,7 +253,7 @@ class ZenPackSpec(Spec):
 
         # Device Classes
         self.device_classes = self.specs_from_param(
-            DeviceClassSpec, 'device_classes', device_classes)
+            DeviceClassSpec, 'device_classes', device_classes, log=self.LOG)
 
     @property
     def ordered_classes(self):
@@ -552,6 +556,7 @@ class ZenPackSpec(Spec):
         attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
         attributes['NEW_RELATIONS'] = self.NEW_RELATIONS
         attributes['GLOBAL_CATALOGS'] = []
+        attributes['log'] = self.LOG
         global_catalog_classes = {}
         for (class_, class_spec) in self.classes.items():
             for (p, property_spec) in class_spec.properties.items():

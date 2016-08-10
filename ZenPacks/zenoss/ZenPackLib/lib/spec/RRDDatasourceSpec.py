@@ -1,9 +1,12 @@
 from .Spec import Spec
 from .RRDDatapointSpec import RRDDatapointSpec
+from ..functions import LOG
+
 
 class RRDDatasourceSpec(Spec):
+    """RRDDatasourceSpec"""
 
-    """TODO."""
+    LOG = LOG
 
     def __init__(
             self,
@@ -18,7 +21,8 @@ class RRDDatasourceSpec(Spec):
             commandTemplate=None,
             datapoints=None,
             extra_params=None,
-            _source_location=None
+            _source_location=None,
+            log=LOG
             ):
         """
         Create an RRDDatasource Specification
@@ -45,6 +49,7 @@ class RRDDatasourceSpec(Spec):
 
         """
         super(RRDDatasourceSpec, self).__init__(_source_location=_source_location)
+        self.LOG=log
 
         self.template_spec = template_spec
         self.name = name
@@ -61,7 +66,7 @@ class RRDDatasourceSpec(Spec):
             self.extra_params = extra_params
 
         self.datapoints = self.specs_from_param(
-            RRDDatapointSpec, 'datapoints', datapoints)
+            RRDDatapointSpec, 'datapoints', datapoints, log=self.LOG)
 
     def create(self, templatespec, template):
         datasource_types = dict(template.getDataSourceOptions())

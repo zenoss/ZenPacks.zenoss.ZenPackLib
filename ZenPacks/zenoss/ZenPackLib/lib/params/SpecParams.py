@@ -1,9 +1,16 @@
 from ..spec.Spec import Spec
+from ..functions import LOG
 
 
 class SpecParams(object):
+    """SpecParams"""
+
+    LOG = LOG
+
     def __init__(self, **kwargs):
         # Initialize with default values
+        self.LOG = kwargs.get('log', LOG)
+
         params = self.__class__.init_params()
         for param in params:
             if 'default' in params[param]:

@@ -5,6 +5,7 @@ import inspect
 import sys
 import yaml
 import collections
+import logging
 from optparse import OptionGroup
 
 import Globals
@@ -12,13 +13,10 @@ from Products.ZenUtils.Utils import unused
 unused(Globals)
 
 from Acquisition import aq_base
-
 from Products.ZenModel.ZenPack import ZenPack
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
-
-from ..utils import logging, LOG
-from ..functions import create_module
+from ..functions import create_module, LOG
 from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
@@ -166,7 +164,7 @@ class ZPLCommand(ZenScriptBase):
         ''''''
         if self.options.convert or self.options.dump:
             if not self.is_valid_zenpack():
-                self.parser.error('%s was not found' % self.options.zenpack)
+                self.parser.error('{} was not found'.format(self.options.zenpack))
 
         if self.options.create:
             self.create_zenpack_srcdir(self.options.zenpack)
@@ -197,7 +195,7 @@ class ZPLCommand(ZenScriptBase):
             logger.handlers = []
         handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
-            fmt='%s:%s:0: %%(message)s' % (filename, linecount))
+            fmt='{}:{}:0: %%(message)s'.format(filename, linecount))
         handler.setFormatter(formatter)
         logging.getLogger().addHandler(handler)
 
@@ -293,7 +291,7 @@ class ZPLCommand(ZenScriptBase):
         self.connect()
         zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name)
         if zenpack is None:
-            LOG.error("ZenPack '%s' not found." % zenpack_name)
+            LOG.error("ZenPack '{}' not found.".format(zenpack_name))
             return
         zenpack_init_py = os.path.join(os.path.dirname(inspect.getfile(zenpack.__class__)), '__init__.py')
 
@@ -314,7 +312,7 @@ class ZPLCommand(ZenScriptBase):
         # tweak the input slightly.
         inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
         inputfile = re.sub(r'from .* import schema', '', inputfile)
-        inputfile = re.sub(r'__file__', '"%s"' % zenpack_init_py, inputfile)
+        inputfile = re.sub(r'__file__', '"{}"'.format(zenpack_init_py), inputfile)
 
         # Kludge 'from . import' into working.
         import site
@@ -336,8 +334,8 @@ class ZPLCommand(ZenScriptBase):
         templates = self.zenpack_templatespecs(zenpack_name)
         for dc_name in templates:
             if dc_name not in specparams.device_classes:
-                LOG.warning("Device class '%s' was not defined in %s - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.",
-                            dc_name, zenpack_init_py)
+                LOG.warning("Device class '{}' was not defined in {} - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.".format(
+                            dc_name, zenpack_init_py))
                 specparams.device_classes[dc_name] = DeviceClassSpecParams(specparams, dc_name)
 
             # And merge in the templates we found in ZODB.
@@ -406,14 +404,14 @@ class ZPLCommand(ZenScriptBase):
                         crspec.left_class, crspec.left_relname,
                         crspec.right_relname, crspec.right_class)
         else:
-            LOG.error("Diagram type '%s' is not supported.", diagram_type)
+            LOG.error("Diagram type '{}' is not supported.".format(diagram_type))
 
     def list_paths(self):
         ''''''
         self.connect()
         device = self.dmd.Devices.findDevice(self.options.device)
         if device is None:
-            LOG.error("Device '%s' not found." % self.options.device)
+            LOG.error("Device '{}' not found.".format(self.options.device))
             return
 
         from Acquisition import aq_chain
@@ -459,7 +457,7 @@ class ZPLCommand(ZenScriptBase):
 
         print "\nClass Summary\n-------------\n"
         for source_class in sorted(class_summary.keys()):
-            print "%s is reachable from %s" % (source_class, ", ".join(sorted(class_summary[source_class])))
+            print "{} is reachable from {}".format(source_class, ", ".join(sorted(class_summary[source_class])))
 
     def zenpack_templatespecs(self, zenpack_name):
         """Return dictionary of RRDTemplateSpecParams by device_class.
@@ -480,7 +478,7 @@ class ZPLCommand(ZenScriptBase):
         self.connect()
         zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
         if zenpack is None:
-            LOG.error("ZenPack '%s' not found." % zenpack_name)
+            LOG.error("ZenPack '{}' not found.".format(zenpack_name))
             return
 
         # Find explicitly associated templates, and templates implicitly
