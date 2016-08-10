@@ -1,10 +1,6 @@
-import logging
-LOG = logging.getLogger('zen.zenpacklib')
-# Suppresses "No handlers could be found for logger" errors if logging
-# hasn't been configured.
-if len(LOG.handlers) == 0:
-    LOG.addHandler(logging.NullHandler())
-
+from .helpers.ZenPackLibLog import ZenPackLibLog
+ZPLOG = ZenPackLibLog()
+LOG = ZPLOG.defaultlog
 
 FACET_BLACKLIST = (
     'dependencies',
@@ -23,7 +19,7 @@ def yaml_installed():
         import yaml
         import yaml.constructor
     except ImportError:
-        print "YAML not installed"
+        LOG.critical('PyYAML is required but not installed. Run "easy_install PyYAML" or "pip install PyYAML"')
         pass
     else:
         return True
@@ -36,6 +32,7 @@ def impact_installed():
         from ZenPacks.zenoss.Impact.impactd.relations import ImpactEdge
         from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipDataProvider
     except ImportError:
+        LOG.info('Impact is not installed and some functionality dependent on it will be disabled')
         pass
     else:
         return True
@@ -49,7 +46,21 @@ def dynamicview_installed():
         from ZenPacks.zenoss.DynamicView.interfaces import IRelatable, IRelationsProvider, IGroupMappingProvider
         from ZenPacks.zenoss.DynamicView.model.adapters import BaseRelatable, BaseRelationsProvider
     except ImportError:
+        LOG.info('DynamicView is not installed and some functionality dependent on it will be disabled')
         pass
     else:
         return True
     return False
+
+
+def has_metricfacade():
+    '''return True if metricfacade can be imported'''
+    try:
+        from Products.Zuul.facades import metricfacade
+    except ImportError:
+        LOG.info('MetricFacade is not available and some functionality dependent on it will be disabled')
+        pass
+    else:
+        return True
+    return False
+

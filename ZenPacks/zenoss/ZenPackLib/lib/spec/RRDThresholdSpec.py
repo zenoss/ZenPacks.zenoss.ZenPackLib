@@ -1,8 +1,11 @@
 from .Spec import Spec
+from ..functions import LOG
+
 
 class RRDThresholdSpec(Spec):
+    """RRDThresholdSpec"""
 
-    """TODO."""
+    LOG = LOG
 
     def __init__(
             self,
@@ -14,7 +17,8 @@ class RRDThresholdSpec(Spec):
             severity=None,
             enabled=None,
             extra_params=None,
-            _source_location=None
+            _source_location=None,
+            log=LOG
             ):
         """
         Create an RRDThreshold Specification
@@ -35,6 +39,7 @@ class RRDThresholdSpec(Spec):
 
         """
         super(RRDThresholdSpec, self).__init__(_source_location=_source_location)
+        self.LOG=log
 
         self.name = name
         self.template_spec = template_spec

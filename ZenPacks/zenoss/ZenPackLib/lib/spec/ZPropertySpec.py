@@ -1,10 +1,12 @@
 from Products.ZenRelations.zPropertyCategory import setzPropertyCategory
 from .Spec import Spec
+from ..functions import LOG
 
 
 class ZPropertySpec(Spec):
+    """ZPropertySpec"""
 
-    """TODO."""
+    LOG = LOG
 
     def __init__(
             self,
@@ -13,7 +15,8 @@ class ZPropertySpec(Spec):
             type_='string',
             default=None,
             category=None,
-            _source_location=None
+            _source_location=None,
+            log=LOG
             ):
         """
             Create a ZProperty Specification
@@ -27,6 +30,7 @@ class ZPropertySpec(Spec):
             :type category: str
         """
         super(ZPropertySpec, self).__init__(_source_location=_source_location)
+        self.LOG=log
 
         self.zenpack_spec = zenpack_spec
         self.name = name

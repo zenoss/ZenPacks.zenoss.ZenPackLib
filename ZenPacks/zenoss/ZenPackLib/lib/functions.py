@@ -12,8 +12,17 @@ from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
 from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
 from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
 
-from .utils import LOG, logging, yaml_installed
+from .utils import yaml_installed
+from .helpers.ZenPackLibLog import ZenPackLibLog
 
+
+ZPLOG = ZenPackLibLog()
+LOG = ZPLOG.defaultlog
+
+
+# Default log settings
+QUIET=True
+LEVEL=0
 
 
 """
@@ -23,14 +32,28 @@ Private Functions
 def getZenossKeywords(klasses):
     kwset = set()
     for klass in klasses:
-        kwset = kwset.union(set(dir(klass)))
+        for k in klass.__dict__.keys():
+            if callable(getattr(klass, k)):
+                kwset = kwset.union([k])
+        for attribute in dir(klass):
+            if callable(getattr(klass, attribute)):
+                kwset = kwset.union([attribute])
     return kwset
 
-
 ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
-                                     BaseDeviceComponent,
                                      BaseDeviceInfo,
+                                     BaseDeviceComponent,
                                      BaseComponentInfo])
+
+JS_WORDS = set(['uuid', 'uid', 'meta_type', 'monitor', 'severity', 'monitored', 'locking'])
+
+
+def find_keyword_cls(keyword):
+    names = []
+    for k in [BaseDevice, BaseDeviceComponent, BaseDeviceInfo, BaseComponentInfo]:
+        if keyword in dir(k):
+            names.append(k.__name__)
+    return names
 
 
 def relname_from_classname(classname, plural=False):

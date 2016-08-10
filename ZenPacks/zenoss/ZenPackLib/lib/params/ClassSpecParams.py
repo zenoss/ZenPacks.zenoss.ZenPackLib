@@ -19,8 +19,8 @@ class ClassSpecParams(SpecParams, ClassSpec):
             self.monitoring_templates = [monitoring_templates]
 
         self.properties = self.specs_from_param(
-            ClassPropertySpecParams, 'properties', properties, leave_defaults=True)
+            ClassPropertySpecParams, 'properties', properties, leave_defaults=True, log=self.LOG)
 
         self.relationships = self.specs_from_param(
-            ClassRelationshipSpecParams, 'relationships', relationships, leave_defaults=True)
+            ClassRelationshipSpecParams, 'relationships', relationships, leave_defaults=True, log=self.LOG)
 

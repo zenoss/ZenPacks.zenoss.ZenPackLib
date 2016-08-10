@@ -1,13 +1,12 @@
 from zope.interface import implements
 from zope.component import adapts
 from Products.ZenUtils.guid.interfaces import IGlobalIdentifier
-from .utils import LOG
+from .functions import LOG
 from .base.ComponentBase import ComponentBase
 from .base.DeviceBase import DeviceBase
-
-
 from ZenPacks.zenoss.Impact.impactd.relations import ImpactEdge
 from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipDataProvider
+
 
 class ImpactRelationshipDataProvider(object):
 

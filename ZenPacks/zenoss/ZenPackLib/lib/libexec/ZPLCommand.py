@@ -13,12 +13,10 @@ from Products.ZenUtils.Utils import unused
 unused(Globals)
 
 from Acquisition import aq_base
-
 from Products.ZenModel.ZenPack import ZenPack
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
-
-from ..functions import LOG, create_module
+from ..functions import create_module, LOG
 from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams

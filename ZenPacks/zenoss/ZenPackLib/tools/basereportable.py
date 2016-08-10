@@ -306,7 +306,7 @@ class BaseReportableFactory(ETLBaseReportableFactory):
                     if related:
                         related = related()
 
-                    entity_class_name = "%s_to_%s" % (
+                    entity_class_name = "{}_to_{}".format(
                         IReportable(self.context).entity_class_name,
                         un_camel(importClass(relation.remoteClass, None).meta_type)
                     )
@@ -349,7 +349,7 @@ class BaseReportable(ETLBaseReportable):
                 seen_target_entity.add(target_entity)
                 self.rel_property_name[relName] = target_entity
             except Exception, e:
-                LOG.error("Error processing relationship %s on %s: %s") % (relName, self.context, e)
+                LOG.error("Error processing relationship {} on {}: {}").format(relName, self.context, e)
 
     @property
     def entity_class_name(self):
@@ -465,15 +465,15 @@ class BaseManyToManyReportable(Reportable):
 
     @property
     def id(self):
-        return "%s__%s" % (self.fromObject.id, self.toObject.id)
+        return "{}__{}".format(self.fromObject.id, self.toObject.id)
 
     @property
     def uid(self):
-        return "%s__%s" % (self.fromObject.uid, self.toObject.uid)
+        return "{}__{}".format(self.fromObject.uid, self.toObject.uid)
 
     @property
     def sid(self):
-        return "%s__%s" % (IReportable(self.fromObject).sid, IReportable(self.toObject).sid)
+        return "{}__{}".format(IReportable(self.fromObject).sid, IReportable(self.toObject).sid)
 
     def reportProperties(self):
         fromReportable = IReportable(self.fromObject)
@@ -518,14 +518,14 @@ class DumpReportables(ZenScriptBase):
                     # not my problem.
                     continue
 
-                print "      adapter=%s.%s -> %s.%s" % (
+                print "      adapter={}.{} -> {}.{}".format(
                     factory.__class__.__module__,
                     factory.__class__.__name__,
                     reportable.__class__.__module__,
                     reportable.__class__.__name__,
                 )
-                print "      reportable.entity_class_name=%s" % reportable.entity_class_name
-                print "      reportable.id=%s, sid=%s" % (reportable.id, reportable.sid)
+                print "      reportable.entity_class_name={}".format(reportable.entity_class_name)
+                print "      reportable.id={}, sid={}".format(reportable.id, reportable.sid)
 
                 props = reportable.reportProperties()
 
@@ -535,9 +535,9 @@ class DumpReportables(ZenScriptBase):
                         continue
 
                     if length == -1:
-                        print "         %s [%s] = %s" % (name, type_, value)
+                        print "         {} [{}] = {}".format(name, type_, value)
                     else:
-                        print "         %s [%s.%s] = %s" % (name, type_, length, value)
+                        print "         {} [{}.{}] = {}".format(name, type_, length, value)
 
                 print ""
 

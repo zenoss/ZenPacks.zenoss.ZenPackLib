@@ -1,10 +1,13 @@
 from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
 from .Spec import Spec
 from .GraphPointSpec import GraphPointSpec
+from ..functions import LOG
 
 
 class GraphDefinitionSpec(Spec):
-    """TODO."""
+    """GraphDefinitionSpec"""
+
+    LOG = LOG
 
     def __init__(
             self,
@@ -13,7 +16,6 @@ class GraphDefinitionSpec(Spec):
             height=None,
             width=None,
             units=None,
-            log=None,
             base=None,
             miny=None,
             maxy=None,
@@ -21,7 +23,8 @@ class GraphDefinitionSpec(Spec):
             hasSummary=None,
             graphpoints=None,
             comments=None,
-            _source_location=None
+            _source_location=None,
+            log=LOG,
             ):
         """
         Create a GraphDefinition Specification
@@ -50,7 +53,7 @@ class GraphDefinitionSpec(Spec):
         :type comments: list(str)
         """
         super(GraphDefinitionSpec, self).__init__(_source_location=_source_location)
-
+        self.LOG=log
         self.template_spec = template_spec
         self.name = name
 
@@ -64,7 +67,7 @@ class GraphDefinitionSpec(Spec):
         self.custom = custom
         self.hasSummary = hasSummary
         self.graphpoints = self.specs_from_param(
-            GraphPointSpec, 'graphpoints', graphpoints)
+            GraphPointSpec, 'graphpoints', graphpoints, log=self.LOG)
         self.comments = comments
 
         # TODO fix comments parsing - must always be a list.

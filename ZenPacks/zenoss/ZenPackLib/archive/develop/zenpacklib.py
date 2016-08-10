@@ -49,6 +49,7 @@ import re
 import sys
 import math
 import types
+import keyword
 
 from lxml import etree
 
@@ -166,6 +167,24 @@ TestCase = None
 # Required for registering ZCSA adapters.
 GSM = getGlobalSiteManager()
 
+
+def getZenossKeywords(klasses):
+    kwset = set()
+    for klass in klasses:
+        for k in klass.__dict__.keys():
+            if callable(getattr(klass, k)):
+                kwset = kwset.union([k])
+        for attribute in dir(klass):
+            if callable(getattr(klass, attribute)):
+                kwset = kwset.union([attribute])
+    return kwset
+
+ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
+                                    BaseDeviceInfo,
+                                    BaseDeviceComponent,
+                                    BaseComponentInfo])
+
+JS_WORDS = set(['uuid', 'uid', 'meta_type', 'monitor', 'severity', 'monitored', 'locking'])
 
 # Public Classes ############################################################
 
@@ -928,8 +947,25 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def get_facets(self, root=None, streams=None, seen=None, path=None, recurse_all=False):
+    def get_facets(self, root=None, streams=None, seen=None, depth=0, path=None, recurse_all=False):
         """Generate non-containing related objects for faceting."""
+
+        if recurse_all:
+            # recurse_all is only used for list_paths to show all possible paths
+            # from this object to any other object, so in the interest of time
+            # and keeping noise to a minimum, don't bother traversing deeper
+            # than 15 levels.
+            if depth > 15:
+                return
+        else:
+            # in non-recurse_all mode, deep traverals only occur when an
+            # extra_paths expression directs it to keep going down a specific
+            # path.  It is assumed that this will generally be of limited depth
+            # anyway, but just in case, put an absolute limit on it, of the
+            # maximum depth supported by zenpacklib's device() method.
+            if depth > 200:
+                return
+
         if seen is None:
             seen = set()
 
@@ -957,21 +993,19 @@ class ComponentBase(ModelBase):
 
             relpath = "/".join(path + [relname])
 
-            if relname not in path:
-                path.append(relname)
-
             # Always include directly-related objects.
             for obj in relobjs:
-                if obj in seen:
+                if (self.id, relname, obj.id) in seen:
+                    # avoid a cycle
                     continue
 
                 yield obj
-                seen.add(obj)
+                seen.add((self.id, relname, obj.id))
 
                 # If 'all' mode, just include indirectly-related objects as well, in
                 # an unfiltered manner.
                 if recurse_all:
-                    for facet in obj.get_facets(root=root, seen=seen, path=path, recurse_all=True):
+                    for facet in obj.get_facets(root=root, seen=seen, path=path, depth=depth+1, recurse_all=True):
                         yield facet
 
                 else:
@@ -984,11 +1018,12 @@ class ComponentBase(ModelBase):
                         if not recurse:
                             continue
 
-                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path):
-                            if facet in seen:
+                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, depth=depth+1):
+                            if (self.id, relname, facet.id) in seen:
+                                # avoid a cycle
                                 continue
                             yield facet
-                            seen.add(facet)
+                            seen.add((self.id, relname, facet.id))
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
@@ -1016,7 +1051,7 @@ class ComponentBase(ModelBase):
     def getRRDTemplateName(self):
         """Return name of primary template to bind to this component."""
         if self._templates:
-            return self._templates[0]
+            return self._templates[-1]
 
         return ''
 
@@ -1602,7 +1637,7 @@ class ZenPackSpec(Spec):
 
         for class_ in self.classes.values():
             # list of all base classes for this class
-            bases = get_bases(class_)
+            bases = get_bases(class_, bases=[])
             # Link the appropriate predefined (class_relationships) schema into place on this class's relationships list.
             for rel in self.class_relationships:
                 # handle both directions
@@ -1614,25 +1649,30 @@ class ZenPackSpec(Spec):
                     if class_.name == target_class:
                         if target_relname not in class_.relationships:
                             class_.relationships[target_relname] = ClassRelationshipSpec(class_, target_relname)
-
-                    # look for relations inherited from base classes
-                    elif target_class in bases:
-                        # we need to inherit in this case
-                        if target_relname not in class_.relationships:
-                            # if we can find a relationspec to inherit, then we use it
-                            found_rel = find_relation_in_bases(bases, target_relname)
-                            if found_rel:
-                                class_.relationships[target_relname] = found_rel
-
-                    # make sure we have the schema defined
-                    if target_relname in class_.relationships:
                         if not class_.relationships[target_relname].schema:
                             class_.relationships[target_relname].schema = target_schema
+                    # look for relations inherited from base classes
+                    # go through these in order
+                    else:
+                        # these are in order from nearest to farthest
+                        for base in bases:
+                            if target_class == base:
+                                # see if we have an existing relspec
+                                found_rel = find_relation_in_bases(bases, target_relname)
+                                # we need to inherit in this case
+                                if found_rel:
+                                    if target_relname not in class_.relationships:
+                                        class_.relationships[target_relname] = found_rel
+                                    if not class_.relationships[target_relname].schema:
+                                        class_.relationships[target_relname].schema = target_schema
+                                    continue
 
+        for class_ in self.classes.values():
             # Plumb _relations
             for relname, relationship in class_.relationships.iteritems():
                 if not relationship.schema:
-                    LOG.error("Class '%s': no relationship schema has been defined for relationship '%s'" % (class_.name, relname))
+                    LOG.error("Removing invalid display config for relationship %s from  %s.%s" % (relname, self.name, class_.name))
+                    class_.relationships.pop(relname)
                     continue
 
                 if relationship.schema.remoteClass in self.imported_classes.keys():
@@ -1646,7 +1686,12 @@ class ZenPackSpec(Spec):
                     remote_relname = relationship.zenrelations_tuple[0]  # products_zenmodel_device_device
 
                     if relname not in (x[0] for x in remoteClassObj._relations):
-                        remoteClassObj._relations += ((relname, remoteType(localType, modname, remote_relname)),)
+                        rel = ((relname, remoteType(localType, modname, remote_relname)),)
+                        # do this differently if it's on a ZPL-based class
+                        if hasattr(remoteClassObj, '_v_local_relations'):
+                            remoteClassObj._v_local_relations += rel
+                        else:
+                            remoteClassObj._relations += rel
 
                     remote_module_id = remoteClassObj.__module__
                     if relname not in self.NEW_RELATIONS[remote_module_id]:
@@ -4849,6 +4894,31 @@ if YAML_INSTALLED:
 
         return severity
 
+    def format_message(e):
+        message = []
+
+        mark = e.context_mark or e.problem_mark
+        if mark:
+            position = "{}:{}:{}".format(mark.name, mark.line + 1, mark.column + 1)
+        else:
+            position = "[unknown]"
+        if e.context is not None:
+            message.append(e.context)
+
+        if e.problem is not None:
+            message.append(e.problem)
+
+        if e.note is not None:
+            message.append("(note: " + e.note + ")")
+
+        return "{}: {}".format(position, message)
+
+    def yaml_warning(loader, e):
+        # Given a MarkedYAMLError exception, either log or raise
+        # the error, depending on the 'fatal' argument.
+
+        print format_message(e)
+
     def yaml_error(loader, e, exc_info=None):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
@@ -4865,23 +4935,33 @@ if YAML_INSTALLED:
         if fatal:
             raise e
 
-        message = []
+        print format_message(e)
 
-        mark = e.context_mark or e.problem_mark
-        if mark:
-            position = "%s:%s:%s" % (mark.name, mark.line+1, mark.column+1)
-        else:
-            position = "[unknown]"
-        if e.context is not None:
-            message.append(e.context)
+    def verify_key(loader, cls, params, key, start_mark):
+        # always ok to use a param name (description, name, etc.)
+        if key in params.keys():
+            return True
 
-        if e.problem is not None:
-            message.append(e.problem)
+        # never use a python reserved word
+        if key in keyword.kwlist:
+            yaml_error(loader, yaml.constructor.ConstructorError(
+                None, None,
+                "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+                start_mark))
+        elif key in ZENOSS_KEYWORDS.union(JS_WORDS):
+            # should be ok to use a zenoss word to define these
+            # some items, like sysUpTime are pretty common datapoints
+            if cls not in [RRDDatasourceSpec,
+                           RRDDatapointSpec,
+                           RRDTemplateSpec,
+                           GraphDefinitionSpec,
+                           GraphPointSpec]:
+                yaml_warning(loader, yaml.constructor.ConstructorError(
+                    None, None,
+                    "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+                    start_mark))
 
-        if e.note is not None:
-            message.append("(note: " + e.note + ")")
-
-        print "%s: %s" % (position, ",".join(message))
+        return False
 
     def construct_specsparameters(loader, node, spectype):
         spec_class = {x.__name__: x for x in Spec.__subclasses__()}.get(spectype, None)
@@ -4900,10 +4980,12 @@ if YAML_INSTALLED:
                 node.start_mark))
             return
 
+        param_defs = spec_class.init_params()
         specs = OrderedDict()
         for spec_key_node, spec_value_node in node.value:
             try:
                 spec_key = str(loader.construct_scalar(spec_key_node))
+                verify_key(loader, spec_class, param_defs, spec_key, spec_key_node.start_mark)
             except yaml.MarkedYAMLError, e:
                 yaml_error(loader, e)
 
@@ -5124,6 +5206,7 @@ if YAML_INSTALLED:
         for key_node, value_node in node.value:
             yaml_key = str(loader.construct_scalar(key_node))
 
+            verify_key(loader, cls, param_defs, yaml_key, key_node.start_mark)
             if yaml_key not in param_name_map:
                 if extra_params:
                     # If an 'extra_params' parameter is defined for this spec,
@@ -5828,7 +5911,12 @@ def apply_defaults(dictionary, default_defaults=None, leave_defaults=False):
             defaults = dictionary.pop('DEFAULTS')
         for k, v in dictionary.iteritems():
             dictionary[k] = dict(defaults, **v)
-
+            if 'extra_params' in  dictionary[k].keys():
+                extra_params = defaults.get('extra_params',{})
+                dictionary_params = dictionary[k]['extra_params']
+                for i, j in extra_params.items():
+                    if i not in dictionary_params.keys():
+                        dictionary_params[i] = j
 
 def get_symbol_name(*args):
     """Return fully-qualified symbol name given path args.
@@ -6647,6 +6735,7 @@ if __name__ == '__main__':
                                 break
                             if isinstance(obj, RelationshipBase):
                                 path.insert(0, obj.id)
+                        all_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
                         included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
                         class_summary[component.meta_type].add(facet.meta_type)
 
