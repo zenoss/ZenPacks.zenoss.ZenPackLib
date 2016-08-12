@@ -4,13 +4,13 @@ from lxml import etree
 import yaml
 import logging
 
-from Products.ZenModel.ZenPack import ZenPack
+from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
 from ..functions import LOG
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 
 
-class ZenPack(ZenPack):
+class ZenPack(ZenPackBase):
     """
     ZenPack loader that handles custom installation and removal tasks.
     """
