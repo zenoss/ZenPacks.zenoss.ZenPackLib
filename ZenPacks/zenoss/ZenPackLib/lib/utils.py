@@ -19,7 +19,6 @@ def yaml_installed():
     try:
         import yaml
         import yaml.constructor
-        import yaml.doodads
     except ImportError:
         LOG.critical('PyYAML is required but not installed. Run "easy_install PyYAML" or "pip install PyYAML"')
         pass
