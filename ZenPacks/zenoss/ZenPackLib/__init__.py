@@ -13,9 +13,11 @@
 # through monkey-patching.
 import os
 import Globals
+import sys
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from Products.ZenUtils.Utils import unused, zenPath
+from .lib.utils import yaml_installed
 
 unused(Globals)
 #
@@ -24,9 +26,11 @@ class ZenPack(ZenPackBase):
     '''ZenPack'''
 
     def install(self, dmd):
-        ZenPackBase.install(self, dmd)
-        self.create_symlink()
-
+        if yaml_installed():
+            ZenPackBase.install(self, dmd)
+            self.create_symlink()
+        else:
+            sys.exit(1)
 
     def remove(self, dmd, leaveObjects=False):
         if not leaveObjects:
