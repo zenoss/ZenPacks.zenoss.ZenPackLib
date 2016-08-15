@@ -138,12 +138,6 @@ class ZenPackSpec(Spec):
 
         # Class Relationship Schema
         self.class_relationships = self.specparams.class_relationships
-        if class_relationships:
-            if not isinstance(class_relationships, list):
-                raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
-            for rel in class_relationships:
-                rel['log'] = self.LOG
-                self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
 
         # Classes
         self.classes = self.specs_from_param(ClassSpec, 'classes', classes, log=self.LOG)
