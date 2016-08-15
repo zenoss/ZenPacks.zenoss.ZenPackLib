@@ -24,7 +24,6 @@ YAML_PREFERRED_ORDER = ['zProperties', 'class_relationships', 'classes',
 
 def get_calling_dir():
     '''determine source directory of ZenPack's load_yaml call'''
-    frame = inspect.stack()[1]
     for i in inspect.stack():
         frame, filename, lineno, method_name, lines, idx = i
         if '__init__.py' not in filename:
