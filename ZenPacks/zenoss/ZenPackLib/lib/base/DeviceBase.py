@@ -1,3 +1,11 @@
+##############################################################################
+#
+# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+#
+# This content is made available according to terms specified in
+# License.zenoss under the directory where your Zenoss product is installed.
+#
+##############################################################################
 from Products import Zuul
 from zenoss.protocols.protobufs.zep_pb2 import (
     STATUS_NEW, STATUS_ACKNOWLEDGED,
