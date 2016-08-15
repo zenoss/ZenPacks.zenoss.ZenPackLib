@@ -1,3 +1,11 @@
+##############################################################################
+#
+# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+#
+# This content is made available according to terms specified in
+# License.zenoss under the directory where your Zenoss product is installed.
+#
+##############################################################################
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
 from ..functions import catalog_search
 from ..functions import LOG

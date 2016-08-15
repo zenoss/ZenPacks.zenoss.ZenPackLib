@@ -2,7 +2,7 @@
 
 ##############################################################################
 # This program is part of zenpacklib, the ZenPack API.
-# Copyright (C) 2013-2015  Zenoss, Inc.
+# Copyright (C) 2013-2016  Zenoss, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
