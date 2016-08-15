@@ -6,6 +6,7 @@ import time
 from .ZenPackLibLog import LOG
 from .Dumper import Dumper
 from .Loader import Loader
+import inspect
 
 
 # list of yaml sections with DEFAULTS capability
@@ -21,15 +22,30 @@ YAML_PREFERRED_ORDER = ['zProperties', 'class_relationships', 'classes',
                         'relationships']
 
 
+def get_calling_dir():
+    '''determine source directory of ZenPack's load_yaml call'''
+    frame = inspect.stack()[1]
+    for i in inspect.stack():
+        frame, filename, lineno, method_name, lines, idx = i
+        if '__init__.py' not in filename:
+            continue
+        for line in lines:
+            if 'load_yaml' in line:
+                return os.path.dirname(filename)
+    return None
+
+
 def load_yaml(yaml_doc=None, verbose=False, level=0):
     ''''''
     Loader.QUIET= not verbose
     Loader.LEVEL = level
 
+    # determine caller directory and attempt to load from it
     if not yaml_doc:
-        LOG.error("No YAML file specified")
-        return
-
+        try:
+            return load_yaml(get_calling_dir(), verbose, level)
+        except Exception as e:
+            LOG.error("YAML load error %s" % e)
     # loading from multiple files
     if isinstance(yaml_doc, list):
         # build python dict of merged YAML data
