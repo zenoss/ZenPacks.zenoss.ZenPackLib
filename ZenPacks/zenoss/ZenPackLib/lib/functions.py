@@ -6,175 +6,15 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-import os
-import importlib
 import collections
-import imp
-import sys
-import operator
 import re
-from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
-
-from Products.ZenModel.Device import Device as BaseDevice
-from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
-from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
-from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
 from .helpers.ZenPackLibLog import DEFAULTLOG
 
 
-# Private Functions ######################################################### 
-
-
-def getZenossKeywords(klasses):
-    kwset = set()
-    for klass in klasses:
-        for k in klass.__dict__.keys():
-            if callable(getattr(klass, k)):
-                kwset = kwset.union([k])
-        for attribute in dir(klass):
-            if callable(getattr(klass, attribute)):
-                kwset = kwset.union([attribute])
-    return kwset
-
-ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
-                                     BaseDeviceInfo,
-                                     BaseDeviceComponent,
-                                     BaseComponentInfo])
-
-JS_WORDS = set(['uuid', 'uid', 'meta_type', 'monitor', 'severity', 'monitored', 'locking'])
-
-
-def find_keyword_cls(keyword):
-    names = []
-    for k in [BaseDevice, BaseDeviceComponent, BaseDeviceInfo, BaseComponentInfo]:
-        if keyword in dir(k):
-            names.append(k.__name__)
-    return names
-
-
-def relname_from_classname(classname, plural=False):
-    """Return relationship name given classname and plural flag."""
-
-    if '.' in classname:
-        classname = classname.replace('.', '_').lower()
-
-    relname = list(classname)
-    for i, c in enumerate(classname):
-        if relname[i].isupper():
-            relname[i] = relname[i].lower()
-        else:
-            break
-
-    return ''.join((''.join(relname), 's' if plural else ''))
-
-
-def get_zenpack_path(zenpack_name):
-    """Return filesystem path for given ZenPack."""
-    zenpack_module = importlib.import_module(zenpack_name)
-    if hasattr(zenpack_module, '__file__'):
-        return os.path.dirname(zenpack_module.__file__)
-    else:
-        return None
-
-
-def ordered_values(iterable):
-    """Return ordered list of values for iterable of OrderAndValue instances."""
-    return [
-        x.value for x in sorted(iterable, key=operator.attrgetter('order'))]
-
-
-def pluralize(text):
-    """Return pluralized version of text.
-
-    Totally naive implementation currently. Could use a third party
-    library if we knew it would be installed.
-    """
-    if text.endswith('s'):
-        return '{}es'.format(text)
-
-    return '{}s'.format(text)
-
-
-def fix_kwargs(kwargs):
-    """Return kwargs with reserved words suffixed with _."""
-    new_kwargs = {}
-    for k, v in kwargs.items():
-        if k in ('class', 'type'):
-            new_kwargs['{}_'.format(k)] = v
-        else:
-            new_kwargs[k] = v
-
-    return new_kwargs
-
-
-def catalog_search(scope, name, *args, **kwargs):
-    """Return iterable of matching brains in named catalog."""
-
-    catalog = getattr(scope, '{}Search'.format(name), None)
-    if not catalog:
-        DEFAULTLOG.debug("Catalog {}Search not found at {}.  It should be created when the first included component is indexed".format(name, scope))
-        return []
-
-    if args:
-        if isinstance(args[0], BaseQuery):
-            return catalog.evalAdvancedQuery(args[0])
-        elif isinstance(args[0], dict):
-            return catalog(args[0])
-        else:
-            raise TypeError(
-                "search() argument must be a BaseQuery or a dict, "
-                "not {0!r}"
-                .format(type(args[0]).__name__))
-
-    return catalog(**kwargs)
-
-
-def get_symbol_name(*args):
-    """Return fully-qualified symbol name given path args.
-
-    Example usage:
-
-        >>> get_symbol_name('ZenPacks.example.Name')
-        'ZenPacks.example.Name'
-
-        >>> get_symbol_name('ZenPacks.example.Name', 'schema')
-        'ZenPacks.example.Name.schema'
-
-        >>> get_symbol_name('ZenPacks.example.Name', 'schema', 'APIC')
-        'ZenPacks.example.Name.schema.APIC'
-
-        >>> get_symbol_name('ZenPacks.example.Name', 'schema.Pool')
-        'ZenPacks.example.Name.schema.Pool'
-
-    No verification is done. Names for symbols that don't exist may
-    be returned.
-
-    """
-    return '.'.join(x for x in args if x)
-
-
-def create_module(*args):
-    """Import and return module given path args.
-
-    See get_symbol_name documentation for usage. May raise ImportError.
-
-    """
-    module_name = get_symbol_name(*args)
-    try:
-        return importlib.import_module(module_name)
-    except ImportError:
-        module = imp.new_module(module_name)
-        module.__name__ = module_name
-        sys.modules[module_name] = module
-
-        module_parts = module_name.split('.')
-
-        if len(module_parts) > 1:
-            parent_module_name = get_symbol_name(*module_parts[:-1])
-            parent_module = create_module(parent_module_name)
-            setattr(parent_module, module_parts[-1], module)
-
-    return importlib.import_module(module_name)
+"""
+    Deprecated? 
+    The following code appears to be unused 
+"""
 
 
 def relationships_from_yuml(yuml):
@@ -213,6 +53,8 @@ def relationships_from_yuml(yuml):
     """
     classes = []
     match_comment = re.compile(r'^//').search
+    from .spec.Spec import Spec
+    spec = Spec()
 
     match_line = re.compile(
         r'\[(?P<left_classname>[^\]]+)\]'
@@ -264,14 +106,14 @@ def relationships_from_yuml(yuml):
             right_type = 'ToOne'
 
         if not left_relname:
-            left_relname = relname_from_classname(
+            left_relname = spec.relname_from_classname(
                 right_class, plural=left_type != 'ToOne')
 
         if not right_relname:
-            right_relname = relname_from_classname(
+            right_relname = spec.relname_from_classname(
                 left_class, plural=right_type != 'ToOne')
-        
-        from spec.RelationshipSchemaSpec import RelationshipSchemaSpec
+
+        from .spec.RelationshipSchemaSpec import RelationshipSchemaSpec
         # Order them correctly (larger one on the right)
         if RelationshipSchemaSpec.valid_orientation(left_type, right_type):
             classes.append(dict(
@@ -294,11 +136,6 @@ def relationships_from_yuml(yuml):
             ))
 
     return classes
-
-# Public Functions #########################################################
-
-
-#### Deprecated? These appear to be unused 
 
 
 def ucfirst(text):

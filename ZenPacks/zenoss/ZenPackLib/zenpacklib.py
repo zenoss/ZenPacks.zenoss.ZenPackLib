@@ -39,7 +39,8 @@ unused(Globals)
 
 # ZenPacks use these to load their YAML files
 from lib.helpers.utils import load_yaml
-
+# this may be deprecated
+from lib.functions import relationships_from_yuml
 # these are the base classes for zenpacklib.Device, zenpacklib.Component, zenpacklib.HardwareComponent
 from lib.base.Device import Device
 from lib.base.Component import Component

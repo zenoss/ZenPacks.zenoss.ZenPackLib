@@ -13,9 +13,14 @@ import sys
 import importlib
 import keyword
 from collections import OrderedDict
-from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
 from .Dumper import get_zproperty_type
+from ..spec.Spec import Spec
+
+from Products.ZenModel.Device import Device as BaseDevice
+from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
+from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
+from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
 
 
 class Loader(yaml.Loader):

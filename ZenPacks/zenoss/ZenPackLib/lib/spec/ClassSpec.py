@@ -29,8 +29,6 @@ from ..interfaces import IHardwareComponentInfo
 from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
 
 from ..gsm import get_gsm
-from ..functions import pluralize, get_symbol_name, relname_from_classname, \
-    get_zenpack_path, ordered_values
 
 from ..base.HardwareComponent import HardwareComponent
 from ..base.Component import Component
@@ -213,11 +211,11 @@ class ClassSpec(Spec):
 
         self.meta_type = meta_type or self.name
         self.label = label or self.meta_type
-        self.plural_label = plural_label or pluralize(self.label)
+        self.plural_label = plural_label or self.pluralize(self.label)
 
         if short_label:
             self.short_label = short_label
-            self.plural_short_label = plural_short_label or pluralize(self.short_label)
+            self.plural_short_label = plural_short_label or self.pluralize(self.short_label)
         else:
             self.short_label = self.label
             self.plural_short_label = plural_short_label or self.plural_label
@@ -331,17 +329,23 @@ class ClassSpec(Spec):
 
     def create(self):
         """Implement specification."""
+        self.create_schema_classes()
+        self.create_zenpack_classes()
+        self.create_registered()
+
+    def create_schema_classes(self):
         self.create_model_schema_class()
         self.create_iinfo_schema_class()
         self.create_info_schema_class()
 
+    def create_zenpack_classes(self):
         self.create_model_class()
         self.create_iinfo_class()
         self.create_info_class()
-
         if self.is_component or self.is_hardware_component:
             self.create_formbuilder_class()
 
+    def create_registered(self):
         self.register_dynamicview_adapters()
         self.register_impact_adapters()
 
@@ -459,10 +463,10 @@ class ClassSpec(Spec):
 
         icon_filename = self.icon or '{}.png'.format(self.name)
 
-        zenpack_path = get_zenpack_path(self.zenpack.name)
+        zenpack_path = self.get_zenpack_path(self.zenpack.name)
         if zenpack_path:
             icon_path = os.path.join(
-                get_zenpack_path(self.zenpack.name),
+                zenpack_path,
                 'resources',
                 'icon',
                 icon_filename)
@@ -587,7 +591,7 @@ class ClassSpec(Spec):
             attributes['_v_path_pattern_streams'] = self.path_pattern_streams
 
         return self.create_schema_class(
-            get_symbol_name(self.zenpack.name, 'schema'),
+            self.get_symbol_name(self.zenpack.name, 'schema'),
             self.name,
             self.resolved_bases,
             attributes)
@@ -600,7 +604,7 @@ class ClassSpec(Spec):
     def create_model_class(self):
         """Create and return model class."""
         return self.create_stub_class(
-            get_symbol_name(self.zenpack.name, self.name),
+            self.get_symbol_name(self.zenpack.name, self.name),
             self.model_schema_class,
             self.name)
 
@@ -642,7 +646,7 @@ class ClassSpec(Spec):
             attributes.update(spec.iinfo_schemas)
 
         return self.create_schema_class(
-            get_symbol_name(self.zenpack.name, 'schema'),
+            self.get_symbol_name(self.zenpack.name, 'schema'),
             'I{}Info'.format(self.name),
             tuple(bases),
             attributes)
@@ -655,7 +659,7 @@ class ClassSpec(Spec):
     def create_iinfo_class(self):
         """Create and return I<Info>Info class."""
         return self.create_stub_class(
-            get_symbol_name(self.zenpack.name, self.name),
+            self.get_symbol_name(self.zenpack.name, self.name),
             self.iinfo_schema_class,
             'I{}Info'.format(self.name))
 
@@ -704,7 +708,7 @@ class ClassSpec(Spec):
             attributes.update(spec.info_properties)
 
         return self.create_schema_class(
-            get_symbol_name(self.zenpack.name, 'schema'),
+            self.get_symbol_name(self.zenpack.name, 'schema'),
             '{}Info'.format(self.name),
             tuple(bases),
             attributes)
@@ -717,7 +721,7 @@ class ClassSpec(Spec):
     def create_info_class(self):
         """Create and return Info subclass."""
         info_class = self.create_stub_class(
-            get_symbol_name(self.zenpack.name, self.name),
+            self.get_symbol_name(self.zenpack.name, self.name),
             self.info_schema_class,
             '{}Info'.format(self.name))
 
@@ -754,8 +758,8 @@ class ClassSpec(Spec):
         attributes['zenpack_id_prefix'] = self.zenpack.id_prefix
 
         formbuilder = self.create_class(
-            get_symbol_name(self.zenpack.name, self.name),
-            get_symbol_name(self.zenpack.name, 'schema'),
+            self.get_symbol_name(self.zenpack.name, self.name),
+            self.get_symbol_name(self.zenpack.name, 'schema'),
             '{}FormBuilder'.format(self.name),
             tuple(bases),
             attributes)
@@ -1036,7 +1040,7 @@ class ClassSpec(Spec):
                 columns=','.join(
                     default_left_columns +
                     self.containing_js_columns +
-                    ordered_values(ordered_columns) +
+                    self.ordered_values(ordered_columns) +
                     default_right_columns)))
 
     @property

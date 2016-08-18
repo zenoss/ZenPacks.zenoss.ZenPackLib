@@ -7,6 +7,11 @@
 #
 ##############################################################################
 import inspect
+import os
+import sys
+import imp
+import importlib
+import operator
 import re
 import logging
 from collections import OrderedDict
@@ -18,7 +23,6 @@ from Products.ZenRelations import ToOneRelationship, ToManyRelationship
 from zope.interface.interface import InterfaceClass
 from Products.Zuul.interfaces import IInfo
 
-from ..functions import fix_kwargs, create_module
 from ..helpers.ZenPackLibLog import DEFAULTLOG
 
 
@@ -223,7 +227,7 @@ class Spec(object):
         keys.sort()
         for k in keys:
             v = param_dict.get(k)
-            args = fix_kwargs(v)
+            args = self.fix_kwargs(v)
             args['zplog'] = zplog
             specs[k] = spec_type(self, k, **(args))
 
@@ -319,7 +323,7 @@ class Spec(object):
     def create_class(self, module, schema_module, classname, bases, attributes):
         """Create and return described class."""
         if isinstance(module, basestring):
-            module = create_module(module)
+            module = self.create_module(module)
     
         schema_class = self.create_schema_class(
             schema_module, classname, bases, attributes)
@@ -329,7 +333,7 @@ class Spec(object):
     def create_schema_class(self, schema_module, classname, bases, attributes):
         """Create and return described schema class."""
         if isinstance(schema_module, basestring):
-            schema_module = create_module(schema_module)
+            schema_module = self.create_module(schema_module)
 
         schema_class = getattr(schema_module, classname, None)
         if schema_class:
@@ -345,15 +349,18 @@ class Spec(object):
     def create_stub_class(self, module, schema_class, classname):
         """Create and return described stub class."""
         if isinstance(module, basestring):
-            module = create_module(module)
+            module = self.create_module(module)
 
         concrete_class = getattr(module, classname, None)
         if concrete_class:
             return concrete_class
 
         class_factory = self.get_class_factory(schema_class)
+
         stub_class = class_factory(classname, (schema_class,), {})
+
         stub_class.__module__ = module.__name__
+
         setattr(module, classname, stub_class)
 
         return stub_class
