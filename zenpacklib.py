@@ -58,10 +58,11 @@ if __name__ == '__main__':
     from Products.ZenUtils.Utils import unused
     unused(Globals)
 
+import zope.schema
 from zope.browser.interfaces import IBrowserView
 from zope.component import adapts, getGlobalSiteManager
 from zope.event import notify
-from zope.interface import classImplements, implements
+from zope.interface import classImplements, implements, providedBy
 from zope.interface.interface import InterfaceClass
 from Acquisition import aq_base
 
@@ -1198,6 +1199,37 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
                     item['xtype'] = 'ZPL_{zenpack_id_prefix}_RenderableDisplayField'.format(
                         zenpack_id_prefix=self.zenpack_id_prefix)
                     item['renderer'] = renderer
+
+    def fields(self, fieldFilter=None):
+        """ override to ensure fields are inherited properly"""
+        d = {}
+
+        iface_fields = []
+        for iface in providedBy(self.context):
+            f = zope.schema.getFields(iface)
+            if f:
+                iface_fields.append(f)
+        # reverse so that subclasses processed last
+        iface_fields.reverse()
+
+        for f in iface_fields:
+            def _filter(item):
+                include = True
+                if fieldFilter:
+                    key=item[0]
+                    include = fieldFilter(key)
+                else:
+                    include = bool(item)
+                return include
+            for k,v in filter(_filter, f.iteritems()):
+                c = self._dict(v)
+                c['name'] = k
+                value =  getattr(self.context, k, None)
+                c['value'] = value() if callable(value) else value                    
+                if c['xtype'] in ('autoformcombo', 'itemselector'):
+                    c['values'] = self.vocabulary(v)
+                d[k] = c
+        return d
 
 
 class ClassProperty(property):
