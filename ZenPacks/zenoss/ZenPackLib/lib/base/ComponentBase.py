@@ -21,7 +21,6 @@ from Products.ZenRelations.Exceptions import ZenSchemaError
 
 from .ModelBase import ModelBase
 from ..utils import FACET_BLACKLIST
-from ..functions import catalog_search
 
 
 class ComponentBase(ModelBase):
@@ -106,7 +105,7 @@ class ComponentBase(ModelBase):
             return
 
         # Find and add new object to relationship.
-        for result in catalog_search(self.device(), 'ComponentBase', id=id_):
+        for result in self.catalog_search(self.device(), 'ComponentBase', id=id_):
             try:
                 new_obj = result.getObject()
             except Exception as e:
@@ -154,7 +153,7 @@ class ComponentBase(ModelBase):
         query = Or(*[Eq('id', x) for x in changed_ids])
 
         obj_map = {}
-        for result in catalog_search(self.device(), 'ComponentBase', query):
+        for result in self.catalog_search(self.device(), 'ComponentBase', query):
             try:
                 component = result.getObject()
             except Exception as e:

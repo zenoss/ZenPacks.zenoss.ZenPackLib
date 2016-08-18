@@ -25,6 +25,7 @@ from Products.ZenModel.ZenPack import ZenPack
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
 from ..functions import create_module, LOG
+from ..spec.Spec import Spec
 from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
@@ -315,9 +316,10 @@ class ZPLCommand(ZenScriptBase):
 
         # create a dummy zenpacklib sufficient to be used in an
         # __init__.py, so we can capture export the data.
-        zenpacklib_module = create_module("zenpacklib")
+        spec = Spec()
+        zenpacklib_module = spec.create_module("zenpacklib")
         zenpacklib_module.ZenPackSpec = type('ZenPackSpec', (dict,), {})
-        zenpack_schema_module = create_module("schema")
+        zenpack_schema_module = spec.create_module("schema")
         zenpack_schema_module.ZenPack = ZenPack
 
         def zpl_create(self):

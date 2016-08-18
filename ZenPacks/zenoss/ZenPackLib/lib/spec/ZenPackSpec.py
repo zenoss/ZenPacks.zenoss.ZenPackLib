@@ -21,7 +21,7 @@ from zope.browser.interfaces import IBrowserView
 from Products.ZenUI3.browser.interfaces import IMainSnippetManager
 from Products.ZenUI3.utils.javascript import JavaScriptSnippet
 from ..utils import dynamicview_installed
-from ..functions import get_symbol_name, get_zenpack_path, LOG
+from ..functions import LOG
 from ..resources.templates import JS_LINK_FROM_GRID
 from ..gsm import get_gsm
 from ..base.Device import Device
@@ -137,7 +137,7 @@ class ZenPackSpec(Spec):
             ZPropertySpec, 'zProperties', zProperties, log=self.LOG)
 
         # Class Relationship Schema
-        self.class_relationships = self.specparams.class_relationships
+        self.class_relationships =[]
         if class_relationships:
             if not isinstance(class_relationships, list):
                 raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
@@ -274,9 +274,15 @@ class ZenPackSpec(Spec):
 
         for spec in self.zProperties.itervalues():
             spec.create()
+            
+        # try to avoid import errors on class overrides
+        # by creating specs first
+        for spec in self.classes.itervalues():
+            spec.create_schema_classes()
 
         for spec in self.classes.itervalues():
-            spec.create()
+            spec.create_zenpack_classes()
+            spec.create_registered()
 
         self.create_product_names()
         self.create_ordered_component_tree()
@@ -325,7 +331,7 @@ class ZenPackSpec(Spec):
 
     def register_browser_resources(self):
         """Register browser resources if they exist."""
-        zenpack_path = get_zenpack_path(self.name)
+        zenpack_path = self.get_zenpack_path(self.name)
         if not zenpack_path:
             return
 
@@ -365,7 +371,7 @@ class ZenPackSpec(Spec):
 
         for spec in self.ordered_classes:
             if spec.is_device:
-                for_ = get_symbol_name(self.name, spec.name, spec.name)
+                for_ = self.get_symbol_name(self.name, spec.name, spec.name)
 
                 directives.append(get_directive('device', for_, 21))
                 directives.append(get_directive(spec.name, for_, 22))
@@ -423,8 +429,8 @@ class ZenPackSpec(Spec):
             }
 
         snippet_class = self.create_class(
-            get_symbol_name(self.name),
-            get_symbol_name(self.name, 'schema'),
+            self.get_symbol_name(self.name),
+            self.get_symbol_name(self.name, 'schema'),
             name,
             (JavaScriptSnippet,),
             attributes)
@@ -575,8 +581,8 @@ class ZenPackSpec(Spec):
             catalog = ".".join([self.name, class_]).replace(".", "_")
             attributes['GLOBAL_CATALOGS'].append('{}Search'.format(catalog))
 
-        return self.create_class(get_symbol_name(self.name),
-                            get_symbol_name(self.name, 'schema'),
+        return self.create_class(self.get_symbol_name(self.name),
+                            self.get_symbol_name(self.name, 'schema'),
                             'ZenPack',
                             (ZenPack,),
                             attributes)
