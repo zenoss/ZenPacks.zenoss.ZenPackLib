@@ -32,6 +32,7 @@ from .DeviceClassSpec import DeviceClassSpec
 from .ClassRelationshipSpec import ClassRelationshipSpec
 from .RelationshipSchemaSpec import RelationshipSchemaSpec
 from .ZPropertySpec import ZPropertySpec
+from .EventClassSpec import EventClassSpec
 
 DYNAMICVIEW_INSTALLED = dynamicview_installed()
 
@@ -95,6 +96,7 @@ class ZenPackSpec(Spec):
             classes=None,
             class_relationships=None,
             device_classes=None,
+            event_classes=None,
             _source_location=None,
             log=LOG):
         """
@@ -109,6 +111,8 @@ class ZenPackSpec(Spec):
             :yaml_block_style class_relationships: True
             :param device_classes: DeviceClass Specs
             :type device_classes: SpecsParameter(DeviceClassSpec)
+            :param event_classes: EventClass Specs
+            :type event_classes: SpecsParameter(EventClassSpec)
             :param classes: Class Specs
             :type classes: SpecsParameter(ClassSpec)
         """
@@ -123,7 +127,8 @@ class ZenPackSpec(Spec):
             zProperties=zProperties,
             classes=classes,
             class_relationships=class_relationships,
-            device_classes=device_classes, 
+            device_classes=device_classes,
+            event_classes=event_classes,
             log=self.LOG)
         self.name = name
         self.LOG.debug("------ {} ------".format(self.name))
@@ -262,6 +267,10 @@ class ZenPackSpec(Spec):
         # Device Classes
         self.device_classes = self.specs_from_param(
             DeviceClassSpec, 'device_classes', device_classes, log=self.LOG)
+
+        # Event Classes
+        self.event_classes = self.specs_from_param(
+            EventClassSpec, 'event_classes', event_classes)
 
     @property
     def ordered_classes(self):
@@ -560,6 +569,7 @@ class ZenPackSpec(Spec):
             }
 
         attributes['device_classes'] = self.device_classes
+        attributes['event_classes'] = self.event_classes
         attributes['_v_specparams'] = self.specparams
         attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
         attributes['NEW_RELATIONS'] = self.NEW_RELATIONS

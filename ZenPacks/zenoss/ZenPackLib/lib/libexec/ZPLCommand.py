@@ -18,7 +18,6 @@ from optparse import OptionGroup
 
 import Globals
 from Products.ZenUtils.Utils import unused
-unused(Globals)
 
 from Acquisition import aq_base
 from Products.ZenModel.ZenPack import ZenPack
@@ -28,16 +27,31 @@ from ..functions import create_module, LOG
 from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
+from ..params.EventClassSpecParams import EventClassSpecParams
+from ..params.EventClassMappingSpecParams import EventClassMappingSpecParams
 from ..resources.templates import SETUP_PY
 from ..helpers.WarningLoader import WarningLoader
 from ..helpers.Dumper import Dumper
 from ..helpers.Loader import Loader
 from ..helpers.utils import optimize_yaml
 
+unused(Globals)
+
+
+def stripped_yaml_dump(specparams, Dumper=Dumper):
+    outputfile = yaml.dump(specparams, Dumper=Dumper)
+
+    # tweak the yaml slightly.
+    outputfile = outputfile.replace("__builtin__.object", "object")
+    outputfile = re.sub(r"!!float '(\d+)'", r"\1", outputfile)
+    outputfile = re.sub(r"!ZenPackSpec", r"", outputfile)
+
+    print outputfile
+
 
 class ZPLCommand(ZenScriptBase):
     '''ZPLCommand'''
-    
+
     def __init__(self, noopts=0, app=None, connect=False, version=None):
         ''''''
         if not version:
@@ -57,44 +71,48 @@ class ZPLCommand(ZenScriptBase):
         self.parser.option_groups = []
         self.parser.usage = "%prog [options] [FILENAME|ZENPACK|DEVICE]"
         self.parser.version = self.version
-        
+
         group = OptionGroup(self.parser, "ZenPack Conversion")
         group.add_option("-t", "--dump-templates",
-                    dest="dump",
-                    action="store_true",
-                    help="export existing monitoring templates to YAML")
+                         dest="dump",
+                         action="store_true",
+                         help="export existing monitoring templates to YAML")
         group.add_option("-y", "--yaml-convert",
-                    dest="convert",
-                    action="store_true",
-                    help="convert existing ZenPack to YAML")
+                         dest="convert",
+                         action="store_true",
+                         help="convert existing ZenPack to YAML")
+        group.add_option("-e", "--dump-event-classes",
+                         dest="dump_event_classes",
+                         action="store_true",
+                         help="export existing event classes to YAML")
         self.parser.add_option_group(group)
 
         group = OptionGroup(self.parser, "New ZPL ZenPacks")
         group.add_option("-c", "--create",
-                    dest="create",
-                    action="store_true",
-                    help="Create a new ZenPack source directory")
+                         dest="create",
+                         action="store_true",
+                         help="Create a new ZenPack source directory")
         self.parser.add_option_group(group)
 
         group = OptionGroup(self.parser, "ZenPack Development")
         group.add_option("-l", "--lint",
-                    dest="lint",
-                    action="store_true",
-                    help="check zenpack.yaml syntax for errors")
+                         dest="lint",
+                         action="store_true",
+                         help="check zenpack.yaml syntax for errors")
         group.add_option("-o", "--optimize",
-                    dest="optimize",
-                    action="store_true",
-                    help="optimize zenpack.yaml format and DEFAULTS")
+                         dest="optimize",
+                         action="store_true",
+                         help="optimize zenpack.yaml format and DEFAULTS")
         group.add_option("-d", "--diagram",
-                    dest="diagram",
-                    action="store_true",
-                    help="print YUML (http://yuml.me/) class diagram source based on zenpack.yaml")
+                         dest="diagram",
+                         action="store_true",
+                         help="print YUML (http://yuml.me/) class diagram source based on zenpack.yaml")
         self.parser.add_option_group(group)
 
         self.parser.add_option("-p", "--paths",
-                    dest="paths",
-                    action="store_true",
-                    help="print possible facet paths for a given device and whether currently filtered.")
+                               dest="paths",
+                               action="store_true",
+                               help="print possible facet paths for a given device and whether currently filtered.")
 
     def is_valid_file(self):
         '''Determine if supplied file is valid'''
@@ -182,7 +200,7 @@ class ZPLCommand(ZenScriptBase):
             self.create_zenpack_srcdir(self.options.zenpack)
 
         elif self.options.convert:
-             self.py_to_yaml(self.options.zenpack)
+            self.py_to_yaml(self.options.zenpack)
 
         elif self.options.dump:
             self.dump_templates(self.options.zenpack)
@@ -198,6 +216,9 @@ class ZPLCommand(ZenScriptBase):
 
         elif self.options.paths:
             self.list_paths()
+
+        elif self.options.dump_event_classes:
+            self.dump_event_classes(self.options.zenpack)
 
     def optimize(self, filename):
         '''return formatted YAML with DEFAULTS optimized'''
@@ -523,6 +544,44 @@ class ZPLCommand(ZenScriptBase):
                 specs[dc_name][template.id] = spec
 
         return specs
+
+    def dump_event_classes(self, zenpack_name):
+        self.connect()
+        eventclasses = self.zenpack_eventclassspecs(zenpack_name)
+        zpsp = ZenPackSpecParams(zenpack_name, event_classes=eventclasses)
+        stripped_yaml_dump(zpsp, Dumper=Dumper)
+
+    def zenpack_eventclassspecs(self, zenpack_name):
+        zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
+        if zenpack is None:
+            LOG.error("ZenPack '%s' not found." % zenpack_name)
+            return
+
+        eventclasses = collections.defaultdict(dict)
+        for eventclass in [x for x in zenpack.packables() if x.meta_type == 'EventClass']:
+            ec_name = "/" + "/".join(eventclass.getPrimaryUrlPath().split('/')[4:])
+            eventclasses[ec_name] = EventClassSpecParams.fromObject(eventclass, create=True, remove=True)
+            for subclass in eventclass.getSubEventClasses():
+                ec_name = "/" + "/".join(subclass.getPrimaryUrlPath().split('/')[4:])
+                # Remove = false because the removing the parent will remove the child # This is a performance optimization
+                eventclasses[ec_name] = EventClassSpecParams.fromObject(subclass, create=True, remove=False)
+
+        for eventclassinst in [x for x in zenpack.packables() if x.meta_type == 'EventClassInst']:
+            eventclass = eventclassinst.eventClass()
+            ec_name = "/" + "/".join(eventclass.getPrimaryUrlPath().split('/')[4:])
+
+            # Do not create/remove the eventclasses as we do not own them
+            eventclassspec = eventclasses.get(ec_name, EventClassSpecParams.new(ec_name, remove=False, create=False))
+            if eventclassinst.id in eventclassspec.mappings:
+                # we have already gotten this instance and we don't need a duplicate
+                continue
+            else:
+                # This zenpack owns this mapping, lets make sure to remove it when we are done.
+                eventclassspec.mappings[eventclassinst.id] = EventClassMappingSpecParams.fromObject(eventclassinst, remove=True)
+            eventclasses[ec_name] = eventclassspec
+
+        return eventclasses
+
 
 if __name__ == '__main__':
     script = ZPLCommand()
