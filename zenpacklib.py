@@ -2733,9 +2733,9 @@ class ClassSpec(Spec):
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.iinfo_schemas)
 
-        for i, spec in enumerate(self.containing_components):
-            attr = relname_from_classname(spec.name)
-            attributes[attr] = schema.Entity(
+        for i, specs in enumerate(self.containing_spec_relations):
+            spec, relspec = specs
+            attributes[relspec.name] = schema.Entity(
                 title=_t(spec.label),
                 group="Relationships",
                 order=3 + i / 100.0)
@@ -2796,17 +2796,8 @@ class ClassSpec(Spec):
             'class_plural_short_label': ProxyProperty('class_plural_short_label')
         })
 
-        for spec in self.containing_components:
-            attr = None
-            for rel, rspec in self.relationships.items():
-                if rspec.remote_classname == spec.name:
-                    attr = rel
-                    continue
-
-            if not attr:
-                attr = relname_from_classname(spec.name)
-
-            attributes[attr] = RelationshipInfoProperty(attr)
+        for spec, relspec in self.containing_spec_relations:
+            attributes.update(relspec.info_properties)
 
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.info_properties)
@@ -2934,6 +2925,26 @@ class ClassSpec(Spec):
         return containing_specs
 
     @property
+    def containing_spec_relations(self):
+        """ Return iterable of containing component ClassSpec and RelationshipSpec instances.
+            Instances will be sorted shallow to deep.
+        """
+        containing_rels = []
+        for relname, relschema in self.model_schema_class._relations:
+            if not issubclass(relschema.remoteType, ToManyCont):
+                continue
+
+            remote_classname = relschema.remoteClass.split('.')[-1]
+            remote_spec = self.zenpack.classes.get(remote_classname)
+            relation_spec = self.relationships.get(relname)
+            if not remote_spec or remote_spec.is_device:
+                continue
+
+            containing_rels.extend(remote_spec.containing_spec_relations)
+            containing_rels.append((remote_spec, relation_spec))
+        return containing_rels
+
+    @property
     def faceting_components(self):
         """Return iterable of faceting component ClassSpec instances."""
         faceting_specs = []
@@ -2979,14 +2990,10 @@ class ClassSpec(Spec):
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
 
-        for spec in self.containing_components:
-            # grid_display=False
+        for spec, relspec in self.containing_spec_relations:
             if spec.name in filtered_relationships:
                 continue
-            fields.append(
-                "{{name: '{}'}}"
-                .format(
-                    relname_from_classname(spec.name)))
+            fields.append("{{name: '{}'}}".format(relspec.name))
 
         return fields
 
@@ -3003,8 +3010,7 @@ class ClassSpec(Spec):
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
 
-        for spec in self.containing_components:
-            # grid_display=False
+        for spec, relspec in self.containing_spec_relations:
             if spec.name in filtered_relationships:
                 continue
 
@@ -3014,7 +3020,7 @@ class ClassSpec(Spec):
 
             column_fields = [
                 "id: '{}'".format(spec.name),
-                "dataIndex: '{}'".format(relname_from_classname(spec.name)),
+                "dataIndex: '{}'".format(relspec.name),
                 "header: _t('{}')".format(spec.short_label),
                 "width: {}".format(width),
                 "renderer: {}".format(renderer),
