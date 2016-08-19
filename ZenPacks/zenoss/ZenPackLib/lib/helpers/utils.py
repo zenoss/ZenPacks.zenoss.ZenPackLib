@@ -94,7 +94,8 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
     CFG = None
 
     try:
-        LOG.info("Loading YAML from {}".format(yaml_doc))
+        if os.path.isfile(yaml_doc):
+            LOG.info("Loading YAML from {}".format(yaml_doc))
         CFG = load_yaml_single(yaml_doc)
     except Exception as e:
         LOG.error(e)
@@ -105,7 +106,7 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
         LOG.error("Unable to load {}".format(yaml_doc))
 
     end = time.time() - start
-    LOG.info("Loaded {} in {:0.2f}s".format(yaml_doc, end))
+    LOG.info("Loaded {} in {:0.2f}s".format(CFG.name, end))
 
     return CFG
 
