@@ -10,12 +10,20 @@ from .SpecParams import SpecParams
 from .ZPropertySpecParams import ZPropertySpecParams
 from .ClassSpecParams import ClassSpecParams
 from .DeviceClassSpecParams import DeviceClassSpecParams
+from .EventClassSpecParams import EventClassSpecParams
 from ..spec.RelationshipSchemaSpec import RelationshipSchemaSpec
 from ..spec.ZenPackSpec import ZenPackSpec
 
 
 class ZenPackSpecParams(SpecParams, ZenPackSpec):
-    def __init__(self, name, zProperties=None, class_relationships=None, classes=None, device_classes=None, **kwargs):
+    def __init__(self,
+                 name,
+                 zProperties=None,
+                 class_relationships=None,
+                 classes=None,
+                 device_classes=None,
+                 event_classes=None,
+                 **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
 
@@ -37,4 +45,5 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
         self.device_classes = self.specs_from_param(
             DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True, log=self.LOG)
 
-
+        self.event_classes = self.specs_from_param(
+            EventClassSpecParams, 'event_classes', event_classes, leave_defaults=True)

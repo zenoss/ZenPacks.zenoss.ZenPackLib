@@ -12,6 +12,29 @@ from yaml.representer import SafeRepresenter
 from collections import OrderedDict
 from ..functions import LOG
 
+from ..spec.ZenPackSpec import ZenPackSpec
+from ..spec.DeviceClassSpec import DeviceClassSpec
+from ..spec.ZPropertySpec import ZPropertySpec
+from ..spec.ClassSpec import ClassSpec
+from ..spec.ClassPropertySpec import ClassPropertySpec
+from ..spec.ClassRelationshipSpec import ClassRelationshipSpec
+from ..spec.RelationshipSchemaSpec import RelationshipSchemaSpec
+
+from ..params.ZenPackSpecParams import ZenPackSpecParams
+from ..params.DeviceClassSpecParams import DeviceClassSpecParams
+from ..params.ZPropertySpecParams import ZPropertySpecParams
+from ..params.ClassSpecParams import ClassSpecParams
+from ..params.ClassPropertySpecParams import ClassPropertySpecParams
+from ..params.ClassRelationshipSpecParams import ClassRelationshipSpecParams
+from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
+from ..params.RRDThresholdSpecParams import RRDThresholdSpecParams
+from ..params.RRDDatasourceSpecParams import RRDDatasourceSpecParams
+from ..params.RRDDatapointSpecParams import RRDDatapointSpecParams
+from ..params.GraphDefinitionSpecParams import GraphDefinitionSpecParams
+from ..params.GraphPointSpecParams import GraphPointSpecParams
+from ..params.EventClassSpecParams import EventClassSpecParams
+from ..params.EventClassMappingSpecParams import EventClassMappingSpecParams
+
 
 def get_zproperty_type(z_type):
     """
@@ -247,27 +270,6 @@ class Dumper(yaml.Dumper):
         return class_.__module__ + "." + class_.__name__
 
 
-from ..spec.ZenPackSpec import ZenPackSpec
-from ..spec.DeviceClassSpec import DeviceClassSpec
-from ..spec.ZPropertySpec import ZPropertySpec
-from ..spec.ClassSpec import ClassSpec
-from ..spec.ClassPropertySpec import ClassPropertySpec
-from ..spec.ClassRelationshipSpec import ClassRelationshipSpec
-from ..spec.RelationshipSchemaSpec import RelationshipSchemaSpec
-
-from ..params.ZenPackSpecParams import ZenPackSpecParams
-from ..params.DeviceClassSpecParams import DeviceClassSpecParams
-from ..params.ZPropertySpecParams import ZPropertySpecParams
-from ..params.ClassSpecParams import ClassSpecParams
-from ..params.ClassPropertySpecParams import ClassPropertySpecParams
-from ..params.ClassRelationshipSpecParams import ClassRelationshipSpecParams
-from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
-from ..params.RRDThresholdSpecParams import RRDThresholdSpecParams
-from ..params.RRDDatasourceSpecParams import RRDDatasourceSpecParams
-from ..params.RRDDatapointSpecParams import RRDDatapointSpecParams
-from ..params.GraphDefinitionSpecParams import GraphDefinitionSpecParams
-from ..params.GraphPointSpecParams import GraphPointSpecParams
-
 # Spec subclasses
 Dumper.add_representer(ZenPackSpec, Dumper.represent_zenpackspec)
 Dumper.add_representer(DeviceClassSpec, Dumper.represent_spec)
@@ -279,6 +281,8 @@ Dumper.add_representer(RelationshipSchemaSpec, Dumper.represent_relschemaspec)
 # SpecParams subclasses
 Dumper.add_representer(ZenPackSpecParams, Dumper.represent_zenpackspec)
 Dumper.add_representer(DeviceClassSpecParams, Dumper.represent_spec)
+Dumper.add_representer(EventClassSpecParams, Dumper.represent_spec)
+Dumper.add_representer(EventClassMappingSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ZPropertySpecParams, Dumper.represent_spec)
 Dumper.add_representer(ClassSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ClassPropertySpecParams, Dumper.represent_spec)
@@ -292,5 +296,3 @@ Dumper.add_representer(GraphPointSpecParams, Dumper.represent_spec)
 # representers for python types
 Dumper.add_representer(OrderedDict, Dumper.represent_ordereddict)
 Dumper.add_representer(unicode, SafeRepresenter.represent_unicode)
-
-
