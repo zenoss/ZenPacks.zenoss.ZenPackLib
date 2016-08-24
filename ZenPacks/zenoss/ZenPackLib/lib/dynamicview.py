@@ -9,7 +9,7 @@
 import collections
 from zope.interface import implements
 from zope.component import adapts
-from .functions import LOG
+from .helpers.ZenPackLibLog import DEFAULTLOG
 from ZenPacks.zenoss.DynamicView import BaseRelation, BaseGroup
 from ZenPacks.zenoss.DynamicView import TAG_ALL
 from ZenPacks.zenoss.DynamicView.interfaces import IRelatable, IRelationsProvider
@@ -115,7 +115,7 @@ class DynamicViewRelationsProvider(BaseRelationsProvider):
         """Generate object relatables returned by adapted.methodname()."""
         method = getattr(self._adapted, methodname, None)
         if not method or not callable(method):
-            LOG.warning(
+            DEFAULTLOG.warning(
                 "no %r relationship or method for %r",
                 methodname,
                 self._adapted.meta_type)

@@ -10,7 +10,7 @@ import yaml
 import re
 from yaml.representer import SafeRepresenter
 from collections import OrderedDict
-from ..functions import LOG
+from .ZenPackLibLog import DEFAULTLOG
 
 
 def get_zproperty_type(z_type):
@@ -36,7 +36,7 @@ class Dumper(yaml.Dumper):
         be used for this specific zenpacklib.
     """
 
-    LOG=LOG
+    LOG=DEFAULTLOG
 
     def dict_representer(self, data):
         return yaml.MappingNode(u'tag:yaml.org,2002:map', data.items())

@@ -6,8 +6,7 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-from .helpers.ZenPackLibLog import ZenPackLibLog
-from .functions import LOG
+from .helpers.ZenPackLibLog import DEFAULTLOG
 
 
 FACET_BLACKLIST = (
@@ -28,7 +27,7 @@ def yaml_installed():
         import yaml
         import yaml.constructor
     except ImportError:
-        LOG.critical('PyYAML is required but not installed. Run "easy_install PyYAML" or "pip install PyYAML"')
+        DEFAULTLOG.critical('PyYAML is required but not installed. Run "easy_install PyYAML" or "pip install PyYAML"')
         pass
     else:
         return True
@@ -41,7 +40,7 @@ def impact_installed():
         from ZenPacks.zenoss.Impact.impactd.relations import ImpactEdge
         from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipDataProvider
     except ImportError:
-        LOG.info('Impact is not installed and some functionality dependent on it will be disabled')
+        DEFAULTLOG.info('Impact is not installed and some functionality dependent on it will be disabled')
         pass
     else:
         return True
@@ -55,7 +54,7 @@ def dynamicview_installed():
         from ZenPacks.zenoss.DynamicView.interfaces import IRelatable, IRelationsProvider, IGroupMappingProvider
         from ZenPacks.zenoss.DynamicView.model.adapters import BaseRelatable, BaseRelationsProvider
     except ImportError:
-        LOG.info('DynamicView is not installed and some functionality dependent on it will be disabled')
+        DEFAULTLOG.info('DynamicView is not installed and some functionality dependent on it will be disabled')
         pass
     else:
         return True
@@ -67,7 +66,7 @@ def has_metricfacade():
     try:
         from Products.Zuul.facades import metricfacade
     except ImportError:
-        LOG.info('MetricFacade is not available and some functionality dependent on it will be disabled')
+        DEFAULTLOG.info('MetricFacade is not available and some functionality dependent on it will be disabled')
         pass
     else:
         return True

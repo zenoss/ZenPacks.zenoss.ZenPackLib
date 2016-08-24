@@ -24,11 +24,12 @@ from Acquisition import aq_base
 from Products.ZenModel.ZenPack import ZenPack
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
-from ..functions import create_module, LOG
+from ..functions import create_module
 from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 from ..resources.templates import SETUP_PY
+from ..helpers.ZenPackLibLog import DEFAULTLOG
 from ..helpers.WarningLoader import WarningLoader
 from ..helpers.Dumper import Dumper
 from ..helpers.Loader import Loader
@@ -37,7 +38,8 @@ from ..helpers.utils import optimize_yaml
 
 class ZPLCommand(ZenScriptBase):
     '''ZPLCommand'''
-    
+    LOG = DEFAULTLOG
+
     def __init__(self, noopts=0, app=None, connect=False, version=None):
         ''''''
         if not version:
@@ -45,6 +47,17 @@ class ZPLCommand(ZenScriptBase):
             version = zenpacklib.__version__
         self.version = version
         ZenScriptBase.__init__(self, noopts, app, connect)
+        self.enable_log_stderr()
+
+    def enable_log_stderr(self):
+        """
+            Enable logging to stderr 
+            using this ZenPack's log settings
+        """
+        self.LOG.propagate = False
+        h = logging.StreamHandler(sys.stderr)
+        h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
+        self.LOG.addHandler(h)
 
     def buildOptions(self):
         ''''''
@@ -205,7 +218,7 @@ class ZPLCommand(ZenScriptBase):
             new_yaml = optimize_yaml(filename)
             print new_yaml
         except Exception, e:
-            LOG.exception(e)
+            DEFAULTLOG.exception(e)
 
     def lint(self, filename):
         '''parse YAML file and check syntax'''
@@ -226,7 +239,7 @@ class ZPLCommand(ZenScriptBase):
             with open(filename, 'r') as stream:
                 yaml.load(stream, Loader=WarningLoader)
         except Exception, e:
-            LOG.exception(e)
+            DEFAULTLOG.exception(e)
 
     def create_zenpack_srcdir(self, zenpack_name):
         """Create a new ZenPack source directory."""
@@ -309,7 +322,7 @@ class ZPLCommand(ZenScriptBase):
         self.connect()
         zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name)
         if zenpack is None:
-            LOG.error("ZenPack '{}' not found.".format(zenpack_name))
+            DEFAULTLOG.error("ZenPack '{}' not found.".format(zenpack_name))
             return
         zenpack_init_py = os.path.join(os.path.dirname(inspect.getfile(zenpack.__class__)), '__init__.py')
 
@@ -352,7 +365,7 @@ class ZPLCommand(ZenScriptBase):
         templates = self.zenpack_templatespecs(zenpack_name)
         for dc_name in templates:
             if dc_name not in specparams.device_classes:
-                LOG.warning("Device class '{}' was not defined in {} - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.".format(
+                DEFAULTLOG.warning("Device class '{}' was not defined in {} - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.".format(
                             dc_name, zenpack_init_py))
                 specparams.device_classes[dc_name] = DeviceClassSpecParams(specparams, dc_name)
 
@@ -422,14 +435,14 @@ class ZPLCommand(ZenScriptBase):
                         crspec.left_class, crspec.left_relname,
                         crspec.right_relname, crspec.right_class)
         else:
-            LOG.error("Diagram type '{}' is not supported.".format(diagram_type))
+            DEFAULTLOG.error("Diagram type '{}' is not supported.".format(diagram_type))
 
     def list_paths(self):
         ''''''
         self.connect()
         device = self.dmd.Devices.findDevice(self.options.device)
         if device is None:
-            LOG.error("Device '{}' not found.".format(self.options.device))
+            DEFAULTLOG.error("Device '{}' not found.".format(self.options.device))
             return
 
         from Acquisition import aq_chain
@@ -496,7 +509,7 @@ class ZPLCommand(ZenScriptBase):
         self.connect()
         zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
         if zenpack is None:
-            LOG.error("ZenPack '{}' not found.".format(zenpack_name))
+            DEFAULTLOG.error("ZenPack '{}' not found.".format(zenpack_name))
             return
 
         # Find explicitly associated templates, and templates implicitly

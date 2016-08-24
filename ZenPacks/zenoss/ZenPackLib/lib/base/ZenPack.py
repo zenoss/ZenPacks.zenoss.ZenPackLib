@@ -14,39 +14,30 @@ import logging
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
-from ..functions import LOG
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 
 
 class ZenPack(ZenPackBase):
     """
     ZenPack loader that handles custom installation and removal tasks.
+
+    NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in
+    via zenpacklib when this class is instantiated.
     """
-    LOG = LOG
 
     def __init__(self, *args, **kwargs):
         super(ZenPack, self).__init__(*args, **kwargs)
-        self.LOG = kwargs.get('log', LOG)
-        # Emable logging to stderr if the user sets the ZPL_LOG_ENABLE environment
-        # variable to this zenpack's name.   (defaults to 'DEBUG', but
-        # user may choose a different level with ZPL_LOG_LEVEL.
-        if self.id in os.environ.get('ZPL_LOG_ENABLE', ''):
-            levelName = os.environ.get('ZPL_LOG_LEVEL', 'DEBUG').upper()
-            logLevel = getattr(logging, levelName)
+        self.enable_log_stderr()
 
-            if logLevel:
-                # Reconfigure the logger to ensure it goes to stderr for the
-                # selected level or above.
-                self.LOG.propagate = False
-                self.LOG.setLevel(logLevel)
-                h = logging.StreamHandler(sys.stderr)
-                h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
-                self.LOG.addHandler(h)
-            else:
-                self.LOG.error("Unrecognized ZPL_LOG_LEVEL '{}'".format(os.environ.get('ZPL_LOG_LEVEL')))
-
-    # NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in
-    # via zenpacklib when this class is instantiated.
+    def enable_log_stderr(self):
+        """
+            Enable logging to stderr 
+            using this ZenPack's log settings
+        """
+        self.LOG.propagate = False
+        h = logging.StreamHandler(sys.stderr)
+        h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
+        self.LOG.addHandler(h)
 
     def _buildDeviceRelations(self):
         for d in self.dmd.Devices.getSubDevicesGen():
@@ -139,7 +130,7 @@ class ZenPack(ZenPackBase):
                         newname = "{}-upgrade-{}".format(orig_mtname, int(time.time()))
                         self.LOG.error(
                             "Monitoring template {}/{} has been modified "
-                            "since the %s ZenPack was installed.  These local "
+                            "since the {} ZenPack was installed.  These local "
                             "changes will be lost as this ZenPack is upgraded "
                             "or reinstalled.   Existing template will be "
                             "renamed to '{}'.  Please review and reconcile "

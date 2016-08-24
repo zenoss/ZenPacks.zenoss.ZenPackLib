@@ -23,13 +23,13 @@ def new_log(id):
         logging.basicConfig()
     return log
 
-LOG = new_log('zpl.zenpacklib')
+DEFAULTLOG = new_log('zpl.zenpacklib')
 
 
 class ZenPackLibLog(object):
     ''''''
     zenpacks = {}
-    defaultlog = LOG
+    defaultlog = DEFAULTLOG
 
     def get_log(self, id):
         if id in self.zenpacks.keys():

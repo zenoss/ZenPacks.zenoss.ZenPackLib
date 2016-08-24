@@ -11,7 +11,7 @@ import logging
 from collections import OrderedDict
 import yaml
 import time
-from .ZenPackLibLog import LOG
+from .ZenPackLibLog import DEFAULTLOG
 from .Dumper import Dumper
 from .Loader import Loader
 import inspect
@@ -52,7 +52,7 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
         try:
             return load_yaml(get_calling_dir(), verbose, level)
         except Exception as e:
-            LOG.error("YAML load error %s" % e)
+            DEFAULTLOG.error("YAML load error %s" % e)
     # loading from multiple files
     if isinstance(yaml_doc, list):
         # build python dict of merged YAML data
@@ -69,7 +69,7 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
                 # if we already have a ZP id, but this yaml
                 # has a different one, then there's a problem.
                 if name and name != zp_id:
-                    LOG.error('Skipping {} because multiple ZenPack names found: {} vs {}'.format(f, zp_id, name))
+                    DEFAULTLOG.error('Skipping {} because multiple ZenPack names found: {} vs {}'.format(f, zp_id, name))
                     continue
             # update the python dict
             cfg_data.update(f_cfg)
@@ -95,18 +95,18 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
 
     try:
         if os.path.isfile(yaml_doc):
-            LOG.info("Loading YAML from {}".format(yaml_doc))
+            DEFAULTLOG.info("Loading YAML from {}".format(yaml_doc))
         CFG = load_yaml_single(yaml_doc)
     except Exception as e:
-        LOG.error(e)
+        DEFAULTLOG.error(e)
 
     if CFG:
         CFG.create()
     else:
-        LOG.error("Unable to load {}".format(yaml_doc))
+        DEFAULTLOG.error("Unable to load {}".format(yaml_doc))
 
     end = time.time() - start
-    LOG.info("Loaded {} in {:0.2f}s".format(CFG.name, end))
+    DEFAULTLOG.info("Loaded {} in {:0.2f}s".format(CFG.name, end))
 
     return CFG
 
@@ -141,7 +141,7 @@ def optimize_yaml(yaml_doc):
     # new load
     valid = compare_zenpackspecs(orig_yaml, optimized_yaml)
     if not valid:
-        LOG.warn('OPTIMIZATION FAILED VERIFICATION!  Please review optimized YAML prior to use ')
+        DEFAULTLOG.warn('OPTIMIZATION FAILED VERIFICATION!  Please review optimized YAML prior to use ')
     return optimized_yaml
 
 
@@ -157,7 +157,7 @@ def compare_zenpackspecs(orig_yaml, new_yaml):
     new.create()
     # SpecParams should be equal
     if orig != new:
-        LOG.warn('ZenPackSpec mismatch between original and new')
+        DEFAULTLOG.warn('ZenPackSpec mismatch between original and new')
         dict_compare(orig.__dict__, new.__dict__)
     # now dump new specs back out to yaml
     orig_dump = yaml.dump(orig.specparams, Dumper=Dumper)
@@ -167,7 +167,7 @@ def compare_zenpackspecs(orig_yaml, new_yaml):
     new_raw_yaml = load_yaml_single(new_dump, useLoader=False)
     # these should also be equivalent
     if orig_raw_yaml != new_raw_yaml:
-        LOG.warn('YAML loaded Python dictionary mismatch between original and new')
+        DEFAULTLOG.warn('YAML loaded Python dictionary mismatch between original and new')
         dict_compare(orig_raw_yaml, new_raw_yaml)
         return False
     return True
@@ -180,9 +180,9 @@ def dict_compare(d1, d2):
     removed = d2_keys - d1_keys
     modified = {o : (d1[o], d2[o]) for o in intersect_keys if d1[o] != d2[o]}
     same = set(o for o in intersect_keys if d1[o] == d2[o])
-    LOG.warn('ADDED: {}'.format(added))
-    LOG.warn('REMOVED: {}'.format(removed))
-    LOG.warn('MODIFIED: {}'.format(modified))
+    DEFAULTLOG.warn('ADDED: {}'.format(added))
+    DEFAULTLOG.warn('REMOVED: {}'.format(removed))
+    DEFAULTLOG.warn('MODIFIED: {}'.format(modified))
 
 
 def get_optimized_yaml(data):

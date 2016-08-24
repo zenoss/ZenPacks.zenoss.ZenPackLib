@@ -8,7 +8,7 @@
 ##############################################################################
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
 from ..functions import catalog_search
-from ..functions import LOG
+from ..helpers.ZenPackLibLog import DEFAULTLOG
 
 
 class CatalogBase(object):
@@ -16,7 +16,7 @@ class CatalogBase(object):
 
     # By Default there is no default catalog created.
     _catalogs = {}
-    LOG=LOG
+    LOG=DEFAULTLOG
 
     def search(self, name, *args, **kwargs):
         """
@@ -128,20 +128,20 @@ class CatalogBase(object):
     @classmethod
     def _get_catalog_spec(cls, name):
         if not hasattr(cls, '_catalogs'):
-            LOG.error("{} has no catalogs defined".format(cls))
+            cls.LOG.error("{} has no catalogs defined".format(cls))
             return
 
         spec = cls._catalogs.get(name)
         if not spec:
-            LOG.error("{} catalog definition is missing".format(name))
+            cls.LOG.error("{} catalog definition is missing".format(name))
             return
 
         if not isinstance(spec, dict):
-            LOG.error("{} catalog definition is not a dict".format(name))
+            cls.LOG.error("{} catalog definition is not a dict".format(name))
             return
 
         if not spec.get('indexes'):
-            LOG.error("{} catalog definition has no indexes".format(name))
+            cls.LOG.error("{} catalog definition has no indexes".format(name))
             return
 
         return spec
@@ -212,7 +212,7 @@ class CatalogBase(object):
         for propname, propdata in spec['indexes'].items():
             index_type = propdata.get('type')
             if not index_type:
-                LOG.error("{} index has no type".format(propname))
+                cls.LOG.error("{} index has no type".format(propname))
                 return
 
             index_factory = {
@@ -221,7 +221,7 @@ class CatalogBase(object):
                 }.get(index_type.lower())
 
             if not index_factory:
-                LOG.error("{} is not a valid index type".format(index_type))
+                cls.LOG.error("{} is not a valid index type".format(index_type))
                 return
 
             try:
@@ -242,7 +242,7 @@ class CatalogBase(object):
                     try:
                         new_obj = result.getObject()
                     except Exception as e:
-                        LOG.error("Trying to index non-existent object {}".format(e))
+                        cls.LOG.error("Trying to index non-existent object {}".format(e))
                         continue
                     else:
                         if hasattr(new_obj, 'index_object'):

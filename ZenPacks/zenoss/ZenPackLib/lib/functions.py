@@ -19,7 +19,7 @@ from Products.ZenModel.Device import Device as BaseDevice
 from Products.Zuul.infos.device import DeviceInfo as BaseDeviceInfo
 from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
 from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
-from .helpers.ZenPackLibLog import LOG
+from .helpers.ZenPackLibLog import DEFAULTLOG
 
 
 # Private Functions ######################################################### 
@@ -112,7 +112,7 @@ def catalog_search(scope, name, *args, **kwargs):
 
     catalog = getattr(scope, '{}Search'.format(name), None)
     if not catalog:
-        LOG.debug("Catalog {}Search not found at {}.  It should be created when the first included component is indexed".format(name, scope))
+        DEFAULTLOG.debug("Catalog {}Search not found at {}.  It should be created when the first included component is indexed".format(name, scope))
         return []
 
     if args:

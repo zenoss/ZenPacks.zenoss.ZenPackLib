@@ -20,7 +20,7 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
         self.name = name
 
         self.zProperties = self.specs_from_param(
-            ZPropertySpecParams, 'zProperties', zProperties, leave_defaults=True, log=self.LOG)
+            ZPropertySpecParams, 'zProperties', zProperties, leave_defaults=True, zplog=self.LOG)
 
         self.class_relationships = []
         if class_relationships:
@@ -28,13 +28,13 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
                 raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
 
             for rel in class_relationships:
-                rel['log'] = self.LOG
+                rel['zplog'] = self.LOG
                 self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
 
         self.classes = self.specs_from_param(
-            ClassSpecParams, 'classes', classes, leave_defaults=True, log=self.LOG)
+            ClassSpecParams, 'classes', classes, leave_defaults=True, zplog=self.LOG)
 
         self.device_classes = self.specs_from_param(
-            DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True, log=self.LOG)
+            DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True, zplog=self.LOG)
 
 

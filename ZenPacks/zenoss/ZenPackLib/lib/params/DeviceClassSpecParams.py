@@ -17,4 +17,4 @@ class DeviceClassSpecParams(SpecParams, DeviceClassSpec):
         self.path = path
         self.zProperties = zProperties
         self.templates = self.specs_from_param(
-            RRDTemplateSpecParams, 'templates', templates, log=self.LOG)
+            RRDTemplateSpecParams, 'templates', templates, zplog=self.LOG)

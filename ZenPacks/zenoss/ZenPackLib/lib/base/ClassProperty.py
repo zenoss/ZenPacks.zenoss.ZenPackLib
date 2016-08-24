@@ -6,7 +6,8 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-from ..functions import LOG
+from ..helpers.ZenPackLibLog import DEFAULTLOG
+
 
 class ClassProperty(property):
 
@@ -16,7 +17,7 @@ class ClassProperty(property):
     @ClassProperty decorator does, but only for getters.
 
     """
-    LOG=LOG
+    LOG=DEFAULTLOG
 
     def __get__(self, cls, owner):
         return self.fget.__get__(None, owner)()

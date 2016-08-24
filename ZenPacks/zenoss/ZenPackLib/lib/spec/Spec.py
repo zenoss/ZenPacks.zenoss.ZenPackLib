@@ -18,7 +18,8 @@ from Products.ZenRelations import ToOneRelationship, ToManyRelationship
 from zope.interface.interface import InterfaceClass
 from Products.Zuul.interfaces import IInfo
 
-from ..functions import fix_kwargs, create_module, LOG
+from ..functions import fix_kwargs, create_module
+from ..helpers.ZenPackLibLog import DEFAULTLOG
 
 
 def MethodInfoProperty(method_name, entity=False):
@@ -77,7 +78,7 @@ def RelationshipGetter(relationship_name):
             elif isinstance(relationship, ToOneRelationship):
                 return self.getIdForRelationship(relationship)
         except Exception:
-            LOG.error(
+            DEFAULTLOG.error(
                 "error getting {} ids for {}".format(
                 relationship_name, self.getPrimaryUrlPath()))
             raise
@@ -94,7 +95,7 @@ def RelationshipSetter(relationship_name):
             elif isinstance(relationship, ToOneRelationship):
                 self.setIdForRelationship(relationship, id_or_ids)
         except Exception:
-            LOG.error(
+            DEFAULTLOG.error(
                 "error setting {} ids for {}".format(
                 relationship_name, self.getPrimaryUrlPath()))
             raise
@@ -135,10 +136,12 @@ class Spec(object):
     source_location = None
     speclog = None
 
-    LOG = LOG
+    LOG = DEFAULTLOG
 
-    def __init__(self, _source_location=None, log=LOG):
-        self.LOG = log
+    def __init__(self, _source_location=None, zplog=None):
+        if zplog:
+            self.LOG = zplog
+
         class LogAdapter(logging.LoggerAdapter):
             def process(self, msg, kwargs):
                 return '{} {}'.format(self.extra['context'], msg), kwargs
@@ -201,7 +204,7 @@ class Spec(object):
                         if i not in dictionary_params.keys():
                             dictionary_params[i] = j
 
-    def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False, log=LOG):
+    def specs_from_param(self, spec_type, param_name, param_dict, apply_defaults=True, leave_defaults=False, zplog=DEFAULTLOG):
         """Return a normalized dictionary of spec_type instances."""
         if param_dict is None:
             param_dict = OrderedDict()
@@ -221,7 +224,7 @@ class Spec(object):
         for k in keys:
             v = param_dict.get(k)
             args = fix_kwargs(v)
-            args['log'] = log
+            args['zplog'] = zplog
             specs[k] = spec_type(self, k, **(args))
 
         return specs
@@ -304,7 +307,7 @@ class Spec(object):
                 continue
 
             if self_val_or_default != other_val_or_default:
-                LOG.debug("Comparing {} to {}, parameter {} does not match ({} != {})".format(
+                self.LOG.debug("Comparing {} to {}, parameter {} does not match ({} != {})".format(
                           self, other, p, self_val_or_default, other_val_or_default))
                 return False
 

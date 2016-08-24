@@ -8,13 +8,10 @@
 ##############################################################################
 from .Spec import Spec
 from .RRDTemplateSpec import RRDTemplateSpec
-from ..functions import LOG
 
 
 class DeviceClassSpec(Spec):
     """Initialize a DeviceClass via Python at install time."""
-
-    LOG = LOG
 
     def __init__(
             self,
@@ -25,7 +22,7 @@ class DeviceClassSpec(Spec):
             remove=False,
             templates=None,
             _source_location=None,
-            log=LOG):
+            zplog=None):
         """
             Create a DeviceClass Specification
 
@@ -39,7 +36,8 @@ class DeviceClassSpec(Spec):
             :type templates: SpecsParameter(RRDTemplateSpec)
         """
         super(DeviceClassSpec, self).__init__(_source_location=_source_location)
-        self.LOG=log
+        if zplog:
+            self.LOG = zplog
         self.zenpack_spec = zenpack_spec
         self.path = path.lstrip('/')
         self.create = bool(create)
@@ -51,4 +49,4 @@ class DeviceClassSpec(Spec):
             self.zProperties = zProperties
 
         self.templates = self.specs_from_param(
-            RRDTemplateSpec, 'templates', templates, log=self.LOG)
+            RRDTemplateSpec, 'templates', templates, zplog=self.LOG)

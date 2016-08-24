@@ -10,7 +10,6 @@ from Products.ZenModel.GraphPoint import GraphPoint
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
 from .Spec import Spec
-from ..functions import LOG
 
 
 class GraphPointSpec(Spec):
@@ -33,7 +32,7 @@ class GraphPointSpec(Spec):
             color=None,
             includeThresholds=False,
             _source_location=None,
-            log=LOG
+            zplog=None
             ):
         """
         Create a GraphPoint Specification
@@ -65,7 +64,8 @@ class GraphPointSpec(Spec):
 
         """
         super(GraphPointSpec, self).__init__(_source_location=_source_location)
-        self.LOG=log
+        if zplog:
+            self.LOG = zplog
 
         self.template_spec = template_spec
         self.name = name
