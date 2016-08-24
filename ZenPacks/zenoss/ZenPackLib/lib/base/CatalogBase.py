@@ -7,7 +7,7 @@
 #
 ##############################################################################
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
-from ..functions import catalog_search
+from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
 from ..helpers.ZenPackLibLog import DEFAULTLOG
 
 
@@ -23,7 +23,25 @@ class CatalogBase(object):
         Return iterable of matching brains in named catalog.
         'name' is the catalog name (typically the name of a class)
         """
-        return catalog_search(self, name, *args, **kwargs)
+        return self.catalog_search(self, name, *args, **kwargs)
+
+    def catalog_search(self, scope, name, *args, **kwargs):
+        """Return iterable of matching brains in named catalog."""
+        catalog = getattr(scope, '{}Search'.format(name), None)
+        if not catalog:
+            LOG.debug("Catalog {}Search not found at {}.  It should be created when the first included component is indexed".format(name, scope))
+            return []
+        if args:
+            if isinstance(args[0], BaseQuery):
+                return catalog.evalAdvancedQuery(args[0])
+            elif isinstance(args[0], dict):
+                return catalog(args[0])
+            else:
+                raise TypeError(
+                    "search() argument must be a BaseQuery or a dict, "
+                    "not {0!r}"
+                    .format(type(args[0]).__name__))
+        return catalog(**kwargs)
 
     @classmethod
     def class_search(cls, dmd, name, *args, **kwargs):
@@ -33,7 +51,7 @@ class CatalogBase(object):
         """
 
         name = cls.__module__.replace('.', '_')
-        return catalog_search(dmd.Devices, name, *args, **kwargs)
+        return cls.catalog_search(dmd.Devices, name, *args, **kwargs)
 
     @classmethod
     def get_catalog_name(cls, name, scope):

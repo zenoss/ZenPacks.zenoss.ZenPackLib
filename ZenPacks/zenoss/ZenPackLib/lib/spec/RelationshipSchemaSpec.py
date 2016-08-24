@@ -8,7 +8,6 @@
 ##############################################################################
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 from Products.ZenRelations.Exceptions import ZenSchemaError
-from ..functions import relname_from_classname
 from .Spec import Spec
 
 
@@ -121,11 +120,11 @@ class RelationshipSchemaSpec(Spec):
 
     @property
     def default_left_relname(self):
-        return relname_from_classname(self.right_class, plural=self.right_cardinality != '1')
+        return self.relname_from_classname(self.right_class, plural=self.right_cardinality != '1')
 
     @property
     def default_right_relname(self):
-        return relname_from_classname(self.left_class, plural=self.left_cardinality != '1')
+        return self.relname_from_classname(self.left_class, plural=self.left_cardinality != '1')
 
     @property
     def cardinality(self):
