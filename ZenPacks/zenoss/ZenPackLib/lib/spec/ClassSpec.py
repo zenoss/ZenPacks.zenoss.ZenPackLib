@@ -30,7 +30,7 @@ from ..utils import impact_installed, dynamicview_installed, has_metricfacade, F
 
 from ..gsm import get_gsm
 from ..functions import pluralize, get_symbol_name, relname_from_classname, \
-    get_zenpack_path, ordered_values, LOG
+    get_zenpack_path, ordered_values
 
 from ..base.HardwareComponent import HardwareComponent
 from ..base.Component import Component
@@ -102,8 +102,6 @@ class ClassSpec(Spec):
     to double adapters doing the same thing.
     """
 
-    LOG = LOG
-
     def __init__(
             self,
             zenpack,
@@ -133,7 +131,7 @@ class ClassSpec(Spec):
             dynamicview_relations=None,
             extra_paths=None,
             _source_location=None,
-            log=LOG
+            zplog=None
             ):
         """
             Create a Class Specification
@@ -199,7 +197,8 @@ class ClassSpec(Spec):
 
         """
         super(ClassSpec, self).__init__(_source_location=_source_location)
-        self.LOG = log
+        if zplog:
+            self.LOG = zplog
         self.zenpack = zenpack
         self.name = name
 
@@ -239,11 +238,11 @@ class ClassSpec(Spec):
 
         # Properties.
         self.properties = self.specs_from_param(
-            ClassPropertySpec, 'properties', properties, log=self.LOG)
+            ClassPropertySpec, 'properties', properties, zplog=self.LOG)
 
         # Relationships.
         self.relationships = self.specs_from_param(
-            ClassRelationshipSpec, 'relationships', relationships, log=self.LOG)
+            ClassRelationshipSpec, 'relationships', relationships, zplog=self.LOG)
 
         # Impact.
         self.impacts = impacts

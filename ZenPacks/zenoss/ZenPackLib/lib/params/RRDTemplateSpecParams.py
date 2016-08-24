@@ -20,13 +20,13 @@ class RRDTemplateSpecParams(SpecParams, RRDTemplateSpec):
         self.name = name
 
         self.thresholds = self.specs_from_param(
-            RRDThresholdSpecParams, 'thresholds', thresholds, log=self.LOG)
+            RRDThresholdSpecParams, 'thresholds', thresholds, zplog=self.LOG)
 
         self.datasources = self.specs_from_param(
-            RRDDatasourceSpecParams, 'datasources', datasources, log=self.LOG)
+            RRDDatasourceSpecParams, 'datasources', datasources, zplog=self.LOG)
 
         self.graphs = self.specs_from_param(
-            GraphDefinitionSpecParams, 'graphs', graphs, log=self.LOG)
+            GraphDefinitionSpecParams, 'graphs', graphs, zplog=self.LOG)
 
     @classmethod
     def fromObject(cls, template):

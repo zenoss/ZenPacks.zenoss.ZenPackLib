@@ -14,7 +14,7 @@ import importlib
 import keyword
 from collections import OrderedDict
 from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
-from .ZenPackLibLog import ZPLOG, LOG
+from .ZenPackLibLog import ZPLOG, DEFAULTLOG
 from .Dumper import get_zproperty_type
 
 
@@ -26,7 +26,7 @@ class Loader(yaml.Loader):
         be used for this specific zenpacklib.
     """
 
-    LOG=LOG
+    LOG=DEFAULTLOG
     QUIET=False
     LEVEL=0
 
@@ -270,7 +270,7 @@ class Loader(yaml.Loader):
 
         from ..spec.ZenPackSpec import ZenPackSpec
         params = self.construct_spec(ZenPackSpec, node)
-        params['log'] = self.LOG
+        params['zplog'] = self.LOG
         name = params.pop("name")
 
         fatal = not getattr(self, 'warnings', False)

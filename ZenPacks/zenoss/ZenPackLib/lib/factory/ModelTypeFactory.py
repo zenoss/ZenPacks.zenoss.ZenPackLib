@@ -8,7 +8,7 @@
 ##############################################################################
 from collections import OrderedDict
 from ..base.ClassProperty import ClassProperty
-from ..functions import LOG
+from ..helpers.ZenPackLibLog import DEFAULTLOG
 
 
 def ModelTypeFactory(name, bases):
@@ -61,7 +61,7 @@ def ModelTypeFactory(name, bases):
         '_relations': _relations,
         'index_object': index_object,
         'unindex_object': unindex_object,
-        'LOG': LOG
+        'LOG': DEFAULTLOG
         }
 
     return type(name, bases, attributes)

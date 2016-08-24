@@ -7,17 +7,17 @@
 #
 ##############################################################################
 from ..spec.Spec import Spec
-from ..functions import LOG
+from ..helpers.ZenPackLibLog import DEFAULTLOG
 
 
 class SpecParams(object):
     """SpecParams"""
 
-    LOG = LOG
+    LOG = DEFAULTLOG
 
     def __init__(self, **kwargs):
         # Initialize with default values
-        self.LOG = kwargs.get('log', LOG)
+        self.LOG = kwargs.get('zplog', DEFAULTLOG)
 
         params = self.__class__.init_params()
         for param in params:

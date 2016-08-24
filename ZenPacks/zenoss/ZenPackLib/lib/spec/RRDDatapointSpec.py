@@ -8,13 +8,10 @@
 ##############################################################################
 import re
 from .Spec import Spec
-from ..functions import LOG
 
 
 class RRDDatapointSpec(Spec):
     """RRDDatapointSpec"""
-
-    LOG = LOG
 
     def __init__(
             self,
@@ -30,7 +27,7 @@ class RRDDatapointSpec(Spec):
             shorthand=None,
             extra_params=None,
             _source_location=None,
-            log=LOG
+            zplog=None
             ):
         """
         Create an RRDDatapoint Specification
@@ -54,7 +51,8 @@ class RRDDatapointSpec(Spec):
 
         """
         super(RRDDatapointSpec, self).__init__(_source_location=_source_location)
-        self.LOG=log
+        if zplog:
+            self.LOG = zplog
 
         self.datasource_spec = datasource_spec
         self.name = name

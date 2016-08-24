@@ -21,7 +21,7 @@ from zope.browser.interfaces import IBrowserView
 from Products.ZenUI3.browser.interfaces import IMainSnippetManager
 from Products.ZenUI3.utils.javascript import JavaScriptSnippet
 from ..utils import dynamicview_installed
-from ..functions import get_symbol_name, get_zenpack_path, LOG
+from ..functions import get_symbol_name, get_zenpack_path
 from ..resources.templates import JS_LINK_FROM_GRID
 from ..gsm import get_gsm
 from ..base.Device import Device
@@ -86,8 +86,6 @@ class ZenPackSpec(Spec):
     #####
     """
 
-    LOG = LOG
-
     def __init__(
             self,
             name,
@@ -96,7 +94,7 @@ class ZenPackSpec(Spec):
             class_relationships=None,
             device_classes=None,
             _source_location=None,
-            log=LOG):
+            zplog=None):
         """
             Create a ZenPack Specification
 
@@ -113,8 +111,8 @@ class ZenPackSpec(Spec):
             :type classes: SpecsParameter(ClassSpec)
         """
         super(ZenPackSpec, self).__init__(_source_location=_source_location)
-        self.LOG = log
-
+        if zplog:
+            self.LOG = zplog
         # The parameters from which this zenpackspec was originally
         # instantiated.
         from ..params.ZenPackSpecParams import ZenPackSpecParams
@@ -124,7 +122,7 @@ class ZenPackSpec(Spec):
             classes=classes,
             class_relationships=class_relationships,
             device_classes=device_classes, 
-            log=self.LOG)
+            zplog=self.LOG)
         self.name = name
         self.LOG.debug("------ {} ------".format(self.name))
         self.id_prefix = name.replace(".", "_")
@@ -134,19 +132,19 @@ class ZenPackSpec(Spec):
 
         # zProperties
         self.zProperties = self.specs_from_param(
-            ZPropertySpec, 'zProperties', zProperties, log=self.LOG)
+            ZPropertySpec, 'zProperties', zProperties, zplog=self.LOG)
 
         # Class Relationship Schema
-        self.class_relationships = self.specparams.class_relationships
+        self.class_relationships = []
         if class_relationships:
             if not isinstance(class_relationships, list):
                 raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
             for rel in class_relationships:
-                rel['log'] = self.LOG
+                rel['zplog'] = self.LOG
                 self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
 
         # Classes
-        self.classes = self.specs_from_param(ClassSpec, 'classes', classes, log=self.LOG)
+        self.classes = self.specs_from_param(ClassSpec, 'classes', classes, zplog=self.LOG)
         
         self.imported_classes = {}
 
@@ -261,7 +259,7 @@ class ZenPackSpec(Spec):
 
         # Device Classes
         self.device_classes = self.specs_from_param(
-            DeviceClassSpec, 'device_classes', device_classes, log=self.LOG)
+            DeviceClassSpec, 'device_classes', device_classes, zplog=self.LOG)
 
     @property
     def ordered_classes(self):
@@ -564,7 +562,6 @@ class ZenPackSpec(Spec):
         attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
         attributes['NEW_RELATIONS'] = self.NEW_RELATIONS
         attributes['GLOBAL_CATALOGS'] = []
-        attributes['log'] = self.LOG
         global_catalog_classes = {}
         for (class_, class_spec) in self.classes.items():
             for (p, property_spec) in class_spec.properties.items():
@@ -575,11 +572,13 @@ class ZenPackSpec(Spec):
             catalog = ".".join([self.name, class_]).replace(".", "_")
             attributes['GLOBAL_CATALOGS'].append('{}Search'.format(catalog))
 
-        return self.create_class(get_symbol_name(self.name),
+        cls = self.create_class(get_symbol_name(self.name),
                             get_symbol_name(self.name, 'schema'),
                             'ZenPack',
                             (ZenPack,),
                             attributes)
+        cls.LOG = self.LOG
+        return cls
 
     def test_setup(self):
         """Execute from a test suite's afterSetUp method.

@@ -12,7 +12,7 @@ from zope.interface import implements, providedBy
 from Products.Zuul.form.interfaces import IFormBuilder
 from Products.Zuul.interfaces import IInfo
 from Products.Zuul.infos.component import ComponentFormBuilder as BaseComponentFormBuilder
-from ..functions import LOG
+from ..helpers.ZenPackLibLog import DEFAULTLOG
 
 
 class ComponentFormBuilder(BaseComponentFormBuilder):
@@ -25,7 +25,7 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
 
     implements(IFormBuilder)
     adapts(IInfo)
-    LOG = LOG
+    LOG = DEFAULTLOG
 
     def render(self, **kwargs):
         rendered = super(ComponentFormBuilder, self).render(kwargs)

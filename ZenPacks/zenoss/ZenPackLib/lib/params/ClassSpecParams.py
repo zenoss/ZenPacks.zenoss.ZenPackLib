@@ -27,8 +27,8 @@ class ClassSpecParams(SpecParams, ClassSpec):
             self.monitoring_templates = [monitoring_templates]
 
         self.properties = self.specs_from_param(
-            ClassPropertySpecParams, 'properties', properties, leave_defaults=True, log=self.LOG)
+            ClassPropertySpecParams, 'properties', properties, leave_defaults=True, zplog=self.LOG)
 
         self.relationships = self.specs_from_param(
-            ClassRelationshipSpecParams, 'relationships', relationships, leave_defaults=True, log=self.LOG)
+            ClassRelationshipSpecParams, 'relationships', relationships, leave_defaults=True, zplog=self.LOG)
 

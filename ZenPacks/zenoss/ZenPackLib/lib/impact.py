@@ -9,7 +9,7 @@
 from zope.interface import implements
 from zope.component import adapts
 from Products.ZenUtils.guid.interfaces import IGlobalIdentifier
-from .functions import LOG
+from .helpers.ZenPackLibLog import DEFAULTLOG
 from .base.ComponentBase import ComponentBase
 from .base.DeviceBase import DeviceBase
 from ZenPacks.zenoss.Impact.impactd.relations import ImpactEdge
@@ -74,7 +74,7 @@ class ImpactRelationshipDataProvider(object):
         """Generate object GUIDs returned by adapted.methodname()."""
         method = getattr(self.adapted, methodname, None)
         if not method or not callable(method):
-            LOG.warning(
+            DEFAULTLOG.warning(
                 "no %r relationship or method for %r",
                 methodname,
                 self.adapted.meta_type)
