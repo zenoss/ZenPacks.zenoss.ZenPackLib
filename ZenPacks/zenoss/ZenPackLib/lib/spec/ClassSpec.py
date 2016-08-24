@@ -862,6 +862,23 @@ class ClassSpec(Spec):
         return faceting_specs
 
     @property
+    def faceting_spec_relations(self):
+        """Return iterable of faceting component ClassSpec and RelationshipSpec instances."""
+        faceting_specs = []
+        for relname, relschema in self.model_class._relations:
+            if relname in FACET_BLACKLIST:
+                continue
+            if not issubclass(relschema.remoteType, ToMany):
+                continue
+            remote_classname = relschema.remoteClass.split('.')[-1]
+            remote_spec = self.zenpack.classes.get(remote_classname)
+            if remote_spec:
+                for class_spec in [remote_spec] + remote_spec.subclass_specs():
+                    if class_spec and not class_spec.is_device:
+                        faceting_specs.append((class_spec, class_spec.relationships.get(relname)))
+        return faceting_specs
+
+    @property
     def filterable_by(self):
         """Return meta_types by which this class can be filtered."""
         if not self.filter_display:
@@ -1042,33 +1059,59 @@ class ClassSpec(Spec):
     @property
     def subcomponent_nav_js_snippet(self):
         """Return subcomponent navigation JavaScript snippet."""
-        cases = []
-        for meta_type in self.filterable_by:
-            cases.append("case '{}': return true;".format(meta_type))
+        
+        def get_js_snippet(id, label, classes):
+            """return basic JS nav snippet"""
+            cases = []
+            for c in classes:
+                cases.append("case '{}': return true;".format(c))
+            if not cases:
+                return ''
+            return (
+                "Zenoss.nav.appendTo('Component', [{{\n"
+                "    id: 'component_{id}',\n"
+                "    text: _t('{label}'),\n"
+                "    xtype: '{meta_type}Panel',\n"
+                "    subComponentGridPanel: true,\n"
+                "    filterNav: function(navpanel) {{\n"
+                "        switch (navpanel.refOwner.componentType) {{\n"
+                "            {cases}\n"
+                "            default: return false;\n"
+                "        }}\n"
+                "    }},\n"
+                "    setContext: function(uid) {{\n"
+                "        ZC.{meta_type}Panel.superclass.setContext.apply(this, [uid]);\n"
+                "    }}\n"
+                "}}]);\n"
+                .format(meta_type=self.meta_type, id=id, label=label, cases=' '.join(cases)))
 
-        if not cases:
-            return ''
+        sections = {self.plural_short_label: []}
 
-        return (
-            "Zenoss.nav.appendTo('Component', [{{\n"
-            "    id: 'component_{meta_type}',\n"
-            "    text: _t('{plural_label}'),\n"
-            "    xtype: '{meta_type}Panel',\n"
-            "    subComponentGridPanel: true,\n"
-            "    filterNav: function(navpanel) {{\n"
-            "        switch (navpanel.refOwner.componentType) {{\n"
-            "            {cases}\n"
-            "            default: return false;\n"
-            "        }}\n"
-            "    }},\n"
-            "    setContext: function(uid) {{\n"
-            "        ZC.{meta_type}Panel.superclass.setContext.apply(this, [uid]);\n"
-            "    }}\n"
-            "}}]);\n"
-            .format(
-                meta_type=self.meta_type,
-                plural_label=self.plural_short_label,
-                cases=' '.join(cases)))
+        related = self.containing_spec_relations + self.faceting_spec_relations
+        hidden = [x.meta_type for x in self.filter_hide_from_class_specs]
+        filterable = self.filterable_by
+        for spec, relation in related:
+            if spec.meta_type not in filterable:
+                continue
+            # default if no label specified
+            if not relation:
+                sections[self.plural_short_label].append(spec.meta_type)
+            else:
+                # also default if not labeled
+                if not relation.label:
+                    sections[self.plural_short_label].append(spec.meta_type)
+                else:
+                    # new snippet if relation labeled
+                    if relation.label not in sections:
+                        sections[relation.label] = []
+                    sections[relation.label].append(spec.meta_type)
+
+        snippets = []
+        for label, metatypes in sections.items():        
+            id = '_'.join(label.lower().split(' '))
+            snippets.append(get_js_snippet(id, label, metatypes))
+
+        return ''.join(snippets)
 
     @property
     def device_js_snippet(self):
