@@ -14,6 +14,7 @@ import logging
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
+from ..helpers.ZenPackLibLog import DEFAULTLOG
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 
 
@@ -24,6 +25,7 @@ class ZenPack(ZenPackBase):
     NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in
     via zenpacklib when this class is instantiated.
     """
+    LOG = DEFAULTLOG
 
     def __init__(self, *args, **kwargs):
         super(ZenPack, self).__init__(*args, **kwargs)
