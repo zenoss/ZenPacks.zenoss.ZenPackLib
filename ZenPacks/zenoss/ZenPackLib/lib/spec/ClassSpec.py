@@ -331,17 +331,23 @@ class ClassSpec(Spec):
 
     def create(self):
         """Implement specification."""
+        self.create_schema_classes()
+        self.create_zenpack_classes()
+        self.create_registered()
+
+    def create_schema_classes(self):
         self.create_model_schema_class()
         self.create_iinfo_schema_class()
         self.create_info_schema_class()
 
+    def create_zenpack_classes(self):
         self.create_model_class()
         self.create_iinfo_class()
         self.create_info_class()
-
         if self.is_component or self.is_hardware_component:
             self.create_formbuilder_class()
 
+    def create_registered(self):
         self.register_dynamicview_adapters()
         self.register_impact_adapters()
 
