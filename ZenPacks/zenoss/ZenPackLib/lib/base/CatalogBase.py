@@ -7,7 +7,7 @@
 #
 ##############################################################################
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
-from ..functions import catalog_search
+from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
 from ..helpers.ZenPackLibLog import DEFAULTLOG
 
 
@@ -51,7 +51,7 @@ class CatalogBase(object):
         """
 
         name = cls.__module__.replace('.', '_')
-        return catalog_search(dmd.Devices, name, *args, **kwargs)
+        return cls.catalog_search(dmd.Devices, name, *args, **kwargs)
 
     @classmethod
     def get_catalog_name(cls, name, scope):

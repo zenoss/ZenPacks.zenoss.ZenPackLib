@@ -24,12 +24,7 @@ from Acquisition import aq_base
 from Products.ZenModel.ZenPack import ZenPack
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
-<<<<<<< Upstream, based on origin/feature/zenpackify
-from ..functions import create_module
-=======
-from ..functions import create_module, LOG
 from ..spec.Spec import Spec
->>>>>>> f94cafe prevent error when loading class overrides
 from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams

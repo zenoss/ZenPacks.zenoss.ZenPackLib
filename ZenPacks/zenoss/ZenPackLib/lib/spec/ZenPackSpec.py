@@ -21,11 +21,6 @@ from zope.browser.interfaces import IBrowserView
 from Products.ZenUI3.browser.interfaces import IMainSnippetManager
 from Products.ZenUI3.utils.javascript import JavaScriptSnippet
 from ..utils import dynamicview_installed
-<<<<<<< Upstream, based on origin/feature/zenpackify
-from ..functions import get_symbol_name, get_zenpack_path
-=======
-from ..functions import LOG
->>>>>>> f94cafe prevent error when loading class overrides
 from ..resources.templates import JS_LINK_FROM_GRID
 from ..gsm import get_gsm
 from ..base.Device import Device
@@ -139,11 +134,7 @@ class ZenPackSpec(Spec):
             ZPropertySpec, 'zProperties', zProperties, zplog=self.LOG)
 
         # Class Relationship Schema
-<<<<<<< Upstream, based on origin/feature/zenpackify
         self.class_relationships = []
-=======
-        self.class_relationships =[]
->>>>>>> f94cafe prevent error when loading class overrides
         if class_relationships:
             if not isinstance(class_relationships, list):
                 raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
@@ -586,13 +577,8 @@ class ZenPackSpec(Spec):
             catalog = ".".join([self.name, class_]).replace(".", "_")
             attributes['GLOBAL_CATALOGS'].append('{}Search'.format(catalog))
 
-<<<<<<< Upstream, based on origin/feature/zenpackify
-        cls = self.create_class(get_symbol_name(self.name),
-                            get_symbol_name(self.name, 'schema'),
-=======
-        return self.create_class(self.get_symbol_name(self.name),
+        cls = self.create_class(self.get_symbol_name(self.name),
                             self.get_symbol_name(self.name, 'schema'),
->>>>>>> f94cafe prevent error when loading class overrides
                             'ZenPack',
                             (ZenPack,),
                             attributes)

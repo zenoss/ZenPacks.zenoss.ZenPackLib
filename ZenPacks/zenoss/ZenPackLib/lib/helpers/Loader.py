@@ -23,6 +23,37 @@ from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceCompo
 from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
 
 
+def getZenossKeywords(klasses):
+    '''return a list of reserved keywords'''
+    kwset = set()
+    for klass in klasses:
+        for k in klass.__dict__.keys():
+            if callable(getattr(klass, k)):
+                kwset = kwset.union([k])
+        for attribute in dir(klass):
+            if callable(getattr(klass, attribute)):
+                kwset = kwset.union([attribute])
+    return kwset
+
+
+def find_keyword_cls(keyword):
+    '''report on classes using keyword'''
+    names = []
+    for k in [BaseDevice, BaseDeviceComponent, BaseDeviceInfo, BaseComponentInfo]:
+        if keyword in dir(k):
+            names.append(k.__name__)
+    return names
+
+
+ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
+                                     BaseDeviceInfo,
+                                     BaseDeviceComponent,
+                                     BaseComponentInfo])
+JS_WORDS = set(['uuid', 'uid', 'meta_type', 'monitor', 'severity', 'monitored', 'locking'])
+RESERVED_WORDS = ZENOSS_KEYWORDS.union(JS_WORDS)
+
+
+
 class Loader(yaml.Loader):
     """
         These subclasses exist so that each copy of zenpacklib installed on a
@@ -34,6 +65,7 @@ class Loader(yaml.Loader):
     LOG=DEFAULTLOG
     QUIET=False
     LEVEL=0
+    SPEC = Spec()
 
     def type_map(self, node):
         '''map yaml node to python data type'''
@@ -362,11 +394,11 @@ class Loader(yaml.Loader):
 
         left_relname = ml.group('pre_relname') or ml.group('post_relname')
         if left_relname is None:
-            left_relname = relname_from_classname(right_class, plural=left_type != 'ToOne')
+            left_relname = self.SPEC.relname_from_classname(right_class, plural=left_type != 'ToOne')
 
         right_relname = mr.group('pre_relname') or mr.group('post_relname')
         if right_relname is None:
-            right_relname = relname_from_classname(left_class, plural=right_type != 'ToOne')
+            right_relname = self.SPEC.relname_from_classname(left_class, plural=right_type != 'ToOne')
 
         return dict(
             left_class=left_class,
@@ -446,7 +478,7 @@ class Loader(yaml.Loader):
                 None, None,
                 "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
                 start_mark))
-        elif key in ZENOSS_KEYWORDS.union(JS_WORDS):
+        elif key in RESERVED_WORDS:
             # should be ok to use a zenoss word to define these
             # some items, like sysUpTime are pretty common datapoints
             if cls.__name__ not in ['RRDDatasourceSpec',
