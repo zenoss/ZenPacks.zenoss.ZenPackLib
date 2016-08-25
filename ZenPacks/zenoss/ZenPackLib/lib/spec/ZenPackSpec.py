@@ -273,8 +273,14 @@ class ZenPackSpec(Spec):
         for spec in self.zProperties.itervalues():
             spec.create()
 
+        # try to avoid import errors on class overrides
+        # by creating specs first
         for spec in self.classes.itervalues():
-            spec.create()
+            spec.create_schema_classes()
+
+        for spec in self.classes.itervalues():
+            spec.create_zenpack_classes()
+            spec.create_registered()
 
         self.create_product_names()
         self.create_ordered_component_tree()
