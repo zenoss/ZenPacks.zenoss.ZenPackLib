@@ -4,6 +4,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('zen.zenpacklib.tests')
 from Products.ZenRelations.Exceptions import RelationshipExistsError
+from Acquisition import aq_base
 
 
 # Zenoss Imports
@@ -15,6 +16,7 @@ from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
 # change this to use other versions of zenpacklib
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
+from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import load_yaml_single
 
 
 def str_to_severity(value):
@@ -37,14 +39,25 @@ def str_to_severity(value):
     return severity
 
 
+def _add(ob, obj):
+    """ override of ToManyContRelationship _add method
+    """
+    id = obj.id
+    if ob._objects.has_key(id):
+        raise RelationshipExistsError
+    ob._objects[id] = aq_base(obj)
+    obj = aq_base(obj).__of__(ob)
+    ob.setCount()
+
+
 class ZPLTestHarness(ZenScriptBase):
     '''Class containing methods to build out dummy objects representing YAML class instances'''
 
     def __init__(self, filename, connect=False):
         ''''''
         ZenScriptBase.__init__(self)
-        self.cfg = zenpacklib.load_yaml(filename)
-        self.yaml = yaml.load(open(filename, 'r'))
+        self.cfg = zenpacklib.load_yaml(filename, verbose=True)
+        self.yaml = load_yaml_single(filename, useLoader=False)
         self.zp = self.cfg.zenpack_module
         self.schema = self.zp.schema
         self.build_cfg_obs()
@@ -63,6 +76,7 @@ class ZPLTestHarness(ZenScriptBase):
         self.obs = []
         for name, spec in self.cfg.classes.items():
             ob = self.build_ob(name)
+            ob.buildRelations()
             self.obs.append(ob)
 
     def get_cls(self, name):
@@ -112,7 +126,10 @@ class ZPLTestHarness(ZenScriptBase):
 
     def add_rel(self, rel, target):
         try:
-            rel._add(target)
+            if rel.__class__.__name__ == 'ToManyContRelationship':
+                _add(rel, target)
+            else:
+                rel._add(target)
         except RelationshipExistsError:
             pass
 
