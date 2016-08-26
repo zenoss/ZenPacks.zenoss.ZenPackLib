@@ -29,7 +29,7 @@ from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 from ..resources.templates import SETUP_PY
-from ..helpers.ZenPackLibLog import DEFAULTLOG
+from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
 from ..helpers.WarningLoader import WarningLoader
 from ..helpers.Dumper import Dumper
 from ..helpers.Loader import Loader
@@ -47,17 +47,7 @@ class ZPLCommand(ZenScriptBase):
             version = zenpacklib.__version__
         self.version = version
         ZenScriptBase.__init__(self, noopts, app, connect)
-        self.enable_log_stderr()
-
-    def enable_log_stderr(self):
-        """
-            Enable logging to stderr 
-            using this ZenPack's log settings
-        """
-        self.LOG.propagate = False
-        h = logging.StreamHandler(sys.stderr)
-        h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
-        self.LOG.addHandler(h)
+        ZenPackLibLog.enable_log_stderr(self.LOG)
 
     def buildOptions(self):
         ''''''
