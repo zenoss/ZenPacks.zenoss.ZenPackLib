@@ -14,59 +14,76 @@
     zenpacklib.Device subclass wipes out other relations added to 
     Products.ZenModel.Device (ZEN-24108)
 """
-
-# stdlib Imports
-import os
-import unittest
-import logging
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger('zen.zenpacklib.tests')
-
-from .ZPLTestHarness import ZPLTestHarness
-
 # Zenoss Imports
 import Globals  # noqa
 from Products.ZenUtils.Utils import unused
 unused(Globals)
 
+from Products.ZenTestCase.BaseTestCase import BaseTestCase 
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
-class TestZen24018(unittest.TestCase):
 
-    """Specs test suite."""
-    zps = []
+RELATION_YAML="""
+name: ZenPacks.zenoss.ZenPackLib
+classes:
+  BasicDeviceComponent:
+    base: [zenpacklib.Component]
+    properties:
+      something:
+        label: Something
+  SubClassComponent:
+    base: [zenpacklib.Component]
 
-    def setUp(self):
-        fdir = '%s/data/yaml' % os.path.dirname(__file__)
-        self.base_device_file = '%s/%s' % (fdir, 'zen-24018-1.yaml')
-        self.device_subclass_file = '%s/%s' % (fdir, 'zen-24018-2.yaml')
-        self.subclass_relation_file = '%s/%s' % (fdir, 'zen-24018-3.yaml')
+class_relationships:
+  - Products.ZenModel.Device.Device 1:MC BasicDeviceComponent
+  - ZenPacks.zenoss.ZPLDevice.NormDevice.NormDevice 1:MC SubClassComponent
+"""
 
+
+SUBCLASS_YAML="""
+name: ZenPacks.zenoss.ZPLDevice
+classes:
+  BaseDevice:
+    base: [zenpacklib.Device]
+  NormDevice:
+    base: [BaseDevice]
+  ClusterDevice:
+    base: [NormDevice]
+"""
+
+
+device_subclass_zp = ZPLTestHarness(SUBCLASS_YAML)
+subclass_relation_zp = ZPLTestHarness(RELATION_YAML)
+
+from Products.ZenModel.Device import Device as ZenDevice
+from ZenPacks.zenoss.ZPLDevice.BaseDevice import BaseDevice
+from ZenPacks.zenoss.ZPLDevice.NormDevice import NormDevice
+from ZenPacks.zenoss.ZPLDevice.ClusterDevice import ClusterDevice
+
+
+class TestZen24018(BaseTestCase):
+    """Test fix for ZEN-24108
+
+       Device relations between ZPL-based ZenPacks overwrite inherited Device relations
+    """
 
     def test_inherited_relations(self):
-        device_subclass_zp = ZPLTestHarness(self.device_subclass_file)
-        base_device_zp = ZPLTestHarness(self.base_device_file)
-        subclass_relation_zp = ZPLTestHarness(self.subclass_relation_file)
-
-        from Products.ZenModel.Device import Device as ZenDevice
-        from ZenPacks.zenoss.ZPLDevice.BaseDevice import BaseDevice
-        from ZenPacks.zenoss.ZPLDevice.Device import Device
-        from ZenPacks.zenoss.ZPLDevice.ClusterDevice import ClusterDevice
 
         # all ZenModel.Device subclasses should have this relation
-        for x in [ZenDevice, BaseDevice, Device, ClusterDevice]:
+        for x in [ZenDevice, BaseDevice, NormDevice, ClusterDevice]:
             # should be True
-            self.assertTrue(self.has_relation(ZenDevice, 'basicDeviceComponents'),
+            self.assertTrue(self.has_relation(x, 'basicDeviceComponents'),
                             '%s is missing relation: basicDeviceComponents' % x.__name__)
 
         # these should have subClassComponents
-        for x in [Device, ClusterDevice]:
-            self.assertTrue(self.has_relation(ZenDevice, 'subClassComponents'),
+        for x in [NormDevice, ClusterDevice]:
+            self.assertTrue(self.has_relation(x, 'subClassComponents'),
                             '%s is missing relation: subClassComponents' % x.__name__)
 
         # these should not have subClassComponents
         for x in [ZenDevice, BaseDevice]:
-            self.assertTrue(self.has_relation(ZenDevice, 'subClassComponents'),
-                            '%s is missing relation: subClassComponents' % x.__name__)
+            self.assertFalse(self.has_relation(x, 'subClassComponents'),
+                            '%s has unneeded relation: subClassComponents' % x.__name__)
 
     def has_relation(self, cls, relname):
         if relname in dict(cls._relations).keys():

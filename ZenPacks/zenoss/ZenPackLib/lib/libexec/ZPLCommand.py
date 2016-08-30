@@ -33,7 +33,7 @@ from ..helpers.ZenPackLibLog import DEFAULTLOG
 from ..helpers.WarningLoader import WarningLoader
 from ..helpers.Dumper import Dumper
 from ..helpers.Loader import Loader
-from ..helpers.utils import optimize_yaml
+from ..helpers.utils import optimize_yaml, load_yaml_single
 
 
 class ZPLCommand(ZenScriptBase):
@@ -220,24 +220,15 @@ class ZPLCommand(ZenScriptBase):
         except Exception, e:
             DEFAULTLOG.exception(e)
 
-    def lint(self, filename):
+    @classmethod
+    def lint(cls, filename):
         '''parse YAML file and check syntax'''
-        with open(filename, 'r') as file:
-            linecount = len(file.readlines())
-
-        # Change our logging output format.
-        logging.getLogger().handlers = []
-        for logger in logging.Logger.manager.loggerDict.values():
-            logger.handlers = []
         handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            fmt='{}:{}:0: %%(message)s'.format(filename, linecount))
-        handler.setFormatter(formatter)
-        logging.getLogger().addHandler(handler)
+
+        DEFAULTLOG.addHandler(handler)
 
         try:
-            with open(filename, 'r') as stream:
-                yaml.load(stream, Loader=WarningLoader)
+            load_yaml_single(filename, loader=WarningLoader)
         except Exception, e:
             DEFAULTLOG.exception(e)
 
