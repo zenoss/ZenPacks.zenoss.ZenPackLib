@@ -2735,7 +2735,7 @@ class ClassSpec(Spec):
 
         for i, specs in enumerate(self.containing_spec_relations):
             spec, relspec = specs
-            attributes[relspec.name] = schema.Entity(
+            attributes[self.get_relname(spec, relspec)] = schema.Entity(
                 title=_t(spec.label),
                 group="Relationships",
                 order=3 + i / 100.0)
@@ -2797,7 +2797,11 @@ class ClassSpec(Spec):
         })
 
         for spec, relspec in self.containing_spec_relations:
-            attributes.update(relspec.info_properties)
+            if relspec:
+                attributes.update(relspec.info_properties)
+            else:
+                attr = relname_from_classname(spec.name)
+                attributes[attr] = RelationshipInfoProperty(attr)
 
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.info_properties)
@@ -2941,6 +2945,8 @@ class ClassSpec(Spec):
                 continue
 
             containing_rels.extend(remote_spec.containing_spec_relations)
+            if not relation_spec:
+                relation_spec = self.inherited_relationships().get(relname)
             containing_rels.append((remote_spec, relation_spec))
         return containing_rels
 
@@ -3011,7 +3017,7 @@ class ClassSpec(Spec):
         for spec, relspec in self.containing_spec_relations:
             if spec.name in filtered_relationships:
                 continue
-            fields.append("{{name: '{}'}}".format(relspec.name))
+            fields.append("{{name: '{}'}}".format(self.get_relname(spec, relspec)))
 
         return fields
 
@@ -3038,7 +3044,7 @@ class ClassSpec(Spec):
 
             column_fields = [
                 "id: '{}'".format(spec.name),
-                "dataIndex: '{}'".format(relspec.name),
+                "dataIndex: '{}'".format(self.get_relname(spec, relspec)),
                 "header: _t('{}')".format(spec.short_label),
                 "width: {}".format(width),
                 "renderer: {}".format(renderer),
@@ -3221,6 +3227,12 @@ class ClassSpec(Spec):
             self.component_grid_panel_js_snippet,
             self.subcomponent_nav_js_snippet,
             ))
+
+    def get_relname(self, spec, relspec):
+        if relspec:
+            return relspec.name
+        else:
+            return relname_from_classname(spec.name)
 
     def test_setup(self):
         """Execute from a test suite's afterSetUp method.
