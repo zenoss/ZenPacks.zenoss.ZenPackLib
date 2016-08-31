@@ -4997,8 +4997,9 @@ if YAML_INSTALLED:
     def yaml_warning(loader, e):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
-
-        print format_message(e)
+        pass
+        # commenting out for 1.1 release
+        # print format_message(e)
 
     def yaml_error(loader, e, exc_info=None):
         # Given a MarkedYAMLError exception, either log or raise
