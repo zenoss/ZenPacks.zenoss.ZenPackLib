@@ -22,7 +22,8 @@ different versions of zenpacklib.
 ==================  ======================================
 zenpacklib Version  Zenoss Versions
 ==================  ======================================
-1.0                 4.2, 5.0 :ref:`* <pyyaml-requirement>`
+1.1                 4.2 :ref:`* <pyyaml-requirement>`, 5.0, 5.1, 5.2
+1.0                 4.2 :ref:`* <pyyaml-requirement>`, 5.0, 5.1, 5.2
 ==================  ======================================
 
 Compatibility only considers <major>.<minor> versions of both zenpacklib and

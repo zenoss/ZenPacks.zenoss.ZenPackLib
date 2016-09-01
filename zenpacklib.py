@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.0.13"
+__version__ = "1.1.0"
 
 
 import logging
@@ -49,6 +49,7 @@ import re
 import sys
 import math
 import types
+import keyword
 
 from lxml import etree
 
@@ -57,10 +58,11 @@ if __name__ == '__main__':
     from Products.ZenUtils.Utils import unused
     unused(Globals)
 
+import zope.schema
 from zope.browser.interfaces import IBrowserView
 from zope.component import adapts, getGlobalSiteManager
 from zope.event import notify
-from zope.interface import classImplements, implements
+from zope.interface import classImplements, implements, providedBy
 from zope.interface.interface import InterfaceClass
 from Acquisition import aq_base
 
@@ -92,6 +94,7 @@ from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
 from Products.ZenUtils.Utils import monkeypatch, importClass
 
 from Products import Zuul
+from Products.Zuul import marshal
 from Products.Zuul.catalog.events import IndexingEvent
 from Products.Zuul.catalog.global_catalog import ComponentWrapper as BaseComponentWrapper
 from Products.Zuul.catalog.global_catalog import DeviceWrapper as BaseDeviceWrapper
@@ -112,6 +115,12 @@ from Products.Zuul.utils import ZuulMessageFactory as _t
 
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
 from zope.viewlet.interfaces import IViewlet
+
+from zenoss.protocols.protobufs.zep_pb2 import (
+    STATUS_NEW, STATUS_ACKNOWLEDGED,
+    SEVERITY_CRITICAL,
+    )
+
 
 try:
     import yaml
@@ -160,6 +169,24 @@ TestCase = None
 GSM = getGlobalSiteManager()
 
 
+def getZenossKeywords(klasses):
+    kwset = set()
+    for klass in klasses:
+        for k in klass.__dict__.keys():
+            if callable(getattr(klass, k)):
+                kwset = kwset.union([k])
+        for attribute in dir(klass):
+            if callable(getattr(klass, attribute)):
+                kwset = kwset.union([attribute])
+    return kwset
+
+ZENOSS_KEYWORDS = getZenossKeywords([BaseDevice,
+                                    BaseDeviceInfo,
+                                    BaseDeviceComponent,
+                                    BaseComponentInfo])
+
+JS_WORDS = set(['uuid', 'uid', 'meta_type', 'monitor', 'severity', 'monitored', 'locking'])
+
 # Public Classes ############################################################
 
 class ZenPack(ZenPackBase):
@@ -197,6 +224,8 @@ class ZenPack(ZenPackBase):
             d.buildRelations()
 
     def install(self, app):
+        self.createZProperties(app)
+
         # create device classes and set zProperties on them
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
@@ -277,8 +306,6 @@ class ZenPack(ZenPackBase):
                         lines_installed = [x + '\n' for x in yaml.dump(installed, Dumper=Dumper).split('\n')]
                         lines_orig_mtspec = [x + '\n' for x in yaml.dump(orig_mtspec, Dumper=Dumper).split('\n')]
                         diff = ''.join(difflib.unified_diff(lines_orig_mtspec, lines_installed))
-
-                        # installed is not going to have cycletime in it, because it's the default.
 
                         newname = "{}-upgrade-{}".format(orig_mtname, int(time.time()))
                         LOG.error(
@@ -664,6 +691,9 @@ class ModelBase(CatalogBase):
         """Return relative URL path for class' icon."""
         return getattr(self, 'icon_url', '/zport/dmd/img/icons/noicon.png')
 
+    def getDynamicViewGroup(self):
+        return getattr(self, 'dynamicview_group', None)
+
 
 class DeviceBase(ModelBase):
 
@@ -673,6 +703,49 @@ class DeviceBase(ModelBase):
     types.
 
     """
+
+    def getStatus(self, statusclass="/Status", **kwargs):
+        """Return status number for this device.
+
+        The status number is the number of critical events associated
+        with this device. This includes only events tagger with the
+        device's UUID, and not events affecting components of the
+        device.
+
+        None is returned when the device's status is unknown because it
+        isn't being monitored, or because there was an error retrieving
+        its events.
+
+        This method is overridden here to provide a simpler default
+        meaning for "down". By default any critical severity event that
+        is in either the new or acknowledged state in the /Status event
+        class and is tagged with the device's UUID indicates that the
+        device is down. An alternate event class (statusclass) can be
+        provided, which is what would be done by the device's
+        getPingStatus and getSnmpStatus methods.
+
+        A key different between this methods behavior vs. that of the
+        Device.getStatus method it overrides is that warning and error
+        events are not considered as affecting the device's status.
+
+        """
+        if not self.monitorDevice():
+            return None
+
+        zep = Zuul.getFacade("zep", self.dmd)
+        try:
+            event_filter = zep.createEventFilter(
+                tags=[self.getUUID()],
+                element_sub_identifier=[""],
+                severity=[SEVERITY_CRITICAL],
+                status=[STATUS_NEW, STATUS_ACKNOWLEDGED],
+                event_class=filter(None, [statusclass]))
+
+            result = zep.getEventSummaries(0, filter=event_filter, limit=0)
+        except Exception:
+            return None
+
+        return int(result['total'])
 
 
 class ComponentBase(ModelBase):
@@ -875,8 +948,25 @@ class ComponentBase(ModelBase):
 
         return faceting_relnames
 
-    def get_facets(self, root=None, streams=None, seen=None, path=None, recurse_all=False):
+    def get_facets(self, root=None, streams=None, seen=None, depth=0, path=None, recurse_all=False):
         """Generate non-containing related objects for faceting."""
+
+        if recurse_all:
+            # recurse_all is only used for list_paths to show all possible paths
+            # from this object to any other object, so in the interest of time
+            # and keeping noise to a minimum, don't bother traversing deeper
+            # than 15 levels.
+            if depth > 15:
+                return
+        else:
+            # in non-recurse_all mode, deep traverals only occur when an
+            # extra_paths expression directs it to keep going down a specific
+            # path.  It is assumed that this will generally be of limited depth
+            # anyway, but just in case, put an absolute limit on it, of the
+            # maximum depth supported by zenpacklib's device() method.
+            if depth > 200:
+                return
+
         if seen is None:
             seen = set()
 
@@ -906,35 +996,35 @@ class ComponentBase(ModelBase):
 
             # Always include directly-related objects.
             for obj in relobjs:
-                if obj in seen:
+                if (self.id, relname, obj.id) in seen:
+                    # avoid a cycle
                     continue
 
                 yield obj
-                seen.add(obj)
+                seen.add((self.id, relname, obj.id))
 
-            # If 'all' mode, just include indirectly-related objects as well, in
-            # an unfiltered manner.
-            if recurse_all:
-                for facet in obj.get_facets(root=root, seen=seen, path=path + [relname], recurse_all=True):
-                    yield facet
-                return
+                # If 'all' mode, just include indirectly-related objects as well, in
+                # an unfiltered manner.
+                if recurse_all:
+                    for facet in obj.get_facets(root=root, seen=seen, path=path, depth=depth+1, recurse_all=True):
+                        yield facet
 
-            # Otherwise, look at extra_path defined path pattern streams
-            for stream in streams:
-                recurse = any([pattern.match(relpath) for pattern in stream])
+                else:
+                    # Otherwise, look at extra_path defined path pattern streams
+                    for stream in streams:
+                        recurse = any([pattern.match(relpath) for pattern in stream])
 
-                LOG.log(9, "[%s] matching %s against %s: %s" % (root.meta_type, relpath, [x.pattern for x in stream], recurse))
+                        LOG.log(9, "[%s] matching %s against %s: %s" % (root.meta_type, relpath, [x.pattern for x in stream], recurse))
 
-                if not recurse:
-                    continue
-
-                for obj in relobjs:
-                    for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path + [relname]):
-                        if facet in seen:
+                        if not recurse:
                             continue
 
-                        yield facet
-                        seen.add(facet)
+                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, depth=depth+1):
+                            if (self.id, relname, facet.id) in seen:
+                                # avoid a cycle
+                                continue
+                            yield facet
+                            seen.add((self.id, relname, facet.id))
 
     def rrdPath(self):
         """Return filesystem path for RRD files for this component.
@@ -962,7 +1052,7 @@ class ComponentBase(ModelBase):
     def getRRDTemplateName(self):
         """Return name of primary template to bind to this component."""
         if self._templates:
-            return self._templates[0]
+            return self._templates[-1]
 
         return ''
 
@@ -1109,6 +1199,37 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
                     item['xtype'] = 'ZPL_{zenpack_id_prefix}_RenderableDisplayField'.format(
                         zenpack_id_prefix=self.zenpack_id_prefix)
                     item['renderer'] = renderer
+
+    def fields(self, fieldFilter=None):
+        """ override to ensure fields are inherited properly"""
+        d = {}
+
+        iface_fields = []
+        for iface in providedBy(self.context):
+            f = zope.schema.getFields(iface)
+            if f:
+                iface_fields.append(f)
+        # reverse so that subclasses processed last
+        iface_fields.reverse()
+
+        for f in iface_fields:
+            def _filter(item):
+                include = True
+                if fieldFilter:
+                    key=item[0]
+                    include = fieldFilter(key)
+                else:
+                    include = bool(item)
+                return include
+            for k,v in filter(_filter, f.iteritems()):
+                c = self._dict(v)
+                c['name'] = k
+                value =  getattr(self.context, k, None)
+                c['value'] = value() if callable(value) else value                    
+                if c['xtype'] in ('autoformcombo', 'itemselector'):
+                    c['values'] = self.vocabulary(v)
+                d[k] = c
+        return d
 
 
 class ClassProperty(property):
@@ -1527,24 +1648,63 @@ class ZenPackSpec(Spec):
                         if 'schema' in relationships[relationship]:
                             raise ValueError("Class '%s': 'schema' may not be defined or modified in an individual class's relationship.  Use the zenpack's class_relationships instead." % classname)
 
-        for class_ in self.classes.values():
+        def find_relation_in_bases(bases, relname):
+            '''return inherited relationship spec'''
+            for base in bases:
+                base_cls = self.classes.get(base)
+                if relname in base_cls.relationships:
+                    return base_cls.relationships.get(relname)
+            return None
 
+        def get_bases(cls, bases=[]):
+            '''find all available base classes for this class'''
+            for base in cls.bases:
+                base_cls = self.classes.get(base)
+                if not base_cls:
+                    continue
+                if base not in bases:
+                    bases.append(base)
+                bases = get_bases(base_cls, bases)
+            return bases
+
+        for class_ in self.classes.values():
+            # list of all base classes for this class
+            bases = get_bases(class_, bases=[])
             # Link the appropriate predefined (class_relationships) schema into place on this class's relationships list.
             for rel in self.class_relationships:
-                if class_.name == rel.left_class:
-                    if rel.left_relname not in class_.relationships:
-                        class_.relationships[rel.left_relname] = ClassRelationshipSpec(class_, rel.left_relname)
-                    class_.relationships[rel.left_relname].schema = rel.left_schema
+                # handle both directions
+                for direction in ['left', 'right']:
+                    target_class = getattr(rel, '%s_class' % direction)
+                    target_relname = getattr(rel, '%s_relname' % direction)
+                    target_schema = getattr(rel, '%s_schema' % direction)
+                    # these are directly specified for the class in yaml
+                    if class_.name == target_class:
+                        if target_relname not in class_.relationships:
+                            class_.relationships[target_relname] = ClassRelationshipSpec(class_, target_relname)
+                        if not class_.relationships[target_relname].schema:
+                            class_.relationships[target_relname].schema = target_schema
+                    # look for relations inherited from base classes
+                    # go through these in order
+                    else:
+                        # these are in order from nearest to farthest
+                        for base in bases:
+                            if target_class == base:
+                                # see if we have an existing relspec
+                                found_rel = find_relation_in_bases(bases, target_relname)
+                                # we need to inherit in this case
+                                if found_rel:
+                                    if target_relname not in class_.relationships:
+                                        class_.relationships[target_relname] = found_rel
+                                    if not class_.relationships[target_relname].schema:
+                                        class_.relationships[target_relname].schema = target_schema
+                                    continue
 
-                if class_.name == rel.right_class:
-                    if rel.right_relname not in class_.relationships:
-                        class_.relationships[rel.right_relname] = ClassRelationshipSpec(class_, rel.right_relname)
-                    class_.relationships[rel.right_relname].schema = rel.right_schema
-
+        for class_ in self.classes.values():
             # Plumb _relations
             for relname, relationship in class_.relationships.iteritems():
                 if not relationship.schema:
-                    LOG.error("Class '%s': no relationship schema has been defined for relationship '%s'" % (class_.name, relname))
+                    LOG.error("Removing invalid display config for relationship %s from  %s.%s" % (relname, self.name, class_.name))
+                    class_.relationships.pop(relname)
                     continue
 
                 if relationship.schema.remoteClass in self.imported_classes.keys():
@@ -1558,7 +1718,12 @@ class ZenPackSpec(Spec):
                     remote_relname = relationship.zenrelations_tuple[0]  # products_zenmodel_device_device
 
                     if relname not in (x[0] for x in remoteClassObj._relations):
-                        remoteClassObj._relations += ((relname, remoteType(localType, modname, remote_relname)),)
+                        rel = ((relname, remoteType(localType, modname, remote_relname)),)
+                        # do this differently if it's on a ZPL-based class
+                        if hasattr(remoteClassObj, '_v_local_relations'):
+                            remoteClassObj._v_local_relations += rel
+                        else:
+                            remoteClassObj._relations += rel
 
                     remote_module_id = remoteClassObj.__module__
                     if relname not in self.NEW_RELATIONS[remote_module_id]:
@@ -2069,6 +2234,7 @@ class ClassSpec(Spec):
             filter_hide_from=None,
             dynamicview_views=None,
             dynamicview_group=None,
+            dynamicview_weight=None,
             dynamicview_relations=None,
             extra_paths=None,
             _source_location=None
@@ -2128,6 +2294,8 @@ class ClassSpec(Spec):
             :type dynamicview_views: list(str)
             :param dynamicview_group: TODO
             :type dynamicview_group: str
+            :param dynamicview_weight: TODO
+            :type dynamicview_weight: float
             :param dynamicview_relations: TODO
             :type dynamicview_relations: dict
             :param extra_paths: TODO
@@ -2208,6 +2376,11 @@ class ClassSpec(Spec):
             self.dynamicview_group = self.plural_short_label
         else:
             self.dynamicview_group = dynamicview_group
+
+        if dynamicview_weight is None:
+            self.dynamicview_weight = 1000 + (self.order * 100)
+        else:
+            self.dynamicview_weight = dynamicview_weight
 
         # additional relationships to add, beyond IMPACTS and IMPACTED_BY.
         if dynamicview_relations is None:
@@ -2386,6 +2559,9 @@ class ClassSpec(Spec):
     @property
     def icon_url(self):
         """Return relative URL to icon."""
+        if self.icon and self.icon.startswith('/'):
+            return self.icon
+
         icon_filename = self.icon or '{}.png'.format(self.name)
 
         zenpack_path = get_zenpack_path(self.zenpack.name)
@@ -2419,7 +2595,13 @@ class ClassSpec(Spec):
             'class_plural_label': self.plural_label,
             'class_short_label': self.short_label,
             'class_plural_short_label': self.plural_short_label,
-            'class_dynamicview_group': self.dynamicview_group,
+            'dynamicview_views': self.dynamicview_views,
+            'dynamicview_group': {
+                'name': self.dynamicview_group,
+                'weight': self.dynamicview_weight,
+                'type': self.zenpack.name,
+                'icon': self.icon_url,
+                },
             }
 
         properties = []
@@ -2448,7 +2630,7 @@ class ClassSpec(Spec):
                     if cached:
                         r = self.cacheRRDValue(datapoint, default=default)
                     else:
-                        r = self.getRRDValue(datapoint, default=default)
+                        r = self.getRRDValue(datapoint)
 
                     if r is not None:
                         if not math.isnan(float(r)):
@@ -2551,9 +2733,9 @@ class ClassSpec(Spec):
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.iinfo_schemas)
 
-        for i, spec in enumerate(self.containing_components):
-            attr = relname_from_classname(spec.name)
-            attributes[attr] = schema.Entity(
+        for i, specs in enumerate(self.containing_spec_relations):
+            spec, relspec = specs
+            attributes[relspec.name] = schema.Entity(
                 title=_t(spec.label),
                 group="Relationships",
                 order=3 + i / 100.0)
@@ -2591,9 +2773,15 @@ class ClassSpec(Spec):
             if base_classname in self.zenpack.classes:
                 bases.append(self.zenpack.classes[base_classname].info_class)
 
+        attributes = {}
+
         if not bases:
             if self.is_device:
                 bases = [BaseDeviceInfo]
+
+                # Override how status is determined for devices.
+                attributes["status"] = DeviceInfoStatusProperty()
+
             elif self.is_component:
                 bases = [BaseComponentInfo]
             elif self.is_hardware_component:
@@ -2601,7 +2789,6 @@ class ClassSpec(Spec):
             else:
                 bases = [InfoBase]
 
-        attributes = {}
         attributes.update({
             'class_label': ProxyProperty('class_label'),
             'class_plural_label': ProxyProperty('class_plural_label'),
@@ -2609,17 +2796,8 @@ class ClassSpec(Spec):
             'class_plural_short_label': ProxyProperty('class_plural_short_label')
         })
 
-        for spec in self.containing_components:
-            attr = None
-            for rel, rspec in self.relationships.items():
-                if rspec.remote_classname == spec.name:
-                    attr = rel
-                    continue
-
-            if not attr:
-                attr = relname_from_classname(spec.name)
-
-            attributes[attr] = RelationshipInfoProperty(attr)
+        for spec, relspec in self.containing_spec_relations:
+            attributes.update(relspec.info_properties)
 
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.info_properties)
@@ -2706,27 +2884,10 @@ class ClassSpec(Spec):
             required=(self.model_class,),
             provided=IRelationsProvider)
 
-        dvm = DynamicViewMappings()
-
-        groupName = self.model_class.class_dynamicview_group
-        weight = 1000 + (self.order * 100)
-        icon_url = getattr(self, 'icon_url', '/zport/dmd/img/icons/noicon.png')
-
-        # Make sure the named utility is also registered.  It seems that
-        # during unit tests, it may not be, even if the mapping is still
-        # present.
-        group = GSM.queryUtility(IGroup, groupName)
-        if not group:
-            group = BaseGroup(groupName, weight, None, icon_url)
-            GSM.registerUtility(group, IGroup, groupName)
-
-        for viewName in self.dynamicview_views:
-            if groupName not in dvm.getGroupNames(viewName):
-                dvm.addMapping(
-                    viewName=viewName,
-                    groupName=group.name,
-                    weight=group.weight,
-                    icon=group.icon)
+        GSM.registerSubscriptionAdapter(
+            DynamicViewGroupMappingProvider,
+            required=(DynamicViewRelatable,),
+            provided=IGroupMappingProvider)
 
     def register_impact_adapters(self):
         """Register Impact adapters."""
@@ -2764,6 +2925,26 @@ class ClassSpec(Spec):
         return containing_specs
 
     @property
+    def containing_spec_relations(self):
+        """ Return iterable of containing component ClassSpec and RelationshipSpec instances.
+            Instances will be sorted shallow to deep.
+        """
+        containing_rels = []
+        for relname, relschema in self.model_schema_class._relations:
+            if not issubclass(relschema.remoteType, ToManyCont):
+                continue
+
+            remote_classname = relschema.remoteClass.split('.')[-1]
+            remote_spec = self.zenpack.classes.get(remote_classname)
+            relation_spec = self.relationships.get(relname)
+            if not remote_spec or remote_spec.is_device:
+                continue
+
+            containing_rels.extend(remote_spec.containing_spec_relations)
+            containing_rels.append((remote_spec, relation_spec))
+        return containing_rels
+
+    @property
     def faceting_components(self):
         """Return iterable of faceting component ClassSpec instances."""
         faceting_specs = []
@@ -2782,6 +2963,24 @@ class ClassSpec(Spec):
                     if class_spec and not class_spec.is_device:
                         faceting_specs.append(class_spec)
 
+        return faceting_specs
+
+    @property
+    def faceting_spec_relations(self):
+        """Return iterable of faceting component ClassSpec and RelationshipSpec instances."""
+        faceting_specs = []
+        for relname, relschema in self.model_class._relations:
+            if relname in FACET_BLACKLIST:
+                continue
+            if not issubclass(relschema.remoteType, ToMany):
+                continue
+            remote_classname = relschema.remoteClass.split('.')[-1]
+            remote_spec = self.zenpack.classes.get(remote_classname)
+            remote_relname = relschema.remoteName
+            if remote_spec:
+                for class_spec in [remote_spec] + remote_spec.subclass_specs():
+                    if class_spec and not class_spec.is_device:
+                        faceting_specs.append((class_spec, class_spec.relationships.get(remote_relname)))
         return faceting_specs
 
     @property
@@ -2809,14 +3008,10 @@ class ClassSpec(Spec):
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
 
-        for spec in self.containing_components:
-            # grid_display=False
+        for spec, relspec in self.containing_spec_relations:
             if spec.name in filtered_relationships:
                 continue
-            fields.append(
-                "{{name: '{}'}}"
-                .format(
-                    relname_from_classname(spec.name)))
+            fields.append("{{name: '{}'}}".format(relspec.name))
 
         return fields
 
@@ -2833,8 +3028,7 @@ class ClassSpec(Spec):
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
 
-        for spec in self.containing_components:
-            # grid_display=False
+        for spec, relspec in self.containing_spec_relations:
             if spec.name in filtered_relationships:
                 continue
 
@@ -2844,7 +3038,7 @@ class ClassSpec(Spec):
 
             column_fields = [
                 "id: '{}'".format(spec.name),
-                "dataIndex: '{}'".format(relname_from_classname(spec.name)),
+                "dataIndex: '{}'".format(relspec.name),
                 "header: _t('{}')".format(spec.short_label),
                 "width: {}".format(width),
                 "renderer: {}".format(renderer),
@@ -2967,33 +3161,58 @@ class ClassSpec(Spec):
     @property
     def subcomponent_nav_js_snippet(self):
         """Return subcomponent navigation JavaScript snippet."""
-        cases = []
-        for meta_type in self.filterable_by:
-            cases.append("case '{}': return true;".format(meta_type))
+        
+        def get_js_snippet(id, label, classes):
+            """return basic JS nav snippet"""
+            cases = []
+            for c in classes:
+                cases.append("case '{}': return true;".format(c))
+            if not cases:
+                return ''
+            return (
+                "Zenoss.nav.appendTo('Component', [{{\n"
+                "    id: 'component_{id}',\n"
+                "    text: _t('{label}'),\n"
+                "    xtype: '{meta_type}Panel',\n"
+                "    subComponentGridPanel: true,\n"
+                "    filterNav: function(navpanel) {{\n"
+                "        switch (navpanel.refOwner.componentType) {{\n"
+                "            {cases}\n"
+                "            default: return false;\n"
+                "        }}\n"
+                "    }},\n"
+                "    setContext: function(uid) {{\n"
+                "        ZC.{meta_type}Panel.superclass.setContext.apply(this, [uid]);\n"
+                "    }}\n"
+                "}}]);\n"
+                .format(meta_type=self.meta_type, id=id, label=label, cases=' '.join(cases)))
 
-        if not cases:
-            return ''
+        sections = {self.plural_short_label: []}
 
-        return (
-            "Zenoss.nav.appendTo('Component', [{{\n"
-            "    id: 'component_{meta_type}',\n"
-            "    text: _t('{plural_label}'),\n"
-            "    xtype: '{meta_type}Panel',\n"
-            "    subComponentGridPanel: true,\n"
-            "    filterNav: function(navpanel) {{\n"
-            "        switch (navpanel.refOwner.componentType) {{\n"
-            "            {cases}\n"
-            "            default: return false;\n"
-            "        }}\n"
-            "    }},\n"
-            "    setContext: function(uid) {{\n"
-            "        ZC.{meta_type}Panel.superclass.setContext.apply(this, [uid]);\n"
-            "    }}\n"
-            "}}]);\n"
-            .format(
-                meta_type=self.meta_type,
-                plural_label=self.plural_short_label,
-                cases=' '.join(cases)))
+        specs_rels = list(set(self.containing_spec_relations) | set(self.faceting_spec_relations))
+        specs_rels_dict = dict([(r[0].meta_type, r) for r in specs_rels])
+        filtered = list(specs_rels_dict.get(f) for f in self.filterable_by)
+
+        for spec, relation in filtered:
+            # default if no label specified
+            if not relation:
+                sections[self.plural_short_label].append(spec.meta_type)
+            else:
+                # also default if not labeled
+                if not relation.label:
+                    sections[self.plural_short_label].append(spec.meta_type)
+                else:
+                    # new snippet if relation labeled
+                    if relation.label not in sections:
+                        sections[relation.label] = []
+                    sections[relation.label].append(spec.meta_type)
+
+        snippets = []
+        for label, metatypes in sections.items():        
+            id = '_'.join(label.lower().split(' '))
+            snippets.append(get_js_snippet(id, label, metatypes))
+
+        return ''.join(snippets)
 
     @property
     def device_js_snippet(self):
@@ -3120,6 +3339,10 @@ class ClassPropertySpec(Spec):
         self.grid_display = grid_display
         self.renderer = renderer
 
+        if not self.display:
+            self.details_display = False
+            self.grid_display = False
+
         # pick an appropriate default renderer for this property.
         if type_ == 'entity' and not self.renderer:
             self.renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'.format(
@@ -3212,8 +3435,9 @@ class ClassPropertySpec(Spec):
     def info_properties(self):
         """Return Info properties dict."""
         if self.api_backendtype == 'method':
+            isEntity = self.type_ == 'entity'
             return {
-                self.name: MethodInfoProperty(self.name),
+                self.name: MethodInfoProperty(self.name, entity=isEntity),
                 }
         else:
             if not self.enum:
@@ -3813,7 +4037,6 @@ class RRDDatasourceSpec(Spec):
             eventKey=None,
             severity=None,
             commandTemplate=None,
-            cycletime=None,
             datapoints=None,
             extra_params=None,
             _source_location=None
@@ -3836,8 +4059,6 @@ class RRDDatasourceSpec(Spec):
             :type severity: Severity
             :param commandTemplate: TODO
             :type commandTemplate: str
-            :param cycletime: TODO
-            :type cycletime: int
             :param datapoints: TODO
             :type datapoints: SpecsParameter(RRDDatapointSpec)
             :param extra_params: Additional parameters that may be used by subclasses of RRDDatasource
@@ -3855,7 +4076,6 @@ class RRDDatasourceSpec(Spec):
         self.eventKey = eventKey
         self.severity = severity
         self.commandTemplate = commandTemplate
-        self.cycletime = cycletime
         if extra_params is None:
             self.extra_params = {}
         else:
@@ -3891,8 +4111,6 @@ class RRDDatasourceSpec(Spec):
             datasource.severity = self.severity
         if self.commandTemplate is not None:
             datasource.commandTemplate = self.commandTemplate
-        if self.cycletime is not None:
-            datasource.cycletime = self.cycletime
 
         if self.extra_params:
             for param, value in self.extra_params.iteritems():
@@ -4415,7 +4633,7 @@ class RRDDatasourceSpecParams(SpecParams, RRDDatasourceSpec):
 
         self.sourcetype = datasource.sourcetype
         for propname in ('enabled', 'component', 'eventClass', 'eventKey',
-                         'severity', 'commandTemplate', 'cycletime',):
+                         'severity', 'commandTemplate'):
             if hasattr(sample_ds, propname):
                 setattr(self, '_%s_defaultvalue' % propname, getattr(sample_ds, propname))
             if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
@@ -4757,6 +4975,32 @@ if YAML_INSTALLED:
 
         return severity
 
+    def format_message(e):
+        message = []
+
+        mark = e.context_mark or e.problem_mark
+        if mark:
+            position = "{}:{}:{}".format(mark.name, mark.line + 1, mark.column + 1)
+        else:
+            position = "[unknown]"
+        if e.context is not None:
+            message.append(e.context)
+
+        if e.problem is not None:
+            message.append(e.problem)
+
+        if e.note is not None:
+            message.append("(note: " + e.note + ")")
+
+        return "{}: {}".format(position, message)
+
+    def yaml_warning(loader, e):
+        # Given a MarkedYAMLError exception, either log or raise
+        # the error, depending on the 'fatal' argument.
+        pass
+        # commenting out for 1.1 release
+        # print format_message(e)
+
     def yaml_error(loader, e, exc_info=None):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
@@ -4773,23 +5017,33 @@ if YAML_INSTALLED:
         if fatal:
             raise e
 
-        message = []
+        print format_message(e)
 
-        mark = e.context_mark or e.problem_mark
-        if mark:
-            position = "%s:%s:%s" % (mark.name, mark.line+1, mark.column+1)
-        else:
-            position = "[unknown]"
-        if e.context is not None:
-            message.append(e.context)
+    def verify_key(loader, cls, params, key, start_mark):
+        # always ok to use a param name (description, name, etc.)
+        if key in params.keys():
+            return True
 
-        if e.problem is not None:
-            message.append(e.problem)
+        # never use a python reserved word
+        if key in keyword.kwlist:
+            yaml_error(loader, yaml.constructor.ConstructorError(
+                None, None,
+                "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+                start_mark))
+        elif key in ZENOSS_KEYWORDS.union(JS_WORDS):
+            # should be ok to use a zenoss word to define these
+            # some items, like sysUpTime are pretty common datapoints
+            if cls not in [RRDDatasourceSpec,
+                           RRDDatapointSpec,
+                           RRDTemplateSpec,
+                           GraphDefinitionSpec,
+                           GraphPointSpec]:
+                yaml_warning(loader, yaml.constructor.ConstructorError(
+                    None, None,
+                    "Found reserved keyword '{}' while processing {}".format(key, cls.__name__),
+                    start_mark))
 
-        if e.note is not None:
-            message.append("(note: " + e.note + ")")
-
-        print "%s: %s" % (position, ",".join(message))
+        return False
 
     def construct_specsparameters(loader, node, spectype):
         spec_class = {x.__name__: x for x in Spec.__subclasses__()}.get(spectype, None)
@@ -4808,10 +5062,12 @@ if YAML_INSTALLED:
                 node.start_mark))
             return
 
+        param_defs = spec_class.init_params()
         specs = OrderedDict()
         for spec_key_node, spec_value_node in node.value:
             try:
                 spec_key = str(loader.construct_scalar(spec_key_node))
+                verify_key(loader, spec_class, param_defs, spec_key, spec_key_node.start_mark)
             except yaml.MarkedYAMLError, e:
                 yaml_error(loader, e)
 
@@ -5032,6 +5288,7 @@ if YAML_INSTALLED:
         for key_node, value_node in node.value:
             yaml_key = str(loader.construct_scalar(key_node))
 
+            verify_key(loader, cls, param_defs, yaml_key, key_node.start_mark)
             if yaml_key not in param_name_map:
                 if extra_params:
                     # If an 'extra_params' parameter is defined for this spec,
@@ -5510,7 +5767,16 @@ def relationships_from_yuml(yuml):
     return classes
 
 
-def MethodInfoProperty(method_name):
+def DeviceInfoStatusProperty():
+    """Return property for DeviceBaseInfo.status."""
+    def getter(self):
+        status = self._object.getStatus()
+        return None if status is None else status < 1
+
+    return property(getter)
+
+
+def MethodInfoProperty(method_name, entity=False):
     """Return a property with the Infos for object(s) returned by a method.
 
     A list of Info objects is returned for methods returning a list, or a single
@@ -5518,10 +5784,18 @@ def MethodInfoProperty(method_name):
     """
     def getter(self):
         try:
-            return Zuul.info(getattr(self._object, method_name)())
+            result = Zuul.info(getattr(self._object, method_name)())
         except TypeError:
             # If not callable avoid the traceback and send the property
-            return Zuul.info(getattr(self._object, method_name))
+            result = Zuul.info(getattr(self._object, method_name))
+        if entity:
+            # rather than returning entire object(s), return just
+            # the fields needed by the UI renderer for creating links.
+            return marshal(
+                result,
+                keys=('name', 'meta_type', 'class_label', 'uid'))
+        else:
+            return result
 
     return property(getter)
 
@@ -5550,7 +5824,11 @@ def RelationshipInfoProperty(relationship_name):
 
     """
     def getter(self):
-        return Zuul.info(getattr(self._object, relationship_name)())
+        # rather than returning entire object(s), return just the fields
+        # required by the UI renderer for creating links.
+        return marshal(
+            Zuul.info(getattr(self._object, relationship_name)()),
+            keys=('name', 'meta_type', 'class_label', 'uid'))
 
     return property(getter)
 
@@ -5715,7 +5993,12 @@ def apply_defaults(dictionary, default_defaults=None, leave_defaults=False):
             defaults = dictionary.pop('DEFAULTS')
         for k, v in dictionary.iteritems():
             dictionary[k] = dict(defaults, **v)
-
+            if 'extra_params' in  dictionary[k].keys():
+                extra_params = defaults.get('extra_params',{})
+                dictionary_params = dictionary[k]['extra_params']
+                for i, j in extra_params.items():
+                    if i not in dictionary_params.keys():
+                        dictionary_params[i] = j
 
 def get_symbol_name(*args):
     """Return fully-qualified symbol name given path args.
@@ -5821,7 +6104,7 @@ def create_class(module, schema_module, classname, bases, attributes):
 # Impact Stuff ##############################################################
 
 try:
-    from ZenPacks.zenoss.Impact.impactd.relations import ImpactEdge, DSVRelationshipProvider, RelationshipEdgeError
+    from ZenPacks.zenoss.Impact.impactd.relations import ImpactEdge
     from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipDataProvider
 except ImportError:
     IMPACT_INSTALLED = False
@@ -5830,10 +6113,11 @@ else:
 
 try:
     from ZenPacks.zenoss.DynamicView import BaseRelation, BaseGroup
-    from ZenPacks.zenoss.DynamicView import TAG_IMPACTED_BY, TAG_IMPACTS, TAG_ALL
-    from ZenPacks.zenoss.DynamicView.interfaces import IRelatable, IRelationsProvider, IGroup
-    from ZenPacks.zenoss.DynamicView.dynamicview import DynamicViewMappings
-    from ZenPacks.zenoss.DynamicView.model.adapters import BaseRelatable, BaseRelationsProvider
+    from ZenPacks.zenoss.DynamicView import TAG_ALL
+    from ZenPacks.zenoss.DynamicView.interfaces import IRelatable, IRelationsProvider
+    from ZenPacks.zenoss.DynamicView.interfaces import IGroupMappingProvider
+    from ZenPacks.zenoss.DynamicView.model.adapters import BaseRelatable
+    from ZenPacks.zenoss.DynamicView.model.adapters import BaseRelationsProvider
 
 except ImportError:
     DYNAMICVIEW_INSTALLED = False
@@ -5925,7 +6209,6 @@ if DYNAMICVIEW_INSTALLED:
         """
 
         implements(IRelatable)
-        adapts(DeviceBase, ComponentBase)
 
         @property
         def id(self):
@@ -5941,7 +6224,41 @@ if DYNAMICVIEW_INSTALLED:
 
         @property
         def group(self):
-            return self._adapted.class_dynamicview_group
+            data = self._adapted.getDynamicViewGroup()
+            if data:
+                return data.get('name', 'Unknown')
+
+        @property
+        def group_data(self):
+            return self._adapted.getDynamicViewGroup()
+
+    class DynamicViewGroupMappingProvider(object):
+        """Generic DynamicView IGroupMappingProvider adapter.
+
+        All group information is gathered from the adapted model object.
+
+        """
+
+        implements(IGroupMappingProvider)
+        adapts(DynamicViewRelatable)
+
+        def __init__(self, adapted):
+            self._adapted = adapted
+
+        def getGroup(self, viewName):
+            group = self._adapted
+            entity = group._adapted
+
+            if viewName not in entity.dynamicview_views:
+                return
+
+            data = self._adapted.group_data
+            if data:
+                return BaseGroup(
+                    name=data.get('name', 'Unknown'),
+                    weight=data.get('weight', 999),
+                    type=data.get('type', 'Unknown'),
+                    icon=data.get('icon', '/zport/dmd/img/icons/noicon.png'))
 
     class DynamicViewRelationsProvider(BaseRelationsProvider):
         """Generic DynamicView RelationsProvider subscription adapter (IRelationsProvider)
@@ -5955,7 +6272,6 @@ if DYNAMICVIEW_INSTALLED:
         DynamicViewRelationsProvider for a given model class.
         """
         implements(IRelationsProvider)
-        adapts(DeviceBase, ComponentBase)
 
         def relations(self, type=TAG_ALL):
             target = IRelatable(self._adapted)
@@ -6501,6 +6817,7 @@ if __name__ == '__main__':
                                 break
                             if isinstance(obj, RelationshipBase):
                                 path.insert(0, obj.id)
+                        all_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
                         included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
                         class_summary[component.meta_type].add(facet.meta_type)
 
