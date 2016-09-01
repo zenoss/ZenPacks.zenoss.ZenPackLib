@@ -619,7 +619,7 @@ classes:
     properties:
       DEFAULTS:
         grid_display: false
-        #default: None
+        default: None
       instancename:
         label: Instance Name
       jobid:
@@ -632,7 +632,6 @@ classes:
         label: Description
       username:
         label: User
-        #default: None
       datecreated:
         label: Date Created
       cluster_node_server:

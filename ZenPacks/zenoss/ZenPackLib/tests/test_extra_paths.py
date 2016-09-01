@@ -15,21 +15,18 @@ This module tests zenpacklib 'extra_paths' and path reporters.
 
 """
 
-# stdlib Imports
-import os
-import site
-import tempfile
-
 # Zenoss Imports
 import Globals  # noqa
+from Products.ZenUtils.Utils import unused
+unused(Globals)
+
 from Products.ZenRelations.RelationshipBase import RelationshipBase
 from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
 from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
-
 # zenpacklib Imports
-site.addsitedir(os.path.join(os.path.dirname(__file__), '..'))
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
+
 
 YAML = """
 name: ZenPacks.zenoss.SimplevSphere
@@ -81,13 +78,6 @@ classes:
 """
 
 
-def spec_from_string(s):
-    with tempfile.NamedTemporaryFile() as f:
-        f.write(s.strip())
-        f.flush()
-        return zenpacklib.load_yaml(f.name)
-
-
 # When a manually-created python object is first added to its container, we
 # need to reload it, as its in-memory representation is changed.
 def addContained(object, relname, target):
@@ -132,7 +122,7 @@ class TestExtraPaths(BaseTestCase):
         self.dmd.Devices.SimplevSphere._setProperty('zPythonClass', 'ZenPacks.zenoss.SimplevSphere.Endpoint')
 
         # Load the YAML
-        self.CFG = spec_from_string(YAML)
+        self.CFG = zenpacklib.load_yaml(YAML)
 
         # And create the model.
         self._create_device()

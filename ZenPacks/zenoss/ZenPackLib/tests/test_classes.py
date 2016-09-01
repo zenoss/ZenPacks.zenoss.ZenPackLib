@@ -15,12 +15,8 @@ This module tests zenpacklib "Specs". These are the intermediate step
 between YAML and Zenoss functionality.
 
 """
-
 # stdlib Imports
 import os
-import logging
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger('zen.zenpacklib.tests')
 
 # Zenoss Imports
 import Globals  # noqa
@@ -28,8 +24,7 @@ from Products.ZenUtils.Utils import unused
 unused(Globals)
 
 from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-from .ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 
 class TestClasses(BaseTestCase):
@@ -38,45 +33,19 @@ class TestClasses(BaseTestCase):
     zps = []
 
     def setUp(self):
-        fdir = '%s/data/yaml' % os.path.dirname(__file__)
+        fdir = '{}/data/yaml'.format(os.path.abspath(os.path.dirname(__file__)))
         for f in os.listdir(fdir):
             if '.yaml' not in f:
                 continue
             file = os.path.join(os.path.dirname(__file__), 'data/yaml/%s' % f)
-            log.info("loading file: {}".format(file))
             self.zps.append(ZPLTestHarness(file))
 
-    def test_ClassProperties(self):
-        '''
-        check that class properties follow the spec
-        '''
-        log.info("Checking Properties")
+    def test_ZP(self):
         for zp in self.zps:
-            self.assertTrue(zp.check_properties(),"Test Failed")
-
-    def test_ClassRelations(self):
-        '''
-        check that class relations follow the spec
-        '''
-        log.info("Checking relations")
-        for zp in self.zps:
-            self.assertTrue(zp.check_cfg_relations(),"Test Failed")
-
-    def test_Templates_YAML(self):
-        '''
-        check that class relations follow the spec
-        '''
-        log.info("Checking relations")
-        for zp in self.zps:
-            self.assertTrue(zp.check_templates_vs_yaml(),"Test Failed")
-
-    def test_Templates_Spec(self):
-        '''
-        check that class relations follow the spec
-        '''
-        log.info("Checking relations")
-        for zp in self.zps:
-            self.assertTrue(zp.check_templates_vs_specs(),"Test Failed")
+            self.assertTrue(zp.check_properties(), "Property testing failed for {}".format(zp.filename))
+            self.assertTrue(zp.check_cfg_relations(), "Relation testing failed for {}".format(zp.filename))
+            self.assertTrue(zp.check_templates_vs_yaml(), "Template (YAML) testing failed for {}".format(zp.filename))
+            self.assertTrue(zp.check_templates_vs_specs(), "Template (Spec) testing failed for {}".format(zp.filename))
 
 def test_suite():
     """Return test suite for this module."""

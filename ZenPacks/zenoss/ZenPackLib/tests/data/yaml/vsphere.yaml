@@ -1,4 +1,4 @@
-name: ZenPacks.zenoss.vSphere
+name: ZenPacks.zenoss.vSphere2
 
 zProperties:
   DEFAULTS:
@@ -45,6 +45,13 @@ zProperties:
   zVSphereModelIgnore:
     type: lines
   zVSphereModelCache:
+    type: lines
+  zVSphereHostSystemUser:
+    type: string
+    default: admin
+  zVSphereHostSystemPassword:
+    type: password
+  zVSphereHostCollectionClusterWhitelist:
     type: lines
 
 class_relationships:
@@ -111,6 +118,7 @@ classes:
   ComputeResource:
     base: [VMwareComponent]  
     meta_type: vSphereComputeResource
+    filter_display: false
     properties: 
       numEffectiveHosts:
         type: int
@@ -258,7 +266,7 @@ classes:
     label: dvSwitch
     plural_label: dvSwitches
     properties:
-      uuid:
+      dvsUUID:
         type: string
         label: UUID
         grid_display: false
@@ -378,7 +386,7 @@ classes:
         type: string
         label: Model
         grid_display: false
-      uuid:
+      lunUUID:
         type: string
         label: LUN UUID
         grid_display: false
@@ -502,6 +510,34 @@ classes:
         label: Overall Status
         api_only: true
         api_backendtype: method
+        grid_display: false
+      vxlanInstallDate:
+        type: string
+        label: VXLAN VIB Install Date
+        grid_display: false
+      vxlanVersion:
+        type: string
+        label: VXLAN VIB Version
+        grid_display: false
+      vsipInstallDate:
+        type: string
+        label: VSIP VIB Install Date
+        grid_display: false
+      vsipVersion:
+        type: string
+        label: VSIP VIB Version
+        grid_display: false
+      dvfilterSwitchSecurityInstallDate:
+        type: string
+        label: DVFilter Switch Security VIB Install Date
+        grid_display: false
+      dvfilterSwitchSecurityVersion:
+        type: string
+        label: DVFilter Switch Security VIB Version
+        grid_display: false
+      vdsConfigured:
+        type: boolean
+        label: VDS Config Present
         grid_display: false
     relationships:
       datacenter:
@@ -655,6 +691,13 @@ classes:
         type: string
         label: LUN UUID
         grid_display: false
+      host:
+        label: Host
+        api_only: true
+        api_backendtype: method               
+        type: entity
+        label_width: 140
+        order: 1.3        
       storageProvider:
         label: Storage Provider
         api_only: true
@@ -747,16 +790,16 @@ classes:
     base: [ResourcePool]
     meta_type: vSphereVirtualApp
     label: vApp
-    #TODO: unable to override these aspects of inherited relationships
-    # relationships:
-    #   owner:
-    #     grid_display: false
-    #   parentResourcePool:
-    #     grid_display: false
-    #     label: "Parent vApp"
-    #   childResourcePools:
-    #     grid_display: false
-    #     label: "Child vApps"      
+    relationships:
+      owner:
+        grid_display: false
+      # Not currently working (ZEN-24302)
+      parentResourcePool:
+        grid_display: false
+        label: "Parent vApp"
+      childResourcePools:
+        grid_display: false
+        label: "Child vApps"      
     
 
   Datacenter:
@@ -876,7 +919,8 @@ classes:
     short_label: VM
     plural_label: VMs
     extra_paths:
-      - ['vm', '(childResourcePools)+']   # from all parent resource pools, recursively.
+      - ['resourcePool', 'owner']  # from cluster or standalone
+      - ['resourcePool', '(parentResourcePool)+']   # from all parent resource pools, recursively.
     properties:
       overallStatus:
         type: string
@@ -894,7 +938,7 @@ classes:
         default: ''
         label: Guest Name
         grid_display: false
-      uuid:
+      vmUUID:
         type: string
         label: UUID
         grid_display: false

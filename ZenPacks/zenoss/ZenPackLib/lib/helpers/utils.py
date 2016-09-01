@@ -19,7 +19,7 @@ import inspect
 
 # list of yaml sections with DEFAULTS capability
 YAML_HAS_DEFAULTS = ['classes', 'properties', 'thresholds', 'datasources',
-                     'datapoints', 'graphs', 'relationships','graphpoints']
+                     'datapoints', 'graphs', 'relationships','graphpoints', 'zProperties']
 
 # preferred section ordering for YAML sections
 YAML_PREFERRED_ORDER = ['zProperties', 'class_relationships', 'classes',
@@ -102,25 +102,23 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
 
     if CFG:
         CFG.create()
+        end = time.time() - start
+        DEFAULTLOG.info("Loaded {} in {:0.2f}s".format(CFG.name, end))
     else:
         DEFAULTLOG.error("Unable to load {}".format(yaml_doc))
-
-    end = time.time() - start
-    DEFAULTLOG.info("Loaded {} in {:0.2f}s".format(CFG.name, end))
-
     return CFG
 
 
-def load_yaml_single(yaml_doc, useLoader=True):
+def load_yaml_single(yaml_doc, useLoader=True, loader=Loader):
     ''''''
     # if it's a string
     if os.path.isfile(yaml_doc):
         if useLoader:
-            return yaml.load(file(yaml_doc, 'r'), Loader=Loader)
+            return yaml.load(file(yaml_doc, 'r'), Loader=loader)
         return yaml.load(file(yaml_doc, 'r'))
     else:
         if useLoader:
-            return yaml.load(yaml_doc, Loader=Loader)
+            return yaml.load(yaml_doc, Loader=loader)
         return yaml.load(yaml_doc)
 
 
