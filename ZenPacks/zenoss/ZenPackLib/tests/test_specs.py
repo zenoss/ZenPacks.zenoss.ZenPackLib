@@ -16,9 +16,6 @@ between YAML and Zenoss functionality.
 
 """
 
-# stdlib Imports
-import unittest
-
 # Zenoss Imports
 import Globals  # noqa
 from Products.ZenUtils.Utils import unused

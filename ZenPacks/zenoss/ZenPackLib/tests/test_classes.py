@@ -30,7 +30,7 @@ from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 class TestClasses(BaseTestCase):
 
     """Specs test suite."""
-    zps = []
+    files = []
 
     def setUp(self):
         fdir = '{}/data/yaml'.format(os.path.abspath(os.path.dirname(__file__)))
@@ -38,10 +38,11 @@ class TestClasses(BaseTestCase):
             if '.yaml' not in f:
                 continue
             file = os.path.join(os.path.dirname(__file__), 'data/yaml/%s' % f)
-            self.zps.append(ZPLTestHarness(file))
+            self.files.append(file)
 
     def test_ZP(self):
-        for zp in self.zps:
+        for file in self.files:
+            zp = ZPLTestHarness(file)
             self.assertTrue(zp.check_properties(), "Property testing failed for {}".format(zp.filename))
             self.assertTrue(zp.check_cfg_relations(), "Relation testing failed for {}".format(zp.filename))
             self.assertTrue(zp.check_templates_vs_yaml(), "Template (YAML) testing failed for {}".format(zp.filename))

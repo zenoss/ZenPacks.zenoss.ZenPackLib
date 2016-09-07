@@ -21,7 +21,6 @@ import Globals  # noqa
 
 from Products.ZenUtils.Utils import unused
 from BaseTestCommand import BaseTestCommand
-import logging
 import io
 import yaml
 
