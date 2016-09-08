@@ -1,5 +1,13 @@
 Version 1.1
 ===========
+Release 1.1.1
+--------------
+
+Fixes
+
+* Ensure relation display falls back to inherited or relname_from_classname (ZEN-24302)
+
+
 
 Release 1.1.0
 -------------
