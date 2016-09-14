@@ -2737,7 +2737,7 @@ class ClassSpec(Spec):
             spec, relspec = specs
             attributes[self.get_relname(spec, relspec)] = schema.Entity(
                 title=_t(spec.label),
-                group="Relationships",
+                group="Overview",
                 order=3 + i / 100.0)
 
         for spec in self.inherited_relationships().itervalues():
@@ -3749,15 +3749,16 @@ class ClassRelationshipSpec(Spec):
             remote_spec.label = remote_spec.meta_type
 
         if isinstance(self.schema, (ToOne)):
-            schemas[self.name] = schema.Entity(
-                title=_t(self.label or remote_spec.label),
-                group="Relationships",
-                order=self.order or 3.0)
+            if (self.label or remote_spec.label) != 'Device':
+                schemas[self.name] = schema.Entity(
+                    title=_t(self.label or remote_spec.label),
+                    group="Overview",
+                    order=self.order or 3.0)
         else:
             relname_count = '{}_count'.format(self.name)
             schemas[relname_count] = schema.Int(
                 title=_t(u'Number of {}'.format(self.label or remote_spec.plural_label)),
-                group="Relationships",
+                group="Overview",
                 order=self.order or 6.0)
 
         return schemas
