@@ -639,8 +639,11 @@ class ClassSpec(Spec):
 
         for i, specs in enumerate(self.containing_spec_relations):
             spec, relspec = specs
+            relname = self.get_relname(spec, relspec)
+            if relspec and not relspec.details_display:
+                continue
 
-            attributes[self.get_relname(spec, relspec)] = schema.Entity(
+            attributes[relname] = schema.Entity(
                 title=_t(spec.label),
                 group="Relationships",
                 order=3 + i / 100.0)
