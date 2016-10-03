@@ -17,6 +17,7 @@ from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 # change this to use other versions of zenpacklib
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import load_yaml_single
+from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
 
 
 def str_to_severity(value):
@@ -56,6 +57,7 @@ class ZPLTestHarness(ZenScriptBase):
     def __init__(self, filename, connect=False):
         ''''''
         ZenScriptBase.__init__(self)
+        self.filename = filename
         self.cfg = zenpacklib.load_yaml(filename, verbose=True)
         self.yaml = load_yaml_single(filename, useLoader=False)
         self.zp = self.cfg.zenpack_module
@@ -64,6 +66,8 @@ class ZPLTestHarness(ZenScriptBase):
         # create relations between objects
         self.build_relations()
         self.build_cfg_relations()
+        self.exported_yaml = yaml.dump(self.cfg, Dumper=Dumper)
+        self.reloaded_yaml = load_yaml_single(self.exported_yaml, useLoader=False)
 
     def build_ob(self, cls_name, inst=0):
         '''build an instance object from schema class'''
@@ -115,7 +119,7 @@ class ZPLTestHarness(ZenScriptBase):
 
     def link_obs(self, ob_from, ob_to):
         '''link two schema instance objects'''
-        #get object specs and relation specs
+        # get object specs and relation specs
         rspec = self.find_relspec(ob_from, ob_to)
         # get object relations
         from_rel = self.get_ob_rel(ob_from, rspec)
@@ -187,12 +191,12 @@ class ZPLTestHarness(ZenScriptBase):
             if not passed:
                 return False
         return True
-        
+
     def check_ob_relations(self):
         '''compare class vs spec relations'''
         passed = True
         for i, j in self.find_pairs():
-            if not self.check_rel(i,j):
+            if not self.check_rel(i, j):
                 passed = False
         return passed
 
@@ -248,42 +252,62 @@ class ZPLTestHarness(ZenScriptBase):
                 2) compare class spec relations to ZPL-created class
                 3) compare class spec relations to ZPL-created class instances
         '''
+        def check_relation_schema(fwd, rwd, rel_class, bases):
+            """ check RelationshipSchemaSpec """
+            for b in bases:
+                b_fwd = fwd.replace(rel_class, b, 1)
+                b_rwd = b.join(rwd.rsplit(rel_class, 1))
+                if self.has_cfg_relation(b_fwd, b_rwd):
+                    return True
+            log.warn('Problem with {} RelationshipSchemaSpec "{}"'.format(name, fwd))
+            return False
+        def check_class_relation(fwd, rwd, cls, relname):
+            """ check class relation """
+            c_fwd = self.rel_cls_info(cls, relname)
+            c_rwd = self.rel_cls_info(cls, relname, reverse=True)
+            for x, y in [(fwd, c_fwd), (rwd, c_rwd)]:
+                if x != y:
+                    log.warn('Class ({}) relation mismatch between:\n    {}\n    {}'.format(cls.__name__, x, y))
+                    return False
+            return True
+        def check_object_relation(fwd, rwd, name, relname):
+            """check relation on object"""
+            ob = self.build_ob(name)
+            ob_fwd = self.rel_ob_info(ob, relname)
+            ob_rwd = self.rel_ob_info(ob, relname, reverse=True)
+            for x, y in [(fwd, ob_fwd), (rwd, ob_rwd)]:
+                if x != y:
+                    log.warn('Object ({}) relation mismatch between:\n    {}\n    {}'.format(name, x, y))
+                    return False
+            return True
         passed = True
         for name, spec in self.cfg.classes.items():
-            log.info('{} {} {}'.format('-'*40, name, '-'*40))
             cls = self.get_cls(name)
             bases = self.get_bases(cls)
             for relname, rspec in spec.relationships.items():
                 rel_class = rspec.class_.name
+                fwd = self.rel_cls_spec_info(rspec)
+                rwd = self.rel_cls_spec_info(rspec, reverse=True)
+                # check RelationshipSchemaSpec
+                if not self.has_cfg_relation(fwd, rwd):
+                    if not check_relation_schema(fwd, rwd, rel_class, bases):
+                        passed = False
                 if name != rel_class:
                     if rel_class not in bases:
                         log.warn('{} has relation {} inherited from invalid base class: {}'.format(name, relname, rel_class))
                         passed = False
-                # check class rel spec
-                fwd = self.rel_cls_spec_info(rspec)
-                rwd = self.rel_cls_spec_info(rspec, reverse=True)
-                if not self.has_cfg_relation(fwd, rwd):
-                    log.warn('Problem with {} RelationshipSchemaSpec "{}"'.format(name, fwd))
-                    passed = False
-                # if inherited class, replace with this class for future matches
-                if name != rel_class:
-                    fwd = fwd.replace(rel_class, name, 1)
-                    rwd = name.join(rwd.rsplit(rel_class, 1))
-                # check class relation directly
-                # localize inherited classes
-                c_fwd = self.rel_cls_info(cls, relname)
-                c_rwd = self.rel_cls_info(cls, relname, reverse=True)
-                if c_fwd != fwd or c_rwd != rwd:
-                    log.warn('Problem with {} class relation "{}"'.format(name, c_fwd))
+                        continue
+                    else:
+                        # if inherited class, replace with this class for future matches
+                        fwd = fwd.replace(rel_class, name, 1)
+                        rwd = name.join(rwd.rsplit(rel_class, 1))
+                # check class relation
+                if not check_class_relation(fwd, rwd, cls, relname):
                     passed = False
                 # check relation on object
-                ob = self.build_ob(name)
-                ob_fwd = self.rel_ob_info(ob, relname)
-                ob_rwd = self.rel_ob_info(ob, relname, reverse=True)
-                if ob_fwd != fwd or ob_rwd != rwd:
-                    log.warn('Problem with {} object relation: "{}"'.format(name, ob_fwd))
+                if not check_object_relation(fwd, rwd, name, relname):
                     passed = False
-        return passed
+    return passed
 
     def compare_ob_to_spec(self, ob):
         '''compare properties between spec and class'''
@@ -302,7 +326,7 @@ class ZPLTestHarness(ZenScriptBase):
             if intended == 'None':
                 log.info('{} ({}) has default value of "None" (string)'.format(cls_id, name))
             # mismatch between intended and actual
-            errmsg = '{} ({}) type or value mismatch between spec "{}" ({}) and class "{}" ({})'.format(cls_id, name, 
+            errmsg = '{} ({}) type or value mismatch between spec "{}" ({}) and class "{}" ({})'.format(cls_id, name,
                                                                                                    intended, type(intended).__name__,
                                                                                                    actual, type(actual).__name__)
             if intended is None:
@@ -368,7 +392,7 @@ class ZPLTestHarness(ZenScriptBase):
         for p in ob._properties:
             id = p.get('id')
             default = getattr(ob, id)
-            spec_default = getattr(dscs, id, getattr(dscs,'extra_params',{}).get(id))
+            spec_default = getattr(dscs, id, getattr(dscs, 'extra_params', {}).get(id))
             # skip if not defined:
             if not spec_default:
                 continue
@@ -419,12 +443,12 @@ class ZPLTestHarness(ZenScriptBase):
     def check_ob_vs_yaml(self, ob, data):
         '''compare object values to YAML'''
         passed = True
-        ob_data = data.get(ob.id,{})
+        ob_data = data.get(ob.id, {})
         if not isinstance(ob_data, dict):
             # this is the dataoint aliases
             if self.classname(ob) == 'RRDDataPoint':
                 return passed
-        ob_data.update(data.get('DEFAULTS',{}))
+        ob_data.update(data.get('DEFAULTS', {}))
         for k, v in ob_data.items():
             if isinstance(v, dict):
                 continue
@@ -440,8 +464,8 @@ class ZPLTestHarness(ZenScriptBase):
                 if k in ['rrdmin', 'rrdmax']:
                     if str(expected) == str(actual):
                         continue
-                log.warn('{} ({}) property {}: acutal: {} ({}) did not match expected: {} ({})'.format(ob.id, ob.meta_type, k, 
-                                                                                                actual, type(actual).__name__, 
+                log.warn('{} ({}) property {}: acutal: {} ({}) did not match expected: {} ({})'.format(ob.id, ob.meta_type, k,
+                                                                                                actual, type(actual).__name__,
                                                                                                 expected, type(expected).__name__))
                 passed = False
         return passed
@@ -470,7 +494,7 @@ class ZPLTestHarness(ZenScriptBase):
         if reverse:
             return base_string.format(cls_t, rel_t, type_t,
                                   type_f, rel_f, cls_f)
-        return base_string.format(cls_f, rel_f, type_f, 
+        return base_string.format(cls_f, rel_f, type_f,
                               type_t, rel_t, cls_t)
 
     def print_relations(self):
@@ -494,7 +518,7 @@ class ZPLTestHarness(ZenScriptBase):
         rel = getattr(ob, relname)
         return self.rel_string(self.classname(ob),
                                relname,
-                               self.classname(rel).replace('Relationship',''),
+                               self.classname(rel).replace('Relationship', ''),
                                rel.remoteType().__name__,
                                rel.remoteName(),
                                rel.remoteClass().__name__,
@@ -540,9 +564,9 @@ class ZPLTestHarness(ZenScriptBase):
     def print_attrs(self, data):
         for name, spec in data.items():
             print '#### {}'.format(name)
-            for k,v in spec.__dict__.items():
+            for k, v in spec.__dict__.items():
                 if v is None: continue
-                print '  {}: {}'.format(k,v)
+                print '  {}: {}'.format(k, v)
             print ''
 
     def list_all_paths(self):
@@ -579,7 +603,7 @@ class ZPLTestHarness(ZenScriptBase):
                     path.insert(0, obj.id)
             included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
             class_summary[component.meta_type].add(facet.meta_type)
-        
+
         print "Paths\n-----\n"
         for path in sorted(all_paths):
             if path in included_paths:
