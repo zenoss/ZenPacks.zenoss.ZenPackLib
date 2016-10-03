@@ -16,19 +16,13 @@ between YAML and Zenoss functionality.
 
 """
 
-# stdlib Imports
-import os
-import unittest
-import site
-import tempfile
-from Products.ZenUtils.Utils import unused
-
 # Zenoss Imports
 import Globals  # noqa
+from Products.ZenUtils.Utils import unused
 unused(Globals)
 
 # zenpacklib Imports
-site.addsitedir(os.path.join(os.path.dirname(__file__), '..'))
+from Products.ZenTestCase.BaseTestCase import BaseTestCase
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 LINUX_YAML = """
@@ -108,19 +102,11 @@ Zenoss.nav.appendTo('Component', [{
 """
 
 
-def spec_from_string(s):
-    with tempfile.NamedTemporaryFile() as f:
-        f.write(s.strip())
-        f.flush()
-        return zenpacklib.load_yaml(f.name)
-
-
-class TestSpecs(unittest.TestCase):
-
+class TestSpecs(BaseTestCase):
     """Specs test suite."""
 
     def test_DynamicViewComponentNav(self):
-        zenpack = spec_from_string(LINUX_YAML)
+        zenpack = zenpacklib.load_yaml(LINUX_YAML)
 
         # dynamicview_nav_js_snippet is only used internally by zenpacklib, but
         # it should match exactly and be an easier test to make.

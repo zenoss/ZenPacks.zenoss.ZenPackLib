@@ -14,11 +14,6 @@
 This module tests ZenPack install, upgrade and remove.
 
 """
-
-import Globals
-from Products.ZenUtils.Utils import unused, binPath
-unused(Globals)
-
 import os
 import subprocess
 import logging
@@ -26,9 +21,22 @@ import logging
 logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger('zen.zenpacklib.tests')
 
+import Globals
+from Products.ZenUtils.Utils import unused, binPath
+unused(Globals)
 
 from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
+
+def get_cmd_output(cmd, vars):
+    LOG.info(" ".join(cmd))
+    env = dict(os.environ)
+    env.update(vars)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                         env=env)
+    out, err = p.communicate()
+    p.wait()
+    return (p,out,err)
 
 class TestInstall(BaseTestCase):
 
@@ -37,118 +45,37 @@ class TestInstall(BaseTestCase):
                                 "data/zenpacks/ZenPacks.zenoss.ZPLTest1")
     disableLogging = False
 
-    def setUp(self):
-        cmd = [binPath('zenpack'), "--list"]
-        LOG.info(" ".join(cmd))
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        p.wait()
-        LOG.debug("out=%s, err=%s", out, err)
-
-
-        self.assertIs(p.returncode, 0,
-                      'Error listing installed zenpacks: %s' % err)
-
-        if self.zenpack_name in out:
-            cmd = [binPath('zenpack'), "--remove", self.zenpack_name]
-
-            LOG.info(" ".join(cmd))
-            p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-            out, err = p.communicate()
-            p.wait()
-            LOG.debug("out=%s, err=%s", out, err)
-
-            self.assertIs(p.returncode, 0,
-                          'Error removing %s zenpack: %s' % (self.zenpack_name, err))
-
     def test_install(self):
+        """install the zenpack for the first time"""
         cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
+        out = self.run_cmd(cmd)
 
-        LOG.info(" ".join(cmd))
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        p.wait()
-        LOG.debug("out=%s, err=%s", out, err)
-
-        self.assertIs(p.returncode, 0,
-                      'Error installing %s zenpack: %s' % (self.zenpack_name, err))
-
-    def test_upgrade(self):
+    def test_install_upgrade(self):
+        """install it a second time unchanged"""
         cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
+        out = self.run_cmd(cmd)
 
-        LOG.info(" ".join(cmd))
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        p.wait()
-        LOG.debug("out=%s, err=%s", out, err)
-
-        self.assertIs(p.returncode, 0,
-                      'Error installing %s zenpack: %s' % (self.zenpack_path, err))
-
-        # install it a second time.  Basically a do-nothign upgrade.
-
-        LOG.info(" ".join(cmd))
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        p.wait()
-        LOG.debug("out=%s, err=%s", out, err)
-
-        self.assertIs(p.returncode, 0,
-                      'Error upgrading %s zenpack: %s' % (self.zenpack_name, err))
-
-        pass
-
-    def test_add_template(self):
+    def test_install_upgrade_yaml(self):
+        """
+            install it a second time, with a different yaml file that simulates
+            adding a new monitoring template
+        """
         cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
+        out = self.run_cmd(cmd, vars={'ZPL_YAML_FILENAME': 'yes'})
 
-        LOG.info(" ".join(cmd))
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        p.wait()
+    def test_remove_if_installed(self):
+        " remove the installed zenpack"
+        out = self.run_cmd([binPath('zenpack'), "--list"])
+        if self.zenpack_name in out:
+            out = self.run_cmd([binPath('zenpack'), "--remove", self.zenpack_name])
+
+    def run_cmd(self, cmd, vars={}):
+        """execute a command and assert success"""
+        p,out,err = get_cmd_output(cmd, vars)
         LOG.debug("out=%s, err=%s", out, err)
-
-        self.assertIs(p.returncode, 0,
-                      'Error installing %s zenpack: %s' % (self.zenpack_path, err))
-
-        # install it a second time, with a different yaml file that simulates
-        # adding a new monitoring template
-
-        yaml_filename = os.path.join(self.zenpack_path, 'ZenPacks/zenoss/ZPLTest1/zenpack2.yaml')
-
-        LOG.info("ZPL_YAML_FILENAME=" + yaml_filename + " " + " ".join(cmd))
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             env=dict(os.environ, ZPL_YAML_FILENAME=yaml_filename))
-        out, err = p.communicate()
-        p.wait()
-        LOG.debug("out=%s, err=%s", out, err)
-
-        self.assertIs(p.returncode, 0,
-                      'Error upgrading %s zenpack: %s' % (self.zenpack_name, err))
-
-        pass
-
-    def test_uninstall(self):
-        cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
-
-        LOG.info(" ".join(cmd))
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        p.wait()
-        LOG.debug("out=%s, err=%s", out, err)
-
-        self.assertIs(p.returncode, 0,
-                      'Error installing %s zenpack: %s' % (self.zenpack_path, err))
-
-        cmd = [binPath('zenpack'), "--remove", self.zenpack_name]
-
-        LOG.info(" ".join(cmd))
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        p.wait()
-        LOG.debug("out=%s, err=%s", out, err)
-
-        self.assertIs(p.returncode, 0,
-                      'Error removing %s zenpack: %s' % (self.zenpack_name, err))
+        msg = 'Command "{}" failed with error:\n  {}'.format(cmd, err)
+        self.assertIs(p.returncode, 0, msg)
+        return out
 
 
 def test_suite():

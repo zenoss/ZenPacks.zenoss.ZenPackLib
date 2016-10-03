@@ -1,3 +1,33 @@
+#!/usr/bin/env python
+
+##############################################################################
+#
+# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+#
+# This content is made available according to terms specified in
+# License.zenoss under the directory where your Zenoss product is installed.
+#
+##############################################################################
+
+"""
+    This is designed to test whether or not a relation added to a 
+    zenpacklib.Device subclass wipes out other relations added to 
+    Products.ZenModel.Device (ZEN-24108)
+"""
+# Zenoss Imports
+import Globals  # noqa
+from Products.ZenUtils.Utils import unused
+unused(Globals)
+
+# stdlib Imports
+from Products.ZenTestCase.BaseTestCase import BaseTestCase
+
+# zenpacklib Imports
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+
+
+
+YAML_DOC="""
 name: ZenPacks.zenoss.PS.SA.UGE
 
 class_relationships:
@@ -74,8 +104,8 @@ classes:
         type: string
         label: Version
         order: 10
-#    extra_paths:
-#    - ['ugequeues', 'hpcnodes']
+    extra_paths:
+    - ['ugequeues', 'hpcnodes']
 
   HPCFilesystem:
     base: [zenpacklib.Component]
@@ -99,4 +129,34 @@ device_classes:
       zPythonClass: ZenPacks.zenoss.PS.SA.UGE.UnivaGrid
       zPingMonitorIgnore: true
       zSnmpMonitorIgnore: true
+"""
 
+
+class TestZen23840(BaseTestCase):
+    """Test fix for ZEN-23840
+
+       ToMany-ToMany (M:M) non-containing relationships cause infinite recursion in get_facets
+    """
+
+    def test_inherited_relation_display(self):
+        z = ZPLTestHarness(YAML_DOC)
+        expected = 2
+        for ob in z.obs:
+            if ob.meta_type == 'HPCNode':
+                facets = []
+                for f in ob.get_facets():
+                    facets.append(f)
+                actual = len(facets)
+                self.assertEquals(expected, actual, 'get_facets expected {}, got {} objects'.format(expected, actual))
+
+def test_suite():
+    """Return test suite for this module."""
+    from unittest import TestSuite, makeSuite
+    suite = TestSuite()
+    suite.addTest(makeSuite(TestZen23840))
+    return suite
+
+if __name__ == "__main__":
+    from zope.testrunner.runner import Runner
+    runner = Runner(found_suites=[test_suite()])
+    runner.run()

@@ -14,26 +14,28 @@
 This module tests command line usage of zenpacklib.py.
 
 """
-
 import logging
 import os
 import re
 import shutil
 import Globals
-from Products.ZenUtils.Utils import unused
+from Products.ZenUtils.Utils import unused, binPath
+
 unused(Globals)
 
 logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger('zen.zenpacklib.tests')
 
-from .BaseTestCommand import BaseTestCommand
+
+from ZenPacks.zenoss.ZenPackLib.tests.BaseTestCommand import BaseTestCommand
+
+from ZenPacks.zenoss.ZenPackLib.tests.test_install import TestInstall, get_cmd_output
 
 
 class TestCommands(BaseTestCommand):
 
-    zenpack_name = 'ZenPacks.zenoss.ZPLTest1'
-    zenpack_path = os.path.join(os.path.dirname(__file__),
-                                "data/zenpacks/ZenPacks.zenoss.ZPLTest1")
+    zenpack_name = TestInstall.zenpack_name
+    zenpack_path = TestInstall.zenpack_path
     yaml_path = os.path.join(zenpack_path, 'ZenPacks/zenoss/ZPLTest1/zenpack.yaml')
 
     disableLogging = False
@@ -46,6 +48,7 @@ class TestCommands(BaseTestCommand):
                 e.message == 'No module named ZPLTest1',
                 "ZPLTest1 zenpack is not installed.  You must install it before running this test:\n   zenpack --link --install=%s" % self.zenpack_path
             )
+
 
     def test_smoke_lint(self):
         self._smoke_command("--lint", self.yaml_path)
@@ -115,6 +118,24 @@ class TestCommands(BaseTestCommand):
             "version output {!r} doesn't match /{}/"
             .format(output, version_pattern))
 
+    def test_a_install(self):
+        """install the zenpack for the first time"""
+        cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
+        out = self.run_cmd(cmd)
+
+    def test_z_remove(self):
+        " remove the installed zenpack"
+        out = self.run_cmd([binPath('zenpack'), "--list"])
+        if self.zenpack_name in out:
+            out = self.run_cmd([binPath('zenpack'), "--remove", self.zenpack_name])
+
+    def run_cmd(self, cmd, vars={}):
+        """execute a command and assert success"""
+        p,out,err = get_cmd_output(cmd, vars)
+        LOG.debug("out=%s, err=%s", out, err)
+        msg = 'Command "{}" failed with error:\n  {}'.format(cmd, err)
+        self.assertIs(p.returncode, 0, msg)
+        return out
 
 def test_suite():
     """Return test suite for this module."""
@@ -125,6 +146,7 @@ def test_suite():
 
 
 if __name__ == "__main__":
+
     from zope.testrunner.runner import Runner
     runner = Runner(found_suites=[test_suite()])
     runner.run()

@@ -7,10 +7,11 @@
 #
 ##############################################################################
 import os
-from ZenPacks.zenoss.ZPL import zenpacklib
+from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 if 'ZPL_YAML_FILENAME' in os.environ:
-    CFG = zenpacklib.load_yaml(os.environ['ZPL_YAML_FILENAME'])
+    YAML = os.path.join(os.path.dirname(__file__), 'zenpack2.yaml')
 else:
     YAML = os.path.join(os.path.dirname(__file__), 'zenpack.yaml')
-    CFG = zenpacklib.load_yaml(YAML)
+
+CFG = zenpacklib.load_yaml(YAML)

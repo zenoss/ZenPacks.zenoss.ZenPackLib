@@ -45,6 +45,7 @@ from lib.base.Device import Device
 from lib.base.Component import Component
 from lib.base.HardwareComponent import HardwareComponent
 
+from lib.functions import relationships_from_yuml
 
 if __name__ == '__main__':
     from lib.libexec.ZPLCommand import ZPLCommand

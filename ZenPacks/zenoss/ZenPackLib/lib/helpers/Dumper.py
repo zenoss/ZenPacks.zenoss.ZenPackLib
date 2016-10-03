@@ -43,15 +43,7 @@ class Dumper(yaml.Dumper):
 
     def get_representation(self, value, v_type):
         ''''''
-        map = {'bool': self.represent_bool,
-               'float': self.represent_float,
-               'int': self.represent_int,
-               'str': self.represent_str,
-               }
-
-        if v_type in map.keys():
-            return map.get(v_type)(value)
-        elif v_type.startswith("dict"):
+        if v_type.startswith("dict"):
             return self.represent_dict(value)
         elif v_type.startswith('list'):
             if 'ExtraPath' in v_type:
@@ -93,9 +85,8 @@ class Dumper(yaml.Dumper):
                 return self.dict_representer(specmapping)
 
             else:
-                self.LOG.info("Using represent_data for {} ({})".format(value, v_type))
+                self.LOG.debug("Using represent_data for {} ({})".format(value, v_type))
                 return self.represent_data(value)
-
         return None
 
     def represent_relschemaspec(self, data):
@@ -292,5 +283,7 @@ Dumper.add_representer(GraphPointSpecParams, Dumper.represent_spec)
 # representers for python types
 Dumper.add_representer(OrderedDict, Dumper.represent_ordereddict)
 Dumper.add_representer(unicode, SafeRepresenter.represent_unicode)
-
-
+Dumper.add_representer(float, SafeRepresenter.represent_float)
+Dumper.add_representer(int, SafeRepresenter.represent_int)
+Dumper.add_representer(str, SafeRepresenter.represent_str)
+Dumper.add_representer(bool, SafeRepresenter.represent_bool)

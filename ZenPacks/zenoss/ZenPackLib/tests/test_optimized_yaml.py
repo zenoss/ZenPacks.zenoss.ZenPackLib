@@ -14,25 +14,18 @@
 Tests YAML loading from multiple files
 
 """
-# stdlib Imports
-import os
-import site
-import tempfile
-import traceback
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 import yaml
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.Loader import Loader
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import optimize_yaml, compare_zenpackspecs
-
 
 # Zenoss Imports
 import Globals  # noqa
 from Products.ZenUtils.Utils import unused
 unused(Globals)
+
+from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
 
 YAML_WHOLE = """

@@ -259,7 +259,7 @@ classes:
     label: Fabric Node
     label_width: 65
     content_width: 100
-    order: !!float '31'
+    order: 31
     properties:
       role:
         label: Role
@@ -269,7 +269,7 @@ classes:
   FabricPod:
     meta_type: ZPLTest1FabricPod
     label: Fabric Pod
-    order: !!float '30'
+    order: 30
     properties:
       editable_boolean:
         type: boolean
@@ -284,7 +284,7 @@ classes:
     meta_type: ZPLTest1ApplicationEndpointGroup
     label: Endpoint Group
     short_label: Endpoint Group
-    order: !!float '13'
+    order: 13
     properties:
       mapped_network:
         type: entity
@@ -308,21 +308,21 @@ classes:
   FvAp:
     meta_type: ZPLTest1Application
     label: Application
-    order: !!float '12'
+    order: 12
     impacts: [fvTenant]
     impacted_by: [fvAEPgs]
     monitoring_templates: [Health]
   FvBD:
     meta_type: ZPLTest1BridgeDomain
     label: Bridge Domain
-    order: !!float '16'
+    order: 16
     impacts: [fvAEPgs]
     impacted_by: [fvCtx]
     monitoring_templates: [Health]
   FvCtx:
     meta_type: ZPLTest1PrivateNetwork
     label: Private Network
-    order: !!float '15'
+    order: 15
     impacts: [fvBDs]
     impacted_by: [fabricPods]
     monitoring_templates: [Health]
@@ -343,14 +343,14 @@ classes:
   FvTenant:
     meta_type: ZPLTest1Tenant
     label: Tenant
-    order: !!float '11'
+    order: 11
     impacted_by: [fvAps]
     monitoring_templates: [Health]
   L1PhysIf:
     meta_type: ZPLTest1L1PhysIf
     label: Physical Interface
     label_width: 95
-    order: !!float '36'
+    order: 36
     properties:
       layer:
         label: Layer
@@ -383,7 +383,7 @@ classes:
   VnsCDev:
     meta_type: ZPLTest1VnsCDev
     label: Service Device
-    order: !!float '20'
+    order: 20
     properties:
       cmgmt_host:
         label: Management Address
@@ -410,7 +410,7 @@ classes:
     meta_type: ZPLTest1VnsGraphInst
     label: Service Graph
     content_width: 180
-    order: !!float '17'
+    order: 17
     properties:
       graphDn:
         label: Graph DN
@@ -422,7 +422,7 @@ classes:
   VnsLDevVip:
     meta_type: ZPLTest1VnsLDevVip
     label: Service Cluster
-    order: !!float '19'
+    order: 19
     properties:
       cmgmt_host:
         label: Management Address
@@ -455,7 +455,7 @@ classes:
     meta_type: ZPLTest1VnsNodeInst
     label: Service Function Node
     short_label: Function Node
-    order: !!float '18'
+    order: 18
     properties:
       funcType:
         label: Function Type
@@ -470,4 +470,4 @@ classes:
   VzBrCP:
     meta_type: ZPLTest1Contract
     label: Contract
-    order: !!float '14'
+    order: 14
