@@ -55,6 +55,19 @@ class ZenPack(ZenPackBase):
                 self.LOG.info('Setting zProperty {} on {}'.format(zprop, dcspec.path))
                 dcObject.setZenProperty(zprop, value)
 
+            # if device class has description and protocol, register a devtype
+            if dcspec.description and dcspec.protocol:
+                try:
+                    if (dcspec.description, dcspec.protocol) not in dcObject.devtypes:
+                        self.LOG.info('Registering devtype for {}: {} ({})'.format(dcObject,
+                                                                                   dcspec.protocol,
+                                                                                   dcspec.description))
+                        dcObject.register_devtype(dcspec.description, dcspec.protocol)
+                except Exception as e:
+                    self.LOG.warn('Error registering devtype for {}: {} ({})'.format(dcObject,
+                                                                                     dcspec.protocol,
+                                                                                     e))
+
         # Load objects.xml now
         super(ZenPack, self).install(app)
         if self.NEW_COMPONENT_TYPES:
