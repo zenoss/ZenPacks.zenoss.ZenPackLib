@@ -510,7 +510,13 @@ class CatalogBase(object):
         if not spec:
             []
 
-        scopes = [spec['indexes'][x].get('scope', 'device') for x in spec['indexes']]
+        indexes = spec.get('indexes',{})
+        scopes = [indexes[x].get('scope', 'device') for x in indexes]
+        if name != 'ComponentBase':
+            # ignore the id index if not ComponentBaseSearch and if other indexes exist
+            if 'id' in indexes and len(indexes.keys()) > 1:
+                scopes = [indexes[x].get('scope', 'device') for x in indexes if x != 'id']
+
         if 'both' in scopes:
             scopes = [x for x in scopes if x != 'both']
             scopes.append('device')
