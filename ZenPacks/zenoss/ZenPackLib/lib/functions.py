@@ -22,7 +22,7 @@ from Products.Zuul.infos.component import ComponentInfo as BaseComponentInfo
 from .helpers.ZenPackLibLog import DEFAULTLOG
 
 
-# Private Functions ######################################################### 
+# Private Functions #########################################################
 
 
 def getZenossKeywords(klasses):
@@ -162,7 +162,7 @@ def create_module(*args):
     module_name = get_symbol_name(*args)
     try:
         return importlib.import_module(module_name)
-    except ImportError:
+    except ImportError as e:
         module = imp.new_module(module_name)
         module.__name__ = module_name
         sys.modules[module_name] = module
@@ -173,6 +173,10 @@ def create_module(*args):
             parent_module_name = get_symbol_name(*module_parts[:-1])
             parent_module = create_module(parent_module_name)
             setattr(parent_module, module_parts[-1], module)
+
+        to_find = str(e.message).replace('No module named ', '')
+        if to_find not in module_name:
+            DEFAULTLOG.error('create_module failed loading {} ({})'.format(module_name, e))
 
     return importlib.import_module(module_name)
 
@@ -270,7 +274,7 @@ def relationships_from_yuml(yuml):
         if not right_relname:
             right_relname = relname_from_classname(
                 left_class, plural=right_type != 'ToOne')
-        
+
         from spec.RelationshipSchemaSpec import RelationshipSchemaSpec
         # Order them correctly (larger one on the right)
         if RelationshipSchemaSpec.valid_orientation(left_type, right_type):
@@ -298,7 +302,7 @@ def relationships_from_yuml(yuml):
 # Public Functions #########################################################
 
 
-#### Deprecated? These appear to be unused 
+#### Deprecated? These appear to be unused
 
 
 def ucfirst(text):
