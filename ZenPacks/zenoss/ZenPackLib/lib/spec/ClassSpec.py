@@ -54,7 +54,7 @@ from .ClassRelationshipSpec import ClassRelationshipSpec
 
 HAS_METRICFACADE = has_metricfacade()
 
-GSM=get_gsm()
+GSM = get_gsm()
 
 
 class ClassSpec(Spec):
@@ -534,7 +534,7 @@ class ClassSpec(Spec):
                         if HAS_METRICFACADE:
                             r = self.getRRDValue(datapoint)
                         else:
-                            r = self.getRRDValue(datapoint, start=time.time()-1800)
+                            r = self.getRRDValue(datapoint, start=time.time() - 1800)
 
                     if r is not None:
                         if not math.isnan(float(r)):
@@ -645,7 +645,7 @@ class ClassSpec(Spec):
 
             attributes[relname] = schema.Entity(
                 title=_t(spec.label),
-                group="Relationships",
+                group="Overview",
                 order=3 + i / 100.0)
 
         for spec in self.inherited_relationships().itervalues():
@@ -1078,7 +1078,7 @@ class ClassSpec(Spec):
     @property
     def subcomponent_nav_js_snippet(self):
         """Return subcomponent navigation JavaScript snippet."""
-        
+
         def get_js_snippet(id, label, classes):
             """return basic JS nav snippet"""
             cases = []
@@ -1125,7 +1125,7 @@ class ClassSpec(Spec):
                     sections[relation.label].append(spec.meta_type)
 
         snippets = []
-        for label, metatypes in sections.items():        
+        for label, metatypes in sections.items():
             id = '_'.join(label.lower().split(' '))
             snippets.append(get_js_snippet(id, label, metatypes))
 
