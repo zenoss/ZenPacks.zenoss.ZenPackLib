@@ -7,7 +7,7 @@
 #
 ##############################################################################
 import logging
-
+import sys
 
 def new_log(id):
     '''create and return a new log file'''
@@ -49,5 +49,25 @@ class ZenPackLibLog(object):
         else:
             log = self.get_log(id)
         return log
+
+    @classmethod
+    def enable_log_stderr(cls, log):
+        """
+            Enable logging to stderr 
+        """
+        log.propagate = False
+        h = logging.StreamHandler(sys.stderr)
+        h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
+        log.addHandler(h)
+
+    @classmethod
+    def enable_log_stdout(cls, log):
+        """
+            Enable logging to stderr 
+        """
+        log.propagate = False
+        h = logging.StreamHandler(sys.stdout)
+        h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
+        log.addHandler(h)
 
 ZPLOG = ZenPackLibLog()

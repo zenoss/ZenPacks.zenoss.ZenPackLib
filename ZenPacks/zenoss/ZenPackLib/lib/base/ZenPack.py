@@ -14,7 +14,7 @@ import logging
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
-from ..helpers.ZenPackLibLog import DEFAULTLOG
+from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 
 
@@ -29,17 +29,7 @@ class ZenPack(ZenPackBase):
 
     def __init__(self, *args, **kwargs):
         super(ZenPack, self).__init__(*args, **kwargs)
-        self.enable_log_stderr()
-
-    def enable_log_stderr(self):
-        """
-            Enable logging to stderr 
-            using this ZenPack's log settings
-        """
-        self.LOG.propagate = False
-        h = logging.StreamHandler(sys.stderr)
-        h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
-        self.LOG.addHandler(h)
+        ZenPackLibLog.enable_log_stderr(self.LOG)
 
     def _buildDeviceRelations(self):
         for d in self.dmd.Devices.getSubDevicesGen():

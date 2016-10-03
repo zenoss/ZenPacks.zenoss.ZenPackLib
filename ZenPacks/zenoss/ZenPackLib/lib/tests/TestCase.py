@@ -9,7 +9,7 @@
 import importlib
 import logging
 import sys
-from ..helpers.ZenPackLibLog import DEFAULTLOG
+from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
 
 
 """Enable test mode. Only call from code under tests/.
@@ -34,18 +34,8 @@ class TestCase(BaseTestCase):
 
     disableLogging = True
 
-    def enable_log_stderr(self):
-        """
-            Enable logging to stderr 
-            using this ZenPack's log settings
-        """
-        self.LOG.propagate = False
-        h = logging.StreamHandler(sys.stderr)
-        h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s'))
-        self.LOG.addHandler(h)
-
     def afterSetUp(self):
-        self.enable_log_stderr()
+        ZenPackLibLog.enable_log_stderr(self.LOG)
         super(TestCase, self).afterSetUp()
         # Not included with BaseTestCase. Needed to test that UI
         # components have been properly registered.
