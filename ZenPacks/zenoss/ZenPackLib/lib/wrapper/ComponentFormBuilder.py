@@ -72,7 +72,7 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
                 c = self._dict(v)
                 c['name'] = k
                 value =  getattr(self.context, k, None)
-                c['value'] = value() if callable(value) else value                    
+                c['value'] = value() if callable(value) else value
                 if c['xtype'] in ('autoformcombo', 'itemselector'):
                     c['values'] = self.vocabulary(v)
                 d[k] = c

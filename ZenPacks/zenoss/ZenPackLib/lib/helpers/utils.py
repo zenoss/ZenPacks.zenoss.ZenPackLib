@@ -55,6 +55,8 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
             DEFAULTLOG.error("YAML load error %s" % e)
     # loading from multiple files
     if isinstance(yaml_doc, list):
+        if len(yaml_doc) == 1:
+            return load_yaml(yaml_doc[0], verbose, level)
         # build python dict of merged YAML data
         cfg_data = {}
         # this is to make sure ZP names don't conflict
