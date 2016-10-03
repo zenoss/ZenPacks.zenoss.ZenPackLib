@@ -5,10 +5,16 @@ zProperties:
   zILOPassword:
     type: password
     default: ''
-  zILOSSLPort:
-    default: '443'
+  zILOUseSSL:
+    default: True
+    type: boolean
+  zILOPort:
+    default: 443
   zILOUserName:
     default: Administrator
+  zILOCollectSamples:
+    default: False
+    type: boolean
 
 class_relationships:
   # HP Proliant Hardware (ILO and/or OS-based)
@@ -26,8 +32,6 @@ class_relationships:
 - HPChassis(hplogicaldrives) 1:MC HPLogicalDrive
 - HPChassis(hpphysicaldrives) 1:MC HPPhysicalDrive
 - HPChassis 1:MC HPArrayController
-- HPArrayController 1:M HPLogicalDrive
-- HPArrayController 1:M HPPhysicalDrive
 
   # Enclosures under /Server/HP/OnboardAdministrator
 - Products.ZenModel.Device.Device 1:MC (Enclosure_host)HPEnclosure
@@ -37,6 +41,11 @@ class_relationships:
 - HPEnclosure(hpinterconnectbays) 1:MC HPInterconnectBay
 - HPEnclosure(hptemperature) 1:MC HPTemperatureSensor
 - HPEnclosure(hpcoolingfans) 1:MC HPEnclosureCoolingFan
+
+# Non containing relations
+# RAID controller
+- HPArrayController 1:M HPLogicalDrive
+- HPArrayController 1:M HPPhysicalDrive
 
 # LEGACY RELATIONS
 - Products.ZenModel.Device.Device(hpproliantservers) 1:MC (ProliantServer_host)HPProliantServer
@@ -102,7 +111,7 @@ classes:
     base: [ManagedObject]
     label: Chassis
     plural_label: Chassis
-    content_width: 150
+    order: 1.1
     properties:
       DEFAULTS:
         grid_display: false
@@ -115,12 +124,17 @@ classes:
         api_only: true
         api_backendtype: method
         grid_display: true
+      cpqSeTotalMem:
+        label: Total RAM
+        renderer: Zenoss.render.bytesString
+        grid_display: true
+        order: 9
       productId:
         label: Product ID
       productName:
         label: Product
-        default: N/A
         grid_display: true
+        order: 7
       serverName:
         label: Server Name
         details_display: false
@@ -129,10 +143,23 @@ classes:
         index_type: field
         index_scope: global
         grid_display: true
+        order: 6
       enclosureSerialNo:
-        label: Enclosure Serial
+        label: Enclosure Manager Serial
         index_type: field
         index_scope: global
+      get_cpu_count:
+        label: CPU Count
+        grid_display: True
+        api_only: true
+        api_backendtype: method
+        order: 8
+      cpqSiRackEnclosureMgrName:
+        label: Enclosure Manager Name
+      cpqSiRackEnclosureMgrIpAddr:
+        label: Enclosure Manager IP
+      cpqSiRackEnclosureMgrWebLink:
+        label: Enclosure Manager URL
       condition:
         grid_display: false
         details_display: false
@@ -152,11 +179,12 @@ classes:
       hppowersupplies: {}
       hpsystemboard: {}
       hptemperatures: {}
+      hparrayControllers: {}
     dynamicview_relations:
       impacts: [device, getDeviceBayDevice]
       impacted_by: [hpsystemboard, hpcoolingfans, hppowersupplies, hpmemories, hpnetworkinterface,
         hpnetworkinterfacecontrollers, hposhypervisors, hppcidevices, hpmanagementcontroller,
-        hplogicaldrives, HPprocessors, hpphysicaldrives, hplogicaldrives, hptemperatures]
+        hplogicaldrives, HPprocessors, hpphysicaldrives, hplogicaldrives, hptemperatures, hparrayControllers]
     monitoring_templates: [HPChassis]
 
   HPCoolingFan:
@@ -165,7 +193,7 @@ classes:
     order: 12
     properties:
       DEFAULTS:
-        default: N/A
+        #default: N/A
         grid_display: false
       fanName:
         label: Name
@@ -175,14 +203,10 @@ classes:
         label: Hot Plug
       locale:
         label: Location
-      partNumber:
-        label: Part Number
       present:
         label: Present
       redundant:
-        label: Redundant State
-      sparepartNumber:
-        label: Spare Part Number
+        label: Redundant
       speed:
         label: Speed
         api_only: true
@@ -202,7 +226,7 @@ classes:
   HPDeviceBay:
     base: [ManagedObject]
     label: Device Bay
-    order: 27
+    order: 1.2
     properties:
       DEFAULTS:
         grid_display: false
@@ -214,24 +238,57 @@ classes:
         api_only: true
         api_backendtype: method
         grid_display: true
+      get_ilo_ip:
+        label: iLO IP
+        details_display: false
+        order: 5.01
+        api_only: true
+        api_backendtype: method
+        grid_display: true
+        label_width: 75
       postStatus:
         label: POST Status
         api_only: true
         api_backendtype: method
+      power_status:
+        label: Powered
+        order: 7
+        enum:
+          -1: Unknown
+          1: Other
+          2: 'On'
+          3: 'Off'
+          4: Power Staged Off
+          5: Reboot
+        datapoint: cpqRackServerBladePowered_cpqRackServerBladePowered
+        datapoint_default: -1
         grid_display: true
+        label_width: 60
       biosRevision:
         label: BIOS Revision
       bladeDeviceLink:
         label: Blade Device Link
       firmwareversion:
         label: Firmware Version
+      get_cpu_count:
+        label: CPUs
+        order: 6
+        label_width: 60
+        api_only: true
+        api_backendtype: method
+        grid_display: true
+      get_mem:
+        label: RAM
+        order: 6.1
+        label_width: 60
+        api_only: true
+        api_backendtype: method
+        grid_display: true
+        renderer: Zenoss.render.bytesString
       partNumber:
         label: Part Number
       productId:
         label: Product ID
-        label_width: 120
-        order: 5.1
-        grid_display: true
       serviceTag:
         label: Service Tag
         index_type: field
@@ -251,7 +308,7 @@ classes:
     base: [ManagedObject]
     label: Enclosure
     plural_label: Enclosures
-    content_width: 120
+    order: 1
     properties:
       DEFAULTS:
         grid_display: false
@@ -270,10 +327,7 @@ classes:
         index_type: field
         index_scope: global
       sparePartNum:
-        label: 'Spare Part #'
-      uuid:
-        grid_display: true
-        label: UUID
+        label: 'Spare Part Number'
       condition:
         grid_display: false
         details_display: false
@@ -286,8 +340,10 @@ classes:
       hponboardadmin: {}
       hppowersubsystems: {}
       hptemperature: {}
-      hptemperatures: {}
-      hpthermalsubsystems: {}
+      hptemperatures:
+        details_display: false
+      hpthermalsubsystems:
+        details_display: false
     dynamicview_relations:
       impacts: [device]
       impacted_by: [hponboardadmin, hpdevicebays, hpthermalsubsystems, hppowersubsystems,
@@ -299,18 +355,16 @@ classes:
     label: Cooling Fan
     order: 28
     properties:
-      DEFAULTS:
-        default: N/A
       location:
         label: Location
       partNumber:
         label: Part Number
         grid_display: false
-      presence:
-        label: Presence
+      present:
+        label: Present
         grid_display: false
       redundant:
-        label: Redundant State
+        label: Redundant
         label_width: 120
       sparepartNumber:
         label: Spare Part Number
@@ -349,7 +403,7 @@ classes:
       condition:
         grid_display: false
         details_display: false
-      status:
+      get_status:
         grid_display: false
         details_display: false
     dynamicview_relations:
@@ -363,21 +417,6 @@ classes:
     properties:
       DEFAULTS:
         grid_display: false
-        default: N/A
-      board_status:
-        type: string
-        label: Board Status TEST
-        datapoint: cpqDaCntlrBoardStatus_cpqDaCntlrBoardStatus
-        api_only: True
-        api_backendtype: property
-        enum:
-          1: 'Other'
-          2: 'OK'
-          3: 'Failed'
-          4: 'Cable Fault'
-          5: 'Disabled'
-          6: 'Missing'
-        grid_display: True
       get_board_status:
         label: Board Status
         api_only: true
@@ -402,16 +441,11 @@ classes:
         label: Error Status
         api_only: true
         api_backendtype: method
-        grid_display: true
       get_battery_status:
         label: Battery Status
         api_only: true
         api_backendtype: method
         grid_display: true
-      get_cache_status:
-        label: Cache Condition
-        api_only: true
-        api_backendtype: method
       cpqDaCntlrModel:
         label: Model
       cpqDaCntlrFWRev:
@@ -457,10 +491,9 @@ classes:
     order: 19.2
     properties:
       DEFAULTS:
-        default: N/A
         grid_display: false
-      redundancy:
-        label: Redundancy
+      redundant:
+        label: Redundant
         label_width: 200
       capacity:
         label: Capacity
@@ -483,10 +516,10 @@ classes:
 
   HPManagementController:
     label: Management Controller
-    order: 18
+    short_label: Mgmt Controller
+    order: 2
     properties:
       DEFAULTS:
-        default: N/A
         grid_display: false
       getILODevice:
         label: ILO Device
@@ -533,6 +566,8 @@ classes:
       licenseType:
         label: Active License Type
         label_width: 148
+      model:
+        label: Model
       serialNumber:
         label: Serial Number
         label_width: 98
@@ -557,7 +592,6 @@ classes:
     order: 14
     properties:
       DEFAULTS:
-        default: N/A
         grid_display: false
       moduleNum:
         label: Module Number
@@ -588,14 +622,11 @@ classes:
     properties:
       # properties need to be revised to remove metrics (which should be on graphs)
       DEFAULTS:
-        default: N/A
         grid_display: false
       AutoSense:
         label: AutoSense
       Capabilities:
         label: Capabilities
-      CurrentSpeed:
-        label: Current Speed
       Description:
         label: Description
       FullDuplex:
@@ -638,17 +669,21 @@ classes:
         grid_display: False
       macID:
         label: MAC Address
-        grid_display: True
+        grid_display: true
       nicId:
         label: ID
       nicType:
         label: Type
       ipaddress:
         label: IP Address
-        grid_display: True
+        grid_display: true
       portName:
         label: Description
-        grid_display: True
+        grid_display: true
+      result_key:
+        default: NIC
+        grid_display: false
+        details_display: false
       condition:
         grid_display: false
         details_display: false
@@ -663,7 +698,8 @@ classes:
   HPOnboardAdmin:
     base: [ManagedObject]
     label: Onboard Administrator
-    order: 26
+    short_label: Onboard Admin
+    order: 2
     properties:
       DEFAULTS:
         grid_display: false
@@ -676,8 +712,8 @@ classes:
         grid_display: true
       partNumber:
         label: Part Number
-      presence:
-        label: Presence
+      present:
+        label: Present
         grid_display: true
       redundant:
         label: Redundant
@@ -689,6 +725,8 @@ classes:
         grid_display: true
       sparePartNumber:
         label: Spare Part Number
+      enclosureSerialNum:
+        label: Enclosure Serial Number
       condition:
         grid_display: false
         details_display: false
@@ -701,7 +739,6 @@ classes:
     order: 17
     properties:
       DEFAULTS:
-        default: N/A
         grid_display: false
       pciPhysicalSlot:
         label: Physical Slot
@@ -716,7 +753,7 @@ classes:
       condition:
         grid_display: false
         details_display: false
-      status:
+      get_status:
         grid_display: false
         details_display: false
     relationships:
@@ -733,18 +770,17 @@ classes:
     order: 19.1
     properties:
       DEFAULTS:
-        default: N/A
         grid_display: false
-      driveCapacity:
+      capacity:
         label: Capacity
         grid_display: true
         renderer: Zenoss.render.bytesString
-      driveFirmware:
+      firmware:
         label: Firmware
-      driveModel:
+      model:
         label: Model
         grid_display: true
-      driveSpeed:
+      speed:
         label: Speed
       location:
         label: Location
@@ -766,34 +802,85 @@ classes:
       impacts: [hpchassis]
     monitoring_templates: [HPPhysicalDrive]
 
+# Enclosure
   HPPowerSubsystem:
     base: [ManagedObject]
-    label: Power Subsystem
+    label: Power Supply
+    plural_label: Power Supplies
     order: 24
     properties:
       DEFAULTS:
         grid_display: false
-      currentPowerSupply:
-        label: Current Capacity
-        renderer: Zenoss.render.hp_watt_dc
-        datapoint: currentPowerSupply_currentPowerSupply
-      maxPowerSupply:
-        label: Output Capacity
-        grid_display: true
-        renderer: Zenoss.render.hp_watt_dc
       partNumber:
         label: Part Number
-      powerIndex:
-        label: Power Index
-      presence:
-        label: Presence
+        grid_display: true
+        order: 2
       serialNumber:
         label: Serial Number
+        grid_display: true
+        order: 3
+      currentPowerSupply:
+        label: Current Output
+        grid_display: true
+        renderer: Zenoss.render.hp_watt_dc
+        datapoint: currentPowerSupply_currentPowerSupply
+        datapoint_default: 0
+        order: 4
+      maxPowerSupply:
+        label: Max Output
+        grid_display: true
+        renderer: Zenoss.render.hp_watt_dc
+        order: 5
+      present:
+        label: Present
+        default: Present
       sparePartNumber:
         label: sparePartNumber
     dynamicview_relations:
       impacts: [hpenclosure]
     monitoring_templates: [HPPowerSubsystem]
+
+  HPServerPowerSupply:
+    base: [ManagedObject]
+    label: Power Supply
+    plural_label: Power Supplies
+    order: 16
+    properties:
+      DEFAULTS:
+        grid_display: false
+      partNumber:
+        label: Part Number
+        grid_display: true
+        order: 2
+      serialNumber:
+        label: Serial Number
+        grid_display: true
+        order: 3
+      currentPowerSupply:
+        label: Current Output
+        renderer: Zenoss.render.hp_watt_dc
+        datapoint: currentPowerSupply_currentPowerSupply
+        datapoint_default: 0
+        order: 4
+      maxPowerSupply:
+        label: Max Output
+        renderer: Zenoss.render.hp_watt_dc
+        default: Unknown
+        order: 5
+      redundant:
+        label: Redundant
+      present:
+        label: Present
+        default: Present
+      sparePartNumber:
+        label: sparePartNumber
+    relationships:
+      hpproliantserver:
+        details_display: false
+        grid_display: false
+    dynamicview_relations:
+      impacts: [hpchassis]
+    monitoring_templates: [HPServerPowerSupply]
 
   HPProcessor:
     base: [ManagedObject]
@@ -801,7 +888,6 @@ classes:
     order: 15
     properties:
       DEFAULTS:
-        default: N/A
         grid_display: false
       cacheSizeL1:
         label: L1
@@ -852,68 +938,25 @@ classes:
       impacts: [hpchassis]
     monitoring_templates: [HPProcessor]
 
-  HPServerPowerSupply:
-    base: [ManagedObject]
-    label: Power Supply
-    plural_label: Power Supplies
-    order: 16
-    properties:
-      DEFAULTS:
-        default: N/A
-        grid_display: false
-      currentPowerSupply:
-        label: Current Power Supply
-        grid_display: false
-        renderer: Zenoss.render.hp_watt_dc
-        datapoint: currentPowerSupply_currentPowerSupply
-      errorCondition:
-        label: Error Condition
-      hotPlug:
-        label: Hot Plug
-      maxPowerSupply:
-        label: Max Capacity
-        label_width: 130
-        renderer: Zenoss.render.hp_watt_dc
-      partNumber:
-        label: Part Number
-      powerSupplyBay:
-        label: Bay
-      powerSupplyPresent:
-        label: Present
-      redundant:
-        label: Redundancy
-      serialNumber:
-        label: Serial Number
-      sparePartNumber:
-        label: Spare Part Number
-    relationships:
-      hpproliantserver:
-        details_display: false
-        grid_display: false
-    dynamicview_relations:
-      impacts: [hpchassis]
-    monitoring_templates: [HPServerPowerSupply]
-
   HPSystemBoard:
     base: [ManagedObject]
     label: System Board
     order: 11
     properties:
       DEFAULTS:
-        default: N/A
         grid_display: false
       productName:
         label: Product Name
       redundantROMVersion:
-        label: Redundant Rom Version
+        label: Redundant ROM Version
         label_width: 150
       romVer:
         label: Rom Version
       sysSerialNo:
-        label: 'Serial #'
+        label: Serial Number
       tpmModule:
         label: TPM Module
-      status:
+      get_status:
         grid_display: false
         details_display: false
       condition:
@@ -929,43 +972,33 @@ classes:
 
   HPTemperature:
     base: [ManagedObject]
-    label: Temperature Probe
+    label: Temp Sensor
     order: 13
     properties:
       DEFAULTS:
-        default: N/A
         grid_display: false
-      caution:
-        label: Caution Value
-        details_display: false
-        grid_display: false
-      critical:
-        label: Critical Value
-        details_display: false
-        grid_display: false
-      getCautionValue:
-        label: Caution Value
-        renderer: Zenoss.render.hp_temp_celcius
-      getCriticalValue:
-        label: Critical Value
-        renderer: Zenoss.render.hp_temp_celcius
-      currentReading:
-        label: Current Reading
-        renderer: Zenoss.render.hp_temp_celcius
-        api_only: true
-        api_backendtype: method
-        grid_display: true
-      temperature:
-        label: Test
-        datapoint: ilotemperature_ilotemperature
-        datapoint_cached: false
-        grid_display: True
       location:
         label: Location
+        grid_display: true
+        order: 3
+      currentReading:
+        label: Current
+        datapoint: currentReading_currentReading
+        datapoint_default: 0
+        renderer: Zenoss.render.hp_temp_celcius
+        grid_display: true
+        order: 4
+      threshold:
+        type: int
+        default: 150
+        label: Threshold
+        renderer: Zenoss.render.hp_temp_celcius
+        grid_display: true
+        order: 5
       thresholdType:
         label: Threshold Type
+        default: Caution
       condition:
-        grid_display: false
         details_display: false
     relationships:
       hpproliantserver:
@@ -975,36 +1008,40 @@ classes:
       impacts: [hpchassis]
     monitoring_templates: [HPTemperature]
 
+# Enclosure
   HPTemperatureSensor:
     base: [ManagedObject]
-    label: Temperature Sensor
-    plural_label: Temperature Sensors
+    label: Temp Sensor
     order: 23
     properties:
       DEFAULTS:
-        default: N/A
         grid_display: false
-      currentReading:
-        label: Current Reading
-        renderer: Zenoss.render.hp_temp_celcius
-        api_only: true
-        api_backendtype: method
-        grid_display: true
       location:
         label: Location
-        label_width: 200
-      trap:
-        label: Trap
+        grid_display: true
+        order: 3
+      currentReading:
+        label: Current
+        datapoint: currentReading_currentReading
+        datapoint_default: 0
         renderer: Zenoss.render.hp_temp_celcius
+        grid_display: true
+        order: 4
+      threshold:
+        type: int
+        default: 150
+        label: Threshold
+        renderer: Zenoss.render.hp_temp_celcius
+        grid_display: true
+        order: 5
       thresholdType:
         label: Threshold Type
+        default: Caution
       condition:
-        grid_display: false
         details_display: false
     dynamicview_relations:
       impacts: [hpenclosure]
     monitoring_templates: [HPTemperatureSensor]
-
 
   ManagedHardwareObject:
     base: [zenpacklib.HardwareComponent]
@@ -1016,7 +1053,7 @@ classes:
         type: boolean
         default: true
       perfId: {}
-      status:
+      get_status:
         label: Status
         api_only: true
         api_backendtype: method
@@ -1025,10 +1062,6 @@ classes:
         label: Condition
         api_only: true
         api_backendtype: method
-    relationships:
-      DEFAULTS:
-        grid_display: False
-        details_display: False
 
   ManagedObject:
     base: [zenpacklib.Component]
@@ -1040,20 +1073,18 @@ classes:
         type: boolean
         default: true
       perfId: {}
-      status:
+      get_status:
         label: Status
         api_only: true
         api_backendtype: method
         grid_display: true
+        order: 10
       condition:
         label: Condition
         api_only: true
         api_backendtype: method
         grid_display: false
-    relationships:
-      DEFAULTS:
-        grid_display: False
-        details_display: False
+        order: 11
 
 device_classes:
   /Server/HP:
@@ -1337,6 +1368,41 @@ device_classes:
                 rrdmin: 0
             oid: .1.3.6.1.4.1.232.6.2.6.7.1.6
 
+      HPDeviceBay:
+        description: ''
+        thresholds:
+          Power Status:
+            type: HPStatus
+            dsnames: [condition_condition]
+            eventClassKey: proliant_PoweredState
+          Server Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_serverStatus
+        datasources:
+          DEFAULTS:
+            type: SNMP
+          condition:
+            datapoints:
+              condition: 
+            oid: .1.3.6.1.4.1.232.22.2.4.1.1.1.25
+          status:
+            datapoints:
+              status: GAUGE
+            oid: .1.3.6.1.4.1.232.22.2.4.1.1.1.21
+          cpqRackServerBladePOSTStatus:
+            datapoints:
+              cpqRackServerBladePOSTStatus: GAUGE
+            oid: .1.3.6.1.4.1.232.22.2.4.1.1.1.35
+          cpqRackServerBladePowered:
+            datapoints:
+              cpqRackServerBladePowered: GAUGE
+            oid: .1.3.6.1.4.1.232.22.2.4.1.1.1.25
+          cpqRackServerBladeWattageAvg:
+            datapoints:
+              cpqRackServerBladeWattageAvg: GAUGE
+            oid: .1.3.6.1.4.1.232.22.2.4.1.1.1.39
+
       HPEnclosure:
         description: ''
         thresholds:
@@ -1373,76 +1439,830 @@ device_classes:
             eventClassKey: proliant_HealthState
             type: HPStatus
         datasources:
+          DEFAULTS:
+            type: SNMP
           # cpqDaCntlrTable table
           cpqDaCntlrCondition:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.1.1.6
             datapoints:
               cpqDaCntlrCondition: {}
           cpqDaCntlrBoardStatus:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.1.1.10
             datapoints:
               cpqDaCntlrBoardStatus: {}
           cpqDaCntlrPartnerBoardStatus:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.1.1.11
             datapoints:
               cpqDaCntlrPartnerBoardStatus: {}
           cpqDaCntlrBoardCondition:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.1.1.12
             datapoints:
               cpqDaCntlrBoardCondition: {}
           # cpqDaAccelTable table
           cpqDaAccelStatus:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.2.1.2
             datapoints:
               cpqDaAccelStatus: {}
           cpqDaAccelBadData:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.2.1.4
             datapoints:
               cpqDaAccelBadData: {}
           cpqDaAccelErrCode:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.2.1.5
             datapoints:
               cpqDaAccelErrCode: {}
           cpqDaAccelBattery:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.2.1.6
             datapoints:
               cpqDaAccelBattery: {}
           cpqDaAccelReadErrs:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.2.1.7
             datapoints:
               cpqDaAccelReadErrs: DERIVE_MIN_0_ALIAS
           cpqDaAccelWriteErrs:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.2.1.8
             datapoints:
               cpqDaAccelWriteErrs: DERIVE_MIN_0_ALIAS
           cpqDaAccelCondition:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.2.2.1.9
             datapoints:
               cpqDaAccelCondition: {}
           # cpqDaCntlrPerf table
           cpqDaCntlrPerfCpuPercentBusy:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.7.1.1.5
             datapoints:
               cpqDaCntlrPerfCpuPercentBusy: {}
           cpqDaCntlrPerfCommandCount:
-            type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.7.1.1.6
             datapoints:
               cpqDaCntlrPerfCommandCount: {}
           cpqDaCntlrPerfAvgLatency:
+            oid: .1.3.6.1.4.1.232.3.2.7.1.1.7
+            datapoints:
+              cpqDaCntlrPerfAvgLatency: {}
+        graphs:
+          CPU Busy Percent:
+            units: percent
+            maxy: 100
+            miny: 0
+            graphpoints:
+              cpqDaCntlrPerfCpuPercentBusy:
+                dpName: cpqDaCntlrPerfCpuPercentBusy_cpqDaCntlrPerfCpuPercentBusy
+                legend: Busy
+          Command Rate:
+            miny: 0
+            units: commands/sec
+            graphpoints:
+              cpqDaCntlrPerfCommandCount:
+                dpName: cpqDaCntlrPerfCommandCount_cpqDaCntlrPerfCommandCount
+                legend: Commands
+          Latency:
+            miny: 0
+            units: milliseconds
+            graphpoints:
+              cpqDaCntlrPerfAvgLatency:
+                dpName: cpqDaCntlrPerfAvgLatency_cpqDaCntlrPerfAvgLatency
+                legend: Latency
+                rpn: 1000,/
+          Errors:
+            miny: 0
+            units: errors/sec
+            graphpoints:
+              cpqDaAccelReadErrs:
+                dpName: cpqDaAccelReadErrs_cpqDaAccelReadErrs
+                legend: Read
+              cpqDaAccelWriteErrs:
+                dpName: cpqDaAccelWriteErrs_cpqDaAccelWriteErrs
+                legend: Write
+
+      HPLogicalDrive:
+        description: Performance Monitoring of Logical Drives
+        thresholds:
+          Drive Status:
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+            type: HPStatus
+        datasources:
+          DEFAULTS:
             type: SNMP
+          driveRead:
+            datapoints:
+              driveRead:
+                description: Performance Monitoring of Logical Drives
+                aliases: {drive_read: null}
+            oid: .1.3.6.1.4.1.232.3.2.8.1.1.6
+          status:
+            datapoints:
+              status: GAUGE
+            oid: .1.3.6.1.4.1.232.3.2.3.1.1.4
+          driveWrite:
+            datapoints:
+              driveWrite:
+                description: Performance Monitoring of Logical Drives
+                aliases: {drive_write: null}
+            oid: .1.3.6.1.4.1.232.3.2.8.1.1.7
+          sectorsRead:
+            datapoints:
+              sectorsRead:
+                description: Performance Monitoring of Logical Drives
+                aliases: {sectors_read: null}
+            oid: .1.3.6.1.4.1.232.3.2.8.1.1.12
+          sectorsWrite:
+            datapoints:
+              sectorsWrite:
+                description: Performance Monitoring of Logical Drives
+                aliases: {sectors_write: null}
+            oid: .1.3.6.1.4.1.232.3.2.8.1.1.13
+          condition:
+            oid: .1.3.6.1.4.1.232.3.2.3.1.1.11
+            datapoints:
+              condition: {}
+        graphs:
+          Logical Drive Usage:
+            units: Bytes/Sec
+            miny: 0
+            graphpoints:
+              driveRead:
+                dpName: driveRead_driveRead
+                lineWidth: 3
+                format: '%5.0lf%s'
+                legend: Reads
+              driveWrite:
+                dpName: driveWrite_driveWrite
+                lineWidth: 3
+                format: '%5.0lf%s'
+                legend: Writes
+              sectorsRead:
+                dpName: sectorsRead_sectorsRead
+                lineWidth: 3
+                format: '%5.0lf%s'
+                legend: Sectors Read
+              sectorsWrite:
+                dpName: sectorsWrite_sectorsWrite
+                lineWidth: 3
+                format: '%5.0lf%s'
+                legend: Sectors Written
+
+      HPManagementController:
+        description: Performance Monitoring of Management Controller
+        thresholds:
+          Interface Status:
+            dsnames: [interfaceStatus_interfaceStatus]
+            eventClassKey: proliant_interfaceStatus
+            type: HPStatus
+          Data Status:
+            dsnames: [status_status]
+            eventClassKey: proliant_status
+            type: HPStatus
+        datasources:
+          DEFAULTS:
+            type: SNMP
+          interfaceStatus:
+            datapoints:
+              interfaceStatus: GAUGE
+            oid: .1.3.6.1.4.1.232.9.2.2.17.0
+          cpqSm2CntlrAlertStatus:
+            datapoints:
+              cpqSm2CntlrAlertStatus: GAUGE
+            oid: .1.3.6.1.4.1.232.9.2.2.7.0
+          cpqSm2CntlrPendingAlerts:
+            datapoints:
+              cpqSm2CntlrPendingAlerts: GAUGE
+            oid: .1.3.6.1.4.1.232.9.2.2.8.0
+          status:
+            datapoints:
+              status: GAUGE
+            oid: .1.3.6.1.4.1.232.9.2.2.12.0
+          cpqSm2CntlrBatteryStatus:
+            datapoints:
+              cpqSm2CntlrBatteryStatus: GAUGE
+            oid: .1.3.6.1.4.1.232.9.2.2.5.0
+          cpqSm2CntlrVideoStatus:
+            datapoints:
+              cpqSm2CntlrVideoStatus: GAUGE
+            oid: .1.3.6.1.4.1.232.9.2.2.3.0
+          cpqSm2CntlrRemoteSessionStatus:
+            datapoints:
+              cpqSm2CntlrRemoteSessionStatus: GAUGE
+            oid: .1.3.6.1.4.1.232.9.2.2.16.0
+          cpqSm2CntlrKeyboardCableStatus:
+            datapoints:
+              cpqSm2CntlrKeyboardCableStatus: GAUGE
+            oid: .1.3.6.1.4.1.232.9.2.2.19.0
+          cpqSm2NicCondition:
+            datapoints:
+              cpqSm2NicCondition: GAUGE
+            oid: .1.3.6.1.4.1.232.9.2.5.1.1.11
+
+      HPMemory:
+        description: Performance Monitoring of HP Memory module
+        thresholds:
+          Memory Status:
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+            type: HPStatus
+          Memory Condition:
+            dsnames: [condition_condition]
+            eventClassKey: proliant_HealthState
+            type: HPStatus
+        datasources:
+          DEFAULTS:
+            type: SNMP
+          condition:
+            datapoints:
+              condition: GAUGE
+            oid: .1.3.6.1.4.1.232.6.2.14.13.1.20
+          status:
+            datapoints:
+              status: GAUGE
+            oid: .1.3.6.1.4.1.232.6.2.14.13.1.19
+
+      HPOnboardAdmin:
+        description: ''
+        thresholds:
+          OA Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_status
+        datasources:
+          status:
+            type: SNMP
+            datapoints:
+              status: GAUGE
+            oid: .1.3.6.1.4.1.232.22.2.3.1.6.1.12
+
+      HPPhysicalDrive:
+        description: Performance Monitoring of HP Physical Drive
+        thresholds:
+          Drive Status:
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+            type: HPStatus
+        datasources:
+          DEFAULTS:
+            type: SNMP
+          status:
+            datapoints:
+              status: GAUGE
+            oid: .1.3.6.1.4.1.232.3.2.5.1.1.6
+          cpqDaPhyDrvCondition:
+            datapoints:
+              cpqDaPhyDrvCondition: GAUGE
+            oid: .1.3.6.1.4.1.232.3.2.5.1.1.37
+
+      HPProcessor:
+        description: Performance Monitoring of HP Processor
+        thresholds:
+          Processor Status:
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+            type: HPStatus
+        datasources:
+          status:
+            type: SNMP
+            datapoints:
+              status: {}
+            oid: 1.3.6.1.4.1.232.1.2.2.1.1.6
+
+      HPPowerSubsystem:
+        description: Performance monitoring of Power Supply for HP Enclosure
+        thresholds:
+          Power Input Status:
+            type: HPStatus
+            dsnames: [condition_condition]
+            eventClassKey: proliant_inputStatus
+          Power Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_condition
+        datasources:
+          status:
+            type: SNMP
+            datapoints:
+              status: GAUGE
+            oid: .1.3.6.1.4.1.232.22.2.5.1.1.1.17
+          currentPowerSupply:
+            type: SNMP
+            datapoints:
+              currentPowerSupply:
+                aliases: {powersupply_current__watt: null}
+            oid: .1.3.6.1.4.1.232.22.2.5.1.1.1.10
+          condition:
+            type: SNMP
+            datapoints:
+              condition: GAUGE
+            oid: .1.3.6.1.4.1.232.22.2.5.1.1.1.15
+        graphs:
+          Power Supply:
+            units: Watts DC
+            miny: 0
+            graphpoints:
+              currentPowerSupply:
+                dpName: currentPowerSupply_currentPowerSupply
+                lineType: AREA
+                lineWidth: 5
+                format: '%5.0lf%s'
+                legend: Current Output
+
+      HPServerPowerSupply:
+        description: This graph displays Current power Supply readings
+        thresholds:
+          Maximum Capacity:
+            dsnames: [currentPowerSupply_currentPowerSupply]
+            maxval: here.hppowersupplies.maxPowerSupply
+          Power Supply Input Status:
+            dsnames: [condition_condition]
+            eventClassKey: proliant_inputStatus
+            type: HPStatus
+          Power Supply Status:
+            dsnames: [status_status]
+            eventClassKey: proliant_condition
+            type: HPStatus
+        datasources:
+          DEFAULTS:
+            type: SNMP
+          status:
+            datapoints:
+              status: {}
+            oid: .1.3.6.1.4.1.232.6.2.9.3.1.4
+          currentPowerSupply:
+            datapoints:
+              currentPowerSupply: 
+                rrdtype: GAUGE
+                aliases: {powersupply_current__watts: null}
+            oid: .1.3.6.1.4.1.232.6.2.9.3.1.7
+          condition:
+            datapoints:
+              condition: 
+                rrdtype: GAUGE
+                aliases: {input_status: null}
+            oid: .1.3.6.1.4.1.232.6.2.9.3.1.5
+        graphs:
+          Power Supplies:
+            units: Watts DC
+            miny: 0
+            graphpoints:
+              currentPowerSupply:
+                dpName: currentPowerSupply_currentPowerSupply
+                lineWidth: 5
+                legend: Capacity Used
+                includeThresholds: true
+
+      HPSystemBoard:
+        description: Displays System Uptime
+        datasources:
+          hoursInService:
+            type: SNMP
+            datapoints:
+              hoursInService:
+                description: Displays System Uptime
+                aliases: {service_hours: null}
+            oid: .1.3.6.1.2.1.25.1.1.0
+
+      HPTemperature:
+        description: This graph displays Current Temperature Readings
+        thresholds:
+          Temperature Status:
+            dsnames: [status_status]
+            eventClassKey: proliant_tempStatus
+            type: HPStatus
+          Warning Threshold:
+            dsnames: [currentReading_currentReading]
+            maxval: here.threshold
+        datasources:
+          DEFAULTS:
+            type: SNMP
+          currentReading:
+            datapoints:
+              currentReading:
+                description: This graph displays Current Temperature Readings
+                aliases: {temp_current__celsius: null}
+            oid: .1.3.6.1.4.1.232.6.2.6.8.1.4
+          status:
+            datapoints:
+              status: GAUGE
+            oid: .1.3.6.1.4.1.232.6.2.6.8.1.6
+        graphs:
+          Temperature:
+            units: Celsius
+            miny: 0
+            maxy: 155
+            graphpoints:
+              currentReading:
+                dpName: currentReading_currentReading
+                lineWidth: 5
+                legend: Current Reading
+                includeThresholds: true
+
+      HPTemperatureSensor:
+        description: Performance monitoring of Temperature for HP Enclosure
+        thresholds:
+          Temperature Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_status
+          Warning Threshold:
+            dsnames: [currentReading_currentReading]
+            severity: 3
+            maxval: here.threshold
+        datasources:
+          currentReading:
+            type: SNMP
+            datapoints:
+              currentReading:
+                description: Performance monitoring of Temperature for HP Enclosure
+                aliases: {temp_current__celcius: null}
+            oid: .1.3.6.1.4.1.232.22.2.3.1.2.1.6
+          status:
+            type: SNMP
+            datapoints:
+              status: GAUGE
+            oid: .1.3.6.1.4.1.232.22.2.3.1.2.1.8
+        graphs:
+          Temperature Sensors:
+            units: Celsius
+            miny: 0
+            maxy: 155
+            graphpoints:
+              currentReading:
+                dpName: currentReading_currentReading
+                lineWidth: 5
+                format: '%5.0lf%s'
+                legend: Current Reading
+                includeThresholds: true
+
+  /Server/HP/ILO:
+    zProperties:
+      zDeviceTemplates: Device
+      zCollectorPlugins:
+        - HP.ilo.HPILO3Modeler
+      zSnmpMonitorIgnore: true
+      zCredentialsZProperties:
+        - zILOPort
+        - zILOUseSSL
+        - zILOUserName
+        - zILOPassword
+    templates:
+      Device:
+        description: Windows template that requires Informant MIB
+      HPChassis:
+        thresholds:
+          BIOS Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+        datasources:
+          status:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: HEALTH_AT_A_GLANCE
+            ilo_component_name_xpath: ./BIOS_HARDWARE/@STATUS
+            ilo_status_monitor: true
+            datapoints:
+              status:
+                xpath: ./BIOS_HARDWARE/@STATUS
+
+      HPCoolingFan:
+        description: This graph displays Current fan speed and status
+        thresholds:
+          Cooling Fan Status:
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+            type: HPStatus
+        datasources:
+          DEFAULTS:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: HEALTH_AT_A_GLANCE
+            ilo_status_monitor: true
+          status:
+            ilo_result_key: FAN
+            ilo_component_name_xpath: ./LABEL/@VALUE
+            datapoints:
+              status:
+                xpath: ./STATUS/@VALUE
+          speed:
+            ilo_result_key: FAN
+            ilo_component_name_xpath: ./LABEL/@VALUE
+            ilo_status_monitor: false
+            datapoints:
+              speed:
+                aliases: {cooling_fan__pct: null}
+                xpath: ./SPEED/@VALUE
+        graphs:
+          Fan Speed:
+            units: Percentage
+            miny: 0
+            maxy: 100
+            graphpoints:
+              Fan speed:
+                legend: Fan Speed
+                dpName: speed_speed
+                format: '%5.2lf%%'
+
+      HPArrayController:
+        description: Performance Monitoring of HP RAID Array
+        thresholds:
+          RAID Status:
+            type: HPStatus
+            dsnames: [cpqDaCntlrCondition_cpqDaCntlrCondition]
+            eventClassKey: proliant_HealthState
+        datasources:
+          DEFAULTS:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: HEALTH_AT_A_GLANCE
+            ilo_status_monitor: true
+          cpqDaAccelBattery:
+            ilo_component_name_xpath: ./BATTERY/@STATUS
+            datapoints:
+              cpqDaAccelBattery:
+                xpath: ./BATTERY/@STATUS
+          cpqDaCntlrCondition:
+            ilo_result_key: CONTROLLER
+            ilo_component_name_xpath: ./SERIAL_NUMBER/@VALUE
+            datapoints:
+              cpqDaCntlrCondition:
+                xpath: ./STATUS/@VALUE
+          cpqDaCntlrBoardStatus:
+            ilo_result_key: CONTROLLER
+            ilo_component_name_xpath: ./SERIAL_NUMBER/@VALUE
+            datapoints:
+              cpqDaCntlrBoardStatus:
+                xpath: ./CONTROLLER_STATUS/@VALUE
+
+      HPLogicalDrive:
+        description: Performance Monitoring of Logical Drives
+        thresholds:
+          Logical Drive Status:
+            type: HPStatus
+            dsnames: [condition_condition]
+            eventClassKey: proliant_HealthState
+        datasources:
+          condition:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: LOGICAL_DRIVE
+            ilo_component_name_xpath: ./LABEL/@VALUE
+            ilo_status_monitor: true
+            datapoints:
+              condition:
+                xpath: ./STATUS/@VALUE
+
+      HPManagementController:
+        description: ILO HPManagementController
+        thresholds:
+          BIOS Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+        datasources:
+          status:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: HEALTH_AT_A_GLANCE
+            ilo_component_name_xpath: ./BIOS_HARDWARE/@STATUS
+            ilo_status_monitor: true
+            datapoints:
+              status:
+                xpath: ./BIOS_HARDWARE/@STATUS
+
+      HPMemory:
+        description: ILO HPMemory
+        thresholds:
+          Memory Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+        datasources:
+          status:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: CPU_${here/cpuNum}
+            ilo_component_name_xpath: ./SOCKET/@VALUE
+            ilo_status_monitor: true
+            datapoints:
+              status:
+                xpath: ./STATUS/@VALUE
+
+      HPNetworkInterfaceController:
+        description: ILO HPNetworkInterfaceController
+        thresholds:
+          NIC Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+        datasources:
+          status:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            datapoints:
+              status:
+                xpath: ./STATUS/@VALUE
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: ${here/result_key}
+            ilo_component_name_xpath: ./NETWORK_PORT/@VALUE
+            ilo_status_monitor: true
+
+      HPPhysicalDrive:
+        description:  ILO HPPhysicalDrive
+        thresholds:
+          Drive Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+        datasources:
+          status:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: PHYSICAL_DRIVE
+            ilo_component_name_xpath: ./LABEL/@VALUE
+            ilo_status_monitor: true
+            datapoints:
+              status:
+                xpath: ./STATUS/@VALUE
+
+      HPProcessor:
+        description: ILO HPProcessor
+        thresholds:
+          Processor Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+        datasources:
+          status:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: PROCESSOR
+            ilo_component_name_xpath: ./LABEL/@VALUE
+            ilo_status_monitor: true
+            datapoints:
+              status:
+                xpath: ./STATUS/@VALUE
+
+      HPServerPowerSupply:
+        description: ILO HPServerPowerSupply
+        thresholds:
+          Power Supply Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_condition
+        datasources:
+          status:
+            type: ILO
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: SUPPLY
+            ilo_component_name_xpath: ./LABEL/@VALUE
+            ilo_status_monitor: true
+            datapoints:
+              status:
+                xpath: ./STATUS/@VALUE
+
+      HPTemperature:
+        description: ILO HPTemperature
+        thresholds:
+          Warning Threshold:
+            dsnames: [currentReading_currentReading]
+            eventClass: /Perf
+            maxval: here.threshold
+          Temperature Status:
+            type: HPStatus
+            dsnames: [status_status]
+            eventClassKey: proliant_tempStatus
+        datasources:
+          DEFAULTS:
+            type: ILO
+            component: ${here/id}
+            cycletime: 300
+            timeout_delay: 60
+            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
+            ilo_result_key: TEMP
+            ilo_status_monitor: true
+            ilo_component_name_xpath: ./LABEL/@VALUE
+          currentReading:
+            ilo_status_monitor: false
+            datapoints:
+              currentReading:
+                aliases: {temp_ilo__celcius: null}
+                xpath: ./CURRENTREADING/@VALUE
+          status:
+            datapoints:
+              status:
+                xpath: ./STATUS/@VALUE
+        graphs:
+          Temperature:
+            units: Celsius
+            miny: 0
+            maxy: 155
+            graphpoints:
+              currentReading:
+                dpName: currentReading_currentReading
+                legend: Current Reading
+                includeThresholds: true
+
+
+  /Server/HP/ILO/SNMP:
+    zProperties:
+      zCollectorPlugins:
+        - HP.ilo.HPILO3Modeler
+        - HP.snmp.HPSNMPModeler
+      zSnmpMonitorIgnore: False
+    templates:
+
+      HPArrayController:
+        description: Performance Monitoring of RAID Controller
+        thresholds:
+          RAID Controller Status:
+            dsnames: [status_status]
+            eventClassKey: proliant_HealthState
+            type: HPStatus
+        datasources:
+          DEFAULTS:
+            type: SNMP
+          # cpqDaCntlrTable table
+          cpqDaCntlrCondition:
+            oid: .1.3.6.1.4.1.232.3.2.2.1.1.6
+            datapoints:
+              cpqDaCntlrCondition: {}
+          cpqDaCntlrBoardStatus:
+            oid: .1.3.6.1.4.1.232.3.2.2.1.1.10
+            datapoints:
+              cpqDaCntlrBoardStatus: {}
+          cpqDaCntlrPartnerBoardStatus:
+            oid: .1.3.6.1.4.1.232.3.2.2.1.1.11
+            datapoints:
+              cpqDaCntlrPartnerBoardStatus: {}
+          cpqDaCntlrBoardCondition:
+            oid: .1.3.6.1.4.1.232.3.2.2.1.1.12
+            datapoints:
+              cpqDaCntlrBoardCondition: {}
+          # cpqDaAccelTable table
+          cpqDaAccelStatus:
+            oid: .1.3.6.1.4.1.232.3.2.2.2.1.2
+            datapoints:
+              cpqDaAccelStatus: {}
+          cpqDaAccelBadData:
+            oid: .1.3.6.1.4.1.232.3.2.2.2.1.4
+            datapoints:
+              cpqDaAccelBadData: {}
+          cpqDaAccelErrCode:
+            oid: .1.3.6.1.4.1.232.3.2.2.2.1.5
+            datapoints:
+              cpqDaAccelErrCode: {}
+          cpqDaAccelBattery:
+            oid: .1.3.6.1.4.1.232.3.2.2.2.1.6
+            datapoints:
+              cpqDaAccelBattery: {}
+          cpqDaAccelReadErrs:
+            oid: .1.3.6.1.4.1.232.3.2.2.2.1.7
+            datapoints:
+              cpqDaAccelReadErrs: DERIVE_MIN_0_ALIAS
+          cpqDaAccelWriteErrs:
+            oid: .1.3.6.1.4.1.232.3.2.2.2.1.8
+            datapoints:
+              cpqDaAccelWriteErrs: DERIVE_MIN_0_ALIAS
+          cpqDaAccelCondition:
+            oid: .1.3.6.1.4.1.232.3.2.2.2.1.9
+            datapoints:
+              cpqDaAccelCondition: {}
+          # cpqDaCntlrPerf table
+          cpqDaCntlrPerfCpuPercentBusy:
+            oid: .1.3.6.1.4.1.232.3.2.7.1.1.5
+            datapoints:
+              cpqDaCntlrPerfCpuPercentBusy: {}
+          cpqDaCntlrPerfCommandCount:
+            oid: .1.3.6.1.4.1.232.3.2.7.1.1.6
+            datapoints:
+              cpqDaCntlrPerfCommandCount: {}
+          cpqDaCntlrPerfAvgLatency:
             oid: .1.3.6.1.4.1.232.3.2.7.1.1.7
             datapoints:
               cpqDaCntlrPerfAvgLatency: {}
@@ -1522,11 +2342,11 @@ device_classes:
                 description: Performance Monitoring of Logical Drives
                 aliases: {sectors_write: null}
             oid: .1.3.6.1.4.1.232.3.2.8.1.1.13
-          cpqDaLogDrvCondition:
+          condition:
             type: SNMP
             oid: .1.3.6.1.4.1.232.3.2.3.1.1.11
             datapoints:
-              cpqDaLogDrvCondition: {}
+              condition: {}
         graphs:
           Logical Drive Usage:
             units: Bytes/Sec
@@ -1553,82 +2373,6 @@ device_classes:
                 format: '%5.0lf%s'
                 legend: Sectors Written
 
-      HPManagementController:
-        description: Performance Monitoring of Management Controller
-        thresholds:
-          Interface Status:
-            dsnames: [interfaceStatus_interfaceStatus]
-            eventClassKey: proliant_interfaceStatus
-            type: HPStatus
-          Data Status:
-            dsnames: [cpqSm2CntlrDataStatus_cpqSm2CntlrDataStatus]
-            eventClassKey: proliant_status
-            type: HPStatus
-        datasources:
-          interfaceStatus:
-            type: SNMP
-            datapoints:
-              interfaceStatus: GAUGE
-            oid: .1.3.6.1.4.1.232.9.2.2.17.0
-          cpqSm2CntlrAlertStatus:
-            type: SNMP
-            datapoints:
-              cpqSm2CntlrAlertStatus: GAUGE
-            oid: .1.3.6.1.4.1.232.9.2.2.7.0
-          cpqSm2CntlrPendingAlerts:
-            type: SNMP
-            datapoints:
-              cpqSm2CntlrPendingAlerts: GAUGE
-            oid: .1.3.6.1.4.1.232.9.2.2.8.0
-          cpqSm2CntlrDataStatus:
-            type: SNMP
-            datapoints:
-              cpqSm2CntlrDataStatus: GAUGE
-            oid: .1.3.6.1.4.1.232.9.2.2.12.0
-          cpqSm2CntlrBatteryStatus:
-            type: SNMP
-            datapoints:
-              cpqSm2CntlrBatteryStatus: GAUGE
-            oid: .1.3.6.1.4.1.232.9.2.2.5.0
-          cpqSm2CntlrVideoStatus:
-            type: SNMP
-            datapoints:
-              cpqSm2CntlrVideoStatus: GAUGE
-            oid: .1.3.6.1.4.1.232.9.2.2.3.0
-          cpqSm2CntlrRemoteSessionStatus:
-            type: SNMP
-            datapoints:
-              cpqSm2CntlrRemoteSessionStatus: GAUGE
-            oid: .1.3.6.1.4.1.232.9.2.2.16.0
-          cpqSm2CntlrKeyboardCableStatus:
-            type: SNMP
-            datapoints:
-              cpqSm2CntlrKeyboardCableStatus: GAUGE
-            oid: .1.3.6.1.4.1.232.9.2.2.19.0
-
-      HPMemory:
-        description: Performance Monitoring of HP Memory module
-        thresholds:
-          Memory Status:
-            dsnames: [status_status]
-            eventClassKey: proliant_HealthState
-            type: HPStatus
-          Memory Condition:
-            dsnames: [condition_condition]
-            eventClassKey: proliant_HealthState
-            type: HPStatus
-        datasources:
-          condition:
-            type: SNMP
-            datapoints:
-              condition: GAUGE
-            oid: .1.3.6.1.4.1.232.6.2.14.13.1.20
-          status:
-            type: SNMP
-            datapoints:
-              status: GAUGE
-            oid: .1.3.6.1.4.1.232.6.2.14.13.1.19
-
       HPPhysicalDrive:
         description: Performance Monitoring of HP Physical Drive
         thresholds:
@@ -1648,382 +2392,6 @@ device_classes:
               cpqDaPhyDrvCondition: GAUGE
             oid: .1.3.6.1.4.1.232.3.2.5.1.1.37
 
-      HPProcessor:
-        description: Performance Monitoring of HP Processor
-        thresholds:
-          Processor Status:
-            dsnames: [status_status]
-            eventClassKey: proliant_HealthState
-            type: HPStatus
-        datasources:
-          status:
-            type: SNMP
-            datapoints:
-              status: GAUGE
-            oid: 1.3.6.1.4.1.232.1.2.2.1.1.6
-
-      HPServerPowerSupply:
-        description: This graph displays Current power Supply readings
-        thresholds:
-          Maximum Capacity:
-            dsnames: [currentPowerSupply_currentPowerSupply]
-            maxval: here.hppowersupplies.maxPowerSupply
-          Power Supply Input Status:
-            dsnames: [condition_condition]
-            eventClassKey: proliant_inputStatus
-            type: HPStatus
-          Power Supply Status:
-            dsnames: [status_status]
-            eventClassKey: proliant_condition
-            type: HPStatus
-        datasources:
-          status:
-            type: SNMP
-            datapoints:
-              status: GAUGE
-            oid: .1.3.6.1.4.1.232.6.2.9.3.1.4
-          currentPowerSupply:
-            type: SNMP
-            datapoints:
-              currentPowerSupply: 
-                rrdtype: GAUGE
-                aliases: {powersupply_current__watts: null}
-            oid: .1.3.6.1.4.1.232.6.2.9.3.1.7
-          condition:
-            type: SNMP
-            datapoints:
-              condition: 
-                rrdtype: GAUGE
-                aliases: {input_status: null}
-            oid: .1.3.6.1.4.1.232.6.2.9.3.1.5
-        graphs:
-          Power Supplies:
-            units: Watts DC
-            miny: 0
-            graphpoints:
-              currentPowerSupply:
-                dpName: currentPowerSupply_currentPowerSupply
-                lineWidth: 5
-                legend: Capacity Used
-                includeThresholds: true
-
-      HPSystemBoard:
-        description: Displays System Uptime
-        datasources:
-          hoursInService:
-            type: SNMP
-            datapoints:
-              hoursInService:
-                description: Displays System Uptime
-                aliases: {service_hours: null}
-            oid: .1.3.6.1.2.1.25.1.1.0
-        graphs:
-          System Uptime:
-            miny: 0
-            units: Hours
-            graphpoints:
-              hoursInService:
-                dpName: hoursInService_hoursInService
-                lineWidth: 5
-                format: '%5.0lf%s'
-                legend: System Uptime
-                rpn: 360000,/
-
-      HPTemperature:
-        description: This graph displays Current Temperature Readings
-        thresholds:
-          Temperature Status:
-            dsnames: [status_status]
-            eventClassKey: proliant_tempStatus
-            type: HPStatus
-          Warning Threshold:
-            dsnames: [currentReading_currentReading]
-            maxval: here.getCautionValue
-        datasources:
-          currentReading:
-            type: SNMP
-            datapoints:
-              currentReading:
-                description: This graph displays Current Temperature Readings
-                aliases: {temp_current__celsius: null}
-            oid: .1.3.6.1.4.1.232.6.2.6.8.1.4
-          status:
-            type: SNMP
-            datapoints:
-              status: GAUGE
-            oid: .1.3.6.1.4.1.232.6.2.6.8.1.6
-        graphs:
-          Temperature:
-            units: Celsius
-            miny: 0
-            graphpoints:
-              currentReading:
-                dpName: currentReading_currentReading
-                lineWidth: 5
-                legend: Current Reading
-                includeThresholds: true
-
-  /Server/HP/ILO:
-    zProperties:
-      zDeviceTemplates: Device
-      zCollectorPlugins:
-        - HP.ilo.HPILO3Modeler
-      zSnmpMonitorIgnore: True
-      zCredentialsZProperties:
-        - zILOSSLPort
-        - zILOUserName
-        - zILOPassword
-    templates:
-      Device:
-        description: Windows template that requires Informant MIB
-      HPChassis:
-        thresholds:
-          BIOS Status:
-            type: HPStatus
-            dsnames: [status_status]
-            eventClassKey: proliant_HealthState
-        datasources:
-          status:
-            type: ILO
-            component: ${here/id}
-            cycletime: 300
-            datapoints:
-              status:
-                xpath: ./BIOS_HARDWARE/@STATUS
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: HEALTH_AT_A_GLANCE
-            ilo_component_name_xpath: ./BIOS_HARDWARE/@STATUS
-            ilo_status_monitor: 'true'
-
-      HPCoolingFan:
-        description: This graph displays Current fan speed and status
-        thresholds:
-          Cooling Fan Status:
-            dsnames: [status_status]
-            eventClassKey: proliant_HealthState
-            type: HPStatus
-        datasources:
-          status:
-            type: ILO
-            component: ${here/id}
-            cycletime: 300
-            datapoints:
-              status:
-                xpath: ./STATUS/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: FAN
-            ilo_component_name_xpath: ./LABEL/@VALUE
-            ilo_status_monitor: 'true'
-          fan:
-            type: ILO
-            component: ${here/id}
-            cycletime: 300
-            datapoints:
-              fan:
-                aliases: {cooling_fan__pct: null}
-                xpath: ./SPEED/@VALUE
-              speed:
-                aliases: {cooling_fan__rpm: null}
-                xpath: ./SPEED/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: FAN
-            ilo_component_name_xpath: ./LABEL/@VALUE
-        graphs:
-          Fan Speed:
-            units: Percentage
-            miny: 0
-            maxy: 100
-            graphpoints:
-              Fan speed:
-                dpName: fan_fan
-                format: '%5.2lf%%'
-              speed:
-                dpName: fan_speed
-
-      HPLogicalDrive:
-        description: Performance Monitoring of Logical Drives
-        thresholds:
-          Logical Drive Status:
-            type: HPStatus
-            dsnames: [condition_HealthState]
-            eventClassKey: proliant_HealthState
-        datasources:
-          condition:
-            type: ILO
-            component: ${here/id}
-            cycletime: 300
-            datapoints:
-              HealthState:
-                xpath: ./STATUS/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: LOGICAL_DRIVE
-            ilo_component_name_xpath: ./LABEL/@VALUE
-            ilo_status_monitor: true
-      # this needs an ILO query for interface status
-
-      HPManagementController:
-        thresholds:
-          BIOS Status:
-            type: HPStatus
-            dsnames: [status_HealthState]
-            eventClassKey: proliant_HealthState
-        datasources:
-          status:
-            type: ILO
-            component: ${here/id}
-            cycletime: 300
-            datapoints:
-              HealthState:
-                xpath: ./BIOS_HARDWARE/@STATUS
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: HEALTH_AT_A_GLANCE
-            ilo_component_name_xpath: ./BIOS_HARDWARE/@STATUS
-            ilo_status_monitor: 'true'
-
-      HPMemory:
-        description: Performance Monitoring of HP Memory module
-        thresholds:
-          Memory Status:
-            type: HPStatus
-            dsnames: [status_HealthState]
-            eventClassKey: proliant_HealthState
-        datasources:
-          status:
-            type: ILO
-            component: ${here/id}
-            cycletime: 300
-            datapoints:
-              HealthState:
-                xpath: ./STATUS/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: CPU_${here/cpuNum}
-            ilo_component_name_xpath: ./SOCKET/@VALUE
-            ilo_status_monitor: true
-
-      HPNetworkInterfaceController:
-        thresholds:
-          NIC Status:
-            type: HPStatus
-            dsnames: [status_HealthState]
-            eventClassKey: proliant_HealthState
-        datasources:
-          status:
-            type: ILO
-            component: ${here/id}
-            cycletime: 300
-            datapoints:
-              status:
-                xpath: ./STATUS/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: NIC
-            ilo_component_name_xpath: ./NETWORK_PORT/@VALUE
-            ilo_status_monitor: 'true'
-
-      HPPhysicalDrive:
-        description: Performance Monitoring of HP Physical Drive
-        thresholds:
-          Drive Status:
-            type: HPStatus
-            dsnames: [status_status]
-            eventClassKey: proliant_HealthState
-        datasources:
-          status:
-            type: ILO
-            component: ${here/id}
-            cycletime: 300
-            datapoints:
-              status:
-                xpath: ./STATUS/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: PHYSICAL_DRIVE
-            ilo_component_name_xpath: ./LABEL/@VALUE
-            ilo_status_monitor: 'true'
-
-      HPProcessor:
-        description: Performance Monitoring of HP Processor
-        thresholds:
-          Processor Status:
-            type: HPStatus
-            dsnames: [status_status]
-            eventClassKey: proliant_HealthState
-        datasources:
-          status:
-            type: ILO
-            component: ${here/id}
-            cycletime: 300
-            datapoints:
-              status:
-                xpath: ./STATUS/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: PROCESSOR
-            ilo_component_name_xpath: ./LABEL/@VALUE
-            ilo_status_monitor: 'true'
-
-      HPServerPowerSupply:
-        description: ''
-        thresholds:
-          Power Supply Status:
-            type: HPStatus
-            dsnames: [status_status]
-            eventClassKey: proliant_condition
-        datasources:
-          status:
-            type: ILO
-            cycletime: 300
-            datapoints:
-              status:
-                xpath: ./STATUS/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: SUPPLY
-            ilo_component_name_xpath: ./LABEL/@VALUE
-            ilo_status_monitor: 'true'
-
-      HPTemperature:
-        description: ILO Temperature  template
-        thresholds:
-          ILO Error Threshold:
-            dsnames: [ilotemperature_ilotemperature]
-            eventClass: /Perf
-            severity: crit
-            maxval: here.getCriticalValue
-          ILO Warning Threshold:
-            dsnames: [ilotemperature_ilotemperature]
-            eventClass: /Perf
-            maxval: here.getCautionValue
-          Temperature Status:
-            type: HPStatus
-            dsnames: [status_status]
-            eventClassKey: proliant_tempStatus
-        datasources:
-          ilotemperature:
-            type: ILO
-            cycletime: 300
-            datapoints:
-              ilotemperature:
-                aliases: {temp_ilo__celcius: null}
-                xpath: ./CURRENTREADING/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: TEMP
-            ilo_component_name_xpath: ./LABEL/@VALUE
-          status:
-            type: ILO
-            cycletime: 300
-            datapoints:
-              status:
-                xpath: ./STATUS/@VALUE
-            ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
-            ilo_result_key: TEMP
-            ilo_component_name_xpath: ./LABEL/@VALUE
-            ilo_status_monitor: 'true'
-        graphs:
-          Temperature:
-            units: Celsius
-            miny: 0
-            graphpoints:
-              ilotemperature:
-                dpName: ilotemperature_ilotemperature
-                legend: Current Reading
-                includeThresholds: 'true'
 
   /Server/HP/OnboardAdministrator:
     zProperties:
@@ -2210,158 +2578,11 @@ device_classes:
                 legend: Cached
                 rpn: 1024,*,${here/hw/totalMemory},/,100,*
 
-      HPChassis:
-        datasources:
-          status:
-            type: SNMP
-            oid: .1.3.6.1.4.1.232.22.2.3.1.6.1.12.1
-            datapoints:
-              status: GAUGE
-        thresholds:
-          Enclosure Status:
-            dsnames: [status_status]
-            eventClassKey: proliant_status
-            type: HPStatus
 
-      HPCoolingFan:
-        description: This graph displays Current fan speed and status
-        thresholds:
-          Cooling Fan Status:
-            dsnames: [status_status]
-            eventClassKey: proliant_HealthState
-            type: HPStatus
-        datasources:
-          status:
-            type: SNMP
-            datapoints:
-              status: GAUGE
-            oid: .1.3.6.1.4.1.232.6.2.6.7.1.9
-          speed:
-            type: SNMP
-            datapoints:
-              speed:
-                rrdmin: 0
-                description: This graph displays Current fan speed and status
-            oid: .1.3.6.1.4.1.232.6.2.6.7.1.6
 
-      HPDeviceBay:
-        description: ''
-        thresholds:
-          Power Status:
-            type: HPStatus
-            dsnames: [condition_condition]
-            eventClassKey: proliant_PoweredState
-          Server Status:
-            type: HPStatus
-            dsnames: [status_status]
-            eventClassKey: proliant_serverStatus
-        datasources:
-          condition:
-            type: SNMP
-            datapoints:
-              condition: GAUGE
-            oid: .1.3.6.1.4.1.232.22.2.4.1.1.1.25
-          status:
-            type: SNMP
-            datapoints:
-              status: GAUGE
-            oid: .1.3.6.1.4.1.232.22.2.4.1.1.1.21
-          cpqRackServerBladePOSTStatus:
-            type: SNMP
-            datapoints:
-              cpqRackServerBladePOSTStatus: GAUGE
-            oid: .1.3.6.1.4.1.232.22.2.4.1.1.1.35
 
-      HPOnboardAdmin:
-        description: ''
-        thresholds:
-          OA Status:
-            type: HPStatus
-            dsnames: [status_status]
-            eventClassKey: proliant_status
-        datasources:
-          status:
-            type: SNMP
-            datapoints:
-              status: GAUGE
-            oid: .1.3.6.1.4.1.232.22.2.3.1.6.1.12
 
-      HPPowerSubsystem:
-        description: Performance monitoring of Power Supply for HP Enclosure
-        thresholds:
-          Power Input Status:
-            type: HPStatus
-            dsnames: [condition_condition]
-            eventClassKey: proliant_inputStatus
-          Power Status:
-            type: HPStatus
-            dsnames: [status_status]
-            eventClassKey: proliant_condition
-        datasources:
-          status:
-            type: SNMP
-            datapoints:
-              status: GAUGE
-            oid: .1.3.6.1.4.1.232.22.2.5.1.1.1.17
-          currentPowerSupply:
-            type: SNMP
-            datapoints:
-              currentPowerSupply:
-                description: Performance monitoring of Power Supply for HP Enclosure
-                aliases: {powersupply_current__watt: null}
-            oid: .1.3.6.1.4.1.232.22.2.5.1.1.1.10
-          condition:
-            type: SNMP
-            datapoints:
-              condition: GAUGE
-            oid: .1.3.6.1.4.1.232.22.2.5.1.1.1.15
-        graphs:
-          Power Supply:
-            units: Watts DC
-            miny: 0
-            graphpoints:
-              currentPowerSupply:
-                dpName: currentPowerSupply_currentPowerSupply
-                lineType: AREA
-                lineWidth: 5
-                format: '%5.0lf%s'
-                legend: Current Output
 
-      HPTemperatureSensor:
-        description: Performance monitoring of Temperature for HP Enclosure
-        thresholds:
-          Temperature Status:
-            type: HPStatus
-            dsnames: [status_status]
-            eventClassKey: proliant_status
-          Warning Threshold:
-            dsnames: [currentReading_currentReading]
-            severity: crit
-            maxval: here.getTrapValue
-        datasources:
-          currentReading:
-            type: SNMP
-            datapoints:
-              currentReading:
-                description: Performance monitoring of Temperature for HP Enclosure
-                aliases: {temp_current__celcius: null}
-            oid: .1.3.6.1.4.1.232.22.2.3.1.2.1.6
-          status:
-            type: SNMP
-            datapoints:
-              status: GAUGE
-            oid: .1.3.6.1.4.1.232.22.2.3.1.2.1.8
-        graphs:
-          Temperature Sensors:
-            units: Celsius
-            miny: 0
-            graphpoints:
-              currentReading:
-                dpName: currentReading_currentReading
-                lineWidth: 5
-                format: '%5.0lf%s'
-                legend: Current Reading
-                includeThresholds: true
 
 # This should probably go away, and the HP modeler plugins bound to /Server/SUBCLASS as appropriate
   /Server/HP/Proliant:
@@ -2386,18 +2607,18 @@ device_classes:
       HPChassis:
         description: ''
         datasources:
-          HealthState:
+          status:
             type: WBEM
             cycletime: 300
             datapoints:
-              HealthState: GAUGE
+              status: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_ComputerSystem
             result_component_key: Name
             result_component_value: ${here/serverName}
         thresholds:
           Enclosure Status:
-            dsnames: [HealthState_HealthState]
+            dsnames: [status_status]
             eventClassKey: proliant_HealthState
             type: HPStatus
 
@@ -2406,23 +2627,23 @@ device_classes:
         thresholds:
           Fan Status:
             type: HPStatus
-            dsnames: [HealthState_HealthState]
+            dsnames: [status_status]
             eventClassKey: proliant_HealthState
         datasources:
-          CurrentSpeed:
+          speed:
             type: WBEM
             cycletime: 300
             datapoints:
-              CurrentSpeed: GAUGE
+              speed: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_Fan
             result_component_key: Name
             result_component_value: ${here/fanName}
-          HealthState:
+          status:
             type: WBEM
             cycletime: 300
             datapoints:
-              HealthState: GAUGE
+              status: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_Fan
             result_component_key: Name
@@ -2434,22 +2655,23 @@ device_classes:
             maxy: 100
             graphpoints:
               CurrentSpeed:
-                dpName: CurrentSpeed_CurrentSpeed
-                legend: Current Speed
+                dpName: speed_speed
+                legend: Fan Speed
+                format: '%5.2lf%%'
 
       HPLogicalDrive:
         description: Performance Monitoring of Logical Drives
         thresholds:
           Drive Status:
             type: HPStatus
-            dsnames: [HealthState_HealthState]
+            dsnames: [status_status]
             eventClassKey: proliant_HealthState
         datasources:
-          HealthState:
+          status:
             type: WBEM
             cycletime: 300
             datapoints:
-              HealthState: GAUGE
+              status: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_SAStorageVolume
             result_component_key: ElementName
@@ -2460,14 +2682,14 @@ device_classes:
         thresholds:
           ILO Status:
             type: HPStatus
-            dsnames: [HealthState_HealthState]
+            dsnames: [status_status]
             eventClassKey: proliant_HealthState
         datasources:
-          HealthState:
+          status:
             type: WBEM
             cycletime: 300
             datapoints:
-              HealthState: GAUGE
+              status: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_ManagementProcessor
             result_component_key: UniqueIdentifier
@@ -2478,14 +2700,14 @@ device_classes:
         thresholds:
           Memory Status:
             type: HPStatus
-            dsnames: [HealthState_HealthState]
+            dsnames: [status_status]
             eventClassKey: proliant_HealthState
         datasources:
-          HealthState:
+          status:
             type: WBEM
             cycletime: 300
             datapoints:
-              HealthState: GAUGE
+              status: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_MemoryModule
             result_component_key: BankLabel
@@ -2495,19 +2717,19 @@ device_classes:
         description: Performance Monitoring of HP Network Interface
         thresholds:
           High Utilization:
-            dsnames: [bytesReceived_BytesReceived, bytesTransmitted_BytesTransmitted]
+            dsnames: [bytesReceived_bytesReceived, bytesTransmitted_bytesTransmitted]
             eventClass: /Perf
             maxval: (here.Speed or 1e9) / 8 * .75
           Interface Status:
             type: HPStatus
-            dsnames: [HealthState_HealthState]
+            dsnames: [status_status]
             eventClassKey: proliant_HealthState
         datasources:
-          HealthState:
+          status:
             type: WBEM
             cycletime: 300
             datapoints:
-              HealthState: GAUGE
+              status: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_EthernetPort
             result_component_key: Description
@@ -2516,7 +2738,7 @@ device_classes:
             type: WBEM
             cycletime: 300
             datapoints:
-              BytesReceived:
+              bytesReceived:
                 rrdtype: DERIVE
             namespace: root/hpq
             query: SELECT * FROM SMX_EthernetStatistics
@@ -2526,7 +2748,7 @@ device_classes:
             type: WBEM
             cycletime: 300
             datapoints:
-              BytesTransmitted:
+              bytesTransmitted:
                 rrdtype: DERIVE
             namespace: root/hpq
             query: SELECT * FROM SMX_EthernetStatistics
@@ -2536,7 +2758,7 @@ device_classes:
             type: WBEM
             cycletime: 300
             datapoints:
-              PacketsReceived:
+              packetsReceived:
                 rrdtype: DERIVE
                 rrdmin: 0
             namespace: root/hpq
@@ -2547,7 +2769,7 @@ device_classes:
             type: WBEM
             cycletime: 300
             datapoints:
-              PacketsTransmitted:
+              packetsTransmitted:
                 rrdtype: DERIVE
                 rrdmin: 0
             namespace: root/hpq
@@ -2558,7 +2780,7 @@ device_classes:
             type: WBEM
             cycletime: 300
             datapoints:
-              InternalMACReceiveErrors:
+              receiveErrors:
                 rrdtype: DERIVE
             namespace: root/hpq
             query: SELECT * FROM SMX_EthernetStatistics
@@ -2568,7 +2790,7 @@ device_classes:
             type: WBEM
             cycletime: 300
             datapoints:
-              InternalMACTransmitErrors:
+              transmitErrors:
                 rrdtype: DERIVE
             namespace: root/hpq
             query: SELECT * FROM SMX_EthernetStatistics
@@ -2579,34 +2801,34 @@ device_classes:
             units: errors/sec
             miny: 0
             graphpoints:
-              InternalMACReceiveErrors:
-                dpName: receiveErrors_InternalMACReceiveErrors
+              receiveErrors:
+                dpName: receiveErrors_receiveErrors
                 lineType: AREA
                 legend: Receive
-              InternalMACTransmitErrors:
-                dpName: transmitErrors_InternalMACTransmitErrors
+              transmitErrors:
+                dpName: transmitErrors_transmitErrors
                 legend: Send
           Packets:
             units: packets/sec
             miny: 0
             graphpoints:
-              PacketsReceived:
-                dpName: packetsReceived_PacketsReceived
+              packetsReceived:
+                dpName: packetsReceived_packetsReceived
                 lineType: AREA
                 legend: Inbound
-              PacketsTransmitted:
-                dpName: packetsTransmitted_PacketsTransmitted
+              packetsTransmitted:
+                dpName: packetsTransmitted_packetsTransmitted
                 legend: Outbound
           Throughput:
             units: bits/sec
             miny: 0
             graphpoints:
-              BytesReceived:
-                dpName: bytesReceived_BytesReceived
+              bytesReceived:
+                dpName: bytesReceived_bytesReceived
                 legend: Outbound
                 rpn: 8,*
-              BytesTransmitted:
-                dpName: bytesTransmitted_BytesTransmitted
+              bytesTransmitted:
+                dpName: bytesTransmitted_bytesTransmitted
                 lineType: AREA
                 legend: Inbound
                 rpn: 8,*
@@ -2616,14 +2838,14 @@ device_classes:
         thresholds:
           Drive Status:
             type: HPStatus
-            dsnames: [HealthState_HealthState]
+            dsnames: [status_status]
             eventClassKey: proliant_HealthState
         datasources:
-          HealthState:
+          status:
             type: WBEM
             cycletime: 300
             datapoints:
-              HealthState: GAUGE
+              status: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_SADiskDrive
             result_component_key: Name
@@ -2634,14 +2856,14 @@ device_classes:
         thresholds:
           Processor Status:
             type: HPStatus
-            dsnames: [HealthState_HealthState]
+            dsnames: [status_status]
             eventClassKey: proliant_HealthState
         datasources:
-          HealthState:
+          status:
             type: WBEM
             cycletime: 300
             datapoints:
-              HealthState: GAUGE
+              status: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_Processor
             result_component_key: DeviceID
@@ -2652,26 +2874,26 @@ device_classes:
         thresholds:
           Temperature Status:
             type: HPStatus
-            dsnames: [HealthState_HealthState]
+            dsnames: [status_status]
             eventClassKey: proliant_HealthState
           Warning Threshold:
-            dsnames: [CurrentReading_CurrentReading]
-            maxval: here.getCautionValue
+            dsnames: [currentReading_currentReading]
+            maxval: here.threshold
         datasources:
-          CurrentReading:
+          currentReading:
             type: WBEM
             cycletime: 300
             datapoints:
-              CurrentReading: GAUGE
+              currentReading: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_NumericSensor
             result_component_key: Name
             result_component_value: ${here/id}
-          HealthState:
+          status:
             type: WBEM
             cycletime: 300
             datapoints:
-              HealthState: GAUGE
+              status: GAUGE
             namespace: root/hpq
             query: SELECT * FROM SMX_NumericSensor
             result_component_key: Name
@@ -2681,8 +2903,8 @@ device_classes:
             units: Celsius
             miny: 0
             graphpoints:
-              CurrentReading:
-                dpName: CurrentReading_CurrentReading
+              currentReading:
+                dpName: currentReading_currentReading
                 legend: Current Reading
                 includeThresholds: true
 
