@@ -15,7 +15,6 @@ import keyword
 from collections import OrderedDict
 from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
-from .Dumper import get_zproperty_type
 
 
 class Loader(yaml.Loader):
@@ -26,30 +25,9 @@ class Loader(yaml.Loader):
         be used for this specific zenpacklib.
     """
 
-    LOG=DEFAULTLOG
-    QUIET=False
-    LEVEL=0
-
-    def type_map(self, node):
-        '''map yaml node to python data type'''
-        map = {'int': int,
-               'float': float, 
-               'str': str,
-               'unicode': unicode,
-               'bool': bool,
-               'binary': str,
-               'set': set,
-               'seq': list,
-               'map': dict}
-        if 'null' in node.tag:
-            return None
-        for k in map.keys():
-            if k in node.tag:
-                try:
-                    return map.get(k,'str')(node.value)
-                except:
-                    pass
-        return self.construct_scalar(node)
+    LOG = DEFAULTLOG
+    QUIET = False
+    LEVEL = 0
 
     def dict_constructor(self, node):
         """constructor for OrderedDict"""
@@ -99,40 +77,47 @@ class Loader(yaml.Loader):
             # Special case- we allow for a shorthand in specifying datapoint specs.
             return dict(shorthand=self.construct_scalar(node))
 
+        # dictionary of class initialization parameters
         param_defs = cls.init_params()
+        # create new dictionary containing instance parameters
         params = {}
+        # raise an error if this won't parse correctly
         if not isinstance(node, yaml.MappingNode):
             self.yaml_error(yaml.constructor.ConstructorError(
                 None, None,
                 "expected a mapping node, but found {}".format(node.id),
                 node.start_mark))
-
+        # note the YAML source lines
         params['_source_location'] = "{}: {}-{}".format(
             os.path.basename(node.start_mark.name),
-            node.start_mark.line+1,
-            node.end_mark.line+1)
+            node.start_mark.line + 1,
+            node.end_mark.line + 1)
 
         # TODO: When deserializing, we should check if required properties are present.
 
-        param_name_map = {}
-        for param in param_defs:
-            param_name_map[param_defs[param]['yaml_param']] = param
-
         extra_params = None
-        for key in param_defs:
-            if param_defs[key]['type'] == 'ExtraParams':
+        # map attribute keys to yaml parameters if they differ
+        param_name_map = {}
+        for key, attributes in param_defs.items():
+            yaml_key = attributes.get('yaml_param')
+            param_name_map[yaml_key] = key
+            # ensure that extra parameters are only defined once
+            if attributes.get('type') == 'ExtraParams':
                 if extra_params:
                     self.yaml_error(yaml.constructor.ConstructorError(
                         None, None,
                         "Only one ExtraParams parameter may be specified.",
                         node.start_mark))
                 extra_params = key
+                # set this to an empty dict for now
                 params[extra_params] = {}
 
         for key_node, value_node in node.value:
-            yaml_key = str(self.construct_scalar(key_node))
+            yaml_key = self.construct_object(key_node)
+            # make sure this isn't a reserved keyword
             self.verify_key(cls, param_defs, yaml_key, key_node.start_mark)
 
+            # handle the case of extra parameters
             if yaml_key not in param_name_map:
                 if extra_params:
                     # If an 'extra_params' parameter is defined for this spec,
@@ -141,8 +126,7 @@ class Loader(yaml.Loader):
                     #
                     # Note that the values of these extra parameters need to be
                     # scalars, not nested maps or something like that.
-                    #params[extra_params][yaml_key] = self.construct_scalar(value_node)
-                    params[extra_params][yaml_key] = self.type_map(value_node)
+                    params[extra_params][yaml_key] = self.construct_object(value_node)
                     continue
                 else:
                     self.yaml_error(yaml.constructor.ConstructorError(
@@ -151,37 +135,27 @@ class Loader(yaml.Loader):
                         key_node.start_mark))
                     continue
 
-            key = param_name_map[yaml_key]
-            expected_type = param_defs[key]['type']
+            key = param_name_map.get(yaml_key)
+            if not key:
+                self.LOG.error("No key found for {} in {}".format(yaml_key, param_name_map))
 
-            if expected_type == 'ZPropertyDefaultValue':
-                # For zproperties, the actual data type of a default value
-                # depends on the defined type of the zProperty.
+            # default construction
+            yaml_value = self.construct_object(value_node)
 
-                try:
-                    zPropType = [x[1].value for x in node.value if x[0].value == 'type'][0]
-                except Exception:
-                    # type was not specified, so we assume the default (string)
-                    zPropType = 'string'
+            # expected type should fall back to string if not given
+            expected_type = param_defs.get(key, {}).get('type', 'str')
 
-                try:
-                    expected_type = get_zproperty_type(zPropType)
-
-                except KeyError:
-                    self.yaml_error(yaml.constructor.ConstructorError(
-                        None, None,
-                        "Invalid zProperty type_ '{}' for property {} found while processing {}".format(zPropType, key, cls.__name__),
-                        key_node.start_mark))
-                    continue
-
+            # override yaml_value if needed
             try:
-                if expected_type == "bool":
-                    params[key] = self.construct_yaml_bool(value_node)
+                # handle badly formatted things like unquoted hex strings
+                if expected_type == 'str' and not isinstance(yaml_value, str):
+                    yaml_value = self.construct_python_str(value_node)
+                elif expected_type == 'float' and not isinstance(yaml_value, float):
+                    yaml_value = self.construct_yaml_float(value_node)
                 elif expected_type.startswith("dict(SpecsParameter("):
                     m = re.match('^dict\(SpecsParameter\((.*)\)\)$', expected_type)
                     if m:
                         spectype = m.group(1)
-
                         if not isinstance(node, yaml.MappingNode):
                             self.yaml_error(yaml.constructor.ConstructorError(
                                 None, None,
@@ -190,18 +164,12 @@ class Loader(yaml.Loader):
                             continue
                         specs = OrderedDict()
                         for spec_key_node, spec_value_node in value_node.value:
-                            spec_key = str(self.construct_scalar(spec_key_node))
-
+                            spec_key = self.construct_python_str(spec_key_node)
                             specs[spec_key] = self.construct_specsparameters(spec_value_node, spectype)
-                        params[key] = specs
+                        yaml_value = specs
                     else:
                         raise Exception("Unable to determine specs parameter type in '{}'".format(expected_type))
-                elif expected_type.startswith("dict"):
-                    params[key] = self.construct_mapping(value_node)
-                elif expected_type == "float":
-                    params[key] = float(self.construct_scalar(value_node))
-                elif expected_type == "int":
-                    params[key] = int(self.construct_scalar(value_node))
+
                 elif expected_type == "list(class)":
                     classnames = self.construct_sequence(value_node)
                     classes = []
@@ -218,7 +186,8 @@ class Loader(yaml.Loader):
                     # ZPL defines "class" as either a string representing a
                     # class in this definition, or a class object representing
                     # an external class.
-                    params[key] = classes
+                    yaml_value = classes
+
                 elif expected_type == 'list(ExtraPath)':
                     if not isinstance(value_node, yaml.SequenceNode):
                         raise yaml.constructor.ConstructorError(
@@ -228,30 +197,39 @@ class Loader(yaml.Loader):
                     extra_paths = []
                     for path_node in value_node.value:
                         extra_paths.append(self.construct_sequence(path_node))
-                    params[key] = extra_paths
+                    yaml_value = extra_paths
+
                 elif expected_type == "list(RelationshipSchemaSpec)":
                     schemaspecs = []
                     for s in self.construct_sequence(value_node):
                         schemaspecs.append(self.str_to_relschemaspec(s))
-                    params[key] = schemaspecs
-                elif expected_type.startswith("list"):
-                    params[key] = self.construct_sequence(value_node)
-                elif expected_type == "str":
-                    params[key] = str(self.construct_scalar(value_node))
+                    yaml_value = schemaspecs
+
                 elif expected_type == 'RelationshipSchemaSpec':
-                    schemastr = str(self.construct_scalar(value_node))
-                    params[key] = self.str_to_relschemaspec(schemastr)
+                    schemastr = self.construct_python_str(value_node)
+                    yaml_value = self.str_to_relschemaspec(schemastr)
+
                 elif expected_type == 'Severity':
-                    severitystr = str(self.construct_scalar(value_node))
-                    params[key] = self.str_to_severity(severitystr)
-                else:
+                    severitystr = self.construct_python_str(value_node)
+                    yaml_value = self.str_to_severity(severitystr)
+
+                elif re.match('^SpecsParameter\((.*)\)$', expected_type):
                     m = re.match('^SpecsParameter\((.*)\)$', expected_type)
                     if m:
                         spectype = m.group(1)
-                        params[key] = self.construct_specsparameters(value_node, spectype)
+                        yaml_value = self.construct_specsparameters(value_node, spectype)
                     else:
                         raise Exception("Unhandled type '{}'".format(expected_type))
-
+                else:
+                    if expected_type != type(yaml_value).__name__:
+                        if not isinstance(yaml_value, OrderedDict) and \
+                        expected_type not in ['dict(str)',
+                                              'list(str)',
+                                              'ZPropertyDefaultValue']:
+                            self.LOG.warn("Possible type mismatch for {}: {}: expected: {} got: {}".format(key,
+                                                                                                yaml_value,
+                                                                                                expected_type,
+                                                                                                type(yaml_value).__name__))
             except yaml.constructor.ConstructorError, e:
                 self.yaml_error(e)
             except Exception, e:
@@ -259,6 +237,8 @@ class Loader(yaml.Loader):
                     None, None,
                     "Unable to deserialize {} object (param {}): {}".format(cls.__name__, key_node.value, e),
                     value_node.start_mark), exc_info=sys.exc_info())
+
+            params[key] = yaml_value
 
         return params
 
@@ -467,7 +447,7 @@ class Loader(yaml.Loader):
         return None
 
 
+Loader.add_constructor(u'tag:yaml.org,2002:seq', Loader.construct_sequence)
 Loader.add_constructor(u'tag:yaml.org,2002:map', Loader.dict_constructor)
 Loader.add_constructor(u'!ZenPackSpec', Loader.construct_zenpackspec)
 yaml.add_path_resolver(u'!ZenPackSpec', [], Loader=Loader)
-
