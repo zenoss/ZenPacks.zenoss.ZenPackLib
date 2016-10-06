@@ -2618,6 +2618,11 @@ class ClassSpec(Spec):
             if hasattr(base, '_catalogs'):
                 catalogs.update(base._catalogs)
 
+        if self.name not in catalogs:
+            catalogs[self.name] = {'indexes': {}}
+
+        indexes = catalogs[self.name]['indexes']
+
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
             if spec.api_backendtype == 'property':
@@ -2651,15 +2656,13 @@ class ClassSpec(Spec):
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
 
-            pindexes = spec.catalog_indexes
-            if pindexes:
-                if self.name not in catalogs:
-                    catalogs[self.name] = {
-                        'indexes': {
-                            'id': {'type': 'field'},
-                        }
-                    }
-                catalogs[self.name]['indexes'].update(pindexes)
+            indexes.update(spec.catalog_indexes)
+
+        # Add a properly-scoped "id" index if needed
+        if len(indexes) > 0:
+            scopes = {x.get('scope', 'device') for x in indexes.values()}
+            indexes['id'] = {'type': 'field',
+                             'scope': 'device' if 'device' in scopes else 'global'}
 
         # Add local relations.
         for name, spec in self.relationships.iteritems():
