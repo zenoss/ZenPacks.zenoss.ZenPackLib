@@ -49,7 +49,6 @@ class TestCommands(BaseTestCommand):
                 "ZPLTest1 zenpack is not installed.  You must install it before running this test:\n   zenpack --link --install=%s" % self.zenpack_path
             )
 
-
     def test_smoke_lint(self):
         self._smoke_command("--lint", self.yaml_path)
 
@@ -59,7 +58,7 @@ class TestCommands(BaseTestCommand):
     #     self._smoke_command("py_to_yaml", self.zenpack_name)
 
     def test_smoke_dump_templates(self):
-        self._smoke_command("--dump-templates", self.zenpack_name)
+        self._smoke_command("--dump-templates", 'ZenPacks.zenoss.DnsMonitor')
 
     def test_smoke_class_diagram(self):
         self._smoke_command("--diagram", self.yaml_path)
@@ -131,7 +130,7 @@ class TestCommands(BaseTestCommand):
 
     def run_cmd(self, cmd, vars={}):
         """execute a command and assert success"""
-        p,out,err = get_cmd_output(cmd, vars)
+        p, out, err = get_cmd_output(cmd, vars)
         LOG.debug("out=%s, err=%s", out, err)
         msg = 'Command "{}" failed with error:\n  {}'.format(cmd, err)
         self.assertIs(p.returncode, 0, msg)

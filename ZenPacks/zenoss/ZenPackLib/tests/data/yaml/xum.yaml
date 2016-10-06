@@ -1,4 +1,4 @@
-name: ZenPacks.zenoss.XUM.Core
+name: ZenPacks.zenoss.ZenPackLib
 
 classes:
   DEFAULTS:

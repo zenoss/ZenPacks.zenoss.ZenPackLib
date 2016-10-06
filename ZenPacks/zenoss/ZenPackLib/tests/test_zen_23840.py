@@ -10,9 +10,8 @@
 ##############################################################################
 
 """
-    This is designed to test whether or not a relation added to a 
-    zenpacklib.Device subclass wipes out other relations added to 
-    Products.ZenModel.Device (ZEN-24108)
+    ToMany-ToMany (M:M) non-containing relationships cause infinite recursion in get_facets
+    ZEN-23840
 """
 # Zenoss Imports
 import Globals  # noqa
@@ -27,7 +26,7 @@ from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 
 
-YAML_DOC="""
+YAML_DOC = """
 name: ZenPacks.zenoss.PS.SA.UGE
 
 class_relationships:

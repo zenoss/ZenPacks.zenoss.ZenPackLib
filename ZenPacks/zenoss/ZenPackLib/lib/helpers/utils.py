@@ -16,10 +16,14 @@ from .Dumper import Dumper
 from .Loader import Loader
 import inspect
 
+# adding these so that yaml.Loader can handle !ZenPackSpec tag
+yaml.Loader.add_constructor(u'!ZenPackSpec', yaml.Loader.construct_yaml_map)
+yaml.Loader.add_path_resolver(u'!ZenPackSpec', [])
+
 
 # list of yaml sections with DEFAULTS capability
 YAML_HAS_DEFAULTS = ['classes', 'properties', 'thresholds', 'datasources',
-                     'datapoints', 'graphs', 'relationships','graphpoints', 'zProperties']
+                     'datapoints', 'graphs', 'relationships', 'graphpoints', 'zProperties']
 
 # preferred section ordering for YAML sections
 YAML_PREFERRED_ORDER = ['zProperties', 'class_relationships', 'classes',
@@ -44,7 +48,7 @@ def get_calling_dir():
 
 def load_yaml(yaml_doc=None, verbose=False, level=0):
     ''''''
-    Loader.QUIET= not verbose
+    Loader.QUIET = not verbose
     Loader.LEVEL = level
 
     # determine caller directory and attempt to load from it
@@ -127,7 +131,7 @@ def load_yaml_single(yaml_doc, useLoader=True, loader=Loader):
 def optimize_yaml(yaml_doc):
     """optimize layout of YAML file"""
     # apply log verbosity settings
-    Loader.QUIET= False
+    Loader.QUIET = False
     Loader.LEVEL = 0
     # original load
     CFG = load_yaml(yaml_doc)
@@ -149,7 +153,7 @@ def compare_zenpackspecs(orig_yaml, new_yaml):
     """report whether different YAML documents are identical"""
     # now load both yaml files and create ZenPackSpec configs
     # apply log verbosity settings
-    Loader.QUIET= False
+    Loader.QUIET = False
     Loader.LEVEL = 0
     orig = load_yaml_single(orig_yaml)
     new = load_yaml_single(new_yaml)
@@ -194,7 +198,7 @@ def get_optimized_yaml(data):
     # sort
     ordered = sort_yaml_data(data)
     # optimized output
-    return yaml.dump(ordered,  default_flow_style=False, Dumper=Dumper).replace('!!map','')
+    return yaml.dump(ordered, default_flow_style=False, Dumper=Dumper).replace('!!map', '')
 
 
 def descend_defaults(input):
@@ -204,7 +208,7 @@ def descend_defaults(input):
     for k, v in input.items():
         if not isinstance(v, dict):
             continue
-        if k == 'DEFAULTS': 
+        if k == 'DEFAULTS':
             continue
         if k in YAML_HAS_DEFAULTS:
             if len(v.keys()) > 1:
@@ -220,10 +224,10 @@ def set_defaults(input):
     defaults = {}
     # get list of potential defaults
     for name, params in input.items():
-        if not isinstance(params, dict): 
+        if not isinstance(params, dict):
             continue
-        for k,v in params.items():
-            if isinstance(v, dict): 
+        for k, v in params.items():
+            if isinstance(v, dict):
                 continue
             if k not in defaults.keys():
                defaults[k] = v
@@ -239,7 +243,7 @@ def set_defaults(input):
         return
     # remove universal parameters from individual spec
     for name, params in input.items():
-        if not isinstance(params, dict): 
+        if not isinstance(params, dict):
             continue
         for k in params.keys():
             if k in defaults.keys():

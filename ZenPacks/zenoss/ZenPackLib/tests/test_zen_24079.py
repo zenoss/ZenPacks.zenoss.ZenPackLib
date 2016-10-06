@@ -24,8 +24,17 @@ from Products.ZenTestCase.BaseTestCase import BaseTestCase
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
+def duration_installed():
+    '''Return True if Duration Threshold is installed'''
+    try:
+        from ZenPacks.zenoss.DurationThreshold.thresholds.DurationThreshold import DurationThreshold
+    except ImportError:
+        pass
+    else:
+        return True
+    return False
 
-YAML_DOC="""
+YAML_DOC = """
 name: ZenPacks.community.TestDEFAULSonDatasource
 device_classes:
   /Device:
@@ -54,17 +63,18 @@ class TestZen24079(BaseTestCase):
     """
 
     def test_integer_threshold(self):
-        z = ZPLTestHarness(YAML_DOC)
-        z.connect()
-        self.assertTrue(z.check_templates_vs_yaml(), "Template objects do not match YAML")
-        self.assertTrue(z.check_templates_vs_specs(), "Template objects do not match Spec")
-        # check properties on dummy template
-        dcs = z.cfg.device_classes.get('/Device')
-        tcs = dcs.templates.get('TESTTEMPLATE')
-        t = tcs.create(z.dmd, False)
-        for th in t.thresholds():
-            self.assertTrue(isinstance(th.violationPercentage, int), 
-                'DurationThreshold property (violationPercentage) should be int, got {}'.format(type(th.violationPercentage)))
+        if duration_installed():
+            z = ZPLTestHarness(YAML_DOC)
+            z.connect()
+            self.assertTrue(z.check_templates_vs_yaml(), "Template objects do not match YAML")
+            self.assertTrue(z.check_templates_vs_specs(), "Template objects do not match Spec")
+            # check properties on dummy template
+            dcs = z.cfg.device_classes.get('/Device')
+            tcs = dcs.templates.get('TESTTEMPLATE')
+            t = tcs.create(z.dmd, False)
+            for th in t.thresholds():
+                self.assertTrue(isinstance(th.violationPercentage, int),
+                    'DurationThreshold property (violationPercentage) should be int, got {}'.format(type(th.violationPercentage)))
 
 
 

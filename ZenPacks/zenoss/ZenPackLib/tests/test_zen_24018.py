@@ -10,20 +10,19 @@
 ##############################################################################
 
 """
-    This is designed to test whether or not a relation added to a 
-    zenpacklib.Device subclass wipes out other relations added to 
-    Products.ZenModel.Device (ZEN-24108)
+    Test fix for ZEN-24108
+    Device relations between ZPL-based ZenPacks overwrite inherited Device relations
 """
 # Zenoss Imports
 import Globals  # noqa
 from Products.ZenUtils.Utils import unused
 unused(Globals)
 
-from Products.ZenTestCase.BaseTestCase import BaseTestCase 
+from Products.ZenTestCase.BaseTestCase import BaseTestCase
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 
-RELATION_YAML="""
+RELATION_YAML = """
 name: ZenPacks.zenoss.ZenPackLib
 classes:
   BasicDeviceComponent:
@@ -40,7 +39,7 @@ class_relationships:
 """
 
 
-SUBCLASS_YAML="""
+SUBCLASS_YAML = """
 name: ZenPacks.zenoss.ZPLDevice
 classes:
   BaseDevice:
