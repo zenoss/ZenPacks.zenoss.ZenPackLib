@@ -28,6 +28,7 @@ class ZenPack(ZenPackBase):
     def install(self, dmd):
         if yaml_installed():
             ZenPackBase.install(self, dmd)
+            self.check_permissions()
             self.create_symlink()
         else:
             sys.exit(1)
@@ -38,6 +39,13 @@ class ZenPack(ZenPackBase):
             pass
         self.remove_symlink()
         ZenPackBase.remove(self, dmd, leaveObjects=leaveObjects)
+
+    def check_permissions(self):
+        basedir = os.path.dirname(__file__)
+        shell_path = os.path.join(basedir, "bin/zenpacklib")
+        py_path = os.path.join(basedir, 'zenpacklib.py')
+        for x in [shell_path, py_path]:
+            os.chmod(x, 0755)
 
     def create_symlink(self):
         '''create symlink'''
