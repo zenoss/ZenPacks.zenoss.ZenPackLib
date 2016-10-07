@@ -949,6 +949,10 @@ class ClassSpec(Spec):
             if spec.name in filtered_relationships:
                 continue
 
+            header = spec.short_label
+            if relspec:
+                header = relspec.short_label or spec.short_label
+
             width = max(spec.content_width + 14, spec.label_width + 20)
             renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'.format(
                 zenpack_id_prefix=self.zenpack.id_prefix)
@@ -956,7 +960,7 @@ class ClassSpec(Spec):
             column_fields = [
                 "id: '{}'".format(spec.name),
                 "dataIndex: '{}'".format(self.get_relname(spec, relspec)),
-                "header: _t('{}')".format(spec.short_label),
+                "header: _t('{}')".format(header),
                 "width: {}".format(width),
                 "renderer: {}".format(renderer),
                 ]
