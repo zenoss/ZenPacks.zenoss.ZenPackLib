@@ -9,11 +9,9 @@
 ##############################################################################
 
 
-. $ZENHOME/bin/zenfunctions
-
 MYPATH=`python -c "import os.path; print os.path.realpath('$0')"`
 THISDIR=`dirname $MYPATH`
 PRGHOME=`dirname $THISDIR`
 PRGNAME=zenpacklib.py
 
-python $PRGHOME/$PRGNAME $@
+python $PRGHOME/$PRGNAME "$@"
