@@ -1,4 +1,4 @@
-name: ZenPacks.zenoss.IBM.Power
+name: ZenPacks.zenoss.ZenPackLib
 class_relationships:
 ##################### STANDARD RELATIONS #####################
 

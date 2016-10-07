@@ -1,5 +1,5 @@
-name: ZenPacks.zenoss.OpenStackInfrastructure
-zProperties:
+name: ZenPacks.zenoss.ZenPackLib
+zProperties: !ZenPackSpec
   DEFAULTS:
     category: OpenStack
   zOpenStackCeilometerUrl: {}
@@ -78,7 +78,7 @@ class_relationships:
 - VolType 1:M Volume
 # release 2.2.0 does not do backup
 #- Volume 1:M Backup
-device_classes: 
+device_classes: !ZenPackSpec
   /Server/SSH/Linux/NovaHost:
     remove: True
     zProperties:
@@ -659,14 +659,10 @@ device_classes:
                 dpName: networkOutgoingPacketsRate_networkOutgoingPacketsRate
                 format: '%7.2lf%s'
                 color: 98df8a
-classes: 
+classes: !ZenPackSpec
   #-----------------------------------------------------------------------------
   # Base Device Class Types
   #-----------------------------------------------------------------------------
-  NeutronIntegrationComponent:
-    base: [zenpacklib.Component]
-  CinderIntegrationComponent:
-    base: [zenpacklib.Component]
   Endpoint:
     base: [zenpacklib.Device]
     meta_type: OpenStackInfrastructureEndpoint
@@ -793,6 +789,8 @@ classes:
   #-----------------------------------------------------------------------------
   # Component Class Types
   #-----------------------------------------------------------------------------
+  NeutronIntegrationComponent:
+    label: NeutronIntegrationComponent
   Tenant:
     base: [NeutronIntegrationComponent, OpenstackComponent]
     meta_type: OpenStackInfrastructureTenant
@@ -926,16 +924,16 @@ classes:
       hypervisorInstanceName:
         label: Hypervisor Instance Name
         grid_display: false
-      privateIps:
-        type: lines
-        label: Fixed IPs
-        label_width: 70
-        order: 3.3
       publicIps:
         type: lines
         label: Floating IPs
-        label_width: 70
+        label_width: 60
         order: 3.2
+      privateIps:
+        type: lines
+        label: Fixed IPs
+        label_width: 60
+        order: 3.3
       serialNumber:
         label: BIOS Serial Number
         index_type: field
@@ -954,10 +952,6 @@ classes:
       serverId:
         label: Server ID
         grid_display: false
-      serverStatus:
-        label: Status
-        label_width: 50
-        order: 3.5
       powerState:
         label: Power State
         label_width: 50
@@ -969,6 +963,10 @@ classes:
         label: VM State
         label_width: 50
         order: 3.8
+      serverStatus:
+        label: Status
+        label_width: 50
+        order: 3.9
     relationships:
       flavor:
         label_width: 35
@@ -990,10 +988,12 @@ classes:
       vnics:
         label: Vnics
         grid_display: false
+        order: 1.4
       volumes:
         label: Volumes
         label_width: 45
         content_width: 45
+        order: 1.5
     dynamicview_views: [service_view]
     dynamicview_group: Instances
     dynamicview_weight: 211
@@ -1135,6 +1135,11 @@ classes:
     # Impact, and DynamicView's Dependency View.
     # (ZEN-14579)
     # --------------------------------------------------------------------------
+    properties:
+      enabled:
+        grid_display: false
+      operStatus:
+        grid_display: false
     impacted_by: [osprocess_component]
     dynamicview_views: [service_view, openstack_view]
     dynamicview_group: Nova APIs
@@ -1643,6 +1648,11 @@ classes:
     # service_view, and so will not be exported from DV to impact  currently
     # (ZEN-14579).
     # --------------------------------------------------------------------------
+    properties:
+      enabled:
+        grid_display: false
+      operStatus:
+        grid_display: false
     impacted_by: [osprocess_component]
     dynamicview_views: [service_view, openstack_view]
     dynamicview_group: Cinder APIs
@@ -1650,6 +1660,8 @@ classes:
     dynamicview_relations:
       impacted_by: [hostedOn]
       impacts: [orgComponent]
+  CinderIntegrationComponent:
+    meta_type: CinderIntegrationComponent
   Volume:
     base: [CinderIntegrationComponent, LogicalComponent]
     meta_type: OpenStackInfrastructureVolume
@@ -1660,6 +1672,22 @@ classes:
         label: Bootable
         label_width: 40
         content_width: 40
+        order: 21.0
+      size:
+        label: Size (GB)
+        label_width: 40
+        content_width: 40
+        order: 21.1
+      host:
+        label: Host
+        label_width: 100
+        content_width: 100
+        order: 21.2
+      status:
+        label: Status
+        label_width: 60
+        content_width: 60
+        order: 21.4
       volumeId:
         label: Volume ID
         grid_display: false
@@ -1672,21 +1700,6 @@ classes:
       sourceVolumeId:
         label: Source Volume ID
         grid_display: false
-      host:
-        label: Host
-        label_width: 100
-        content_width: 100
-        order: 21.4
-      size:
-        label: Size (GB)
-        label_width: 40
-        content_width: 40
-        order: 21.1
-      status:
-        label: Status
-        label_width: 80
-        content_width: 80
-        order: 21.2
       implementation_components:
         type: entity
         label: Cinder Implementation
@@ -1695,14 +1708,21 @@ classes:
         api_backendtype: method
     relationships:
       tenant:
-        label_width: 80
-        content_width: 80
+        label_width: 60
+        content_width: 60
+        order: 1.0
       instance:
-        label_width: 80
-        content_width: 80
+        label_width: 60
+        content_width: 60
+        order: 1.1
       volSnapshots:
         label_width: 50
         content_width: 50
+        order: 1.2
+      volType:
+        label: Volume Type
+        label_width: 50
+        order: 1.3
 #      backups:
 #        label_width: 50
 #        content_width: 50
@@ -1730,40 +1750,45 @@ classes:
     order: 23
     properties:
       created_at:
-        label: Created At
-        label_width: 100
-        content_width: 100
+        label: Timestamp
+        grid_display: false
+        order: 2.0
       description:
         label: Description
-        label_width: 150
-        content_width: 150
+        label_width: 100
+        content_width: 100
+        order: 2.1
       size:
         label: Size (GB)
         label_width: 40
         content_width: 40
+        order: 2.2
       progress:
         label: Progress
-        label_width: 80
-        content_width: 80
+        label_width: 60
+        content_width: 60
+        order: 2.3
       status:
         label: Status
         label_width: 80
         content_width: 80
-      created_at:
-        label: Created At
-        label_width: 100
-        content_width: 100
-        grid_display: false
+        order: 2.4
       implementation_components:
         type: entity
         label: Cinder Implementation
         grid_display: false
         api_only: true
         api_backendtype: method
+        order: 2.5
     relationships:
       volume:
-        label_width: 80
-        content_width: 80
+        label_width: 60
+        content_width: 60
+        order: 1.0
+      tenant:
+        label_width: 60
+        content_width: 60
+        order: 1.1
     dynamicview_views: [service_view, openstack_view]
     dynamicview_group: Snapshots
     dynamicview_weight: 241

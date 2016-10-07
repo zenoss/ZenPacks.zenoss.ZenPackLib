@@ -34,19 +34,15 @@ from ..helpers.WarningLoader import WarningLoader
 from ..helpers.Dumper import Dumper
 from ..helpers.Loader import Loader
 from ..helpers.utils import optimize_yaml, load_yaml_single
-
+from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 class ZPLCommand(ZenScriptBase):
     '''ZPLCommand'''
     LOG = DEFAULTLOG
+    version = zenpacklib.__version__
 
-    def __init__(self, noopts=0, app=None, connect=False, version=None):
-        ''''''
-        if not version:
-            from ZenPacks.zenoss.ZenPackLib import zenpacklib
-            version = zenpacklib.__version__
-        self.version = version
-        ZenScriptBase.__init__(self, noopts, app, connect)
+    def __init__(self):
+        ZenScriptBase.__init__(self)
         ZenPackLibLog.enable_log_stderr(self.LOG)
 
     def buildOptions(self):
@@ -57,10 +53,12 @@ class ZPLCommand(ZenScriptBase):
         self.parser.remove_option('--genconf')
         self.parser.remove_option('--genxmltable')
         self.parser.remove_option('--genxmlconfigs')
-        self.parser.option_groups = []
+        self.parser.remove_option('--maxlogsize')
+        self.parser.remove_option('--maxbackuplogs')
+        self.parser.remove_option('--logpath')
         self.parser.usage = "%prog [options] [FILENAME|ZENPACK|DEVICE]"
         self.parser.version = self.version
-        
+
         group = OptionGroup(self.parser, "ZenPack Conversion")
         group.add_option("-t", "--dump-templates",
                     dest="dump",
@@ -92,12 +90,11 @@ class ZPLCommand(ZenScriptBase):
                     dest="diagram",
                     action="store_true",
                     help="print YUML (http://yuml.me/) class diagram source based on zenpack.yaml")
-        self.parser.add_option_group(group)
-
-        self.parser.add_option("-p", "--paths",
+        group.add_option("-p", "--paths",
                     dest="paths",
                     action="store_true",
                     help="print possible facet paths for a given device and whether currently filtered.")
+        self.parser.add_option_group(group)
 
     def is_valid_file(self):
         '''Determine if supplied file is valid'''
@@ -517,7 +514,3 @@ class ZPLCommand(ZenScriptBase):
                 specs[dc_name][template.id] = spec
 
         return specs
-
-if __name__ == '__main__':
-    script = ZPLCommand()
-    script.run()

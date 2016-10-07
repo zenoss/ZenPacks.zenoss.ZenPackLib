@@ -1,4 +1,4 @@
-name: ZenPacks.zenoss.BigIpMonitor
+name: ZenPacks.zenoss.ZenPackLib
 zProperties:
   DEFAULTS:
     category: Big IP Monitoring

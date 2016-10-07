@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.1.0dev"
+__version__ = "2.0.0dev"
 
 # Must defer definition of TestCase. Otherwise it imports
 # BaseTestCase which puts Zope into testing mode.
@@ -50,5 +50,5 @@ from lib.functions import relationships_from_yuml
 if __name__ == '__main__':
     from lib.libexec.ZPLCommand import ZPLCommand
 
-    script = ZPLCommand(version=__version__)
+    script = ZPLCommand()
     script.run()
