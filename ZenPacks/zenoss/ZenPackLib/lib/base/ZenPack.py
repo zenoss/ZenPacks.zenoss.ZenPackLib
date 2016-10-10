@@ -41,19 +41,7 @@ class ZenPack(ZenPackBase):
         # create device classes and set zProperties on them
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
-                try:
-                    self.dmd.Devices.getOrganizer(dcspec.path)
-                except KeyError:
-                    self.LOG.info('Creating DeviceClass {}'.format(dcspec.path))
-                    app.dmd.Devices.createOrganizer(dcspec.path)
-
-            dcObject = self.dmd.Devices.getOrganizer(dcspec.path)
-            for zprop, value in dcspec.zProperties.iteritems():
-                if dcObject.getPropertyType(zprop) is None:
-                    self.LOG.error("Unable to set zProperty {} on {} (undefined zProperty)".format(zprop, dcspec.path))
-                    continue
-                self.LOG.info('Setting zProperty {} on {}'.format(zprop, dcspec.path))
-                dcObject.setZenProperty(zprop, value)
+                dcObject = self.create_device_class(app, dcspec)
 
         # Load objects.xml now
         super(ZenPack, self).install(app)
@@ -163,17 +151,37 @@ class ZenPack(ZenPackBase):
 
             for dcname, dcspec in self.device_classes.iteritems():
                 if dcspec.remove:
-                    organizerPath = '/Devices/' + dcspec.path.lstrip('/')
-                    try:
-                        app.dmd.Devices.getOrganizer(organizerPath)
-                    except KeyError:
-                        self.LOG.warning('Unable to remove DeviceClass {} (not found)'.format(dcspec.path))
-                        continue
-
-                    self.LOG.info('Removing DeviceClass {}'.format(dcspec.path))
-                    app.dmd.Devices.manage_deleteOrganizer(organizerPath)
-
+                    self.remove_device_class(app, dcspec)
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
+
+    def create_device_class(self, app, dcspec):
+        ''''''
+        try:
+            dcObject = app.dmd.Devices.getOrganizer(dcspec.path)
+        except KeyError:
+            self.LOG.info('Creating DeviceClass {}'.format(dcspec.path))
+            dcObject = app.dmd.Devices.createOrganizer(dcspec.path)
+
+        for zprop, value in dcspec.zProperties.iteritems():
+            if dcObject.getPropertyType(zprop) is None:
+                self.LOG.error("Unable to set zProperty {} on {} (undefined zProperty)".format(zprop, dcspec.path))
+            else:
+                self.LOG.info('Setting zProperty {} on {}'.format(zprop, dcspec.path))
+                dcObject.setZenProperty(zprop, value)
+        return dcObject
+
+    def remove_device_class(self, app, dcspec):
+        ''''''
+        path = [p for p in dcspec.path.lstrip('/').split('/') if p != 'Devices']
+        organizerPath = '/{}'.format('/'.join(['Devices'] + path))
+        try:
+            app.dmd.Devices.getOrganizer(organizerPath)
+            try:
+                app.dmd.Devices.manage_deleteOrganizer(organizerPath)
+            except Exception as e:
+                self.LOG.error('Unable to remove DeviceClass {} ({})'.format(dcspec.path, e))
+        except KeyError:
+            self.LOG.warning('Unable to remove DeviceClass {} (not found)'.format(dcspec.path))
 
     def manage_exportPack(self, download="no", REQUEST=None):
         """Export ZenPack to $ZENHOME/export directory.
