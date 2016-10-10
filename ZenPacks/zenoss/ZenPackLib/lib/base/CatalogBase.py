@@ -16,7 +16,7 @@ class CatalogBase(object):
 
     # By Default there is no default catalog created.
     _catalogs = {}
-    LOG=DEFAULTLOG
+    LOG = DEFAULTLOG
 
     def search(self, name, *args, **kwargs):
         """
@@ -86,7 +86,7 @@ class CatalogBase(object):
         """Return catalog scopes by name."""
         spec = cls._get_catalog_spec(name)
         if not spec:
-            []
+            return set()
 
         scopes = [spec['indexes'][x].get('scope', 'device') for x in spec['indexes']]
         if 'both' in scopes:
