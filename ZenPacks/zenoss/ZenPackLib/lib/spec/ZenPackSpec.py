@@ -121,7 +121,7 @@ class ZenPackSpec(Spec):
             zProperties=zProperties,
             classes=classes,
             class_relationships=class_relationships,
-            device_classes=device_classes, 
+            device_classes=device_classes,
             zplog=self.LOG)
         self.name = name
         self.LOG.debug("------ {} ------".format(self.name))
@@ -145,7 +145,7 @@ class ZenPackSpec(Spec):
 
         # Classes
         self.classes = self.specs_from_param(ClassSpec, 'classes', classes, zplog=self.LOG)
-        
+
         self.imported_classes = {}
 
         # Import any external classes referred to in the schema
@@ -583,7 +583,6 @@ class ZenPackSpec(Spec):
                             'ZenPack',
                             (ZenPack,),
                             attributes)
-        cls.LOG = self.LOG
         return cls
 
     def test_setup(self):

@@ -1,4 +1,4 @@
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.HP.ZenPackLib
 zProperties:
   DEFAULTS:
     category: ILO
@@ -1915,7 +1915,7 @@ device_classes:
           status:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: HEALTH_AT_A_GLANCE
@@ -1936,7 +1936,7 @@ device_classes:
           DEFAULTS:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: HEALTH_AT_A_GLANCE
@@ -1977,7 +1977,7 @@ device_classes:
           DEFAULTS:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: HEALTH_AT_A_GLANCE
@@ -2011,7 +2011,7 @@ device_classes:
           condition:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: LOGICAL_DRIVE
@@ -2032,7 +2032,7 @@ device_classes:
           status:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: HEALTH_AT_A_GLANCE
@@ -2053,7 +2053,7 @@ device_classes:
           status:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: CPU_${here/cpuNum}
@@ -2074,7 +2074,7 @@ device_classes:
           status:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             datapoints:
               status:
@@ -2095,7 +2095,7 @@ device_classes:
           status:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: PHYSICAL_DRIVE
@@ -2116,7 +2116,7 @@ device_classes:
           status:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: PROCESSOR
@@ -2136,7 +2136,7 @@ device_classes:
         datasources:
           status:
             type: ILO
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: SUPPLY
@@ -2161,7 +2161,7 @@ device_classes:
           DEFAULTS:
             type: ILO
             component: ${here/id}
-            cycletime: 300
+            cycletime: '300'
             timeout_delay: 60
             ilo_query: <SERVER_INFO MODE=\"read\"><GET_EMBEDDED_HEALTH/></SERVER_INFO>
             ilo_result_key: TEMP
@@ -2609,7 +2609,7 @@ device_classes:
         datasources:
           status:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               status: GAUGE
             namespace: root/hpq
@@ -2632,7 +2632,7 @@ device_classes:
         datasources:
           speed:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               speed: GAUGE
             namespace: root/hpq
@@ -2641,7 +2641,7 @@ device_classes:
             result_component_value: ${here/fanName}
           status:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               status: GAUGE
             namespace: root/hpq
@@ -2669,7 +2669,7 @@ device_classes:
         datasources:
           status:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               status: GAUGE
             namespace: root/hpq
@@ -2687,7 +2687,7 @@ device_classes:
         datasources:
           status:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               status: GAUGE
             namespace: root/hpq
@@ -2705,7 +2705,7 @@ device_classes:
         datasources:
           status:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               status: GAUGE
             namespace: root/hpq
@@ -2727,7 +2727,7 @@ device_classes:
         datasources:
           status:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               status: GAUGE
             namespace: root/hpq
@@ -2736,7 +2736,7 @@ device_classes:
             result_component_value: ${here/id}
           bytesReceived:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               bytesReceived:
                 rrdtype: DERIVE
@@ -2746,7 +2746,7 @@ device_classes:
             result_component_value: ${here/id}
           bytesTransmitted:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               bytesTransmitted:
                 rrdtype: DERIVE
@@ -2756,7 +2756,7 @@ device_classes:
             result_component_value: ${here/id}
           packetsReceived:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               packetsReceived:
                 rrdtype: DERIVE
@@ -2767,7 +2767,7 @@ device_classes:
             result_component_value: ${here/id}
           packetsTransmitted:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               packetsTransmitted:
                 rrdtype: DERIVE
@@ -2778,7 +2778,7 @@ device_classes:
             result_component_value: ${here/id}
           receiveErrors:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               receiveErrors:
                 rrdtype: DERIVE
@@ -2788,7 +2788,7 @@ device_classes:
             result_component_value: ${here/id}
           transmitErrors:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               transmitErrors:
                 rrdtype: DERIVE
@@ -2843,7 +2843,7 @@ device_classes:
         datasources:
           status:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               status: GAUGE
             namespace: root/hpq
@@ -2861,7 +2861,7 @@ device_classes:
         datasources:
           status:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               status: GAUGE
             namespace: root/hpq
@@ -2882,7 +2882,7 @@ device_classes:
         datasources:
           currentReading:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               currentReading: GAUGE
             namespace: root/hpq
@@ -2891,7 +2891,7 @@ device_classes:
             result_component_value: ${here/id}
           status:
             type: WBEM
-            cycletime: 300
+            cycletime: '300'
             datapoints:
               status: GAUGE
             namespace: root/hpq

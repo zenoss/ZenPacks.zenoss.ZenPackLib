@@ -11,6 +11,8 @@ import sys
 from lxml import etree
 import yaml
 import logging
+import difflib
+import time
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
@@ -30,6 +32,7 @@ class ZenPack(ZenPackBase):
     def __init__(self, *args, **kwargs):
         super(ZenPack, self).__init__(*args, **kwargs)
         ZenPackLibLog.enable_log_stderr(self.LOG)
+        self.LOG.setLevel('INFO')
 
     def _buildDeviceRelations(self):
         for d in self.dmd.Devices.getSubDevicesGen():
@@ -97,27 +100,26 @@ class ZenPack(ZenPackBase):
                             dcname, orig_mtname, self.id))
                         continue
 
-                    installed = RRDTemplateSpecParams.fromObject(template)
+                    # back up the template
+                    newname = "{}-upgrade-{}".format(orig_mtname, int(time.time()))
+                    deviceclass.rrdTemplates.manage_renameObject(template.id, newname)
+                    # corresponding DeviceClassSpec
+                    dc_spec = self.device_classes.get(dcname)
+                    # RRDTemplateSpec
+                    template_spec = dc_spec.templates.get(orig_mtname)
 
-                    if installed != orig_mtspec:
-                        import time
-                        import difflib
-
-                        lines_installed = [x + '\n' for x in yaml.dump(installed, Dumper=Dumper).split('\n')]
-                        lines_orig_mtspec = [x + '\n' for x in yaml.dump(orig_mtspec, Dumper=Dumper).split('\n')]
-                        diff = ''.join(difflib.unified_diff(lines_orig_mtspec, lines_installed))
-
-                        newname = "{}-upgrade-{}".format(orig_mtname, int(time.time()))
-                        self.LOG.error(
-                            "Monitoring template {}/{} has been modified "
-                            "since the {} ZenPack was installed.  These local "
-                            "changes will be lost as this ZenPack is upgraded "
-                            "or reinstalled.   Existing template will be "
-                            "renamed to '{}'.  Please review and reconcile "
-                            "local changes:\n{}".format(
-                            dcname, orig_mtname, self.id, newname, diff))
-
-                        deviceclass.rrdTemplates.manage_renameObject(template.id, newname)
+                    diff = self.template_changed(app, template, template_spec)
+                    if diff:
+                        self.LOG.info(
+                            "Existing monitoring template {}/{} differs from "
+                            "the newer version included with the {} ZenPack.  "
+                            "The existing template will be "
+                            "backed up to '{}'.  Please review and reconcile any"
+                            "local changes before deleting the backup:\n{}".format(
+                            dcname, orig_mtname, self.id, template.id, diff))
+                    else:
+                        # if unchanged, delete the backup template
+                        template.getPrimaryParent()._delObject(template.id)
 
         else:
             dc = app.Devices
@@ -153,6 +155,28 @@ class ZenPack(ZenPackBase):
                 if dcspec.remove:
                     self.remove_device_class(app, dcspec)
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
+
+    def template_changed(self, app, existing, new_spec):
+        """ 
+            Return True if existing template is changed from spec
+        """
+        diff = None
+        # get spec params from object
+        existing_specparams = RRDTemplateSpecParams.fromObject(existing)
+        # build a dummy template based on YAML spec
+        # create new template
+        new_template = new_spec.create(app.dmd, False)
+        new_specparams = RRDTemplateSpecParams.fromObject(new_template)
+        # remove new template
+        new_template.getPrimaryParent()._delObject(new_template.id)
+        # dump to yaml for both specparams
+        yaml_existing = yaml.dump(existing_specparams, Dumper=Dumper)
+        yaml_new = yaml.dump(new_specparams, Dumper=Dumper)
+        if yaml_existing != yaml_new:
+            lines_existing = [x + '\n' for x in yaml_existing.split('\n')]
+            lines_new = [x + '\n' for x in yaml_new.split('\n')]
+            diff = ''.join(difflib.unified_diff(lines_existing, lines_new))
+        return diff
 
     def create_device_class(self, app, dcspec):
         ''''''

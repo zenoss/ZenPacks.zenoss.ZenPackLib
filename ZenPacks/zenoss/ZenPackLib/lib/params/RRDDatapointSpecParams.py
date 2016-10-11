@@ -89,6 +89,10 @@ class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
                 io.close()
 
                 io = StringIO.StringIO()
+                # these won't get set on the sample dp
+                sample_dp.aliases = datapoint.aliases
+                sample_dp._zendoc = datapoint._zendoc
+
                 sample_dp.exportXml(io)
                 sample_dp_xml = io.getvalue()
                 io.close()
