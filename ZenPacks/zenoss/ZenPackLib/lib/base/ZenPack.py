@@ -7,10 +7,8 @@
 #
 ##############################################################################
 import os
-import sys
 from lxml import etree
 import yaml
-import logging
 import difflib
 import time
 
@@ -44,7 +42,7 @@ class ZenPack(ZenPackBase):
         # create device classes and set zProperties on them
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
-                dcObject = self.create_device_class(app, dcspec)
+                self.create_device_class(app, dcspec)
 
         # Load objects.xml now
         super(ZenPack, self).install(app)
@@ -56,6 +54,10 @@ class ZenPack(ZenPackBase):
         for dcname, dcspec in self.device_classes.iteritems():
             for mtname, mtspec in dcspec.templates.iteritems():
                 mtspec.create(self.dmd)
+
+        # Load event classes
+        for ecname, ecspec in self.event_classes.iteritems():
+            ecspec.instantiate(self.dmd)
 
     def remove(self, app, leaveObjects=False):
         if self._v_specparams is None:
@@ -154,6 +156,53 @@ class ZenPack(ZenPackBase):
             for dcname, dcspec in self.device_classes.iteritems():
                 if dcspec.remove:
                     self.remove_device_class(app, dcspec)
+
+            # Remove EventClasses with remove flag set
+            for ecname, ecspec in self.event_classes.iteritems():
+                organizerPath = ecspec.path
+                if ecspec.remove:
+                    try:
+                        app.dmd.Events.getOrganizer(organizerPath)
+                    except KeyError:
+                        self.LOG.warning('Unable to remove EventClass %s (not found)' % ecspec.path)
+                        continue
+
+                    self.LOG.info('Removing EventClass %s' % ecspec.path)
+                    app.dmd.Events.manage_deleteOrganizer(organizerPath)
+                else:
+                    try:
+                        organizer = app.dmd.Events.getOrganizer(organizerPath)
+                    except KeyError:
+                        continue
+
+                    for mapping_id, mapping_spec in ecspec.mappings.items():
+                        if mapping_spec.remove:
+                            self.LOG.info('Removing EventClassInst %s @ %s' % (mapping_id, ecspec.path))
+                            organizer.removeInstances(organizer.prepId(mapping_id))
+
+            # Remove EventClasses with remove flag set
+            for ecname, ecspec in self.event_classes.iteritems():
+                organizerPath = ecspec.path
+                if ecspec.remove:
+                    try:
+                        app.dmd.Events.getOrganizer(organizerPath)
+                    except KeyError:
+                        self.LOG.warning('Unable to remove EventClass %s (not found)' % ecspec.path)
+                        continue
+
+                    self.LOG.info('Removing EventClass %s' % ecspec.path)
+                    app.dmd.Events.manage_deleteOrganizer(organizerPath)
+                else:
+                    try:
+                        organizer = app.dmd.Events.getOrganizer(organizerPath)
+                    except KeyError:
+                        continue
+
+                    for mapping_id, mapping_spec in ecspec.mappings.items():
+                        if mapping_spec.remove:
+                            self.LOG.info('Removing EventClassInst %s @ %s' % (mapping_id, ecspec.path))
+                            organizer.removeInstances(organizer.prepId(mapping_id))
+
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
     def template_changed(self, app, existing, new_spec):
