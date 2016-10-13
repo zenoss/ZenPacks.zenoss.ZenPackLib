@@ -49,6 +49,38 @@ class ComponentBase(ModelBase):
             }
         }
 
+    def __setattr__(self, name, value):
+        '''enforce type checking when setting _properties attributes'''
+        def lines(val):
+            """handle 'lines' type"""
+            if not isinstance(val, list):
+                val = [val]
+            val = [str(v) for v in val]
+            return val
+        # dictionary of _property "type" keys and target Python classes
+        target_type_map = {'boolean': bool,
+                           'int': int,
+                           'float': float,
+                           'string': str,
+                           'password': str,
+                           'lines': lines,
+                           }
+        # dictionary of _properties "id"s and "type"s
+        property_dict = {p.get('id'): p.get('type') for p in self._properties}
+        # only change type if it's a _properties attribute
+        if name in property_dict:
+            # and if we know how to handle it
+            target_class = target_type_map.get(property_dict.get(name))
+            if target_class:
+                try:
+                    value = target_class(value)
+                except Exception as e:
+                    self.LOG.warning('Error setting {} ({}) to: {} failed ({}).'.format(name,
+                                                                                        target_class.__name__,
+                                                                                        value,
+                                                                                        e))
+        super(ModelBase, self).__setattr__(name, value)
+
     def device(self):
         """Return device under which this component/device is contained."""
         obj = self

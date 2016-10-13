@@ -46,6 +46,7 @@ Fixes
 * Improve ImportError logging in class files (ZEN-22927)
 * Ensure non-cached datapoints return current value (ZEN-22288)
 * Fix issue when setting datapoint_cached to False (ZEN-22287)
+* Set all component property details to correct Python type (ZEN-22057)
 * Honor relationship label containing component overrides in component (ZEN-21966)
 * Prevent attempts to process relationships not in class_relationships (ZEN-21927)
 * Ensure component display properties honored (ZEN-19798)
