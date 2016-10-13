@@ -72,8 +72,11 @@ class RRDDatapointSpec(Spec):
             self.aliases = {}
         elif isinstance(aliases, dict):
             self.aliases = aliases
+        elif isinstance(aliases, str):
+            self.LOG.debug('setting default alias for {}'.format(aliases))
+            self.aliases = {aliases: None}
         else:
-            raise ValueError("aliases must be specified as a dict")
+            raise ValueError("aliases must be specified as a dict or string (got {})".format(aliases))
         self.shorthand = shorthand
         if self.shorthand:
             if 'DERIVE' in shorthand.upper():
