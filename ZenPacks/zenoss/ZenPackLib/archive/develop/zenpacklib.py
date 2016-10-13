@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.2.0dev"
+__version__ = "1.1.0dev"
 
 
 import logging
@@ -58,11 +58,10 @@ if __name__ == '__main__':
     from Products.ZenUtils.Utils import unused
     unused(Globals)
 
-import zope.schema
 from zope.browser.interfaces import IBrowserView
 from zope.component import adapts, getGlobalSiteManager
 from zope.event import notify
-from zope.interface import classImplements, implements, providedBy
+from zope.interface import classImplements, implements
 from zope.interface.interface import InterfaceClass
 from Acquisition import aq_base
 
@@ -1199,37 +1198,6 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
                     item['xtype'] = 'ZPL_{zenpack_id_prefix}_RenderableDisplayField'.format(
                         zenpack_id_prefix=self.zenpack_id_prefix)
                     item['renderer'] = renderer
-
-    def fields(self, fieldFilter=None):
-        """ override to ensure fields are inherited properly"""
-        d = {}
-
-        iface_fields = []
-        for iface in providedBy(self.context):
-            f = zope.schema.getFields(iface)
-            if f:
-                iface_fields.append(f)
-        # reverse so that subclasses processed last
-        iface_fields.reverse()
-
-        for f in iface_fields:
-            def _filter(item):
-                include = True
-                if fieldFilter:
-                    key=item[0]
-                    include = fieldFilter(key)
-                else:
-                    include = bool(item)
-                return include
-            for k,v in filter(_filter, f.iteritems()):
-                c = self._dict(v)
-                c['name'] = k
-                value =  getattr(self.context, k, None)
-                c['value'] = value() if callable(value) else value                    
-                if c['xtype'] in ('autoformcombo', 'itemselector'):
-                    c['values'] = self.vocabulary(v)
-                d[k] = c
-        return d
 
 
 class ClassProperty(property):
@@ -2618,11 +2586,6 @@ class ClassSpec(Spec):
             if hasattr(base, '_catalogs'):
                 catalogs.update(base._catalogs)
 
-        if self.name not in catalogs:
-            catalogs[self.name] = {'indexes': {}}
-
-        indexes = catalogs[self.name]['indexes']
-
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
             if spec.api_backendtype == 'property':
@@ -2656,13 +2619,15 @@ class ClassSpec(Spec):
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
 
-            indexes.update(spec.catalog_indexes)
-
-        # Add a properly-scoped "id" index if needed
-        if len(indexes) > 0:
-            scopes = {x.get('scope', 'device') for x in indexes.values()}
-            indexes['id'] = {'type': 'field',
-                             'scope': 'device' if 'device' in scopes else 'global'}
+            pindexes = spec.catalog_indexes
+            if pindexes:
+                if self.name not in catalogs:
+                    catalogs[self.name] = {
+                        'indexes': {
+                            'id': {'type': 'field'},
+                        }
+                    }
+                catalogs[self.name]['indexes'].update(pindexes)
 
         # Add local relations.
         for name, spec in self.relationships.iteritems():
@@ -2736,11 +2701,11 @@ class ClassSpec(Spec):
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.iinfo_schemas)
 
-        for i, specs in enumerate(self.containing_spec_relations):
-            spec, relspec = specs
-            attributes[self.get_relname(spec, relspec)] = schema.Entity(
+        for i, spec in enumerate(self.containing_components):
+            attr = relname_from_classname(spec.name)
+            attributes[attr] = schema.Entity(
                 title=_t(spec.label),
-                group="Overview",
+                group="Relationships",
                 order=3 + i / 100.0)
 
         for spec in self.inherited_relationships().itervalues():
@@ -2799,12 +2764,17 @@ class ClassSpec(Spec):
             'class_plural_short_label': ProxyProperty('class_plural_short_label')
         })
 
-        for spec, relspec in self.containing_spec_relations:
-            if relspec:
-                attributes.update(relspec.info_properties)
-            else:
+        for spec in self.containing_components:
+            attr = None
+            for rel, rspec in self.relationships.items():
+                if rspec.remote_classname == spec.name:
+                    attr = rel
+                    continue
+
+            if not attr:
                 attr = relname_from_classname(spec.name)
-                attributes[attr] = RelationshipInfoProperty(attr)
+
+            attributes[attr] = RelationshipInfoProperty(attr)
 
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.info_properties)
@@ -2932,28 +2902,6 @@ class ClassSpec(Spec):
         return containing_specs
 
     @property
-    def containing_spec_relations(self):
-        """ Return iterable of containing component ClassSpec and RelationshipSpec instances.
-            Instances will be sorted shallow to deep.
-        """
-        containing_rels = []
-        for relname, relschema in self.model_schema_class._relations:
-            if not issubclass(relschema.remoteType, ToManyCont):
-                continue
-
-            remote_classname = relschema.remoteClass.split('.')[-1]
-            remote_spec = self.zenpack.classes.get(remote_classname)
-            relation_spec = self.relationships.get(relname)
-            if not remote_spec or remote_spec.is_device:
-                continue
-
-            containing_rels.extend(remote_spec.containing_spec_relations)
-            if not relation_spec:
-                relation_spec = self.inherited_relationships().get(relname)
-            containing_rels.append((remote_spec, relation_spec))
-        return containing_rels
-
-    @property
     def faceting_components(self):
         """Return iterable of faceting component ClassSpec instances."""
         faceting_specs = []
@@ -2972,24 +2920,6 @@ class ClassSpec(Spec):
                     if class_spec and not class_spec.is_device:
                         faceting_specs.append(class_spec)
 
-        return faceting_specs
-
-    @property
-    def faceting_spec_relations(self):
-        """Return iterable of faceting component ClassSpec and RelationshipSpec instances."""
-        faceting_specs = []
-        for relname, relschema in self.model_class._relations:
-            if relname in FACET_BLACKLIST:
-                continue
-            if not issubclass(relschema.remoteType, ToMany):
-                continue
-            remote_classname = relschema.remoteClass.split('.')[-1]
-            remote_spec = self.zenpack.classes.get(remote_classname)
-            remote_relname = relschema.remoteName
-            if remote_spec:
-                for class_spec in [remote_spec] + remote_spec.subclass_specs():
-                    if class_spec and not class_spec.is_device:
-                        faceting_specs.append((class_spec, class_spec.relationships.get(remote_relname)))
         return faceting_specs
 
     @property
@@ -3017,10 +2947,14 @@ class ClassSpec(Spec):
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
 
-        for spec, relspec in self.containing_spec_relations:
+        for spec in self.containing_components:
+            # grid_display=False
             if spec.name in filtered_relationships:
                 continue
-            fields.append("{{name: '{}'}}".format(self.get_relname(spec, relspec)))
+            fields.append(
+                "{{name: '{}'}}"
+                .format(
+                    relname_from_classname(spec.name)))
 
         return fields
 
@@ -3037,7 +2971,8 @@ class ClassSpec(Spec):
             if r.grid_display is False:
                 filtered_relationships[r.remote_classname] = r
 
-        for spec, relspec in self.containing_spec_relations:
+        for spec in self.containing_components:
+            # grid_display=False
             if spec.name in filtered_relationships:
                 continue
 
@@ -3047,7 +2982,7 @@ class ClassSpec(Spec):
 
             column_fields = [
                 "id: '{}'".format(spec.name),
-                "dataIndex: '{}'".format(self.get_relname(spec, relspec)),
+                "dataIndex: '{}'".format(relname_from_classname(spec.name)),
                 "header: _t('{}')".format(spec.short_label),
                 "width: {}".format(width),
                 "renderer: {}".format(renderer),
@@ -3170,58 +3105,33 @@ class ClassSpec(Spec):
     @property
     def subcomponent_nav_js_snippet(self):
         """Return subcomponent navigation JavaScript snippet."""
-        
-        def get_js_snippet(id, label, classes):
-            """return basic JS nav snippet"""
-            cases = []
-            for c in classes:
-                cases.append("case '{}': return true;".format(c))
-            if not cases:
-                return ''
-            return (
-                "Zenoss.nav.appendTo('Component', [{{\n"
-                "    id: 'component_{id}',\n"
-                "    text: _t('{label}'),\n"
-                "    xtype: '{meta_type}Panel',\n"
-                "    subComponentGridPanel: true,\n"
-                "    filterNav: function(navpanel) {{\n"
-                "        switch (navpanel.refOwner.componentType) {{\n"
-                "            {cases}\n"
-                "            default: return false;\n"
-                "        }}\n"
-                "    }},\n"
-                "    setContext: function(uid) {{\n"
-                "        ZC.{meta_type}Panel.superclass.setContext.apply(this, [uid]);\n"
-                "    }}\n"
-                "}}]);\n"
-                .format(meta_type=self.meta_type, id=id, label=label, cases=' '.join(cases)))
+        cases = []
+        for meta_type in self.filterable_by:
+            cases.append("case '{}': return true;".format(meta_type))
 
-        sections = {self.plural_short_label: []}
+        if not cases:
+            return ''
 
-        specs_rels = list(set(self.containing_spec_relations) | set(self.faceting_spec_relations))
-        specs_rels_dict = dict([(r[0].meta_type, r) for r in specs_rels])
-        filtered = list(specs_rels_dict.get(f) for f in self.filterable_by)
-
-        for spec, relation in filtered:
-            # default if no label specified
-            if not relation:
-                sections[self.plural_short_label].append(spec.meta_type)
-            else:
-                # also default if not labeled
-                if not relation.label:
-                    sections[self.plural_short_label].append(spec.meta_type)
-                else:
-                    # new snippet if relation labeled
-                    if relation.label not in sections:
-                        sections[relation.label] = []
-                    sections[relation.label].append(spec.meta_type)
-
-        snippets = []
-        for label, metatypes in sections.items():        
-            id = '_'.join(label.lower().split(' '))
-            snippets.append(get_js_snippet(id, label, metatypes))
-
-        return ''.join(snippets)
+        return (
+            "Zenoss.nav.appendTo('Component', [{{\n"
+            "    id: 'component_{meta_type}',\n"
+            "    text: _t('{plural_label}'),\n"
+            "    xtype: '{meta_type}Panel',\n"
+            "    subComponentGridPanel: true,\n"
+            "    filterNav: function(navpanel) {{\n"
+            "        switch (navpanel.refOwner.componentType) {{\n"
+            "            {cases}\n"
+            "            default: return false;\n"
+            "        }}\n"
+            "    }},\n"
+            "    setContext: function(uid) {{\n"
+            "        ZC.{meta_type}Panel.superclass.setContext.apply(this, [uid]);\n"
+            "    }}\n"
+            "}}]);\n"
+            .format(
+                meta_type=self.meta_type,
+                plural_label=self.plural_short_label,
+                cases=' '.join(cases)))
 
     @property
     def device_js_snippet(self):
@@ -3230,12 +3140,6 @@ class ClassSpec(Spec):
             self.component_grid_panel_js_snippet,
             self.subcomponent_nav_js_snippet,
             ))
-
-    def get_relname(self, spec, relspec):
-        if relspec:
-            return relspec.name
-        else:
-            return relname_from_classname(spec.name)
 
     def test_setup(self):
         """Execute from a test suite's afterSetUp method.
@@ -3752,16 +3656,15 @@ class ClassRelationshipSpec(Spec):
             remote_spec.label = remote_spec.meta_type
 
         if isinstance(self.schema, (ToOne)):
-            if (self.label or remote_spec.label) != 'Device':
-                schemas[self.name] = schema.Entity(
-                    title=_t(self.label or remote_spec.label),
-                    group="Overview",
-                    order=self.order or 3.0)
+            schemas[self.name] = schema.Entity(
+                title=_t(self.label or remote_spec.label),
+                group="Relationships",
+                order=self.order or 3.0)
         else:
             relname_count = '{}_count'.format(self.name)
             schemas[relname_count] = schema.Int(
                 title=_t(u'Number of {}'.format(self.label or remote_spec.plural_label)),
-                group="Overview",
+                group="Relationships",
                 order=self.order or 6.0)
 
         return schemas
@@ -5013,14 +4916,8 @@ if YAML_INSTALLED:
     def yaml_warning(loader, e):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
-<<<<<<< HEAD
-        pass
-        # commenting out for 1.1 release
-        # print format_message(e)
-=======
 
         print format_message(e)
->>>>>>> feature/ZEN-24903
 
     def yaml_error(loader, e, exc_info=None):
         # Given a MarkedYAMLError exception, either log or raise

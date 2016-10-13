@@ -1,0 +1,1713 @@
+name: ZenPacks.zenoss.ZenPackLib
+zProperties:
+  DEFAULTS:
+    category: Big IP Monitoring
+  zLTMVirtualServerIgnoreNames:
+    default: ''
+
+class_relationships:
+- BigIpDevice 1:MC TrafficManagementModule
+- BigIpDevice(ltmvirtualservers) 1:MC (loadbalancer)LTMVirtualServer
+- BigIpDevice(loadbalancerports) 1:MC (port)LBPort
+- BigIpDevice(loadbalancerpools) 1:MC (pool)LBPool
+- LBPool(members) 1:MC (member)LBPoolMember
+
+classes:
+  DEFAULTS:
+    base: [BigIpComponent]
+
+  BigIpComponent:
+    base: [zenpacklib.Component]
+
+  BigIpDevice:
+    base: [zenpacklib.Device]
+    properties:
+      sysStatMemoryTotal:
+        label: TMM Total Memory
+        default: 0
+    dynamicview_relations:
+      impacts: [ltmvirtualservers, loadbalancerports, loadbalancerpools]
+
+  LTMVirtualServer:
+    label: LTM Virtual Server
+    monitoring_templates: [LTMVirtualServer]
+    properties:
+      DEFAULTS:
+        grid_display: false
+      displayName:
+        label: Display Name
+      ipAddress:
+        label: IP Address
+        grid_display: true
+        content_width: 100
+        order: 2
+      port:
+        label: Port
+        grid_display: true
+        content_width: 40
+        order: 3
+      currentConnections:
+        label: Current Connections
+        api_only: true
+        api_backendtype: method
+        grid_display: true
+        renderer: Zenoss.render.zeroMeansUnlimited
+        content_width: 80
+        order: 4
+      connLimit:
+        label: Connection Limit
+        type: int
+        grid_display: true
+        renderer: Zenoss.render.noneMeansUnknown
+        content_width: 60
+        order: 5
+      enabled:
+        label: Enabled
+        type: boolean
+        grid_display: true
+        order: 6
+      rateClass:
+        label: Rate Class
+      protocol:
+        label: Protocol
+      ipMask:
+        label: IP Netmask
+      connectionMirroring:
+        label: Connection Mirroring
+        type: boolean
+      translateAddress:
+        label: Address Translation
+        type: boolean
+      translatePort:
+        label: Port Translation
+        type: int
+      servType:
+        label: Server Type
+    dynamicview_relations:
+      impacted_by: [device]
+
+  LBPort:
+    label: Load Balancer Port
+    monitoring_templates: [LBPort]
+    properties:
+      DEFAULTS:
+        grid_display: false
+        default: False
+      learnMode:
+        label: Learn Mode
+        grid_display: true
+        content_width: 90
+        order: 1
+      mediaActiveSpeed:
+        label: Media Speed
+        grid_display: true
+        content_width: 80
+        order: 2
+      mediaActiveDuplex:
+        label: Duplex Mode
+        grid_display: true
+        content_width: 80
+        order: 3
+      macaddress:
+        label: MAC Address
+        grid_display: true
+        default: ''
+        content_width: 120
+        order: 4
+      mtu:
+        label: MTU
+        type: int
+        grid_display: true
+        default: 0
+        content_width: 60
+        order: 5
+      flowCtrlReq:
+        label: Flow Control Required
+      stpLink:
+        label: STP Link
+      stpEdge:
+        label: STP Edge
+        type: boolean
+      stpEdgeActive:
+        label: STP Edge Active
+        type: boolean
+      stpAuto:
+        label: STP Auto
+        type: boolean
+      stpEnable:
+        label: STP Enabled
+        type: boolean
+      stpReset:
+        label: STP Reset
+        type: boolean
+      ifstatus:
+        label: Interface Status
+        default: ''
+      comboPort:
+        label: Port Combining
+        type: boolean
+      preferSfp:
+        label: SFP Preference
+        type: boolean
+      mediaMaxSpeed:
+        label: Media Max Speed
+        type: int
+        default: 0
+      sfpMedia:
+        label: SFP Media
+        type: boolean
+      phyMaster:
+        label: Phys Master
+        default: ''
+      mediaMaxDuplex:
+        label: Media Max Duplex
+        default: ''
+      enabled:
+        label: Enabled
+        type: boolean
+        grid_display: true
+        default: True
+    dynamicview_relations:
+      impacted_by: [device]
+
+  LBPool:
+    label: Load Balancer Pool
+    monitoring_templates: [LBPool]
+    properties:
+      DEFAULTS:
+        grid_display: false
+        default: 0
+      lbMode:
+        label: Balance Mode
+        grid_display: true
+        content_width: 140
+        order: 1
+      monitorRule:
+        label: Monitor Rule
+        default: ''
+        content_width: 80
+        order: 2
+        grid_display: true
+      actionOnServiceDown:
+        label: On Service Down
+      activeMemberCnt:
+        label: Active Members
+        api_only: true
+        api_backendtype: method
+        grid_display: true
+        content_width: 90
+        order: 4
+      totalMemberCnt:
+        label: Total Members
+        api_only: true
+        api_backendtype: method
+        grid_display: true
+        content_width: 90
+        order: 5
+      simpleTimeout:
+        label: Simple Timeout
+        type: int
+      ipTosToClient:
+        label: IP TOS To Client
+        type: int
+      ipTosToServer:
+        label: IP TOS To Server
+        type: int
+      linkQosToClient:
+        label: Link QOS To Client
+        type: int
+      linkQosToServer:
+        label: Link QOS To Server
+        type: int
+      dynamicRatioSum:
+        label: Dynamic Ratio Sum
+        type: int
+      slowRampTime:
+        label: Slow Ramp Time
+        type: int
+      minUpMembers:
+        label: Min Up Members
+        type: int
+      minUpMembersEnable:
+        label: Min Up Members Enable
+      minUpMemberAction:
+        label: Min Up Action
+        grid_display: true
+        default: ''
+      minActiveMembers:
+        label: Min Active Members
+        type: int
+      disallowSnat:
+        label: Disallow SNAT
+        type: boolean
+        default: True
+      disallowNat:
+        label: Disallow NAT
+        type: boolean
+        default: True
+    dynamicview_relations:
+      impacts: [members]
+      impacted_by: [device]
+
+  LBPoolMember:
+    label: Load Balancer Pool Member
+    monitoring_templates: [LBPoolMember]
+    properties:
+      DEFAULTS:
+        grid_display: false
+        default: ''
+      poolName:
+        label: Pool Name
+      # maybe this should be a link to montiored device?
+      address:
+        label: Server
+        grid_display: true
+        content_width: 120
+        order: 2
+      port:
+        label: Port
+        grid_display: true
+        content_width: 60
+        order: 3
+      monitor_status:
+        label: Monitor Status
+        api_only: true
+        api_backendtype: method
+        grid_display: true
+        content_width: 100
+        order: 4
+      session_status:
+        label: Session Status
+        api_only: true
+        api_backendtype: method
+        grid_display: true
+        content_width: 85
+        order: 5
+      monitorRule:
+        label: Monitor Rule
+      connLimit:
+        label: Connection Limit
+        type: int
+      addressType:
+        label: Address Type
+      ratio:
+        label: Ratio
+        type: int
+        default: 0
+      weight:
+        label: Weight
+        type: int
+        default: 0
+      priority:
+        label: Priority
+        type: int
+        default: 0
+      dynamicRatio:
+        label: Dynamic Ratio
+        type: int
+        default: 0
+    dynamicview_relations:
+      impacted_by: [member, device]
+
+  TrafficManagementModule:
+    label: Traffic Management Module
+    monitoring_templates: [TrafficManagementModule]
+    properties:
+      DEFAULTS:
+        default: 0
+      sysTmmStatTmid:
+        label: TMM ID
+        default: ''
+      sysTmmStatTmmPid:
+        label: Process ID
+      sysTmmStatCpu:
+        label: CPU Index
+      sysTmmStatTmid:
+        label: TMM Index
+      sysTmmStatSlotId:
+        label: Slot Index
+    dynamicview_relations:
+      impacted_by: [device]
+
+device_classes:
+  /Network/BIG-IP:
+    zProperties:
+      zPythonClass: ZenPacks.zenoss.BigIpMonitor.BigIpDevice
+      zCollectorPlugins:
+        - zenoss.snmp.DeviceMap
+        - snmp.bigip.DeviceMap
+        - snmp.bigip.InterfaceMap
+        - snmp.bigip.VirtualServers
+        - snmp.bigip.LBPoolMap
+        - snmp.bigip.LBPort
+        - snmp.bigip.TrafficManagementModuleMap
+      zDeviceTemplates:
+        - Device
+        - BigIpDevice
+      zSnmpVer: v2c
+    templates:
+      BigIpDevice:
+        description: F5 BIG-IP device level metrics
+        targetPythonClass: ZenPacks.zenoss.BigIpMonitor.BigIpDevice
+        thresholds:
+          free TMM memory:
+            description:  The memory in use in bytes for TMM (Traffic Management Module).
+            dsnames: [sysStatMemoryUsed_sysStatMemoryUsed]
+            eventClass: /Perf/Memory
+            maxval: here.sysStatMemoryTotal * .9
+          free host memory:
+            dsnames: [sysHostMemoryUsed_sysHostMemoryUsed]
+            eventClass: /Perf/Memory
+            maxval: here.hw.totalMemory * .9
+        datasources:
+          clientBytesIn:
+            type: SNMP
+            datapoints:
+              clientBytesIn:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {clientBytesIn: null}
+                description: The number of bytes received by the system from client-side.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.3.0
+          clientBytesOut:
+            type: SNMP
+            datapoints:
+              clientBytesOut:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {clientBytesOut: null}
+                description: The number of bytes sent to client-side from the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.5.0
+          clientCurConns:
+            type: SNMP
+            datapoints:
+              clientCurConns:
+                description: The current connections from client-side to the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.8.0
+          clientMaxConns:
+            type: SNMP
+            datapoints:
+              clientMaxConns:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {clientMaxConns: null}
+                description: The maximum connections from client-side to the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.6.0
+          clientPacketsIn:
+            type: SNMP
+            datapoints:
+              clientPacketsIn:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {clientPacketsIn: null}
+                description: The number of packets received by the system from client-side.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.2.0
+          clientPacketsOut:
+            type: SNMP
+            datapoints:
+              clientPacketsOut:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {clientPacketsOut: null}
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.4.0
+          connLimitExceeded:
+            type: SNMP
+            datapoints:
+              connLimitExceeded: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.33.0
+          connPoolCurSize:
+            type: SNMP
+            datapoints:
+              connPoolCurSize: {}
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.3.2.0
+          connPoolMaxSize:
+            type: SNMP
+            datapoints:
+              connPoolMaxSize: {}
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.3.3.0
+          connectionMemoryErrors:
+            type: SNMP
+            datapoints:
+              connectionMemoryErrors: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.37.0
+          cookiesDetected:
+            type: SNMP
+            datapoints:
+              cookiesDetected: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.58.0
+          cookiesGenerated:
+            type: SNMP
+            datapoints:
+              cookiesGenerated: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.57.0
+          droppedPacketRate:
+            type: SNMP
+            datapoints:
+              droppedPacketRate: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.46.0
+          sysHostMemoryUsed:
+            type: SNMP
+            datapoints:
+              sysHostMemoryUsed: {}
+            oid: 1.3.6.1.4.1.3375.2.1.7.1.2.0
+          httpRequestRate:
+            type: SNMP
+            datapoints:
+              httpRequestRate: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.56.0
+          hwClientBytesIn:
+            type: SNMP
+            datapoints:
+              hwClientBytesIn:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwClientBytesIn: null}
+                description: The number of hardware accelerated bytes received
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.17.0
+          hwClientBytesOut:
+            type: SNMP
+            datapoints:
+              hwClientBytesOut:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwClientBytesOut: null}
+                description: The number of hardware accelerated bytes sent to client-side
+                  from the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.19.0
+          hwClientCurConns:
+            type: SNMP
+            datapoints:
+              hwClientCurConns:
+                description: The current hardware accelerated connections from client-side
+                  to the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.22.0
+          hwClientMaxConns:
+            type: SNMP
+            datapoints:
+              hwClientMaxConns:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwClientMaxConns: null}
+                description: The maximum hardware accelerated connections from client-side
+                  to the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.20.0
+          hwClientPacketsIn:
+            type: SNMP
+            datapoints:
+              hwClientPacketsIn:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwClientPacketsIn: null}
+                description: The number of hardware accelerated packets received by
+                  the system from client-side.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.16.0
+          hwClientPacketsOut:
+            type: SNMP
+            datapoints:
+              hwClientPacketsOut:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwClientPacketsOut: null}
+                description: The number of hardware accelerated packets sent to client-side
+                  from the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.18.0
+          hwPartialCurConns:
+            type: SNMP
+            datapoints:
+              hwPartialCurConns:
+                description: The current number of the partially hardware accelerated
+                  connections on the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.31.0
+          hwServerBytesIn:
+            type: SNMP
+            datapoints:
+              hwServerBytesIn:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwServerBytesIn: null}
+                description: The number of hardware accelerated bytes received by
+                  the system from server-side
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.24.0
+          hwServerBytesOut:
+            type: SNMP
+            datapoints:
+              hwServerBytesOut:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwServerBytesOut: null}
+                description: The number of hardware accelerated bytes sent to server-side
+                  from the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.26.0
+          hwServerCurConns:
+            type: SNMP
+            datapoints:
+              hwServerCurConns:
+                description: The current hardware accelerated connections from server-side
+                  to the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.29.0
+          hwServerMaxConns:
+            type: SNMP
+            datapoints:
+              hwServerMaxConns:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwServerMaxConns: null}
+                description: The maximum hardware accelerated connections from server-side
+                  to the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.27.0
+          hwServerPacketsIn:
+            type: SNMP
+            datapoints:
+              hwServerPacketsIn:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwServerPacketsIn: null}
+                description: The number of hardware accelerated packets received by
+                  the system from server-side.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.23.0
+          hwServerPacketsOut:
+            type: SNMP
+            datapoints:
+              hwServerPacketsOut:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {hwServerPacketsOut: null}
+                description: The number of hardware accelerated packets sent to server-side
+                  from the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.25.0
+          idleCycles:
+            type: SNMP
+            datapoints:
+              idleCycles:
+                rrdtype: GAUGE
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.42.0
+          inErrorRate:
+            type: SNMP
+            datapoints:
+              inErrorRate: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.47.0
+          licenseDeny:
+            type: SNMP
+            datapoints:
+              licenseDeny: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.36.0
+          sysStatMemoryUsed:
+            type: SNMP
+            datapoints:
+              sysStatMemoryUsed: {}
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.45.0
+          noHandlerDeny:
+            type: SNMP
+            datapoints:
+              noHandlerDeny: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.35.0
+          outErrorRate:
+            type: SNMP
+            datapoints:
+              outErrorRate: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.48.0
+          serverBytesIn:
+            type: SNMP
+            datapoints:
+              serverBytesIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.10.0
+          serverBytesOut:
+            type: SNMP
+            datapoints:
+              serverBytesOut:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {serverBytesOut: null}
+                description: The number of bytes sent to server-side from the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.12.0
+          serverCurConns:
+            type: SNMP
+            datapoints:
+              serverCurConns:
+                description: The current connections from server-side to the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.15.0
+          serverMaxConns:
+            type: SNMP
+            datapoints:
+              serverMaxConns:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {serverMaxConns: null}
+                description: The maximum connections from server-side to the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.13.0
+          serverPacketsIn:
+            type: SNMP
+            datapoints:
+              serverPacketsIn:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {serverPacketsIn: null}
+                description: The number of packets received by the system from server-side.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.9.0
+          serverPacketsOut:
+            type: SNMP
+            datapoints:
+              serverPacketsOut:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {serverPacketsOut: null}
+                description: The number of packets sent to server-side from the system.
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.11.0
+          sleepCycles:
+            type: SNMP
+            datapoints:
+              sleepCycles:
+                rrdtype: GAUGE
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.43.0
+          totalCycles:
+            type: SNMP
+            datapoints:
+              totalCycles:
+                rrdtype: GAUGE
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.41.0
+          virtServerNonSynDeny:
+            type: SNMP
+            datapoints:
+              virtServerNonSynDeny: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.1.2.1.34.0
+        graphs:
+          Accelerated Connections:
+            units: connections/sec
+            miny: 0
+            graphpoints:
+              hwClientCurConns:
+                dpName: hwClientCurConns_hwClientCurConns
+                legend: Current Client
+              hwClientMaxConns:
+                dpName: hwClientMaxConns_hwClientMaxConns
+                legend: Max Client
+              hwPartialCurConns:
+                dpName: hwPartialCurConns_hwPartialCurConns
+                legend: Partially Accelerated
+              hwServerCurConns:
+                dpName: hwServerCurConns_hwServerCurConns
+                legend: Current Server
+              hwServerMaxConns:
+                dpName: hwServerMaxConns_hwServerMaxConns
+                legend: Max Server
+          Accelerated Packet Rates:
+            units: packets/sec
+            miny: 0
+            graphpoints:
+              hwClientPacketsIn:
+                dpName: hwClientPacketsIn_hwClientPacketsIn
+                legend: Inbound Client
+              hwClientPacketsOut:
+                dpName: hwClientPacketsOut_hwClientPacketsOut
+                legend: Outbound Client
+              hwServerPacketsIn:
+                dpName: hwServerPacketsIn_hwServerPacketsIn
+                legend: Inbound Server
+              hwServerPacketsOut:
+                dpName: hwServerPacketsOut_hwServerPacketsOut
+                legend: Outbound Server
+          Accelerated Throughput:
+            units: bytes/sec
+            miny: 0
+            graphpoints:
+              hwClientBytesIn:
+                dpName: hwClientBytesIn_hwClientBytesIn
+                legend: Inbound Client
+              hwClientBytesOut:
+                dpName: hwClientBytesOut_hwClientBytesOut
+                legend: Outbound Client
+              hwServerBytesIn:
+                dpName: hwServerBytesIn_hwServerBytesIn
+                legend: Inbound Server
+              hwServerBytesOut:
+                dpName: hwServerBytesOut_hwServerBytesOut
+                legend: Outbound Server
+          CPU Utilization:
+            units: percent
+            miny: 0
+            maxy: 100
+            custom: "CDEF:sum=totalCycles,idleCycles,+,sleepCycles,+\nCDEF:totalPercent=totalCycles,sum,/,100,*\n\
+              AREA:totalPercent#00cc00:Busy \nGPRINT:totalPercent:LAST:cur\\:%6.2lf%%\n\
+              GPRINT:totalPercent:AVERAGE:avg\\:%6.2lf%%\nGPRINT:totalPercent:MAX:max\\\
+              :%6.2lf%%\\j\nCDEF:idlePercent=idleCycles,sum,/,100,*\nSTACK:idlePercent#0000ff:Idle\
+              \ \nGPRINT:idlePercent:LAST:cur\\:%6.2lf%%\nGPRINT:idlePercent:AVERAGE:avg\\\
+              :%6.2lf%%\nGPRINT:idlePercent:MAX:max\\:%6.2lf%%\\j\nCDEF:sleepPercent=sleepCycles,sum,/,100,*\n\
+              STACK:sleepPercent#00ffff:Sleep\nGPRINT:sleepPercent:LAST:cur\\:%6.2lf%%\n\
+              GPRINT:sleepPercent:AVERAGE:avg\\:%6.2lf%%\nGPRINT:sleepPercent:MAX:max\\\
+              :%6.2lf%%\\j"
+            graphpoints:
+              idleCycles:
+                dpName: idleCycles_idleCycles
+                lineType: DONTDRAW
+              sleepCycles:
+                dpName: sleepCycles_sleepCycles
+                lineType: DONTDRAW
+              totalCycles:
+                dpName: totalCycles_totalCycles
+                lineType: DONTDRAW
+              idlePercent:
+                dpName: idleCycles_idleCycles
+                lineType: AREA
+                stacked: true
+                legend: Idle
+                rpn: totalCycles,/,100,*
+                color: '#0000ff'
+              sleepPercent:
+                dpName: sleepCycles_sleepCycles
+                lineType: AREA
+                stacked: true
+                legend: Sleep
+                rpn: totalCycles,/,100,*
+                color: 00ffff
+              sum:
+                dpName: idleCycles_idleCycles
+                rpn: sleepCycles,+,totalCycles,+
+                lineType: DONTDRAW
+              totalPercent:
+                dpName: totalCycles_totalCycles
+                lineType: AREA
+                stacked: true
+                legend: Busy
+                rpn: totalCycles,sum,/,100,*
+                color: 00cc00
+          Connection Failure Rates:
+            units: connections/sec
+            miny: 0
+            graphpoints:
+              connLimitExceeded:
+                dpName: connLimitExceeded_connLimitExceeded
+                legend: Connection Limit Exceeded
+              connectionMemoryErrors:
+                dpName: connectionMemoryErrors_connectionMemoryErrors
+                legend: Connection Failed due to Memory Errors
+          Connection Pool:
+            units: connections
+            miny: 0
+            graphpoints:
+              connPoolCurSize:
+                dpName: connPoolCurSize_connPoolCurSize
+                lineType: AREA
+                format: '%6.0lf'
+                legend: Current Size
+              connPoolMaxSize:
+                dpName: connPoolMaxSize_connPoolMaxSize
+                lineType: AREA
+                format: '%6.0lf'
+                legend: Max Size
+          Connections:
+            units: connections/sec
+            miny: 0
+            graphpoints:
+              clientCurConns:
+                dpName: clientCurConns_clientCurConns
+                legend: Current Client
+              clientMaxConns:
+                dpName: clientMaxConns_clientMaxConns
+                legend: Max Client
+              serverCurConns:
+                dpName: serverCurConns_serverCurConns
+                legend: Current Server
+              serverMaxConns:
+                dpName: serverMaxConns_serverMaxConns
+                legend: Max Server
+          HTTP Rates:
+            units: requests/sec
+            miny: 0
+            graphpoints:
+              cookiesDetected:
+                dpName: cookiesDetected_cookiesDetected
+                legend: Cookies Detected
+              cookiesGenerated:
+                dpName: cookiesGenerated_cookiesGenerated
+                legend: Cookies Generated
+              httpRequestRate:
+                dpName: httpRequestRate_httpRequestRate
+                legend: HTTP Requests
+          Memory Utilization:
+            units: percent
+            miny: 0
+            maxy: 100
+            graphpoints:
+              sysHostMemoryUsed:
+                dpName: sysHostMemoryUsed_sysHostMemoryUsed
+                format: '%6.2lf%%'
+                legend: Host
+                rpn: ${here/hw/totalMemory},/,100,*
+              sysStatMemoryUsed:
+                dpName: sysStatMemoryUsed_sysStatMemoryUsed
+                lineType: AREA
+                format: '%6.2lf%%'
+                legend: TMM
+                rpn: ${here/sysStatMemoryTotal},/,100,*
+          Packet Failure Rates:
+            units: Packets/sec
+            miny: 0
+            graphpoints:
+              droppedPacketRate:
+                dpName: droppedPacketRate_droppedPacketRate
+                legend: Dropped
+              inErrorRate:
+                dpName: inErrorRate_inErrorRate
+                legend: Inbound Errors
+              licenseDeny:
+                dpName: licenseDeny_licenseDeny
+                legend: License Deny
+              noHandlerDeny:
+                dpName: noHandlerDeny_noHandlerDeny
+                legend: No Handler Denied
+              outErrorRate:
+                dpName: outErrorRate_outErrorRate
+                legend: Outbound Errors
+              virtServerNonSynDeny:
+                dpName: virtServerNonSynDeny_virtServerNonSynDeny
+                legend: Non-Syn Deny
+          Packet Rates:
+            units: packets/sec
+            miny: 0
+            graphpoints:
+              clientPacketsIn:
+                dpName: clientPacketsIn_clientPacketsIn
+                legend: Inbound Client
+              clientPacketsOut:
+                dpName: clientPacketsOut_clientPacketsOut
+                legend: Outbound Client
+              serverPacketsIn:
+                dpName: serverPacketsIn_serverPacketsIn
+                legend: Inbound Server
+              serverPacketsOut:
+                dpName: serverPacketsOut_serverPacketsOut
+                legend: Outbound Sever
+          Throughput:
+            units: bytes/sec
+            miny: 0
+            graphpoints:
+              clientBytesIn:
+                dpName: clientBytesIn_clientBytesIn
+                legend: Inbound Client
+              clientBytesOut:
+                dpName: clientBytesOut_clientBytesOut
+                legend: Outbound Client
+              serverBytesIn:
+                dpName: serverBytesIn_serverBytesIn
+                legend: Inbound Server
+              serverBytesOut:
+                dpName: serverBytesOut_serverBytesOut
+                legend: Outbound Server
+
+      CPU:
+        description: CPU temperature and fan speed
+        targetPythonClass: Products.ZenModel.CPU
+        thresholds:
+          fan underspeed:
+            dsnames: [rpm_rpm]
+            eventClass: /Perf/CPU
+            minval: '3000'
+          overheat:
+            dsnames: [temperature_celsius]
+            eventClass: /Perf/CPU
+            maxval: '38'
+        datasources:
+          rpm:
+            type: SNMP
+            datapoints:
+              rpm: {}
+            oid: 1.3.6.1.4.1.3375.2.1.3.1.2.1.3
+          temperature:
+            type: SNMP
+            datapoints:
+              celsius: {}
+            oid: 1.3.6.1.4.1.3375.2.1.3.1.2.1.2
+
+      Fan:
+        description: Fan speed
+        targetPythonClass: Products.ZenModel.Fan
+        thresholds:
+          fan underspeed:
+            dsnames: [rpm_rpm]
+            eventClass: /HW/Temperature/Fan
+            minval: '3000'
+        datasources:
+          rpm:
+            type: SNMP
+            datapoints:
+              rpm: {}
+            oid: 1.3.6.1.4.1.3375.2.1.3.2.1.2.1.3
+        graphs:
+          Fan Speed:
+            units: rpm
+            miny: 0
+            graphpoints:
+              rpm:
+                dpName: rpm_rpm
+                format: '%5.0lf'
+                legend: Fan Speed
+                includeThresholds: true
+
+      PowerSupply:
+        description: Power Supply Status
+        targetPythonClass: Products.ZenModel.PowerSupply
+        thresholds:
+          Power Supply Status:
+            dsnames: [status_status]
+            eventClass: /HW/Power/BigIpMonitor
+            minval: 1
+        datasources:
+          status:
+            type: SNMP
+            datapoints:
+              status: {}
+            oid: 1.3.6.1.4.1.3375.2.1.3.2.2.2.1.2
+
+      LBPool:
+        datasources:
+          ltmPoolActiveMemberCnt:
+            type: SNMP
+            datapoints:
+              ltmPoolActiveMemberCnt: {}
+            oid: 1.3.6.1.4.1.3375.2.2.5.1.2.1.8
+          ltmPoolMemberCnt:
+            type: SNMP
+            datapoints:
+              ltmPoolMemberCnt: {}
+            oid: 1.3.6.1.4.1.3375.2.2.5.1.2.1.23
+          ltmPoolStatServerPktsIn:
+            type: SNMP
+            datapoints:
+              ltmPoolStatServerPktsIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.5.2.3.1.2
+          ltmPoolStatServerBytesIn:
+            type: SNMP
+            datapoints:
+              ltmPoolStatServerBytesIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.5.2.3.1.3
+          ltmPoolStatServerPktsOut:
+            type: SNMP
+            datapoints:
+              ltmPoolStatServerPktsOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.5.2.3.1.4
+          ltmPoolStatServerBytesOut:
+            type: SNMP
+            datapoints:
+              ltmPoolStatServerBytesOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.5.2.3.1.5
+          ltmPoolStatServerMaxConns:
+            type: SNMP
+            datapoints:
+              ltmPoolStatServerMaxConns: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.5.2.3.1.6
+          ltmPoolStatServerTotConns:
+            type: SNMP
+            datapoints:
+              ltmPoolStatServerTotConns: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.5.2.3.1.7
+          ltmPoolStatServerCurConns:
+            type: SNMP
+            datapoints:
+              ltmPoolStatServerCurConns: {}
+            oid: 1.3.6.1.4.1.3375.2.2.5.2.3.1.8
+
+      LBPoolMember:
+        datasources:
+          ltmPoolMemberMonitorStatus:
+            type: SNMP
+            datapoints:
+              ltmPoolMemberMonitorStatus: {}
+            oid: 1.3.6.1.4.1.3375.2.2.5.3.2.1.11
+          ltmPoolMbrStatusEnabledState:
+            type: SNMP
+            datapoints:
+              ltmPoolMbrStatusEnabledState: {}
+            oid: 1.3.6.1.4.1.3375.2.2.5.3.2.1.13
+      LBPort:
+        datasources:
+          bytesIn:
+            type: SNMP
+            datapoints:
+              bytesIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.3
+          bytesOut:
+            type: SNMP
+            datapoints:
+              bytesOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.5
+        graphs:
+          Throughput:
+            units: bytes/sec
+            miny: 0
+            graphpoints:
+              bytesIn:
+                dpName: bytesIn_bytesIn
+                legend: Inbound
+              bytesOut:
+                dpName: bytesOut_bytesOut
+                legend: Outbound
+
+      LTMVirtualServer:
+        description: Metrics for each virtual server on a BIG-IP load balancer
+        targetPythonClass: ZenPacks.zenoss.BigIpMonitor.LTMVirtualServer
+        datasources:
+          clientBytesIn:
+            type: SNMP
+            datapoints:
+              clientBytesIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.7
+          clientBytesOut:
+            type: SNMP
+            datapoints:
+              clientBytesOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.9
+          clientCurConns:
+            type: SNMP
+            datapoints:
+              clientCurConns: {}
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.12
+          clientMaxConns:
+            type: SNMP
+            datapoints:
+              clientMaxConns: {}
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.10
+          clientPktsIn:
+            type: SNMP
+            datapoints:
+              clientPktsIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.6
+          clientPktsOut:
+            type: SNMP
+            datapoints:
+              clientPktsOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.8
+          clientTotConns:
+            type: SNMP
+            datapoints:
+              clientTotConns: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.11
+          ephemeralBytesIn:
+            type: SNMP
+            datapoints:
+              ephemeralBytesIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.14
+          ephemeralBytesOut:
+            type: SNMP
+            datapoints:
+              ephemeralBytesOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.16
+          ephemeralCurConns:
+            type: SNMP
+            datapoints:
+              ephemeralCurConns: {}
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.19
+          ephemeralMaxConns:
+            type: SNMP
+            datapoints:
+              ephemeralMaxConns: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.17
+          ephemeralPktsIn:
+            type: SNMP
+            datapoints:
+              ephemeralPktsIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.13
+          ephemeralPktsOut:
+            type: SNMP
+            datapoints:
+              ephemeralPktsOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.15
+          ephemeralTotConns:
+            type: SNMP
+            datapoints:
+              ephemeralTotConns: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.18
+          hwAcceleratedBytesIn:
+            type: SNMP
+            datapoints:
+              hwAcceleratedBytesIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.21
+          hwAcceleratedBytesOut:
+            type: SNMP
+            datapoints:
+              hwAcceleratedBytesOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.23
+          hwAcceleratedCurConns:
+            type: SNMP
+            datapoints:
+              hwAcceleratedCurConns: {}
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.26
+          hwAcceleratedMaxConns:
+            type: SNMP
+            datapoints:
+              hwAcceleratedMaxConns: {}
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.24
+          hwAcceleratedPktsIn:
+            type: SNMP
+            datapoints:
+              hwAcceleratedPktsIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.20
+          hwAcceleratedPktsOut:
+            type: SNMP
+            datapoints:
+              hwAcceleratedPktsOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.22
+          hwAcceleratedTotConns:
+            type: SNMP
+            datapoints:
+              hwAcceleratedTotConns: {}
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.25
+          hwPartAcceleratedCurConns:
+            type: SNMP
+            datapoints:
+              hwPartAcceleratedCurConns: {}
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.29
+          maxConnDuration:
+            type: SNMP
+            datapoints:
+              maxConnDuration:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {maxConnDuration: null}
+                description: Maximum Connection Duration (ms)
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.3
+          meanConnDuration:
+            type: SNMP
+            datapoints:
+              meanConnDuration:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {meanConnDuration: null}
+                description: Average Connection Duration (ms)
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.4
+          minConnDuration:
+            type: SNMP
+            datapoints:
+              minConnDuration:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {minConnDuration: null}
+                description: Minimum Connection Duration (ms)
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.2
+          requestRate:
+            type: SNMP
+            datapoints:
+              requestRate: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.2.10.2.3.1.27
+        graphs:
+          Connection Duration:
+            units: ms
+            miny: 0
+            graphpoints:
+              maxConnDuration:
+                dpName: maxConnDuration_maxConnDuration
+                legend: Maximum
+              meanConnDuration:
+                dpName: meanConnDuration_meanConnDuration
+                legend: Average
+              minConnDuration:
+                dpName: minConnDuration_minConnDuration
+                legend: Minimum
+          Connections:
+            units: connections
+            miny: 0
+            graphpoints:
+              clientCurConns:
+                dpName: clientCurConns_clientCurConns
+                lineType: AREA
+                legend: Client
+              clientMaxConns:
+                dpName: clientMaxConns_clientMaxConns
+                legend: Client High Water Mark
+              clientTotConns:
+                dpName: clientTotConns_clientTotConns
+                legend: Client Connections/sec
+              ephemeralCurConns:
+                dpName: ephemeralCurConns_ephemeralCurConns
+                legend: Ephemeral
+              ephemeralMaxConns:
+                dpName: ephemeralMaxConns_ephemeralMaxConns
+                legend: Ephemeral High Water Mark
+              ephemeralTotConns:
+                dpName: ephemeralTotConns_ephemeralTotConns
+                legend: Ephemeral Total Connections/sec
+              hwAcceleratedCurConns:
+                dpName: hwAcceleratedCurConns_hwAcceleratedCurConns
+                legend: Hardware Accelerated
+              hwAcceleratedMaxConns:
+                dpName: hwAcceleratedMaxConns_hwAcceleratedMaxConns
+                legend: Hardware Accelerated High Water Mark
+              hwAcceleratedTotConns:
+                dpName: hwAcceleratedTotConns_hwAcceleratedTotConns
+                legend: Hardware Accelerated Connections/sec
+              hwPartAcceleratedCurConns:
+                dpName: hwPartAcceleratedCurConns_hwPartAcceleratedCurConns
+                legend: Partially Hardware Accelerated
+          Packets:
+            units: pkts/sec
+            miny: 0
+            graphpoints:
+              clientPktsIn:
+                dpName: clientPktsIn_clientPktsIn
+                lineType: AREA
+                legend: Client Received
+              clientPktsOut:
+                dpName: clientPktsOut_clientPktsOut
+                legend: Client Sent
+              ephemeralPktsIn:
+                dpName: ephemeralPktsIn_ephemeralPktsIn
+                legend: Ephemeral Received
+              ephemeralPktsOut:
+                dpName: ephemeralPktsOut_ephemeralPktsOut
+                legend: Ephemeral Sent
+              hwAcceleratedPktsIn:
+                dpName: hwAcceleratedPktsIn_hwAcceleratedPktsIn
+                legend: Hardware Accelerated Received
+              hwAcceleratedPktsOut:
+                dpName: hwAcceleratedPktsOut_hwAcceleratedPktsOut
+                legend: Hardware Accelerated Sent
+          Request Rate:
+            units: Requests/sec
+            miny: 0
+            graphpoints:
+              requestRate:
+                dpName: requestRate_requestRate
+                legend: Total
+          Throughput:
+            units: bits/sec
+            miny: 0
+            graphpoints:
+              clientBytesIn:
+                dpName: clientBytesIn_clientBytesIn
+                lineType: AREA
+                legend: Client Received
+                rpn: 8,*
+              clientBytesOut:
+                dpName: clientBytesOut_clientBytesOut
+                legend: Client Sent
+                rpn: 8,*
+              ephemeralBytesIn:
+                dpName: ephemeralBytesIn_ephemeralBytesIn
+                legend: Ephemeral Received
+              ephemeralBytesOut:
+                dpName: ephemeralBytesOut_ephemeralBytesOut
+                legend: Ephemeral Sent
+              hwAcceleratedBytesIn:
+                dpName: hwAcceleratedBytesIn_hwAcceleratedBytesIn
+                legend: Hardware Accelerated Received
+              hwAcceleratedBytesOut:
+                dpName: hwAcceleratedBytesOut_hwAcceleratedBytesOut
+                legend: Hardware Accelerated Sent
+
+      TemperatureSensor:
+        description: Chassis temperatures
+        targetPythonClass: Products.ZenModel.TemperatureSensor
+        thresholds:
+          overheat:
+            dsnames: [temperature_celsius]
+            eventClass: /HW/Temperature
+            maxval: '38'
+        datasources:
+          temperature:
+            type: SNMP
+            datapoints:
+              celsius: {}
+            oid: 1.3.6.1.4.1.3375.2.1.3.2.3.2.1.2
+        graphs:
+          Temperature:
+            units: celsius
+            graphpoints:
+              celsius:
+                dpName: temperature_celsius
+                format: '%5.2lf'
+                legend: Temperature
+                includeThresholds: true
+
+      bigipInterface:
+        thresholds:
+          high utilization:
+            dsnames: [sysInterfaceStatBytesIn_sysInterfaceStatBytesIn, sysInterfaceStatBytesOut_sysInterfaceStatBytesOut]
+            eventClass: /Perf/Interface
+            maxval: (here.speed or 1e12) / 8 * .75
+        datasources:
+          sysInterfaceStatBytesIn:
+            type: SNMP
+            datapoints:
+              sysInterfaceStatBytesIn:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {inputOctets__bytes: null}
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.3
+          sysInterfaceStatBytesOut:
+            type: SNMP
+            datapoints:
+              sysInterfaceStatBytesOut:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {outputOctets__bytes: null}
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.5
+          sysInterfaceStatCollisions:
+            type: SNMP
+            datapoints:
+              sysInterfaceStatCollisions: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.12
+          sysInterfaceStatDropsIn:
+            type: SNMP
+            datapoints:
+              sysInterfaceStatDropsIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.10
+          sysInterfaceStatDropsOut:
+            type: SNMP
+            datapoints:
+              sysInterfaceStatDropsOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.11
+          sysInterfaceStatErrorsIn:
+            type: SNMP
+            datapoints:
+              sysInterfaceStatErrorsIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.8
+          sysInterfaceStatErrorsOut:
+            type: SNMP
+            datapoints:
+              sysInterfaceStatErrorsOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.9
+          sysInterfaceStatPktsIn:
+            type: SNMP
+            datapoints:
+              sysInterfaceStatPktsIn: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.2
+          sysInterfaceStatPktsOut:
+            type: SNMP
+            datapoints:
+              sysInterfaceStatPktsOut: DERIVE_MIN_0_ALIAS
+            oid: 1.3.6.1.4.1.3375.2.1.2.4.4.3.1.4
+        graphs:
+          Collisions:
+            units: collisions/sec
+            miny: 0
+            graphpoints:
+              Collisions:
+                dpName: sysInterfaceStatCollisions_sysInterfaceStatCollisions
+          Drops:
+            units: drops/sec
+            miny: 0
+            graphpoints:
+              Inbound:
+                dpName: sysInterfaceStatDropsIn_sysInterfaceStatDropsIn
+                lineType: AREA
+              Outbound:
+                dpName: sysInterfaceStatDropsOut_sysInterfaceStatDropsOut
+          Errors:
+            units: errors/sec
+            miny: 0
+            graphpoints:
+              Inbound:
+                dpName: sysInterfaceStatErrorsIn_sysInterfaceStatErrorsIn
+                lineType: AREA
+              Outbound:
+                dpName: sysInterfaceStatErrorsOut_sysInterfaceStatErrorsOut
+          Packets:
+            units: packets/sec
+            miny: 0
+            graphpoints:
+              Inbound:
+                dpName: sysInterfaceStatPktsIn_sysInterfaceStatPktsIn
+                lineType: AREA
+              Outbound:
+                dpName: sysInterfaceStatPktsOut_sysInterfaceStatPktsOut
+          Throughput:
+            units: bits/sec
+            miny: 0
+            graphpoints:
+              Inbound:
+                dpName: sysInterfaceStatBytesIn_sysInterfaceStatBytesIn
+                lineType: AREA
+                rpn: 8,*
+                includeThresholds: true
+              Outbound:
+                dpName: sysInterfaceStatBytesOut_sysInterfaceStatBytesOut
+                rpn: 8,*
+                includeThresholds: true
+
+      bigipVLAN:
+        targetPythonClass: Products.ZenModel.IpInterface
+
+      TrafficManagementModule:
+        description: Metrics for each Traffic Management Module on a BIG-IP load balancer
+        targetPythonClass: ZenPacks.zenoss.BigIpMonitor.TrafficManagementModule
+        datasources:
+           # net client
+          sysTmmStatClientPktsIn:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.6
+            datapoints:
+              sysTmmStatClientPktsIn: DERIVE_MIN_0_ALIAS
+          sysTmmStatClientBytesIn:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.7
+            datapoints:
+              sysTmmStatClientBytesIn: DERIVE_MIN_0_ALIAS
+          sysTmmStatClientPktsOut:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.8
+            datapoints:
+              sysTmmStatClientPktsOut: DERIVE_MIN_0_ALIAS
+          sysTmmStatClientBytesOut:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.9
+            datapoints:
+              sysTmmStatClientBytesOut: DERIVE_MIN_0_ALIAS
+           # client connections
+          sysTmmStatClientMaxConns:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.10
+            datapoints:
+              sysTmmStatClientMaxConns: {}
+          sysTmmStatClientTotConns:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.11
+            datapoints:
+              sysTmmStatClientTotConns: DERIVE_MIN_0_ALIAS
+           # net server
+          sysTmmStatServerPktsIn:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.13
+            datapoints:
+              sysTmmStatServerPktsIn: DERIVE_MIN_0_ALIAS
+          sysTmmStatServerBytesIn:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.14
+            datapoints:
+              sysTmmStatServerBytesIn: DERIVE_MIN_0_ALIAS
+          sysTmmStatServerPktsOut:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.15
+            datapoints:
+              sysTmmStatServerPktsOut: DERIVE_MIN_0_ALIAS
+          sysTmmStatServerBytesOut:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.16
+            datapoints:
+              sysTmmStatServerBytesOut: DERIVE_MIN_0_ALIAS
+           # server connections
+          sysTmmStatServerMaxConns:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.17
+            datapoints:
+              sysTmmStatServerMaxConns: {}
+          sysTmmStatServerTotConns:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.18
+            datapoints:
+              sysTmmStatServerTotConns: DERIVE_MIN_0_ALIAS
+          # denials
+          sysTmmStatMaintenanceModeDeny:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.20
+            datapoints:
+              sysTmmStatMaintenanceModeDeny: DERIVE_MIN_0_ALIAS
+          sysTmmStatMaxConnVirtualAddrDeny:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.21
+            datapoints:
+              sysTmmStatMaxConnVirtualAddrDeny: DERIVE_MIN_0_ALIAS
+          sysTmmStatMaxConnVirtualPathDeny:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.22
+            datapoints:
+              sysTmmStatMaxConnVirtualPathDeny: DERIVE_MIN_0_ALIAS
+          sysTmmStatVirtualServerNonSynDeny:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.23
+            datapoints:
+              sysTmmStatVirtualServerNonSynDeny: DERIVE_MIN_0_ALIAS
+          sysTmmStatNoHandlerDeny:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.24
+            datapoints:
+              sysTmmStatNoHandlerDeny: DERIVE_MIN_0_ALIAS
+          sysTmmStatLicenseDeny:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.25
+            datapoints:
+              sysTmmStatLicenseDeny: DERIVE_MIN_0_ALIAS
+          # redirects
+          sysTmmStatCmpConnRedirected:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.26
+            datapoints:
+              sysTmmStatCmpConnRedirected: DERIVE_MIN_0_ALIAS
+          # errors
+          sysTmmStatConnectionMemoryErrors:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.27
+            datapoints:
+              sysTmmStatConnectionMemoryErrors: DERIVE_MIN_0_ALIAS
+          # mem
+          sysTmmStatMemoryTotal:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.31
+            datapoints:
+              sysTmmStatMemoryTotal: {}
+          sysTmmStatMemoryUsed:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.32
+            datapoints:
+              sysTmmStatMemoryUsed: {}
+          # drops/errors
+          sysTmmStatDroppedPackets:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.33
+            datapoints:
+              sysTmmStatDroppedPackets: DERIVE_MIN_0_ALIAS
+          sysTmmStatIncomingPacketErrors:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.34
+            datapoints:
+              sysTmmStatIncomingPacketErrors: DERIVE_MIN_0_ALIAS
+          sysTmmStatOutgoingPacketErrors:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.35
+            datapoints:
+              sysTmmStatOutgoingPacketErrors: DERIVE_MIN_0_ALIAS
+          # requests
+          sysTmmStatHttpRequests:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.36
+            datapoints:
+              sysTmmStatHttpRequests: DERIVE_MIN_0_ALIAS
+          # load
+          sysTmmStatTmUsageRatio1m:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.38
+            datapoints:
+              sysTmmStatTmUsageRatio1m: {}
+          sysTmmStatTmUsageRatio5m:
+            type: SNMP
+            oid: .1.3.6.1.4.1.3375.2.1.8.2.3.1.39
+            datapoints:
+              sysTmmStatTmUsageRatio5m: {}
+        graphs:
+          Load Average:
+            units: processes
+            miny: 0
+            graphpoints:
+              5 Minute:
+                dpName: sysTmmStatTmUsageRatio5m_sysTmmStatTmUsageRatio5m
+                format: "%7.2lf"
+              1 Minute:
+                dpName: sysTmmStatTmUsageRatio1m_sysTmmStatTmUsageRatio1m
+                format: "%7.2lf"
+          Memory Utilization:
+            units: bytes
+            miny: 0
+            graphpoints:
+              sysTmmStatMemoryTotal:
+                dpName: sysTmmStatMemoryTotal_sysTmmStatMemoryTotal
+                format: '%7.2lf%%'
+                legend: Total
+              sysTmmStatMemoryUsed:
+                dpName: sysTmmStatMemoryUsed_sysTmmStatMemoryUsed
+                lineType: AREA
+                format: '%7.2lf%%'
+                legend: Used
+          Connect Rate:
+            units: connects/sec
+            miny: 0
+            graphpoints:
+              Redirect:
+                dpName: sysTmmStatCmpConnRedirected_sysTmmStatCmpConnRedirected
+                format: "%7.2lf%s"
+              HTTP:
+                dpName: sysTmmStatHttpRequests_sysTmmStatHttpRequests
+                format: "%7.2lf%s"
+          Denial Rate:
+            units: denials/sec
+            miny: 0
+            graphpoints:
+              License:
+                dpName: sysTmmStatLicenseDeny_sysTmmStatLicenseDeny
+                format: "%7.2lf%s"
+              No Handler:
+                dpName: sysTmmStatNoHandlerDeny_sysTmmStatNoHandlerDeny
+                format: "%7.2lf%s"
+              No Client Connection:
+                dpName: sysTmmStatVirtualServerNonSynDeny_sysTmmStatVirtualServerNonSynDeny
+                format: "%7.2lf%s"
+              Connection Limit Exceeded:
+                dpName: sysTmmStatMaxConnVirtualPathDeny_sysTmmStatMaxConnVirtualPathDeny
+                format: "%7.2lf%s"
+              Maintenance Window:
+                dpName: sysTmmStatMaintenanceModeDeny_sysTmmStatMaintenanceModeDeny
+                format: "%7.2lf%s"
+          Error and Drop Rate:
+            units: errors/sec
+            miny: 0
+            graphpoints:
+              Connect Memory Errors:
+                dpName: sysTmmStatConnectionMemoryErrors_sysTmmStatConnectionMemoryErrors
+                format: "%7.2lf%s"
+              Receive Errors:
+                dpName: sysTmmStatIncomingPacketErrors_sysTmmStatIncomingPacketErrors
+                format: "%7.2lf%s"
+              Transmit Errors:
+                dpName: sysTmmStatOutgoingPacketErrors_sysTmmStatOutgoingPacketErrors
+                format: "%7.2lf%s"
+              Dropped Packets:
+                dpName: sysTmmStatDroppedPackets_sysTmmStatDroppedPackets
+                format: "%7.2lf%s"
+          Client Connect Rate:
+            units: connects/sec
+            miny: 0
+            graphpoints:
+              Current:
+                dpName: sysTmmStatClientTotConns_sysTmmStatClientTotConns
+                format: "%7.2lf%s"
+              Maximum:
+                dpName: sysTmmStatClientMaxConns_sysTmmStatClientMaxConns
+                format: "%7.2lf%s"
+          Client Throughput (Packets):
+            units: packets/sec
+            miny: 0
+            graphpoints:
+              Receive:
+                dpName: sysTmmStatClientPktsIn_sysTmmStatClientPktsIn
+                format: "%7.2lf%s"
+              Transmit:
+                dpName: sysTmmStatClientPktsOut_sysTmmStatClientPktsOut
+                format: "%7.2lf%s"
+          Client Throughput (Bytes):
+            units: bytes/sec
+            miny: 0
+            graphpoints:
+              Receive:
+                dpName: sysTmmStatClientBytesIn_sysTmmStatClientBytesIn
+                format: "%7.2lf%s"
+              Transmit:
+                dpName: sysTmmStatClientBytesOut_sysTmmStatClientBytesOut
+                format: "%7.2lf%s"
+          Server Connect Rate:
+            units: connects/sec
+            miny: 0
+            graphpoints:
+              Current:
+                dpName: sysTmmStatServerTotConns_sysTmmStatServerTotConns
+                format: "%7.2lf%s"
+              Maximum:
+                dpName: sysTmmStatServerMaxConns_sysTmmStatServerMaxConns
+                format: "%7.2lf%s"
+          Server Throughput (Packets):
+            units: packets/sec
+            miny: 0
+            graphpoints:
+              Receive:
+                dpName: sysTmmStatServerPktsIn_sysTmmStatServerPktsIn
+                format: "%7.2lf%s"
+              Transmit:
+                dpName: sysTmmStatServerPktsOut_sysTmmStatServerPktsOut
+                format: "%7.2lf%s"
+          Server Throughput (Bytes):
+            units: bytes/sec
+            miny: 0
+            graphpoints:
+              Receive:
+                dpName: sysTmmStatServerBytesIn_sysTmmStatServerBytesIn
+                format: "%7.2lf%s"
+              Transmit:
+                dpName: sysTmmStatServerBytesOut_sysTmmStatServerBytesOut
+                format: "%7.2lf%s"
+

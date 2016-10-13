@@ -1,0 +1,14 @@
+name: ZenPacks.zenoss.Microsoft.Azure
+zProperties:
+  DEFAULTS:
+    category: Microsoft Azure
+  zAzureEAAccessKey:
+    default: ''
+  zAzureEAEnrollmentNumber:
+    default: ''
+  zAzureEABillingCostThreshold:
+    type: multilinethreshold
+    default: '{}'
+  zAzureMonitoringIgnore:
+    default: ''
+
