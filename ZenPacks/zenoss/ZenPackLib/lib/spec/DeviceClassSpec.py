@@ -21,6 +21,8 @@ class DeviceClassSpec(Spec):
             zProperties=None,
             remove=False,
             templates=None,
+            description=None,
+            protocol=None,
             _source_location=None,
             zplog=None):
         """
@@ -34,6 +36,12 @@ class DeviceClassSpec(Spec):
             :type zProperties: dict(str)
             :param templates: TODO
             :type templates: SpecsParameter(RRDTemplateSpec)
+            :param description: Description used for registering devtype
+            :type description: str
+            :param description: Description used for registering devtype
+            :type description: str
+            :param protocol: Protocol to use for registered devtype
+            :type protocol: str
         """
         super(DeviceClassSpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -42,6 +50,8 @@ class DeviceClassSpec(Spec):
         self.path = path.lstrip('/')
         self.create = bool(create)
         self.remove = bool(remove)
+        self.description = description
+        self.protocol = protocol
 
         if zProperties is None:
             self.zProperties = {}
