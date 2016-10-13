@@ -1133,7 +1133,7 @@ class ClassSpec(Spec):
 
         snippets = []
         for label, metatypes in sections.items():
-            id = '_'.join(label.lower().split(' '))
+            id = '{}_{}'.format(self.meta_type.lower(), '_'.join(label.lower().split(' ')))
             snippets.append(get_js_snippet(id, label, metatypes))
 
         return ''.join(snippets)
