@@ -42,7 +42,7 @@ class ZenPack(ZenPackBase):
         # create device classes and set zProperties on them
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
-                self.create_device_class(app, dcspec)
+                dcObject = self.create_device_class(app, dcspec)
 
         # Load objects.xml now
         super(ZenPack, self).install(app)

@@ -39,17 +39,6 @@ from ZenPacks.zenoss.ZenPackLib import zenpacklib
 unused(Globals)
 
 
-def stripped_yaml_dump(specparams, Dumper=Dumper):
-    outputfile = yaml.dump(specparams, Dumper=Dumper)
-
-    # tweak the yaml slightly.
-    outputfile = outputfile.replace("__builtin__.object", "object")
-    outputfile = re.sub(r"!!float '(\d+)'", r"\1", outputfile)
-    outputfile = re.sub(r"!ZenPackSpec", r"", outputfile)
-
-    print outputfile
-
-
 class ZPLCommand(ZenScriptBase):
     '''ZPLCommand'''
     LOG = DEFAULTLOG
@@ -538,11 +527,13 @@ class ZPLCommand(ZenScriptBase):
     def dump_event_classes(self, zenpack_name):
         self.connect()
         eventclasses = self.zenpack_eventclassspecs(zenpack_name)
-        zpsp = ZenPackSpecParams(zenpack_name, event_classes={x: {} for x in eventclasses})
-        for ec_name in eventclasses:
-            zpsp.event_classes[ec_name].mappings = eventclasses[ec_name].mappings
+        if eventclasses:
+            zpsp = ZenPackSpecParams(zenpack_name,
+                                     event_classes={x: {} for x in eventclasses})
+            for ec_name in eventclasses:
+                zpsp.event_classes[ec_name].mappings = eventclasses[ec_name].mappings
 
-        stripped_yaml_dump(zpsp, Dumper=Dumper)
+            print yaml.dump(zpsp, Dumper=Dumper)
 
     def zenpack_eventclassspecs(self, zenpack_name):
         zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
