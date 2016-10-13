@@ -248,6 +248,8 @@ from ..spec.RelationshipSchemaSpec import RelationshipSchemaSpec
 
 from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
+from ..params.EventClassSpecParams import EventClassSpecParams
+from ..params.EventClassMappingSpecParams import EventClassMappingSpec
 from ..params.ZPropertySpecParams import ZPropertySpecParams
 from ..params.ClassSpecParams import ClassSpecParams
 from ..params.ClassPropertySpecParams import ClassPropertySpecParams
@@ -287,3 +289,5 @@ Dumper.add_representer(float, SafeRepresenter.represent_float)
 Dumper.add_representer(int, SafeRepresenter.represent_int)
 Dumper.add_representer(str, SafeRepresenter.represent_str)
 Dumper.add_representer(bool, SafeRepresenter.represent_bool)
+Dumper.add_representer(EventClassSpecParams, Dumper.represent_spec)
+Dumper.add_representer(EventClassMappingSpec, Dumper.represent_spec)

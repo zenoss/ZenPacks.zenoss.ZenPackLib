@@ -18,7 +18,6 @@ from optparse import OptionGroup
 
 import Globals
 from Products.ZenUtils.Utils import unused
-unused(Globals)
 
 from Acquisition import aq_base
 from Products.ZenModel.ZenPack import ZenPack
@@ -28,6 +27,8 @@ from ..functions import create_module
 from ..params.ZenPackSpecParams import ZenPackSpecParams
 from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
+from ..params.EventClassSpecParams import EventClassSpecParams
+from ..params.EventClassMappingSpecParams import EventClassMappingSpecParams
 from ..resources.templates import SETUP_PY
 from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
 from ..helpers.WarningLoader import WarningLoader
@@ -35,6 +36,8 @@ from ..helpers.Dumper import Dumper
 from ..helpers.Loader import Loader
 from ..helpers.utils import optimize_yaml, load_yaml_single
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
+unused(Globals)
+
 
 class ZPLCommand(ZenScriptBase):
     '''ZPLCommand'''
@@ -68,6 +71,10 @@ class ZPLCommand(ZenScriptBase):
                     dest="convert",
                     action="store_true",
                     help="convert existing ZenPack to YAML")
+        group.add_option("-e", "--dump-event-classes",
+                         dest="dump_event_classes",
+                         action="store_true",
+                         help="export existing event classes to YAML")
         self.parser.add_option_group(group)
 
         group = OptionGroup(self.parser, "New ZPL ZenPacks")
@@ -94,7 +101,6 @@ class ZPLCommand(ZenScriptBase):
                     dest="paths",
                     action="store_true",
                     help="print possible facet paths for a given device and whether currently filtered.")
-        self.parser.add_option_group(group)
 
     def is_valid_file(self):
         '''Determine if supplied file is valid'''
@@ -159,7 +165,7 @@ class ZPLCommand(ZenScriptBase):
             if not is_valid:
                 self.parser.error(msg)
 
-        if self.options.convert or self.options.dump or self.options.create:
+        if self.options.convert or self.options.dump or self.options.create or self.options.dump_event_classes:
             self.parser.usage = "%prog [options] ZENPACKNAME"
             if len(self.args) != 1:
                 self.parser.error('No ZenPack given')
@@ -182,7 +188,7 @@ class ZPLCommand(ZenScriptBase):
             self.create_zenpack_srcdir(self.options.zenpack)
 
         elif self.options.convert:
-             self.py_to_yaml(self.options.zenpack)
+            self.py_to_yaml(self.options.zenpack)
 
         elif self.options.dump:
             self.dump_templates(self.options.zenpack)
@@ -198,6 +204,9 @@ class ZPLCommand(ZenScriptBase):
 
         elif self.options.paths:
             self.list_paths()
+
+        elif self.options.dump_event_classes:
+            self.dump_event_classes(self.options.zenpack)
 
     def optimize(self, filename):
         '''return formatted YAML with DEFAULTS optimized'''
@@ -514,3 +523,45 @@ class ZPLCommand(ZenScriptBase):
                 specs[dc_name][template.id] = spec
 
         return specs
+
+    def dump_event_classes(self, zenpack_name):
+        self.connect()
+        eventclasses = self.zenpack_eventclassspecs(zenpack_name)
+        if eventclasses:
+            zpsp = ZenPackSpecParams(zenpack_name,
+                                     event_classes={x: {} for x in eventclasses})
+            for ec_name in eventclasses:
+                zpsp.event_classes[ec_name].mappings = eventclasses[ec_name].mappings
+
+            print yaml.dump(zpsp, Dumper=Dumper)
+
+    def zenpack_eventclassspecs(self, zenpack_name):
+        zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
+        if zenpack is None:
+            self.LOG.error("ZenPack '%s' not found." % zenpack_name)
+            return
+
+        eventclasses = collections.defaultdict(dict)
+        for eventclass in [x for x in zenpack.packables() if x.meta_type == 'EventClass']:
+            ec_name = "/" + "/".join(eventclass.getPrimaryUrlPath().split('/')[4:])
+            eventclasses[ec_name] = EventClassSpecParams.fromObject(eventclass, create=True, remove=True)
+            for subclass in eventclass.getSubEventClasses():
+                ec_name = "/" + "/".join(subclass.getPrimaryUrlPath().split('/')[4:])
+                # Remove = false because the removing the parent will remove the child # This is a performance optimization
+                eventclasses[ec_name] = EventClassSpecParams.fromObject(subclass, create=True, remove=False)
+
+        for eventclassinst in [x for x in zenpack.packables() if x.meta_type == 'EventClassInst']:
+            eventclass = eventclassinst.eventClass()
+            ec_name = "/" + "/".join(eventclass.getPrimaryUrlPath().split('/')[4:])
+
+            # Do not create/remove the eventclasses as we do not own them
+            eventclassspec = eventclasses.get(ec_name, EventClassSpecParams.new(ec_name, remove=False, create=False))
+            if eventclassinst.id in eventclassspec.mappings:
+                # we have already gotten this instance and we don't need a duplicate
+                continue
+            else:
+                # This zenpack owns this mapping, lets make sure to remove it when we are done.
+                eventclassspec.mappings[eventclassinst.id] = EventClassMappingSpecParams.fromObject(eventclassinst, remove=True)
+            eventclasses[ec_name] = eventclassspec
+
+        return eventclasses
