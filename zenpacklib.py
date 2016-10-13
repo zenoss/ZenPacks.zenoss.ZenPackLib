@@ -3452,7 +3452,7 @@ class ClassPropertySpec(Spec):
         if self.api_backendtype == 'method':
             isEntity = self.type_ == 'entity'
             return {
-                self.name: MethodInfoProperty(self.name, entity=isEntity),
+                self.name: MethodInfoProperty(self.name, entity=isEntity, enum=self.enum),
                 }
         else:
             if not self.enum:
@@ -5797,7 +5797,7 @@ def DeviceInfoStatusProperty():
     return property(getter)
 
 
-def MethodInfoProperty(method_name, entity=False):
+def MethodInfoProperty(method_name, entity=False, enum=None):
     """Return a property with the Infos for object(s) returned by a method.
 
     A list of Info objects is returned for methods returning a list, or a single
@@ -5816,6 +5816,13 @@ def MethodInfoProperty(method_name, entity=False):
                 result,
                 keys=('name', 'meta_type', 'class_label', 'uid'))
         else:
+            if enum and isinstance(enum, dict):
+                try:
+                    return enum.get(int(result),'Unknown')
+                except Exception:
+                    return result
+            else:
+                return result
             return result
 
     return property(getter)
