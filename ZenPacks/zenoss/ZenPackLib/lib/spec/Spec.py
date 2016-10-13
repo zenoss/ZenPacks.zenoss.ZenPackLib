@@ -22,7 +22,7 @@ from ..functions import fix_kwargs, create_module
 from ..helpers.ZenPackLibLog import DEFAULTLOG
 
 
-def MethodInfoProperty(method_name, entity=False):
+def MethodInfoProperty(method_name, entity=False, enum=None):
     """Return a property with the Infos for object(s) returned by a method.
 
     A list of Info objects is returned for methods returning a list, or a single
@@ -41,9 +41,13 @@ def MethodInfoProperty(method_name, entity=False):
                 result,
                 keys=('name', 'meta_type', 'class_label', 'uid'))
         else:
-            return result
-
-    return property(getter)
+            if enum and isinstance(enum, dict):
+                try:
+                    return enum.get(int(result),'Unknown')
+                except Exception:
+                    return result
+            else:
+                return result
 
 def EnumInfoProperty(data, enum):
     """Return a property filtered via an enum."""
