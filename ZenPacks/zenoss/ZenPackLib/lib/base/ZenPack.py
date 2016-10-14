@@ -11,6 +11,10 @@ from lxml import etree
 import yaml
 import difflib
 import time
+import sys
+
+from transaction import commit
+from ZODB.POSException import ConflictError
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
@@ -32,9 +36,31 @@ class ZenPack(ZenPackBase):
         ZenPackLibLog.enable_log_stderr(self.LOG)
         self.LOG.setLevel('INFO')
 
-    def _buildDeviceRelations(self):
+    def _buildDeviceRelations(self, batch=10):
+        '''split device buildRelations across multiple commits'''
+        count = 0
+
+        def build_relations(d, retries=5, count=0):
+            if count >= retries:
+                self.LOG.error('max retries exceeded for {}'.format(d.id))
+            else:
+                try:
+                    d.buildRelations()
+                except ConflictError as e:
+                    self.LOG.warn('Reattempting buildRelations() on {} ({})'.format(d.id, e))
+                    sync()
+                    build_relations(d, retries, count + 1)
+                except Exception as e:
+                    self.LOG.error('buildRelations() failed for {} ({})'.format(d.id, e))
+
         for d in self.dmd.Devices.getSubDevicesGen():
-            d.buildRelations()
+            build_relations(d)
+            count += 1
+            if count % batch == 0:
+                sys.stdout.write('.')
+                commit()
+        commit()
+        self.LOG.info('Finished adding {} relationships to existing devices'.format(self.id))
 
     def install(self, app):
         self.createZProperties(app)
