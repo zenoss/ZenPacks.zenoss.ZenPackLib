@@ -6,8 +6,56 @@ Release 2.0.0
 
 Features
 
-* Moved zenpacklib to an installable ZenPack
-* Added Event Class definitions
+* zenpacklib is now an installable ZenPack
+* Added Event Class definitions (ZEN-24903)
+* Support multiple YAML file loading
+* Support directory loading for YAML
+* Support log verbosity per ZenPack
+* Centralized, per-derived ZenPack logging
+* Improved template change detection during install
+* Improved type handling of yaml loaded/dumped data
+* Support centralized use of older monolithic zenpacklib.py
+* Added --optimize parameter to zenpacklib
+* Dramatically enhanced unit testing
+* Support for using enum proprty with datapoint properties (string/int mapping)
+* Ability to call /opt/zenoss/bin/zenpacklib
+* Added ZPLCommand to handle running zenpacklib with arguments
+* Separated zenpacklib.py classes into module files
+* Ability to use ZenPack-provided zenpacklib module
+
+Fixes
+
+* Fix handling of boolean datasource options (ZEN-25315)
+* Merge Detail View groups into 'Overview' group (ZEN-24759)
+* Ensure that component detail pane honors relation "details_display" (ZEN-24762)
+* Update ZenPackLib (ZP) Unit tests (ZEN-24599)
+* Ensure that subcomponent nav JS uses relationship label if provided (ZEN-24305)
+* Ensure ability to set label or a subclass on an inherited relationship (ZEN-24303)
+* Ensure inherited relationship name overrides displayed in details pane (ZEN-24302)
+* Ensure extra_paths is working (ZEN-24268)
+* Ensure that 'extra_params' get applied to template-related objects (ZEN-24083)
+* Improved handling of "custom columns exceed 750 pixels" warnings (ZEN-24022)
+* Avoid patching _relations on ZPL-derived subclasse (ZEN-24018)
+* Incorrect display of nested custom-named relations (ZEN-23995)
+* Fix missing relations (ZEN-23968)
+* Fix maximum recursion depth exceeded traceback in get_facets (ZEN-23840)
+* Allow specifying properties on an inherited relationship (ZEN-23763)
+* Zenpacklib logging  more helpful and less scary (ZEN-23621)
+* Batch buildRelations() commits during ZenPack installs (ZEN-22655)
+* Support adding devtypes (ZEN-22366)
+* Improve ImportError logging in class files (ZEN-22927)
+* Ensure non-cached datapoints return current value (ZEN-22288)
+* Fix issue when setting datapoint_cached to False (ZEN-22287)
+* Honor relationship label containing component overrides in component (ZEN-21966)
+* Prevent attempts to process relationships not in class_relationships (ZEN-21927)
+* Ensure component display properties honored (ZEN-19798)
+* Support setting datapoint alias as string (ZEN-19486)
+* Check datapoint consistency in template graph points and thresholds (ZEN-19461)
+* Check/warn against reserved keyword use (ZEN-19460)
+* getRRDTemplateName can return label of base class (ZEN-19025)
+* Ensure catalog creation respects spec property indexes (ZEN-18269)
+* Ensure device classes can be removed properly (ZEN-18134)
+* Log obscure error with ill-defined relationships (ZEN-16701)
 
 
 Version 1.1
