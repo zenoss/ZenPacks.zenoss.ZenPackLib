@@ -61,6 +61,49 @@ class RRDTemplateSpec(Spec):
         self.graphs = self.specs_from_param(
             GraphDefinitionSpec, 'graphs', graphs, zplog=self.LOG)
 
+        self.validate_references()
+
+    def validate_references(self):
+        """
+            validate 
+                - check that datapoint/datasources are valid
+                - threshold and graph references to datapoints
+        """
+        ds_dp_names = self.get_ds_dp_names()
+        # check threshold references
+        for th_name, th_spec in self.thresholds.items():
+            self.check_ds_dp_names(th_name,
+                                   'Threshold',
+                                   set(th_spec.dsnames),
+                                   ds_dp_names)
+        # check graph point references
+        for g_name, g_spec in self.graphs.items():
+            for gp_name, gp_spec in g_spec.graphpoints.items():
+                self.check_ds_dp_names(gp_name,
+                                       'Graph Point',
+                                       set([gp_spec.dpName]),
+                                       ds_dp_names)
+
+    def get_ds_dp_names(self):
+        """return set of dsname_dpname"""
+        dp_names = []
+        for ds_name, ds_spec in self.datasources.items():
+            for dp_name, dp_spec in ds_spec.datapoints.items():
+                dp_id = '{}_{}'.format(ds_name, dp_name)
+                dp_names.append(dp_id)
+        return set(dp_names)
+
+    def check_ds_dp_names(self, spec_name, spec_type, dp_names, ref_names):
+        valid_names = dp_names.intersection(ref_names)
+        invalid_names = dp_names.difference(ref_names)
+        if len(valid_names) == 0:
+            self.LOG.error('{} {} has no valid datapoints'.format(spec_type,
+                                                                  spec_name))
+        if len(invalid_names) > 0:
+            self.LOG.error('{} {} has invalid datapoints: {}'.format(spec_type,
+                                                            spec_name,
+                                                            ', '.join(list(invalid_names))))
+
     def create(self, dmd, addToZenPack=True):
         device_class = dmd.Devices.createOrganizer(self.deviceclass_spec.path)
 
