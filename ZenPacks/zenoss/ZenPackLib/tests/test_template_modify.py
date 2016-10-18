@@ -298,18 +298,22 @@ class TestTemplateModified(BaseTestCase):
     """
 
     def test_modified(self):
-        self.get_result(YAML_DOC)
-        self.get_result(YAML_CHANGED, DIFF)
+        self.get_result(YAML_DOC, YAML_DOC)
+        self.get_result(YAML_DOC, YAML_CHANGED, DIFF)
 
-    def get_result(self, yaml_doc, expected=None):
-        z = ZPLTestHarness(yaml_doc)
-        z.connect()
-        zenpack = ZenPack(z.dmd)
-        deviceclass = z.dmd.Devices.getOrganizer('Server')
-        template = deviceclass.rrdTemplates._getOb('Device')
-        dcspec = z.cfg.device_classes.get('/Server')
-        tspec = dcspec.templates.get('Device')
-        diff = zenpack.template_changed(z, template, tspec)
+    def get_result(self, orig_doc, new_doc, expected=None):
+        z_orig = ZPLTestHarness(orig_doc)
+        z_new = ZPLTestHarness(new_doc)
+        z_orig.connect()
+        z_new.connect()
+        zenpack = ZenPack(z_new.dmd)
+        # original template spec
+        orig_tspec = z_orig.cfg.device_classes.get('/Server').templates.get('Device')
+        # template based on original spec
+        orig_template = orig_tspec.create(z_orig.dmd, False)
+        # new temlate spec
+        new_tspec = z_new.cfg.device_classes.get('/Server').templates.get('Device')
+        diff = zenpack.template_changed(z_new, orig_template, new_tspec)
         self.assertEquals(diff, expected, 'Expected:\n{}\ngot:\n{}'.format(expected, diff))
 
 

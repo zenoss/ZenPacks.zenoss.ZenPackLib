@@ -1,4 +1,4 @@
-name: ZenPacks.zenoss.HP.ZenPackLib
+name: ZenPacks.zenoss.ZenPackLib
 zProperties:
   DEFAULTS:
     category: ILO
