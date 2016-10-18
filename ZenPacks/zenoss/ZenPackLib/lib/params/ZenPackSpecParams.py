@@ -11,6 +11,7 @@ from .ZPropertySpecParams import ZPropertySpecParams
 from .ClassSpecParams import ClassSpecParams
 from .DeviceClassSpecParams import DeviceClassSpecParams
 from .EventClassSpecParams import EventClassSpecParams
+from .ProcessClassOrganizerSpecParams import ProcessClassOrganizerSpecParams
 from ..spec.RelationshipSchemaSpec import RelationshipSchemaSpec
 from ..spec.ZenPackSpec import ZenPackSpec
 
@@ -23,6 +24,7 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
                  classes=None,
                  device_classes=None,
                  event_classes=None,
+                 process_class_organizers=None,
                  **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
@@ -46,4 +48,7 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
             DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True, zplog=self.LOG)
 
         self.event_classes = self.specs_from_param(
-            EventClassSpecParams, 'event_classes', event_classes, leave_defaults=True)
+            EventClassSpecParams, 'event_classes', event_classes, leave_defaults=True, zplog=self.LOG)
+
+        self.process_class_organizers = self.specs_from_param(
+            ProcessClassOrganizerSpecParams, 'process_class_organizers', process_class_organizers, leave_defaults=True, zplog=self.LOG)
