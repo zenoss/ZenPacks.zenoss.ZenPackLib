@@ -38,8 +38,6 @@ class DeviceClassSpec(Spec):
             :type templates: SpecsParameter(RRDTemplateSpec)
             :param description: Description used for registering devtype
             :type description: str
-            :param description: Description used for registering devtype
-            :type description: str
             :param protocol: Protocol to use for registered devtype
             :type protocol: str
         """
