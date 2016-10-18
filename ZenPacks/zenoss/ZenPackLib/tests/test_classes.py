@@ -49,7 +49,7 @@ class TestClasses(BaseTestCase):
                 self.assertTrue(zp.check_templates_vs_yaml(), "Template (YAML) testing failed for {}".format(zp.filename))
                 self.assertTrue(zp.check_templates_vs_specs(), "Template (Spec) testing failed for {}".format(zp.filename))
             except Exception as e:
-                print 'Could not test {} ({})'.format(file, e)
+                print 'Skipping test {} ({})'.format(file, e)
 
 
 def test_suite():

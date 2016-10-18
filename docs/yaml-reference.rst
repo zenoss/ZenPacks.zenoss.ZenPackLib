@@ -15,4 +15,5 @@ following sections describe the syntax and capabilities of this YAML file.
     yaml-device-classes
     yaml-monitoring-templates
     yaml-classes-and-relationships
+    yaml-event-classes
     yaml-process-classes
