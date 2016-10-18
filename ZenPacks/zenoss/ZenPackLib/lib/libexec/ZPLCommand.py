@@ -77,14 +77,11 @@ class ZPLCommand(ZenScriptBase):
                          help="export existing event classes to YAML")
         self.parser.add_option_group(group)
 
-        group = OptionGroup(self.parser, "New ZPL ZenPacks")
+        group = OptionGroup(self.parser, "ZenPack Development")
         group.add_option("-c", "--create",
                     dest="create",
                     action="store_true",
                     help="Create a new ZenPack source directory")
-        self.parser.add_option_group(group)
-
-        group = OptionGroup(self.parser, "ZenPack Development")
         group.add_option("-l", "--lint",
                     dest="lint",
                     action="store_true",
@@ -101,6 +98,8 @@ class ZPLCommand(ZenScriptBase):
                     dest="paths",
                     action="store_true",
                     help="print possible facet paths for a given device and whether currently filtered.")
+
+        self.parser.add_option_group(group)
 
     def is_valid_file(self):
         '''Determine if supplied file is valid'''
