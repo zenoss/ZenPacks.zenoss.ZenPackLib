@@ -33,6 +33,7 @@ from .ClassRelationshipSpec import ClassRelationshipSpec
 from .RelationshipSchemaSpec import RelationshipSchemaSpec
 from .ZPropertySpec import ZPropertySpec
 from .EventClassSpec import EventClassSpec
+from .ProcessClassOrganizerSpec import ProcessClassOrganizerSpec
 
 DYNAMICVIEW_INSTALLED = dynamicview_installed()
 
@@ -95,6 +96,7 @@ class ZenPackSpec(Spec):
             class_relationships=None,
             device_classes=None,
             event_classes=None,
+            process_class_organizers=None,
             _source_location=None,
             zplog=None):
         """
@@ -104,6 +106,8 @@ class ZenPackSpec(Spec):
             :type name: str
             :param zProperties: zProperty Specs
             :type zProperties: SpecsParameter(ZPropertySpec)
+            :param classes: Class Specs
+            :type classes: SpecsParameter(ClassSpec)
             :param class_relationships: Class Relationship Specs
             :type class_relationships: list(RelationshipSchemaSpec)
             :yaml_block_style class_relationships: True
@@ -111,8 +115,8 @@ class ZenPackSpec(Spec):
             :type device_classes: SpecsParameter(DeviceClassSpec)
             :param event_classes: EventClass Specs
             :type event_classes: SpecsParameter(EventClassSpec)
-            :param classes: Class Specs
-            :type classes: SpecsParameter(ClassSpec)
+            :param process_class_organizers: Process Class Specs
+            :type process_class_organizers: SpecsParameter(ProcessClassOrganizerSpec)
         """
         super(ZenPackSpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -127,6 +131,7 @@ class ZenPackSpec(Spec):
             class_relationships=class_relationships,
             device_classes=device_classes,
             event_classes=event_classes,
+            process_class_organizers=process_class_organizers,
             zplog=self.LOG)
         self.name = name
         self.LOG.debug("------ {} ------".format(self.name))
@@ -269,6 +274,10 @@ class ZenPackSpec(Spec):
         # Event Classes
         self.event_classes = self.specs_from_param(
             EventClassSpec, 'event_classes', event_classes)
+
+        # Process Classes
+        self.process_class_organizers = self.specs_from_param(
+            ProcessClassOrganizerSpec, 'process_class_organizers', process_class_organizers)
 
     @property
     def ordered_classes(self):
@@ -574,6 +583,7 @@ class ZenPackSpec(Spec):
 
         attributes['device_classes'] = self.device_classes
         attributes['event_classes'] = self.event_classes
+        attributes['process_class_organizers'] = self.process_class_organizers
         attributes['_v_specparams'] = self.specparams
         attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
         attributes['NEW_RELATIONS'] = self.NEW_RELATIONS

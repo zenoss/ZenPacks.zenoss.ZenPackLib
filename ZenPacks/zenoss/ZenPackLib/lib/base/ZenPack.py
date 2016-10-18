@@ -11,6 +11,10 @@ from lxml import etree
 import yaml
 import difflib
 import time
+import sys
+
+from transaction import commit
+from ZODB.POSException import ConflictError
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
@@ -32,9 +36,31 @@ class ZenPack(ZenPackBase):
         ZenPackLibLog.enable_log_stderr(self.LOG)
         self.LOG.setLevel('INFO')
 
-    def _buildDeviceRelations(self):
+    def _buildDeviceRelations(self, batch=10):
+        '''split device buildRelations across multiple commits'''
+        count = 0
+
+        def build_relations(d, retries=5, count=0):
+            if count >= retries:
+                self.LOG.error('max retries exceeded for {}'.format(d.id))
+            else:
+                try:
+                    d.buildRelations()
+                except ConflictError as e:
+                    self.LOG.warn('Reattempting buildRelations() on {} ({})'.format(d.id, e))
+                    sync()
+                    build_relations(d, retries, count + 1)
+                except Exception as e:
+                    self.LOG.error('buildRelations() failed for {} ({})'.format(d.id, e))
+
         for d in self.dmd.Devices.getSubDevicesGen():
-            d.buildRelations()
+            build_relations(d)
+            count += 1
+            if count % batch == 0:
+                sys.stdout.write('.')
+                commit()
+        commit()
+        self.LOG.info('Finished adding {} relationships to existing devices'.format(self.id))
 
     def install(self, app):
         self.createZProperties(app)
@@ -43,6 +69,19 @@ class ZenPack(ZenPackBase):
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
                 dcObject = self.create_device_class(app, dcspec)
+
+            # if device class has description and protocol, register a devtype
+            if dcspec.description and dcspec.protocol:
+                try:
+                    if (dcspec.description, dcspec.protocol) not in dcObject.devtypes:
+                        self.LOG.info('Registering devtype for {}: {} ({})'.format(dcObject,
+                                                                                   dcspec.protocol,
+                                                                                   dcspec.description))
+                        dcObject.register_devtype(dcspec.description, dcspec.protocol)
+                except Exception as e:
+                    self.LOG.warn('Error registering devtype for {}: {} ({})'.format(dcObject,
+                                                                                     dcspec.protocol,
+                                                                                     e))
 
         # Load objects.xml now
         super(ZenPack, self).install(app)
@@ -58,6 +97,10 @@ class ZenPack(ZenPackBase):
         # Load event classes
         for ecname, ecspec in self.event_classes.iteritems():
             ecspec.instantiate(self.dmd)
+
+        # Create Process Classes
+        for psname, psspec in self.process_class_organizers.iteritems():
+            psspec.create(self.dmd)
 
     def remove(self, app, leaveObjects=False):
         if self._v_specparams is None:
@@ -180,33 +223,10 @@ class ZenPack(ZenPackBase):
                             self.LOG.info('Removing EventClassInst %s @ %s' % (mapping_id, ecspec.path))
                             organizer.removeInstances(organizer.prepId(mapping_id))
 
-            # Remove EventClasses with remove flag set
-            for ecname, ecspec in self.event_classes.iteritems():
-                organizerPath = ecspec.path
-                if ecspec.remove:
-                    try:
-                        app.dmd.Events.getOrganizer(organizerPath)
-                    except KeyError:
-                        self.LOG.warning('Unable to remove EventClass %s (not found)' % ecspec.path)
-                        continue
-
-                    self.LOG.info('Removing EventClass %s' % ecspec.path)
-                    app.dmd.Events.manage_deleteOrganizer(organizerPath)
-                else:
-                    try:
-                        organizer = app.dmd.Events.getOrganizer(organizerPath)
-                    except KeyError:
-                        continue
-
-                    for mapping_id, mapping_spec in ecspec.mappings.items():
-                        if mapping_spec.remove:
-                            self.LOG.info('Removing EventClassInst %s @ %s' % (mapping_id, ecspec.path))
-                            organizer.removeInstances(organizer.prepId(mapping_id))
-
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
     def template_changed(self, app, existing, new_spec):
-        """ 
+        """
             Return True if existing template is changed from spec
         """
         diff = None
