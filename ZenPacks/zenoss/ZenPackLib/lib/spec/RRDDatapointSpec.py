@@ -78,9 +78,16 @@ class RRDDatapointSpec(Spec):
         else:
             raise ValueError("aliases must be specified as a dict or string (got {})".format(aliases))
         self.shorthand = shorthand
+        # update local variables from shorthand
         if self.shorthand:
-            if 'DERIVE' in shorthand.upper():
-                self.rrdtype = 'DERIVE'
+            try:
+                rrd_type = shorthand.upper().split('_')[0]
+                self.rrdtype = rrd_type
+                # this can happen if shorthand contains an invalid rrdtype
+                if rrd_type not in self.rrdtype:
+                    self.shorthand = shorthand.replace(rrd_type, self.rrdtype)
+            except Exception as e:
+                self.LOG.warning('No rrdtype was derived from shorthand: {} ({})'.format(self.shorthand, e))
 
             min_match = re.search(r'MIN_(\d+)', shorthand, re.IGNORECASE)
             if min_match:
@@ -91,6 +98,14 @@ class RRDDatapointSpec(Spec):
             if max_match:
                 rrdmax = max_match.group(1)
                 self.rrdmax = rrdmax
+        # otherwise build the shorthand if no other properties are found
+        else:
+            if self.use_shorthand():
+                self.shorthand = self.rrdtype
+                if self.rrdmin:
+                    self.shorthand += '_MIN_{}'.format(self.rrdmin)
+                if self.rrdmax:
+                    self.shorthand += '_MAX_{}'.format(self.rrdmax)
 
     def __eq__(self, other):
         if self.shorthand:
@@ -98,6 +113,50 @@ class RRDDatapointSpec(Spec):
             return super(RRDDatapointSpec, self).__eq__(other, ignore_params=['rrdtype', 'rrdmin', 'rrdmax'])
         else:
             return super(RRDDatapointSpec, self).__eq__(other)
+
+    @property
+    def rrdtype(self):
+        return self._rrdtype
+
+    @rrdtype.setter
+    def rrdtype(self, value):
+        if value and value.upper() not in ['GAUGE', 'DERIVE', 'COUNTER', 'RAW']:
+            self.LOG.warning('Invalid rrdtype: {}, using GAUGE instead'.format(value.upper()))
+            value = 'GAUGE'
+        self._rrdtype = value
+
+    @property
+    def rrdmin(self):
+        return self._rrdmin
+
+    @rrdmin.setter
+    def rrdmin(self, value):
+        if value:
+            try:
+                value = int(value)
+            except Exception as e:
+                self.LOG.warning('Invalid rrdmin: {} ({})'.format(value, e))
+        self._rrdmin = value
+
+    @property
+    def rrdmax(self):
+        return self._rrdmax
+
+    @rrdmax.setter
+    def rrdmax(self, value):
+        if value:
+            try:
+                value = int(value)
+            except Exception as e:
+                self.LOG.warning('Invalid rrdmax: {} ({})'.format(value, e))
+        self._rrdmax = value
+
+    def use_shorthand(self):
+        """return True if shorthand should be used"""
+        for x in ['description', 'createCmd', 'isrow', 'description', 'aliases', 'extra_params']:
+            if getattr(self, x):
+                return False
+        return True
 
     def create(self, datasource_spec, datasource):
         datapoint = datasource.manage_addRRDDataPoint(self.name)
@@ -128,4 +187,3 @@ class RRDDatapointSpec(Spec):
             datapoint.addAlias(alias_id, formula)
             self.speclog.debug("adding alias".format(alias_id))
             self.speclog.debug("formula = {}".format(formula))
-
