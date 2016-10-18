@@ -392,8 +392,8 @@ aliases
   :Required: No
   :Type: map<name, formula>
   :Default Value: {} *(empty map)*
-
-.. todo:: Document datapoint alias formulas.
+  :Example 1: aliases: { datapointName: '1024,*' }
+  :Example 2: aliases: datapointName
 
 Datapoints also allow other ad-hoc options to be added not referenced in the
 above list. This is because datapoints are an extensible type in Zenoss, and
