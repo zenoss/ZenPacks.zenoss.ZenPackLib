@@ -1,5 +1,5 @@
 name: ZenPacks.zenoss.ZenPackLib
-zProperties: !ZenPackSpec
+zProperties:
   DEFAULTS:
     category: OpenStack
   zOpenStackCeilometerUrl: {}
@@ -78,7 +78,7 @@ class_relationships:
 - VolType 1:M Volume
 # release 2.2.0 does not do backup
 #- Volume 1:M Backup
-device_classes: !ZenPackSpec
+device_classes: 
   /Server/SSH/Linux/NovaHost:
     remove: True
     zProperties:
@@ -659,7 +659,7 @@ device_classes: !ZenPackSpec
                 dpName: networkOutgoingPacketsRate_networkOutgoingPacketsRate
                 format: '%7.2lf%s'
                 color: 98df8a
-classes: !ZenPackSpec
+classes: 
   #-----------------------------------------------------------------------------
   # Base Device Class Types
   #-----------------------------------------------------------------------------
