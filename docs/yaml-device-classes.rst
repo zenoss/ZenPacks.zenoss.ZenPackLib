@@ -127,6 +127,12 @@ path
   :Type: string
   :Default Value: *(implied from key in device_classes map)*
 
+create
+  :Description: Should the device class be created when the ZenPack is installed?
+  :Required: No
+  :Type: boolean
+  :Default Value: true
+
 remove
   :Description: Should the device class be removed when the ZenPack is removed?
   :Required: No
@@ -144,3 +150,15 @@ templates
   :Required: No
   :Type: map<name, :ref:`Monitoring Template <monitoring-template-fields>`>
   :Default Value: {} *(empty map)*
+
+description
+  :Description: Description used for devtype entry in device multi-add dialog
+  :Required: No
+  :Type: string
+  :Default Value: None
+
+protocol
+  :Description: Protocol used for devtype entry in device multi-add dialog
+  :Required: No
+  :Type: string
+  :Default Value: None
