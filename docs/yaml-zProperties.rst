@@ -67,15 +67,15 @@ on zWidgeterInterval.
        category: ACME Widgeter
        default: 300
 
-There is a special zProperty entry named *DEFAULT* that can be used to further
+There is a special zProperty entry named *DEFAULTS* that can be used to further
 shorten definitions in cases where you're adding many zProperties. The
-following example shows how *DEFAULT* can be used to replace the duplicated
+following example shows how *DEFAULTS* can be used to replace the duplicated
 *category* property.
 
 .. code-block:: yaml
 
    zProperties:
-     DEFAULT:
+     DEFAULTS:
        category: ACME Widgeter
 
      zWidgeterEnable:
