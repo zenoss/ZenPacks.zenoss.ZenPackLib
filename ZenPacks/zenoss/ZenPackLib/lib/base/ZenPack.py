@@ -18,8 +18,12 @@ from ZODB.POSException import ConflictError
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
-from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
+from ..helpers.ZenPackLibLog import ZenPackLibLog, new_log
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
+
+LOG = new_log('zpl.ZenPack')
+LOG.setLevel('INFO')
+ZenPackLibLog.enable_log_stderr(LOG)
 
 
 class ZenPack(ZenPackBase):
@@ -29,12 +33,10 @@ class ZenPack(ZenPackBase):
     NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in
     via zenpacklib when this class is instantiated.
     """
-    LOG = DEFAULTLOG
+    LOG = LOG
 
     def __init__(self, *args, **kwargs):
         super(ZenPack, self).__init__(*args, **kwargs)
-        ZenPackLibLog.enable_log_stderr(self.LOG)
-        self.LOG.setLevel('INFO')
 
     def _buildDeviceRelations(self, batch=10):
         '''split device buildRelations across multiple commits'''
@@ -159,7 +161,7 @@ class ZenPack(ZenPackBase):
                             "Existing monitoring template {}/{} differs from "
                             "the newer version included with the {} ZenPack.  "
                             "The existing template will be "
-                            "backed up to '{}'.  Please review and reconcile any"
+                            "backed up to '{}'.  Please review and reconcile any "
                             "local changes before deleting the backup:\n{}".format(
                             dcname, orig_mtname, self.id, template.id, diff))
                     else:
