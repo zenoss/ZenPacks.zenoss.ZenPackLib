@@ -68,15 +68,8 @@ class RRDDatapointSpec(Spec):
         elif isinstance(extra_params, dict):
             self.extra_params = extra_params
 
-        if aliases is None:
-            self.aliases = {}
-        elif isinstance(aliases, dict):
-            self.aliases = aliases
-        elif isinstance(aliases, str):
-            self.LOG.debug('setting default alias for {}'.format(aliases))
-            self.aliases = {aliases: None}
-        else:
-            raise ValueError("aliases must be specified as a dict or string (got {})".format(aliases))
+        self.aliases = aliases
+
         self.shorthand = shorthand
         # update local variables from shorthand
         if self.shorthand:
@@ -113,6 +106,29 @@ class RRDDatapointSpec(Spec):
             return super(RRDDatapointSpec, self).__eq__(other, ignore_params=['rrdtype', 'rrdmin', 'rrdmax'])
         else:
             return super(RRDDatapointSpec, self).__eq__(other)
+
+    @property
+    def aliases(self):
+        return self._aliases
+
+    @aliases.setter
+    def aliases(self, value):
+        if value is None:
+            self._aliases = {}
+        elif isinstance(value, dict):
+            self._aliases = value
+        elif isinstance(value, str):
+            self.LOG.debug('setting default alias for {}'.format(value))
+            self._aliases = {value: None}
+        else:
+            raise ValueError("aliases must be specified as a dict or string (got {})".format(value))
+        # ensure that alias keys do not exceed 31 characters in length
+        aliases = {}
+        for k, v, in self._aliases.items():
+            if len(k) > 31:
+                self.LOG.warning("alias character length limit exceeded 31: {}, truncating".format(k))
+            aliases[k[:31]] = v
+        self._aliases = aliases
 
     @property
     def rrdtype(self):
