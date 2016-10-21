@@ -56,6 +56,7 @@ Fixes
 * getRRDTemplateName can return label of base class (ZEN-19025)
 * Ensure catalog creation respects spec property indexes (ZEN-18269)
 * Ensure device classes can be removed properly (ZEN-18134)
+* Ensure that datapoint alias keys do not exceed 31 chars (ZEN-17950)
 * Log obscure error with ill-defined relationships (ZEN-16701)
 
 
