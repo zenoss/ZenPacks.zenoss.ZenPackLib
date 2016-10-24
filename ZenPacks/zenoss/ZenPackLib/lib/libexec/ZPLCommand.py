@@ -29,6 +29,8 @@ from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 from ..params.EventClassSpecParams import EventClassSpecParams
 from ..params.EventClassMappingSpecParams import EventClassMappingSpecParams
+from ..params.ProcessClassOrganizerSpecParams import ProcessClassOrganizerSpecParams
+from ..params.ProcessClassSpecParams import ProcessClassSpecParams
 from ..resources.templates import SETUP_PY
 from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
 from ..helpers.WarningLoader import WarningLoader
@@ -71,6 +73,10 @@ class ZPLCommand(ZenScriptBase):
                          dest="dump_event_classes",
                          action="store_true",
                          help="export existing event classes to YAML")
+        group.add_option("-r", "--dump-process-classes",
+                         dest="dump_process_classes",
+                         action="store_true",
+                         help="export existing process classes to YAML")
         self.parser.add_option_group(group)
 
         group = OptionGroup(self.parser, "ZenPack Development")
@@ -160,7 +166,8 @@ class ZPLCommand(ZenScriptBase):
             if not is_valid:
                 self.parser.error(msg)
 
-        if self.options.dump or self.options.create or self.options.dump_event_classes:
+        if self.options.dump or self.options.create or\
+           self.options.dump_event_classes or self.options.dump_process_classes:
             self.parser.usage = "%prog [options] ZENPACKNAME"
             if len(self.args) != 1:
                 self.parser.error('No ZenPack given')
@@ -174,7 +181,7 @@ class ZPLCommand(ZenScriptBase):
             self.options.device = self.args[0]
 
     def run(self):
-        ''''''
+        """run the specified function"""
         if self.options.dump:
             if not self.is_valid_zenpack():
                 self.parser.error('{} was not found'.format(self.options.zenpack))
@@ -199,6 +206,9 @@ class ZPLCommand(ZenScriptBase):
 
         elif self.options.dump_event_classes:
             self.dump_event_classes(self.options.zenpack)
+
+        elif self.options.dump_process_classes:
+            self.dump_process_classes(self.options.zenpack)
 
     def optimize(self, filename):
         '''return formatted YAML with DEFAULTS optimized'''
@@ -494,3 +504,31 @@ class ZPLCommand(ZenScriptBase):
             eventclasses[ec_name] = eventclassspec
 
         return eventclasses
+
+    def dump_process_classes(self, zenpack_name):
+        self.connect()
+        processclasses = self.zenpack_processclassspecs(zenpack_name)
+        if processclasses:
+            zpsp = ZenPackSpecParams(zenpack_name,
+                                     process_class_organizers={x: {} for x in processclasses})
+            for pc_name in processclasses:
+                zpsp.process_class_organizers[pc_name].process_classes = processclasses[pc_name].process_classes
+
+            print yaml.dump(zpsp, Dumper=Dumper)
+
+    def zenpack_processclassspecs(self, zenpack_name):
+        zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
+        if zenpack is None:
+            self.LOG.error("ZenPack '%s' not found.", zenpack_name)
+            return
+
+        processclasses = collections.defaultdict(dict)
+        for processclassorg in [x for x in zenpack.packables() if x.meta_type == 'OSProcessOrganizer']:
+            pc_name = "/".join(processclassorg.getPrimaryUrlPath().split('/')[4:])
+            processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(processclassorg, remove=True)
+            for subclass in processclassorg.getSubOrganizers():
+                pc_name = "/".join(subclass.getPrimaryUrlPath().split('/')[4:])
+                # Remove = false because the removing the parent will remove the child # This is a performance optimization
+                processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(subclass, remove=False)
+
+        return processclasses

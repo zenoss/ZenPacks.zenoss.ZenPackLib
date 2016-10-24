@@ -20,3 +20,22 @@ class ProcessClassOrganizerSpecParams(SpecParams, ProcessClassOrganizerSpec):
         self.remove = remove
         self.process_classes = self.specs_from_param(
             ProcessClassSpecParams, 'process_classes', process_classes)
+
+    @classmethod
+    def fromObject(cls, processclass, remove=False):
+        self = object.__new__(cls)
+        SpecParams.__init__(self)
+
+        self.description = processclass.description
+        self.remove = remove
+        self.process_classes = {x.id: ProcessClassSpecParams.fromObject(x) for x in processclass.osProcessClasses()}
+        return self
+
+    @classmethod
+    def new(cls, processclass, description='', remove=False):
+        self = object.__new__(cls)
+        SpecParams.__init__(self)
+        self.path = processclass
+        self.description = description
+        self.remove = remove
+        return self
