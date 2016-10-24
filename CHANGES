@@ -25,6 +25,7 @@ Features
 * Added support for Process Class definitions
 * Deprecated support for python-based "yaml" specifications
 
+
 Fixes
 
 * Fix handling of boolean datasource options (ZEN-25315)
