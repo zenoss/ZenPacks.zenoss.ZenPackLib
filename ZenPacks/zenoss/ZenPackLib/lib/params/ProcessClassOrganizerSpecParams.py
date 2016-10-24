@@ -13,9 +13,10 @@ from ..spec.ProcessClassOrganizerSpec import ProcessClassOrganizerSpec
 
 
 class ProcessClassOrganizerSpecParams(SpecParams, ProcessClassOrganizerSpec):
-    def __init__(self, zenpack_spec, name, description='', process_classes=None, **kwargs):
+    def __init__(self, zenpack_spec, path, description='', process_classes=None, remove=False, **kwargs):
         SpecParams.__init__(self, **kwargs)
-        self.name = name
+        self.path = path
         self.description = description
+        self.remove = remove
         self.process_classes = self.specs_from_param(
             ProcessClassSpecParams, 'process_classes', process_classes)

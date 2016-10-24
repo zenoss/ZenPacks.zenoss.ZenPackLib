@@ -48,6 +48,7 @@ class EventClassMappingSpec(Spec):
           :type remove: bool
         """
         super(EventClassMappingSpec, self).__init__(_source_location=_source_location)
+        self.klass_string = 'EventClassInst'
         self.eventclass_spec = eventclass_spec
         self.name = name
         self.eventClassKey = eventClassKey
@@ -71,3 +72,5 @@ class EventClassMappingSpec(Spec):
         for x in _properties:
             if getattr(mapping, x) != getattr(self, x):
                 setattr(mapping, x, getattr(self, x, None))
+
+        self.zpl_managed = True

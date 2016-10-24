@@ -22,6 +22,8 @@ Features
 * Added ZPLCommand to handle running zenpacklib with arguments
 * Separated zenpacklib.py classes into module files
 * Ability to use ZenPack-provided zenpacklib module
+* Added support for Process Class definitions
+
 
 Fixes
 

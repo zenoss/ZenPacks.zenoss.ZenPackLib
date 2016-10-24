@@ -15,6 +15,7 @@ class ProcessClassSpecParams(SpecParams, ProcessClassSpec):
                  zenpack_spec,
                  name,
                  description='',
+                 remove=False,
                  include_processes='',
                  exclude_processes='',
                  replace_text='',
@@ -27,6 +28,8 @@ class ProcessClassSpecParams(SpecParams, ProcessClassSpec):
                  **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
+        self.description = description
+        self.remove = remove
         self.include_processes = include_processes
         self.exclude_processes = exclude_processes
         self.replace_text = replace_text
