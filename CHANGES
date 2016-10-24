@@ -22,6 +22,7 @@ Features
 * Added ZPLCommand to handle running zenpacklib with arguments
 * Separated zenpacklib.py classes into module files
 * Ability to use ZenPack-provided zenpacklib module
+* Deprecated support for python-based "yaml" specifications
 
 Fixes
 

@@ -24,7 +24,6 @@ Running the command alone or with `--help` will return the following (truncated)
    ZenPack Conversion:
     -t, --dump-templates
                         export existing monitoring templates to YAML
-    -y, --yaml-convert  convert existing ZenPack to YAML
     -e, --dump-event-classes
                         export existing event classes to YAML
    
@@ -45,7 +44,6 @@ The following commands are supported:
 * :ref:`-d, --diagram <zenpacklib-class_diagram>`: Export yUML (yuml.me) class diagram from a YAML file.
 * :ref:`-t, --dump-templates <zenpacklib-dump_templates>`: Export existing monitoring templates to YAML.
 * :ref:`-e, --dump-event-classes <zenpacklib-dump_event_classes>`: Export existing event classes and mappings to YAML.
-* :ref:`-y, --yaml-convert <zenpacklib-py_to_yaml>`: Converts the Python syntax used in pre-release versions of zenpacklib to YAML.
 * :ref:`-p, --paths <zenpacklib-list_paths>`: Using the specified device, print a report of paths between objects.
 * :ref:`-o, --optimize <zenpacklib-optimize>`: Optimize the layout of an existing zenpack.yaml file
 * :ref:`--version <zenpacklib-version>`: Print zenpacklib version.
@@ -164,25 +162,6 @@ into http://yuml.me to see what it looks like.
 
     # Non-Containing Relationships
     [NetBotzEnclosure]netBotzSensors-.-netBotzEnclosure++[NetBotzSensor]
-
-
-.. _zenpacklib-py_to_yaml:
-
-**********
-py_to_yaml
-**********
-
-The *--yaml-convert* command is designed for a very specific purpose that most
-people will not find useful. Earlier pre-release versions of zenpacklib required
-that the ZenPack be defined via a call to zenpacklib.ZenPackSpec() with Python
-data structures instead of via a YAML file. *py_to_yaml* converts this style of
-definition to a YAML file suitable for use with current versions of zenpacklib.
-
-Example usage:
-
-.. code-block:: bash
-
-    zenpacklib --yaml-convert ZenPacks.example.BetterAlreadyBeInstalled
 
 
 .. _zenpacklib-list_paths:

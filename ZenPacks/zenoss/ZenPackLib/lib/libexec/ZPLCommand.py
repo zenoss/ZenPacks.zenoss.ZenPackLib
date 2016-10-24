@@ -67,10 +67,6 @@ class ZPLCommand(ZenScriptBase):
                     dest="dump",
                     action="store_true",
                     help="export existing monitoring templates to YAML")
-        group.add_option("-y", "--yaml-convert",
-                    dest="convert",
-                    action="store_true",
-                    help="convert existing ZenPack to YAML")
         group.add_option("-e", "--dump-event-classes",
                          dest="dump_event_classes",
                          action="store_true",
@@ -164,7 +160,7 @@ class ZPLCommand(ZenScriptBase):
             if not is_valid:
                 self.parser.error(msg)
 
-        if self.options.convert or self.options.dump or self.options.create or self.options.dump_event_classes:
+        if self.options.dump or self.options.create or self.options.dump_event_classes:
             self.parser.usage = "%prog [options] ZENPACKNAME"
             if len(self.args) != 1:
                 self.parser.error('No ZenPack given')
@@ -179,15 +175,12 @@ class ZPLCommand(ZenScriptBase):
 
     def run(self):
         ''''''
-        if self.options.convert or self.options.dump:
+        if self.options.dump:
             if not self.is_valid_zenpack():
                 self.parser.error('{} was not found'.format(self.options.zenpack))
 
         if self.options.create:
             self.create_zenpack_srcdir(self.options.zenpack)
-
-        elif self.options.convert:
-            self.py_to_yaml(self.options.zenpack)
 
         elif self.options.dump:
             self.dump_templates(self.options.zenpack)
@@ -302,69 +295,6 @@ class ZPLCommand(ZenScriptBase):
         print "  - creating file: {}".format(yaml_fname)
         with open(yaml_fname, 'w') as yaml_f:
             yaml_f.write("name: {}\n".format(zenpack_name))
-
-    def py_to_yaml(self, zenpack_name):
-        '''Create YAML based on existing ZenPack'''
-        self.connect()
-        zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name)
-        if zenpack is None:
-            DEFAULTLOG.error("ZenPack '{}' not found.".format(zenpack_name))
-            return
-        zenpack_init_py = os.path.join(os.path.dirname(inspect.getfile(zenpack.__class__)), '__init__.py')
-
-        # create a dummy zenpacklib sufficient to be used in an
-        # __init__.py, so we can capture export the data.
-        zenpacklib_module = create_module("zenpacklib")
-        zenpacklib_module.ZenPackSpec = type('ZenPackSpec', (dict,), {})
-        zenpack_schema_module = create_module("schema")
-        zenpack_schema_module.ZenPack = ZenPack
-
-        def zpl_create(self):
-            zenpacklib_module.CFG = dict(self)
-        zenpacklib_module.ZenPackSpec.create = zpl_create
-
-        stream = open(zenpack_init_py, 'r')
-        inputfile = stream.read()
-
-        # tweak the input slightly.
-        inputfile = re.sub(r'from .* import zenpacklib', '', inputfile)
-        inputfile = re.sub(r'from .* import schema', '', inputfile)
-        inputfile = re.sub(r'__file__', '"{}"'.format(zenpack_init_py), inputfile)
-
-        # Kludge 'from . import' into working.
-        import site
-        site.addsitedir(os.path.dirname(zenpack_init_py))
-        inputfile = re.sub(r'from . import', 'import', inputfile)
-
-        g = dict(zenpacklib=zenpacklib_module, schema=zenpack_schema_module)
-        l = dict()
-        exec inputfile in g, l
-
-        CFG = zenpacklib_module.CFG
-        CFG['name'] = zenpack_name
-
-        # convert the cfg dictionary to yaml
-        specparams = ZenPackSpecParams(**CFG)
-
-        # Dig around in ZODB and add any defined monitoring templates
-        # to the spec.
-        templates = self.zenpack_templatespecs(zenpack_name)
-        for dc_name in templates:
-            if dc_name not in specparams.device_classes:
-                DEFAULTLOG.warning("Device class '{}' was not defined in {} - adding to the YAML file.  You may need to adjust the 'create' and 'remove' options.".format(
-                            dc_name, zenpack_init_py))
-                specparams.device_classes[dc_name] = DeviceClassSpecParams(specparams, dc_name)
-
-            # And merge in the templates we found in ZODB.
-            specparams.device_classes[dc_name].templates.update(templates[dc_name])
-
-        outputfile = yaml.dump(specparams, Dumper=Dumper)
-
-        # tweak the yaml slightly.
-        outputfile = outputfile.replace("__builtin__.object", "object")
-        outputfile = re.sub(r"!!float '(\d+)'", r"\1", outputfile)
-
-        print outputfile
 
     def dump_templates(self, zenpack_name):
         ''''''
