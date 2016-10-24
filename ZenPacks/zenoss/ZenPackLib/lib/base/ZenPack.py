@@ -18,8 +18,24 @@ from ZODB.POSException import ConflictError
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
-from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
+from ..helpers.ZenPackLibLog import ZenPackLibLog, new_log
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
+from Products.ZenEvents import ZenEventClasses
+
+LOG = new_log('zpl.ZenPack')
+LOG.setLevel('INFO')
+ZenPackLibLog.enable_log_stderr(LOG)
+
+# We need to make sure we aren't removing an important/default event,
+# windows/ip service, or process class on ZenPack removal
+RESERVED_CLASSES = set(['/Status', '/App', '/Cmd', '/Perf',
+                        '/Heartbeat', '/Unknown', '/Change', 'Processes',
+                        'Services', 'WinService', 'IpService'])
+
+for x in dir(ZenEventClasses):
+    y = getattr(ZenEventClasses, x)
+    if isinstance(y, str):
+        RESERVED_CLASSES.add(y)
 
 
 class ZenPack(ZenPackBase):
@@ -29,12 +45,10 @@ class ZenPack(ZenPackBase):
     NEW_COMPONENT_TYPES AND NEW_RELATIONS will be monkeypatched in
     via zenpacklib when this class is instantiated.
     """
-    LOG = DEFAULTLOG
+    LOG = LOG
 
     def __init__(self, *args, **kwargs):
         super(ZenPack, self).__init__(*args, **kwargs)
-        ZenPackLibLog.enable_log_stderr(self.LOG)
-        self.LOG.setLevel('INFO')
 
     def _buildDeviceRelations(self, batch=10):
         '''split device buildRelations across multiple commits'''
@@ -48,7 +62,7 @@ class ZenPack(ZenPackBase):
                     d.buildRelations()
                 except ConflictError as e:
                     self.LOG.warn('Reattempting buildRelations() on {} ({})'.format(d.id, e))
-                    sync()
+                    self.dmd._p_jar.sync()
                     build_relations(d, retries, count + 1)
                 except Exception as e:
                     self.LOG.error('buildRelations() failed for {} ({})'.format(d.id, e))
@@ -159,7 +173,7 @@ class ZenPack(ZenPackBase):
                             "Existing monitoring template {}/{} differs from "
                             "the newer version included with the {} ZenPack.  "
                             "The existing template will be "
-                            "backed up to '{}'.  Please review and reconcile any"
+                            "backed up to '{}'.  Please review and reconcile any "
                             "local changes before deleting the backup:\n{}".format(
                             dcname, orig_mtname, self.id, template.id, diff))
                     else:
@@ -201,29 +215,52 @@ class ZenPack(ZenPackBase):
                     self.remove_device_class(app, dcspec)
 
             # Remove EventClasses with remove flag set
-            for ecname, ecspec in self.event_classes.iteritems():
-                organizerPath = ecspec.path
-                if ecspec.remove:
-                    try:
-                        app.dmd.Events.getOrganizer(organizerPath)
-                    except KeyError:
-                        self.LOG.warning('Unable to remove EventClass %s (not found)' % ecspec.path)
-                        continue
-
-                    self.LOG.info('Removing EventClass %s' % ecspec.path)
-                    app.dmd.Events.manage_deleteOrganizer(organizerPath)
-                else:
-                    try:
-                        organizer = app.dmd.Events.getOrganizer(organizerPath)
-                    except KeyError:
-                        continue
-
-                    for mapping_id, mapping_spec in ecspec.mappings.items():
-                        if mapping_spec.remove:
-                            self.LOG.info('Removing EventClassInst %s @ %s' % (mapping_id, ecspec.path))
-                            organizer.removeInstances(organizer.prepId(mapping_id))
+            self.remove_organizer_or_subs(app.dmd.Events,
+                                          self.event_classes,
+                                          'mappings',
+                                          'removeInstances')
+            # Remove Process Classes/Organizers with remove flag set
+            self.remove_organizer_or_subs(app.dmd.Processes,
+                                          self.process_class_organizers,
+                                          'process_classes',
+                                          'removeOSProcessClasses')
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
+
+    def remove_organizer_or_subs(self, dmd_root, classes, sub_class, remove_name):
+        '''Remove the organizer or subclasses within an organizer
+        Used for event classes, process classes, windows services
+        The specs should use path to describe the organizer name/path
+        For subclasses, use klass_string for the class type name
+        Also be sure to set zpl_managed in the specs
+        '''
+        for cname, cspec in classes.iteritems():
+            organizerPath = cspec.path
+            try:
+                organizer = dmd_root.getOrganizer(organizerPath)
+            except KeyError:
+                self.LOG.warning('Unable to find {} {}'.format(dmd_root.__class__.__name__, cspec.path))
+                continue
+            if cspec.remove and hasattr(organizer, 'zpl_managed') and organizer.zpl_managed:
+                # make sure the organizer is zpl_managed before we try and delete it
+                # also double-check that we do not remove anything important like /Status or Processes
+                if organizerPath in RESERVED_CLASSES:
+                    continue
+                self.LOG.info('Removing {} {}'.format(organizer.__class__.__name__, cspec.path))
+                dmd_root.manage_deleteOrganizer(organizerPath)
+            else:
+                sub_classes = getattr(cspec, sub_class, {})
+                remove_func = getattr(organizer, remove_name, None)
+                if not remove_func:
+                    continue
+                for subclass_id, subclass_spec in sub_classes.items():
+                    if subclass_spec.remove:
+                        preppedId = organizer.prepId(subclass_id)
+                        # make sure object is zpl managed
+                        obj = organizer.findObject(preppedId)
+                        if getattr(obj, 'zpl_managed', False):
+                            self.LOG.info('Removing {} {} @ {}'.format(subclass_spec.klass_string, subclass_id, cspec.path))
+                            remove_func(preppedId)
 
     def template_changed(self, app, existing, new_spec):
         """

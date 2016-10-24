@@ -4,6 +4,79 @@
 Compatibility
 #############
 
+Starting with version 2.0, zenpacklib.py will ship as a separately installed ZenPack.
+This change offers several advantages over the earlier distribution method along with 
+many new features and fixes.  Existing ZenPacks based on earlier versions of zenpacklib.py
+should coexist peacefully with those based on the newer version, and eventual migration to
+version 2.0 should be relatively painless.  Future versions of Zenoss-provided ZenPacks will
+use the newer ZenPackLib version as they are developed and released.
+
+*************************
+Migrating ZenPacks to 2.0
+*************************
+
+For the most part, migrating to ZenPackLib 2.0 should be straightforward and requires minimal changes
+to your ZenPack.  These largely involve changing import statements where appropriate and removing the
+older zenpacklib.py files
+
+The __init__.py file will need its import statements changed.
+
+.. code-block:: python
+
+   from . import zenpacklib
+
+changes to:
+
+.. code-block:: python
+
+   from ZenPacks.zenoss.ZenPackLib import zenpacklib
+
+while:
+.. code-block:: python
+
+   CFG = zenpacklib.load_yaml()
+
+remains unchanged unless some of the new logging capabilities are desired such as:
+
+.. code-block:: python
+
+   CFG = zenpacklib.load_yaml(verbose=True, level=10)
+
+
+In addition, the statement (if it exists):
+
+.. code-block:: python
+
+   from . import schema 
+
+should be changed to:
+
+.. code-block:: python
+
+   schema = CFG.zenpack_module.schema
+
+or added if it does not exist.
+
+.. note::
+
+   Care should also be taken to delete the zenpacklib.py and zenpacklib.pyc files in 
+   the ZenPack's source directory, since leaving them in place may cause unforseen behavior.
+
+.. note::
+
+   Import statements should also be checked throughout any class overrides or 
+   other python files, since the statements will fail if they refer to the older zenpacklib.py.
+
+*******************************
+Older Versions of zenpacklib.py
+*******************************
+
+.. note::
+
+    The following applies to pre-2.0 versions of zenpacklib.py only.  
+    Starting with version 2.0, zenpacklib.py will ship as a separately installed 
+    ZenPack designed for use by dependent ZenPacks
+
 Distributing `zenpacklib.py` with each ZenPack allows different ZenPacks in
 the same Zenoss system to use different versions of zenpacklib. This can make
 things simpler for the ZenPack author as they know which version of zenpacklib
@@ -36,6 +109,18 @@ Zenoss. Maintenance or patch releases of each are always considered compatible.
 Determining Version
 *******************
 
+.. note::
+
+    Beginning with version 2.0, you can check the zenpacklib version with either:
+    
+      zenpacklib --version
+    
+    from the command line, or by navigating to: 
+      
+      Advanced -> Settings -> ZenPacks 
+    
+    in the Zenoss GUI
+
 You can check which version of zenpacklib you're using in two ways. The first is
 by using the *version* command line option.
 
@@ -58,6 +143,10 @@ Python code that has imported *zenpacklib* module through the module's
 ******************
 PyYAML Requirement
 ******************
+.. note::
+
+    Beginning with version 2.0, the ZenPacks.zenoss.ZenPackLib ZenPack will refuse
+    to install unless PyYAML is already installed
 
 zenpacklib requires that PyYAML be installed in the Zenoss system. PyYAML was
 not a standard part of a Zenoss system until Zenoss 5. To use zenpacklib, or to

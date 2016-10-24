@@ -49,12 +49,15 @@ class EventClassSpec(Spec):
             EventClassMappingSpec, 'mappings', mappings, zplog=self.LOG)
 
     def instantiate(self, dmd):
+        bCreated = False
         if self.create:
             try:
-                dmd.Events.getOrganizer(self.path)
+                ecObject = dmd.Events.getOrganizer(self.path)
+                bCreated = getattr(ecObject, 'zpl_managed', False)
             except KeyError:
                 dmd.Events.createOrganizer(self.path)
-        ecObject = dmd.Events.getOrganizer(self.path)
+                ecObject = dmd.Events.getOrganizer(self.path)
+                bCreated = True
         if self.description != '':
             if not ecObject.description == self.description:
                 ecObject.description = self.description
@@ -63,6 +66,6 @@ class EventClassSpec(Spec):
                 ecObject.transform = self.transform
         # Flag this as a ZPL managed object, that is, one that should not be
         # exported to objects.xml  (contained objects will also be excluded)
-        ecObject.zpl_managed = True
+        ecObject.zpl_managed = bCreated
         for mapping_id, mapping_spec in self.mappings.items():
             mapping_spec.create(ecObject)

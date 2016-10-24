@@ -20,6 +20,7 @@ class ProcessClassSpec(Spec):
             zenpack_spec,
             name,
             description='',
+            remove=False,
             includeRegex='',
             excludeRegex='',
             replaceRegex='',
@@ -52,11 +53,15 @@ class ProcessClassSpec(Spec):
           :type modeler_lock: bool
           :param send_event_when_blocked: Send and event when action is blocked?
           :type send_event_when_blocked: bool
+          :param remove: Remove Organizer on ZenPack removal
+          :type remove: boolean
         """
         super(ProcessClassSpec, self).__init__(_source_location=_source_location)
+        self.klass_string = 'OSProcessClass'
         self.zenpack_spec = zenpack_spec
         self.name = name
         self.description = description
+        self.remove = remove
         if zplog:
             self.LOG = zplog
         try:

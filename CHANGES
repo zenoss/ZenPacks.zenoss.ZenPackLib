@@ -22,6 +22,8 @@ Features
 * Added ZPLCommand to handle running zenpacklib with arguments
 * Separated zenpacklib.py classes into module files
 * Ability to use ZenPack-provided zenpacklib module
+* Added support for Process Class definitions
+
 
 Fixes
 
@@ -46,6 +48,7 @@ Fixes
 * Improve ImportError logging in class files (ZEN-22927)
 * Ensure non-cached datapoints return current value (ZEN-22288)
 * Fix issue when setting datapoint_cached to False (ZEN-22287)
+* Set all component property details to correct Python type (ZEN-22057)
 * Honor relationship label containing component overrides in component (ZEN-21966)
 * Prevent attempts to process relationships not in class_relationships (ZEN-21927)
 * Ensure component display properties honored (ZEN-19798)
@@ -55,6 +58,7 @@ Fixes
 * getRRDTemplateName can return label of base class (ZEN-19025)
 * Ensure catalog creation respects spec property indexes (ZEN-18269)
 * Ensure device classes can be removed properly (ZEN-18134)
+* Ensure that datapoint alias keys do not exceed 31 chars (ZEN-17950)
 * Log obscure error with ill-defined relationships (ZEN-16701)
 
 
