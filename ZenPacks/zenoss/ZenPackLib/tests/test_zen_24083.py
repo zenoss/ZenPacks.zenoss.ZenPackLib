@@ -24,8 +24,17 @@ from Products.ZenTestCase.BaseTestCase import BaseTestCase
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 
+def aggregator_installed():
+    """Return True if AggregatingDataSource is installed"""
+    try:
+        from ZenPacks.zenoss.CalculatedPerformance.datasources.AggregatingDataSource import AggregatingDataSource
+    except ImportError:
+        pass
+    else:
+        return True
+    return False
 
-YAML_DOC="""
+YAML_DOC = """
 name: ZenPacks.zenoss.ZenPackLib
 device_classes:
   /Device:
@@ -60,22 +69,23 @@ class TestZen24083(BaseTestCase):
     """
 
     def test_datasource_inheritance(self):
-        z = ZPLTestHarness(YAML_DOC)
-        z.connect()
-        self.assertTrue(z.check_templates_vs_yaml(), "Template objects do not match YAML")
-        self.assertTrue(z.check_templates_vs_specs(), "Template objects do not match Spec")
-        # check properties on dummy template
-        dcs = z.cfg.device_classes.get('/Device')
-        tcs = dcs.templates.get('TESTAGGFAIL')
-        t = tcs.create(z.dmd, False)
-        for ds in t.datasources():
-            # standard paramenter
-            self.assertEquals(ds.component, '${here/id}', 'datasource property (component) was not inherited from DEFAULTS')
-            # extraparams parameter
-            self.assertEquals(ds.targetDataSource, 'ethernetcmascd_64', 'datasource property (targetDataSource) was not inherited from DEFAULTS')
-            # test local override of DEFAULTS 
-            if ds.id == 'agg_in_octets':
-                self.assertEquals(ds.targetDataPoint, 'aggifHCOutOctets', 'datasource property (targetDataPoint) DEFAULTS override was not set')
+        if aggregator_installed():
+            z = ZPLTestHarness(YAML_DOC)
+            z.connect()
+            self.assertTrue(z.check_templates_vs_yaml(), "Template objects do not match YAML")
+            self.assertTrue(z.check_templates_vs_specs(), "Template objects do not match Spec")
+            # check properties on dummy template
+            dcs = z.cfg.device_classes.get('/Device')
+            tcs = dcs.templates.get('TESTAGGFAIL')
+            t = tcs.create(z.dmd, False)
+            for ds in t.datasources():
+                # standard paramenter
+                self.assertEquals(ds.component, '${here/id}', 'datasource property (component) was not inherited from DEFAULTS')
+                # extraparams parameter
+                self.assertEquals(ds.targetDataSource, 'ethernetcmascd_64', 'datasource property (targetDataSource) was not inherited from DEFAULTS')
+                # test local override of DEFAULTS
+                if ds.id == 'agg_in_octets':
+                    self.assertEquals(ds.targetDataPoint, 'aggifHCOutOctets', 'datasource property (targetDataPoint) DEFAULTS override was not set')
 
 
 

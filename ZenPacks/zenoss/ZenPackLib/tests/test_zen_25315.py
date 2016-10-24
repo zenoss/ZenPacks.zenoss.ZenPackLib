@@ -45,6 +45,15 @@ device_classes:
             parser: Auto
 """
 
+def win_shell_installed():
+    """Return True if ShellDataSource is installed"""
+    try:
+        from ZenPacks.zenoss.Microsoft.Windows.datasources.ShellDataSource import ShellDataSource
+    except ImportError:
+        pass
+    else:
+        return True
+    return False
 
 class TestZen25315(BaseTestCase):
     """
@@ -52,18 +61,19 @@ class TestZen25315(BaseTestCase):
     """
 
     def test_datasource_boolean(self):
-        z = ZPLTestHarness(YAML_DOC)
-        z.connect()
-        # check properties on dummy template
-        dcs = z.cfg.device_classes.get('/Server/Microsoft')
-        tcs = dcs.templates.get('TestTemplate')
-        t = tcs.create(z.dmd, False)
-        ds = t.datasources()[0]
+        if win_shell_installed():
+            z = ZPLTestHarness(YAML_DOC)
+            z.connect()
+            # check properties on dummy template
+            dcs = z.cfg.device_classes.get('/Server/Microsoft')
+            tcs = dcs.templates.get('TestTemplate')
+            t = tcs.create(z.dmd, False)
+            ds = t.datasources()[0]
 
-        self.assertTrue(isinstance(ds.usePowershell, bool),
-                'Datasource property (usePowershell) should be bool, got {}'.format(type(ds.usePowershell)))
-        self.assertEquals(ds.usePowershell, False,
-                'Datasource property (usePowershell) should be False, got {}'.format(ds.usePowershell))
+            self.assertTrue(isinstance(ds.usePowershell, bool),
+                    'Datasource property (usePowershell) should be bool, got {}'.format(type(ds.usePowershell)))
+            self.assertEquals(ds.usePowershell, False,
+                    'Datasource property (usePowershell) should be False, got {}'.format(ds.usePowershell))
 
 
 
