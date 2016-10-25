@@ -228,7 +228,7 @@ class ClassSpec(Spec):
         self.plural_label_width = plural_label_width or self.label_width + 7
         self.content_width = content_width or label_width
 
-        self.icon = icon
+        self.icon_url = icon
 
         # Force properties into the 5.0 - 5.9 order range.
         if not order:
@@ -460,25 +460,32 @@ class ClassSpec(Spec):
     @property
     def icon_url(self):
         """Return relative URL to icon."""
-        if self.icon and self.icon.startswith('/'):
-            return self.icon
+        return self._icon_url
 
-        icon_filename = self.icon or '{}.png'.format(self.name)
-
-        zenpack_path = get_zenpack_path(self.zenpack.name)
-        if zenpack_path:
-            icon_path = os.path.join(
-                get_zenpack_path(self.zenpack.name),
-                'resources',
-                'icon',
-                icon_filename)
-
-            if os.path.isfile(icon_path):
-                return '/++resource++{zenpack_name}/icon/{filename}'.format(
-                    zenpack_name=self.zenpack.name,
-                    filename=icon_filename)
-
-        return '/zport/dmd/img/icons/noicon.png'
+    @icon_url.setter
+    def icon_url(self, icon):
+        """Set icon_url"""
+        self._icon_url = None
+        # if it's already given with the path
+        if icon and icon.startswith('/'):
+            self._icon_url = icon
+        else:
+            # otherwise check if it exists whether or not it's given
+            icon_filename = icon or '{}.png'.format(self.name)
+            zenpack_path = get_zenpack_path(self.zenpack.name)
+            if zenpack_path:
+                icon_path = os.path.join(
+                    zenpack_path,
+                    'resources',
+                    'icon',
+                    icon_filename)
+                if os.path.isfile(icon_path):
+                    self._icon_url = '/++resource++{zenpack_name}/icon/{filename}'.format(
+                        zenpack_name=self.zenpack.name,
+                        filename=icon_filename)
+        # fall back to default
+        if not self._icon_url:
+            self._icon_url = '/zport/dmd/img/icons/noicon.png'
 
     @property
     def model_schema_class(self):
