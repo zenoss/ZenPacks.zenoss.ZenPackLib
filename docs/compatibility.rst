@@ -19,6 +19,19 @@ For the most part, migrating to ZenPackLib 2.0 should be straightforward and req
 to your ZenPack.  These largely involve changing import statements where appropriate and removing the
 older zenpacklib.py files
 
+.. note::
+
+   ZenPacks based on ZenPackLib 2.0 will need to have a dependency set to prevent potential issues when 
+   installing or removing them.  If ZenPackLib 2.0 is not installed, a dependent ZenPack should refuse to
+   install until the dependency is met.  Similarly, ZenPackLib 2.0 should refuse removal if dependent ZenPacks
+   are still installed.  To achieve this, make sure that the INSTALL_REQUIRES variable in the setup.py file 
+   contains the following:
+      INSTALL_REQUIRES = ['ZenPacks.zenoss.ZenPackLib']
+   Please note that "INSTALL_REQUIRES" may already contain entries, and these should be preserved if they exist.
+   
+   This can also be configured in the GUI if the dependent ZenPack is installed in develop mode.
+
+
 The __init__.py file will need its import statements changed.
 
 .. code-block:: python
