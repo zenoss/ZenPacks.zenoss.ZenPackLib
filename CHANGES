@@ -23,6 +23,7 @@ Features
 * Separated zenpacklib.py classes into module files
 * Ability to use ZenPack-provided zenpacklib module
 * Added support for Process Class definitions
+* Deprecated support for python-based "yaml" specifications
 
 
 Fixes
