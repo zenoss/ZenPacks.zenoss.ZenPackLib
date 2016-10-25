@@ -26,6 +26,8 @@ Running the command alone or with `--help` will return the following (truncated)
                         export existing monitoring templates to YAML
     -e, --dump-event-classes
                         export existing event classes to YAML
+    -r, --dump-process-classes
+                        export existing process classes to YAML
    
    ZenPack Development:
     -c, --create        Create a new ZenPack source directory
@@ -44,6 +46,7 @@ The following commands are supported:
 * :ref:`-d, --diagram <zenpacklib-class_diagram>`: Export yUML (yuml.me) class diagram from a YAML file.
 * :ref:`-t, --dump-templates <zenpacklib-dump_templates>`: Export existing monitoring templates to YAML.
 * :ref:`-e, --dump-event-classes <zenpacklib-dump_event_classes>`: Export existing event classes and mappings to YAML.
+* :ref:`-r, --dump-process-classes <zenpacklib-dump_process_classes>`: Export existing process classes to YAML.
 * :ref:`-p, --paths <zenpacklib-list_paths>`: Using the specified device, print a report of paths between objects.
 * :ref:`-o, --optimize <zenpacklib-optimize>`: Optimize the layout of an existing zenpack.yaml file
 * :ref:`--version <zenpacklib-version>`: Print zenpacklib version.
@@ -227,6 +230,23 @@ Example usage:
 .. code-block:: bash
 
     zenpacklib --dump-event-classes ZenPacks.example.BetterAlreadyBeInstalled
+
+.. _zenpacklib-dump_process_classes:
+
+********************
+dump_process_classes
+********************
+
+The *--dump-process-classes* command is designed to export process class organizers and
+classes already loaded into your Zenoss instance and associated with a ZenPack. It 
+will export them to the YAML format required for `zenpack.yaml`. It is up to you to merge
+that YAML with your existing `zenpack.yaml`. file.
+
+Example usage:
+
+.. code-block:: bash
+
+    zenpacklib --dump-process-classes ZenPacks.example.BetterAlreadyBeInstalled
 
 .. _zenpacklib-optimize:
 
