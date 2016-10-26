@@ -24,7 +24,7 @@ Features
 * Ability to use ZenPack-provided zenpacklib module
 * Added support for Process Class definitions
 * Deprecated support for python-based "yaml" specifications
-
+* Added support for Windows Service definitions
 
 Fixes
 
