@@ -336,16 +336,16 @@ class ClassSpec(Spec):
         self.create_registered()
 
     def create_schema_classes(self):
-        self.create_model_schema_class()
-        self.create_iinfo_schema_class()
-        self.create_info_schema_class()
+        self.model_schema_class = 'TEST'
+        self.iinfo_schema_class = 'TEST'
+        self.info_schema_class = 'TEST'
 
     def create_zenpack_classes(self):
-        self.create_model_class()
-        self.create_iinfo_class()
-        self.create_info_class()
+        self.model_class = 'TEST'
+        self.iinfo_class = 'TEST'
+        self.info_class = 'TEST'
         if self.is_component or self.is_hardware_component:
-            self.create_formbuilder_class()
+            self.formbuilder_class = 'Test'
 
     def create_registered(self):
         self.register_dynamicview_adapters()
@@ -490,7 +490,16 @@ class ClassSpec(Spec):
     @property
     def model_schema_class(self):
         """Return model schema class."""
-        return self.create_model_schema_class()
+        try:
+            return self._model_schema_class
+        except AttributeError:
+            self.model_schema_class = 'TEST'
+            return self.model_schema_class
+
+    @model_schema_class.setter
+    def model_schema_class(self, value):
+        """Return model schema class."""
+        self._model_schema_class = self.create_model_schema_class()
 
     def create_model_schema_class(self):
         """Create and return model schema class."""
@@ -611,7 +620,16 @@ class ClassSpec(Spec):
     @property
     def model_class(self):
         """Return model class."""
-        return self.create_model_class()
+        try:
+            return self._model_class
+        except AttributeError:
+            self.model_class = 'TEST'
+            return self.model_class
+
+    @model_class.setter
+    def model_class(self, value):
+        """Return model class."""
+        self._model_class = self.create_model_class()
 
     def create_model_class(self):
         """Create and return model class."""
@@ -623,7 +641,16 @@ class ClassSpec(Spec):
     @property
     def iinfo_schema_class(self):
         """Return I<name>Info schema class."""
-        return self.create_iinfo_schema_class()
+        try:
+            return self._iinfo_schema_class  # self.create_info_class()
+        except AttributeError:
+            self.iinfo_schema_class = 'TEST'
+            return self.iinfo_schema_class
+
+    @iinfo_schema_class.setter
+    def iinfo_schema_class(self, value):
+        """Return I<name>Info schema class."""
+        self._iinfo_schema_class = self.create_iinfo_schema_class()
 
     def create_iinfo_schema_class(self):
         """Create and return I<name>Info schema class."""
@@ -670,7 +697,16 @@ class ClassSpec(Spec):
     @property
     def iinfo_class(self):
         """Return I<name>Info class."""
-        return self.create_iinfo_class()
+        try:
+            return self._iinfo_class
+        except AttributeError:
+            self.iinfo_class = 'TEST'
+            return self.iinfo_class
+
+    @iinfo_class.setter
+    def iinfo_class(self, value):
+        """Return I<name>Info class."""
+        self._iinfo_class = self.create_iinfo_class()
 
     def create_iinfo_class(self):
         """Create and return I<Info>Info class."""
@@ -682,7 +718,16 @@ class ClassSpec(Spec):
     @property
     def info_schema_class(self):
         """Return <name>Info schema class."""
-        return self.create_info_schema_class()
+        try:
+            return self._info_schema_class
+        except AttributeError:
+            self.info_schema_class = 'TEST'
+            return self.info_schema_class
+
+    @info_schema_class.setter
+    def info_schema_class(self, value):
+        """Return <name>Info schema class."""
+        self._info_schema_class = self.create_info_schema_class()
 
     def create_info_schema_class(self):
         """Create and return <name>Info schema class."""
@@ -736,7 +781,15 @@ class ClassSpec(Spec):
     @property
     def info_class(self):
         """Return Info subclass."""
-        return self.create_info_class()
+        try:
+            return self._info_class  # self.create_info_class()
+        except AttributeError:
+            self.info_class = 'TEST'
+            return self.info_class
+
+    @info_class.setter
+    def info_class(self, value):
+        self._info_class = self.create_info_class()
 
     def create_info_class(self):
         """Create and return Info subclass."""
@@ -753,7 +806,13 @@ class ClassSpec(Spec):
     @property
     def formbuilder_class(self):
         """Return FormBuilder subclass."""
-        return self.create_formbuilder_class()
+        return self._formbuilder_class
+
+    @formbuilder_class.setter
+    def formbuilder_class(self, value):
+        """Return FormBuilder subclass."""
+
+        self._formbuilder_class = self.create_formbuilder_class()
 
     def create_formbuilder_class(self):
         """Create and return FormBuilder subclass.
