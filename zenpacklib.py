@@ -1006,7 +1006,7 @@ class ComponentBase(ModelBase):
                 # If 'all' mode, just include indirectly-related objects as well, in
                 # an unfiltered manner.
                 if recurse_all:
-                    for facet in obj.get_facets(root=root, seen=seen, path=path, depth=depth+1, recurse_all=True):
+                    for facet in obj.get_facets(root=root, seen=seen, path=path, depth=depth + 1, recurse_all=True):
                         yield facet
 
                 else:
@@ -1019,7 +1019,7 @@ class ComponentBase(ModelBase):
                         if not recurse:
                             continue
 
-                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, depth=depth+1):
+                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, depth=depth + 1):
                             if (self.id, relname, facet.id) in seen:
                                 # avoid a cycle
                                 continue
@@ -1216,16 +1216,16 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
             def _filter(item):
                 include = True
                 if fieldFilter:
-                    key=item[0]
+                    key = item[0]
                     include = fieldFilter(key)
                 else:
                     include = bool(item)
                 return include
-            for k,v in filter(_filter, f.iteritems()):
+            for k, v in filter(_filter, f.iteritems()):
                 c = self._dict(v)
                 c['name'] = k
-                value =  getattr(self.context, k, None)
-                c['value'] = value() if callable(value) else value                    
+                value = getattr(self.context, k, None)
+                c['value'] = value() if callable(value) else value
                 if c['xtype'] in ('autoformcombo', 'itemselector'):
                     c['values'] = self.vocabulary(v)
                 d[k] = c
@@ -3170,7 +3170,7 @@ class ClassSpec(Spec):
     @property
     def subcomponent_nav_js_snippet(self):
         """Return subcomponent navigation JavaScript snippet."""
-        
+
         def get_js_snippet(id, label, classes):
             """return basic JS nav snippet"""
             cases = []
@@ -3217,7 +3217,7 @@ class ClassSpec(Spec):
                     sections[relation.label].append(spec.meta_type)
 
         snippets = []
-        for label, metatypes in sections.items():        
+        for label, metatypes in sections.items():
             id = '_'.join(label.lower().split(' '))
             snippets.append(get_js_snippet(id, label, metatypes))
 
@@ -5013,14 +5013,9 @@ if YAML_INSTALLED:
     def yaml_warning(loader, e):
         # Given a MarkedYAMLError exception, either log or raise
         # the error, depending on the 'fatal' argument.
-<<<<<<< HEAD
         pass
         # commenting out for 1.1 release
         # print format_message(e)
-=======
-
-        print format_message(e)
->>>>>>> feature/ZEN-24903
 
     def yaml_error(loader, e, exc_info=None):
         # Given a MarkedYAMLError exception, either log or raise
@@ -5286,8 +5281,8 @@ if YAML_INSTALLED:
 
         params['_source_location'] = "%s: %s-%s" % (
             os.path.basename(node.start_mark.name),
-            node.start_mark.line+1,
-            node.end_mark.line+1)
+            node.start_mark.line + 1,
+            node.end_mark.line + 1)
 
         # TODO: When deserializing, we should check if required properties are present.
 
@@ -5818,7 +5813,7 @@ def MethodInfoProperty(method_name, entity=False, enum=None):
         else:
             if enum and isinstance(enum, dict):
                 try:
-                    return enum.get(int(result),'Unknown')
+                    return enum.get(int(result), 'Unknown')
                 except Exception:
                     return result
             else:
@@ -6022,7 +6017,7 @@ def apply_defaults(dictionary, default_defaults=None, leave_defaults=False):
         for k, v in dictionary.iteritems():
             dictionary[k] = dict(defaults, **v)
             if 'extra_params' in  dictionary[k].keys():
-                extra_params = defaults.get('extra_params',{})
+                extra_params = defaults.get('extra_params', {})
                 dictionary_params = dictionary[k]['extra_params']
                 for i, j in extra_params.items():
                     if i not in dictionary_params.keys():
