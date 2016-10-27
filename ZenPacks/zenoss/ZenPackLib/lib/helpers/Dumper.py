@@ -262,8 +262,6 @@ from ..params.GraphDefinitionSpecParams import GraphDefinitionSpecParams
 from ..params.GraphPointSpecParams import GraphPointSpecParams
 from ..params.ProcessClassSpecParams import ProcessClassSpecParams
 from ..params.ProcessClassOrganizerSpecParams import ProcessClassOrganizerSpecParams
-from ..params.WindowsServiceOrganizerSpecParams import WindowsServiceOrganizerSpecParams
-from ..params.WindowsServiceSpecParams import WindowsServiceSpecParams
 
 # Spec subclasses
 Dumper.add_representer(ZenPackSpec, Dumper.represent_zenpackspec)
@@ -297,5 +295,3 @@ Dumper.add_representer(EventClassSpecParams, Dumper.represent_spec)
 Dumper.add_representer(EventClassMappingSpec, Dumper.represent_spec)
 Dumper.add_representer(ProcessClassOrganizerSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ProcessClassSpecParams, Dumper.represent_spec)
-Dumper.add_representer(WindowsServiceOrganizerSpecParams, Dumper.represent_spec)
-Dumper.add_representer(WindowsServiceSpecParams, Dumper.represent_spec)

@@ -116,10 +116,6 @@ class ZenPack(ZenPackBase):
         for psname, psspec in self.process_class_organizers.iteritems():
             psspec.create(self.dmd)
 
-        # Create Windows Services
-        for wsname, wsspec in self.windows_service_organizers.iteritems():
-            wsspec.create(self.dmd)
-
     def remove(self, app, leaveObjects=False):
         if self._v_specparams is None:
             return
@@ -228,11 +224,6 @@ class ZenPack(ZenPackBase):
                                           self.process_class_organizers,
                                           'process_classes',
                                           'removeOSProcessClasses')
-            # Remove Windows Services/Organizers with remove flag set
-            self.remove_organizer_or_subs(app.dmd.Services,
-                                          self.windows_service_organizers,
-                                          'windows_services',
-                                          'removeServiceClasses')
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
@@ -391,4 +382,3 @@ class ZenPack(ZenPackBase):
 
         except Exception, e:
             self.LOG.error("Unable to postprocess {}: {}".format(filename, e))
-
