@@ -34,7 +34,6 @@ from .RelationshipSchemaSpec import RelationshipSchemaSpec
 from .ZPropertySpec import ZPropertySpec
 from .EventClassSpec import EventClassSpec
 from .ProcessClassOrganizerSpec import ProcessClassOrganizerSpec
-from .WindowsServiceOrganizerSpec import WindowsServiceOrganizerSpec
 
 DYNAMICVIEW_INSTALLED = dynamicview_installed()
 
@@ -98,7 +97,6 @@ class ZenPackSpec(Spec):
             device_classes=None,
             event_classes=None,
             process_class_organizers=None,
-            windows_service_organizers=None,
             _source_location=None,
             zplog=None):
         """
@@ -119,8 +117,6 @@ class ZenPackSpec(Spec):
             :type event_classes: SpecsParameter(EventClassSpec)
             :param process_class_organizers: Process Class Specs
             :type process_class_organizers: SpecsParameter(ProcessClassOrganizerSpec)
-            :param windows_service_organizers: Windows Service Specs
-            :type windows_service_organizers: SpecsParameter(WindowsServiceOrganizerSpec)
         """
         super(ZenPackSpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -136,7 +132,6 @@ class ZenPackSpec(Spec):
             device_classes=device_classes,
             event_classes=event_classes,
             process_class_organizers=process_class_organizers,
-            windows_service_organizers=windows_service_organizers,
             zplog=self.LOG)
         self.name = name
         self.LOG.debug("------ {} ------".format(self.name))
@@ -283,10 +278,6 @@ class ZenPackSpec(Spec):
         # Process Classes
         self.process_class_organizers = self.specs_from_param(
             ProcessClassOrganizerSpec, 'process_class_organizers', process_class_organizers)
-
-        # Windows Services
-        self.windows_service_organizers = self.specs_from_param(
-            WindowsServiceOrganizerSpec, 'windows_service_organizers', windows_service_organizers)
 
     @property
     def ordered_classes(self):
@@ -593,7 +584,6 @@ class ZenPackSpec(Spec):
         attributes['device_classes'] = self.device_classes
         attributes['event_classes'] = self.event_classes
         attributes['process_class_organizers'] = self.process_class_organizers
-        attributes['windows_service_organizers'] = self.windows_service_organizers
         attributes['_v_specparams'] = self.specparams
         attributes['NEW_COMPONENT_TYPES'] = self.NEW_COMPONENT_TYPES
         attributes['NEW_RELATIONS'] = self.NEW_RELATIONS
