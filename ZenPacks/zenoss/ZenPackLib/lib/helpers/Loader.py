@@ -52,7 +52,7 @@ class Loader(yaml.Loader):
                 node.start_mark))
             return
 
-        param_defs = spec_class.init_params()
+        param_defs = spec_class.init_params
         specs = OrderedDict()
         for spec_key_node, spec_value_node in node.value:
             try:
@@ -78,7 +78,7 @@ class Loader(yaml.Loader):
             return dict(shorthand=self.construct_scalar(node))
 
         # dictionary of class initialization parameters
-        param_defs = cls.init_params()
+        param_defs = cls.init_params
         # create new dictionary containing instance parameters
         params = {}
         # raise an error if this won't parse correctly
