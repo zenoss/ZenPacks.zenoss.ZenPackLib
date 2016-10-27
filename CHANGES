@@ -12,6 +12,7 @@ Features
 * Improve performance of entity properties in component grids.
 * Simplify what device status means to critical event(s) in /Status.
 * Improve grid performance with streamlined info adapters
+* Add base class proxies for all platform component classes.
 
 Fixes
 
@@ -29,11 +30,13 @@ Fixes
 * Ensure that subcomponent nav JS uses relationship label if given (ZEN-24305)
 * Fix for setting of zProperty values before zProperty exists
 * Fix "unexpected keyword default" message
+* Fix support for extending platform component classes. (ZEN-25559)
 
 Documentation
 
 * Fix YAML reference for dynamicview_group class field.
 * Fix documentation of default value for dynamicview_views.
+* Document new component class proxies such as IpInterface and FileSystem.
 
 
 Version 1.0
