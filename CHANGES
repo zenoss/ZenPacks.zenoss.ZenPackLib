@@ -11,7 +11,6 @@ Features
 * Class icons beginning with / will be treated as absolute URL paths.
 * Improve performance of entity properties in component grids.
 * Simplify what device status means to critical event(s) in /Status.
-* Add detection of reserved words
 * Improve grid performance with streamlined info adapters
 
 
