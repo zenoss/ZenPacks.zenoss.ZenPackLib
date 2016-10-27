@@ -13,7 +13,6 @@ Features
 * Simplify what device status means to critical event(s) in /Status.
 * Improve grid performance with streamlined info adapters
 
-
 Fixes
 
 * Fix tracebacks caused by property datapoint_cached. (ZEN-22287)
@@ -28,9 +27,8 @@ Fixes
 * Ensure that inherited relationship names are used (ZEN-24302)
 * Ensure that inherited relationship names are displayed consistently (ZEN-24303)
 * Ensure that subcomponent nav JS uses relationship label if given (ZEN-24305)
-* Fix installation bug where we attempt to set values on zproperties before they have been created
+* Fix for setting of zProperty values before zProperty exists
 * Fix "unexpected keyword default" message
-
 
 Documentation
 
