@@ -42,7 +42,7 @@ class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
 
         self.extra_params = OrderedDict()
         for propname in [x['id'] for x in datapoint._properties]:
-            if propname not in self.init_params():
+            if propname not in self.init_params:
                 if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
                     self.extra_params[propname] = getattr(datapoint, propname, None)
 
