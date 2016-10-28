@@ -32,7 +32,7 @@ class RRDThresholdSpecParams(SpecParams, RRDThresholdSpec):
 
         self.extra_params = OrderedDict()
         for propname in [x['id'] for x in threshold._properties]:
-            if propname not in self.init_params():
+            if propname not in self.init_params:
                 if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
                     self.extra_params[propname] = getattr(threshold, propname, None)
 
