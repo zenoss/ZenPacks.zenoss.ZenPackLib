@@ -36,7 +36,7 @@ class Dumper(yaml.Dumper):
         be used for this specific zenpacklib.
     """
 
-    LOG=DEFAULTLOG
+    LOG = DEFAULTLOG
 
     def dict_representer(self, data):
         return yaml.MappingNode(u'tag:yaml.org,2002:map', data.items())
@@ -67,7 +67,7 @@ class Dumper(yaml.Dumper):
         elif v_type == 'Severity':
             return self.represent_str(self.severity_to_str(value))
         else:
-            
+
             m = re.match('^SpecsParameter\((.*)\)$', v_type)
             if m:
                 spectype = m.group(1)
@@ -119,7 +119,7 @@ class Dumper(yaml.Dumper):
 
         mapping = OrderedDict()
 
-        param_defs = cls.init_params()
+        param_defs = cls.init_params
 
         for p_name, p_data in param_defs.iteritems():
             # determine what type of object this is

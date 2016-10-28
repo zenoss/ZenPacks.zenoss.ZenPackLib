@@ -41,7 +41,7 @@ class RRDDatasourceSpecParams(SpecParams, RRDDatasourceSpec):
 
         self.extra_params = OrderedDict()
         for propname in [x['id'] for x in datasource._properties]:
-            if propname not in self.init_params():
+            if propname not in self.init_params:
                 if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
                     self.extra_params[propname] = getattr(datasource, propname, None)
 
