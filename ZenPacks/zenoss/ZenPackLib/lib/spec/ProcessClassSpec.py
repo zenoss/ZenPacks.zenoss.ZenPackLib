@@ -9,6 +9,7 @@
 
 import re
 from .Spec import Spec
+from ..base.formats import Severity
 
 """Process Class Specs"""
 
@@ -47,10 +48,10 @@ class ProcessClassSpec(Spec):
           :type monitor: bool
           :param alert_on_restart: Send Event on Restart?
           :type alert_on_restart: bool
-          :param fail_severity: Failure Event Severity
-          :type fail_severity: bool
-          :param modeler_lock: Lock Process Components?
-          :type modeler_lock: bool
+          :param fail_severity: Failure Event Severity (0-5)
+          :type fail_severity: Severity
+          :param modeler_lock: Lock Process Components, should be one of 0 (UNLOCKED), 1 (DELETE_LOCKED), 2 (UPDATE_LOCKED)
+          :type modeler_lock: int
           :param send_event_when_blocked: Send and event when action is blocked?
           :type send_event_when_blocked: bool
           :param remove: Remove Organizer on ZenPack removal
@@ -85,7 +86,7 @@ class ProcessClassSpec(Spec):
         self.replacement = replacement
         self.monitor = monitor
         self.alert_on_restart = alert_on_restart
-        self.fail_severity = fail_severity
+        self.fail_severity = Severity(fail_severity)
         self.modeler_lock = modeler_lock
         self.send_event_when_blocked = send_event_when_blocked
 
