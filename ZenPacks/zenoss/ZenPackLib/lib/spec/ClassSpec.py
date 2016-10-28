@@ -101,6 +101,7 @@ class ClassSpec(Spec):
     dynamicview_relations -> impacts/impacted_by, to avoid slowing down performance due
     to double adapters doing the same thing.
     """
+    _icon_url = None
 
     def __init__(
             self,
@@ -228,7 +229,7 @@ class ClassSpec(Spec):
         self.plural_label_width = plural_label_width or self.label_width + 7
         self.content_width = content_width or label_width
 
-        self.icon_url = icon
+        self.icon = icon
 
         # Force properties into the 5.0 - 5.9 order range.
         if not order:
@@ -460,18 +461,19 @@ class ClassSpec(Spec):
     @property
     def icon_url(self):
         """Return relative URL to icon."""
+        if not self._icon_url:
+            self._icon_url = self.get_icon_url()
         return self._icon_url
 
-    @icon_url.setter
-    def icon_url(self, icon):
+    def get_icon_url(self):
         """Set icon_url"""
         self._icon_url = None
         # if it's already given with the path
-        if icon and icon.startswith('/'):
-            self._icon_url = icon
+        if self.icon and self.icon.startswith('/'):
+            self._icon_url = self.icon
         else:
             # otherwise check if it exists whether or not it's given
-            icon_filename = icon or '{}.png'.format(self.name)
+            icon_filename = self.icon or '{}.png'.format(self.name)
             zenpack_path = get_zenpack_path(self.zenpack.name)
             if zenpack_path:
                 icon_path = os.path.join(
