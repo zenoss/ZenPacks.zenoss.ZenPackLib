@@ -9,6 +9,7 @@
 from Products.ZenModel.GraphPoint import GraphPoint
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
+from ..base.types import Color
 from .Spec import Spec
 
 
@@ -78,7 +79,7 @@ class GraphPointSpec(Spec):
         self.limit = limit
         self.rpn = rpn
         self.cFunc = cFunc
-        self.color = color
+        self.color = Color(color)
         self.includeThresholds = includeThresholds
 
         # Shorthand for datapoints that have the same name as their datasource.
