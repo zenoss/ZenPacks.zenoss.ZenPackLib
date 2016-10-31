@@ -647,3 +647,11 @@ includeThresholds
   :Required: No
   :Type: boolean
   :Default Value: false
+
+thresholdLegends
+  :Description: Mapping of threshold id to legend (string) and color (RRGGBB)
+  :Required: No
+  :Type: map
+  :Default Value: None
+  :Example: thresholdLegends: {threshold_id: {legend: Legend, color: OO1122}}
+  

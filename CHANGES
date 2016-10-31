@@ -24,6 +24,7 @@ Features
 * Ability to use ZenPack-provided zenpacklib module
 * Added support for Process Class definitions
 * Deprecated support for python-based "yaml" specifications
+* Support for threshold graphpoint legend and color (ZEN-24904)
 
 Fixes
 
