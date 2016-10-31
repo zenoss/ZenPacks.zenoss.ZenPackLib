@@ -101,6 +101,7 @@ class ClassSpec(Spec):
     dynamicview_relations -> impacts/impacted_by, to avoid slowing down performance due
     to double adapters doing the same thing.
     """
+    _icon_url = None
 
     _model_schema_class = None
     _model_class = None
