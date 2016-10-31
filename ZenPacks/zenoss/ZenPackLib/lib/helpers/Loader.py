@@ -15,6 +15,7 @@ import keyword
 from collections import OrderedDict
 from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
+from ..base.formats import Color, Severity
 
 
 class Loader(yaml.Loader):
@@ -32,6 +33,16 @@ class Loader(yaml.Loader):
     def dict_constructor(self, node):
         """constructor for OrderedDict"""
         return OrderedDict(self.construct_pairs(node))
+
+    def construct_severity(self, node):
+        value = node.value
+        try:
+            value = int(value)
+        except (TypeError, ValueError):
+            value = str(value)
+        print 'construct_severity: {} ({})'.format(value, type(value))
+        sev = Severity(value)
+        return sev.orig
 
     def construct_specsparameters(self, node, spectype):
         """constructor for SpecsParameters"""
@@ -210,8 +221,9 @@ class Loader(yaml.Loader):
                     yaml_value = self.str_to_relschemaspec(schemastr)
 
                 elif expected_type == 'Severity':
-                    severitystr = self.construct_python_str(value_node)
-                    yaml_value = self.str_to_severity(severitystr)
+                    # yaml_value = self.construct_python_str(value_node)
+                    # yaml_value = self.str_to_severity(severitystr)
+                    yaml_value = self.construct_severity(value_node)
 
                 elif re.match('^SpecsParameter\((.*)\)$', expected_type):
                     m = re.match('^SpecsParameter\((.*)\)$', expected_type)
