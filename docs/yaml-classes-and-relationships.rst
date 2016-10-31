@@ -42,7 +42,6 @@ classes or relationships.
     * OSProcess (os/processes)
     * IpService (os/ipservices)
     * WinService (os/winservices)
-    * Software (os/software)
 
 
 .. _zenpacklib-classes:
@@ -73,7 +72,6 @@ of the following two base classes provided by zenpacklib.
     * zenpacklib.IpInterface
     * zenpacklib.IpRouteEntry
     * zenpacklib.OSProcess
-    * zenpacklib.Software
 
     * zenpacklib.Service
 
