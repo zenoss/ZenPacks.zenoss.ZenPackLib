@@ -50,6 +50,8 @@ def MethodInfoProperty(method_name, entity=False, enum=None):
             else:
                 return result
 
+    return property(getter)
+
 def EnumInfoProperty(data, enum):
     """Return a property filtered via an enum."""
     def getter(self, data, enum):
