@@ -8,6 +8,7 @@
 ##############################################################################
 from .Spec import Spec
 from .RRDDatapointSpec import RRDDatapointSpec
+from ..base.types import Severity
 
 class RRDDatasourceSpec(Spec):
     """RRDDatasourceSpec"""
@@ -63,7 +64,7 @@ class RRDDatasourceSpec(Spec):
         self.component = component
         self.eventClass = eventClass
         self.eventKey = eventKey
-        self.severity = severity
+        self.severity = Severity(severity)
         self.commandTemplate = commandTemplate
         if extra_params is None:
             self.extra_params = {}

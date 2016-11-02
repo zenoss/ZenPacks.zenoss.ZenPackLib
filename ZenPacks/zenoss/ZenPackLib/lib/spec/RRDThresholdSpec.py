@@ -7,6 +7,8 @@
 #
 ##############################################################################
 from .Spec import Spec
+from ..base.types import Severity
+
 
 class RRDThresholdSpec(Spec):
     """RRDThresholdSpec"""
@@ -50,7 +52,7 @@ class RRDThresholdSpec(Spec):
         self.template_spec = template_spec
         self.dsnames = dsnames
         self.eventClass = eventClass
-        self.severity = severity
+        self.severity = Severity(severity)
         self.enabled = enabled
         self.type_ = type_
         if extra_params is None:
