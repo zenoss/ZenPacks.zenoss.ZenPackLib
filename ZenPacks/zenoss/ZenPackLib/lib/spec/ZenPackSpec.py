@@ -139,6 +139,7 @@ class ZenPackSpec(Spec):
             event_classes=event_classes,
             process_class_organizers=process_class_organizers,
             zplog=self.LOG)
+
         self.name = name
         self.LOG.debug("------ {} ------".format(self.name))
         self.id_prefix = name.replace(".", "_")
@@ -150,6 +151,39 @@ class ZenPackSpec(Spec):
         self.zProperties = self.specs_from_param(
             ZPropertySpec, 'zProperties', zProperties, zplog=self.LOG)
 
+        # build class_relationships RelationshipSchemaSpecs
+        self.build_class_relationships(class_relationships)
+
+        # build class ClassSpecs
+        self.classes = self.specs_from_param(ClassSpec, 'classes', classes, zplog=self.LOG)
+
+        # import any required external classes for relation schemas
+        self.get_imported_classes()
+
+        # check that class_relations are correctly defined
+        self.check_class_relationships(classes)
+
+        # attach ClassRelationshipSpecs to each ClassSpec built from self.class_relationships
+        self.build_schema_relations()
+
+        # update imported class relationships as needed
+        # as well as self.NEW_RELATIONS and self.NEW_COMPONENT_TYPES
+        self.plumb_relations()
+
+        # Device Classes
+        self.device_classes = self.specs_from_param(
+            DeviceClassSpec, 'device_classes', device_classes, zplog=self.LOG)
+
+        # Event Classes
+        self.event_classes = self.specs_from_param(
+            EventClassSpec, 'event_classes', event_classes)
+
+        # Process Classes
+        self.process_class_organizers = self.specs_from_param(
+            ProcessClassOrganizerSpec, 'process_class_organizers', process_class_organizers)
+
+    def build_class_relationships(self, class_relationships):
+        """build class RelationshipSchemaSpec"""
         # Class Relationship Schema
         self.class_relationships = []
         if class_relationships:
@@ -159,23 +193,8 @@ class ZenPackSpec(Spec):
                 rel['zplog'] = self.LOG
                 self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
 
-        # Classes
-        self.classes = self.specs_from_param(ClassSpec, 'classes', classes, zplog=self.LOG)
-
-        self.imported_classes = {}
-
-        # Import any external classes referred to in the schema
-        for rel in self.class_relationships:
-            for relschema in (rel.left_schema, rel.right_schema):
-                className = relschema.remoteClass
-                if '.' in className and className.split('.')[-1] not in self.classes:
-                    module = ".".join(className.split('.')[0:-1])
-                    try:
-                        kls = importClass(module)
-                        self.imported_classes[className] = kls
-                    except ImportError:
-                        pass
-
+    def check_class_relationships(self, classes):
+        """check that class_relationships are defined correctly """
         # Class Relationships
         if classes:
             for classname, classdata in classes.iteritems():
@@ -188,28 +207,30 @@ class ZenPackSpec(Spec):
                     if 'schema' in relationships[relationship]:
                         raise ValueError("Class '%s': 'schema' may not be defined or modified in an individual class's relationship.  Use the zenpack's class_relationships instead." % classname)
 
-        def find_relation_in_bases(bases, relname):
-            '''return inherited relationship spec'''
-            for base in bases:
-                base_cls = self.classes.get(base)
-                if relname in base_cls.relationships:
-                    return base_cls.relationships.get(relname)
-            return None
+    def get_imported_classes(self):
+        """Import any external classes referred to in the schema"""
+        self.imported_classes = {}
+        # Import any external classes referred to in the schema
+        for rel in self.class_relationships:
+            for relschema in (rel.left_schema, rel.right_schema):
+                className = relschema.remoteClass
+                if '.' in className and className.split('.')[-1] not in self.classes:
+                    module = ".".join(className.split('.')[0:-1])
+                    try:
+                        kls = importClass(module)
+                        self.imported_classes[className] = kls
+                    except ImportError:
+                        pass
 
-        def get_bases(cls, bases=[]):
-            '''find all available base classes for this class'''
-            for base in cls.bases:
-                base_cls = self.classes.get(base)
-                if not base_cls:
-                    continue
-                if base not in bases:
-                    bases.append(base)
-                bases = get_bases(base_cls, bases)
-            return bases
-
+    def build_schema_relations(self):
+        """
+            Populate ClassSpec "relationships" attribute
+            with ClassRelationshipSpec classes, ensuring that 
+            each has a schema defined
+        """
         for class_ in self.classes.values():
             # list of all base classes for this class
-            bases = get_bases(class_, bases=[])
+            bases = self.get_bases(class_, bases=[])
             # Link the appropriate predefined (class_relationships) schema into place on this class's relationships list.
             for rel in self.class_relationships:
                 # handle both directions
@@ -230,7 +251,7 @@ class ZenPackSpec(Spec):
                         for base in bases:
                             if target_class == base:
                                 # see if we have an existing relspec
-                                found_rel = find_relation_in_bases(bases, target_relname)
+                                found_rel = self.find_relation_in_bases(bases, target_relname)
                                 # we need to inherit in this case
                                 if found_rel:
                                     if target_relname not in class_.relationships:
@@ -239,8 +260,22 @@ class ZenPackSpec(Spec):
                                         class_.relationships[target_relname].schema = target_schema
                                     continue
 
+    def plumb_relations(self):
+        """
+            Plumb class relations by ancestors first
+        """
         for class_ in self.classes.values():
-            # Plumb _relations
+            for spec in class_.base_class_specs():
+                self.plumb_class_relations(spec)
+            self.plumb_class_relations(class_)
+
+    def plumb_class_relations(self, class_):
+        """
+            Plumb class relations and update 
+            remote class _v_local_relations/_relations
+            as well as updating NEW_RELATIONS and NEW_COMPONENT_TYPES
+        """
+        if not class_._plumbed:
             for relname, relationship in class_.relationships.iteritems():
                 if not relationship.schema:
                     self.LOG.error("Removing invalid display config for relationship {} from  {}.{}".format(relname, self.name, class_.name))
@@ -272,18 +307,26 @@ class ZenPackSpec(Spec):
                     component_type = '.'.join((modname, className))
                     if component_type not in self.NEW_COMPONENT_TYPES:
                         self.NEW_COMPONENT_TYPES.append(component_type)
+            class_._plumbed = True
 
-        # Device Classes
-        self.device_classes = self.specs_from_param(
-            DeviceClassSpec, 'device_classes', device_classes, zplog=self.LOG)
+    def find_relation_in_bases(self, bases, relname):
+        '''return inherited relationship spec'''
+        for base in bases:
+            base_cls = self.classes.get(base)
+            if relname in base_cls.relationships:
+                return base_cls.relationships.get(relname)
+        return None
 
-        # Event Classes
-        self.event_classes = self.specs_from_param(
-            EventClassSpec, 'event_classes', event_classes)
-
-        # Process Classes
-        self.process_class_organizers = self.specs_from_param(
-            ProcessClassOrganizerSpec, 'process_class_organizers', process_class_organizers)
+    def get_bases(self, cls, bases=[]):
+        '''find all available base classes for this class'''
+        for base in cls.bases:
+            base_cls = self.classes.get(base)
+            if not base_cls:
+                continue
+            if base not in bases:
+                bases.append(base)
+            bases = self.get_bases(base_cls, bases)
+        return bases
 
     @property
     def ordered_classes(self):
@@ -300,7 +343,7 @@ class ZenPackSpec(Spec):
             spec.create()
 
         for spec in self.classes.itervalues():
-            spec.create_registered()
+            spec.create()
 
         self.create_product_names()
         self.create_ordered_component_tree()
