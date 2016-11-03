@@ -75,9 +75,8 @@ Features
 * Class icons beginning with / will be treated as absolute URL paths.
 * Improve performance of entity properties in component grids.
 * Simplify what device status means to critical event(s) in /Status.
-* Add detection of reserved words
 * Improve grid performance with streamlined info adapters
-
+* Add base class proxies for all platform component classes.
 
 Fixes
 
@@ -93,14 +92,15 @@ Fixes
 * Ensure that inherited relationship names are used (ZEN-24302)
 * Ensure that inherited relationship names are displayed consistently (ZEN-24303)
 * Ensure that subcomponent nav JS uses relationship label if given (ZEN-24305)
-* Fix installation bug where we attempt to set values on zproperties before they have been created
+* Fix for setting of zProperty values before zProperty exists
 * Fix "unexpected keyword default" message
-
+* Fix support for extending platform component classes. (ZEN-25559)
 
 Documentation
 
 * Fix YAML reference for dynamicview_group class field.
 * Fix documentation of default value for dynamicview_views.
+* Document new component class proxies such as IpInterface and FileSystem.
 
 
 Version 1.0

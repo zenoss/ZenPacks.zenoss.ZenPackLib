@@ -42,7 +42,6 @@ classes or relationships.
     * OSProcess (os/processes)
     * IpService (os/ipservices)
     * WinService (os/winservices)
-    * Software (os/software)
 
 
 .. _zenpacklib-classes:
@@ -55,7 +54,29 @@ If you need more than the standard classes provide, you will need to extend one
 of the following two base classes provided by zenpacklib.
 
 * zenpacklib.Device
+
 * zenpacklib.Component
+
+  * zenpacklib.HWComponent
+
+    * zenpacklib.CPU
+    * zenpacklib.ExpansionCard
+    * zenpacklib.Fan
+    * zenpacklib.HardDisk
+    * zenpacklib.PowerSupply
+    * zenpacklib.TemperatureSensor
+
+  * zenpacklib.OSComponent
+
+    * zenpacklib.FileSystem
+    * zenpacklib.IpInterface
+    * zenpacklib.IpRouteEntry
+    * zenpacklib.OSProcess
+
+    * zenpacklib.Service
+
+      * zenpacklib.IpService
+      * zenpacklib.WinService
 
 You use *zenpacklib.Device* to create new device types of which instances will
 appear on the *Infrastructure* screen. You use *zenpacklib.Component* to create
@@ -66,6 +87,10 @@ example, a XenServer ZenPack would add a new device type called *Endpoint* which
 represents the XenAPI management interface. That *Endpoint* device type would
 have many components of types such as *Pool*, *StorageRepository* and
 *VirtualMachine*.
+
+The other supported classes are proxies for their platform equivalents, and are
+to be used when you want to extend one of the platform component types rather
+than creating a totally new component type.
 
 
 .. _zenpacklib-relationships:
@@ -197,7 +222,7 @@ name
   :Default Value: *(implied from key in classes map)*
 
 base
-  :Description: List of base classes to extend.
+  :Description: List of base classes to extend. See :ref:`Classes <zenpacklib-classes>`
   :Required: No
   :Type: list<classname>
   :Default Value: [zenpacklib.Component]
