@@ -42,7 +42,6 @@ classes or relationships.
     * OSProcess (os/processes)
     * IpService (os/ipservices)
     * WinService (os/winservices)
-    * Software (os/software)
 
 
 .. _zenpacklib-classes:
@@ -55,7 +54,29 @@ If you need more than the standard classes provide, you will need to extend one
 of the following two base classes provided by zenpacklib.
 
 * zenpacklib.Device
+
 * zenpacklib.Component
+
+  * zenpacklib.HWComponent
+
+    * zenpacklib.CPU
+    * zenpacklib.ExpansionCard
+    * zenpacklib.Fan
+    * zenpacklib.HardDisk
+    * zenpacklib.PowerSupply
+    * zenpacklib.TemperatureSensor
+
+  * zenpacklib.OSComponent
+
+    * zenpacklib.FileSystem
+    * zenpacklib.IpInterface
+    * zenpacklib.IpRouteEntry
+    * zenpacklib.OSProcess
+
+    * zenpacklib.Service
+
+      * zenpacklib.IpService
+      * zenpacklib.WinService
 
 You use *zenpacklib.Device* to create new device types of which instances will
 appear on the *Infrastructure* screen. You use *zenpacklib.Component* to create
@@ -66,6 +87,10 @@ example, a XenServer ZenPack would add a new device type called *Endpoint* which
 represents the XenAPI management interface. That *Endpoint* device type would
 have many components of types such as *Pool*, *StorageRepository* and
 *VirtualMachine*.
+
+The other supported classes are proxies for their platform equivalents, and are
+to be used when you want to extend one of the platform component types rather
+than creating a totally new component type.
 
 
 .. _zenpacklib-relationships:
@@ -197,7 +222,7 @@ name
   :Default Value: *(implied from key in classes map)*
 
 base
-  :Description: List of base classes to extend.
+  :Description: List of base classes to extend. See :ref:`Classes <zenpacklib-classes>`
   :Required: No
   :Type: list<classname>
   :Default Value: [zenpacklib.Component]
@@ -238,7 +263,7 @@ icon
   :Description: Filename (in resources/) for icon.
   :Required: No
   :Type: string
-  :Default Value: *(same as name with a ".png" suffix)*
+  :Default Value: *(same as name with a ".png" suffix in resources/icon/)*
   
 label_width
   :Description: Width of label text in pixels.
@@ -316,13 +341,19 @@ dynamicview_views
   :Description: Names of Dynamic Views objects of this class can appear in.
   :Required: No
   :Type: list<*dynamicview_view_name*>
-  :Default Value: [] *(empty list)*
+  :Default Value: [service_view]
   
-dynamicview_groups
-  :Description: Dynamic View group name for objects of this class.
+dynamicview_group
+  :Description: Dynamic View group name for objects of this class. Can be overridden by implementing getDynamicViewGroup() method on class.
   :Required: No
   :Type: string
   :Default Value: *(same as plural_short_label)*
+
+dynamicview_weight
+  :Description: Dynamic View weight for objects of this class. Higher numbers are further to the right. Can be overridden by implementing getDynamicViewGroup() method on class.
+  :Required: No
+  :Type: float or int
+  :Default: 1000 + (order * 100)
   
 dynamicview_relations
   :Description: Map of Dynamic View relationships for this class and the relationship or method names that when called populate them.
