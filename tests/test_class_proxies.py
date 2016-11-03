@@ -50,6 +50,33 @@ classes:
 
   MyComponent:
     base: [zenpacklib.Component]
+    properties:
+      idx_device:
+        index_type: field
+
+      idx_global:
+        index_type: field
+        index_scope: global
+
+  MyComponentSub1:
+    base: [MyComponent]
+    properties:
+      idx_device_sub1:
+        index_type: field
+
+      idx_global_sub1:
+        index_type: field
+        index_scope: global
+
+  MyComponentSub2:
+    base: [MyComponent]
+    properties:
+      idx_device_sub2:
+        index_type: field
+
+      idx_global_sub2:
+        index_type: field
+        index_scope: global
 
   MyCPU:
     base: [zenpacklib.CPU]
@@ -103,13 +130,24 @@ classes:
     base: [zenpacklib.WinService]
 """
 
+def create_device(dmd, zPythonClass, device_id, datamaps):
+    deviceclass = dmd.Devices.createOrganizer("/Test")
+    deviceclass.setZenProperty("zPythonClass", zPythonClass)
+    device = deviceclass.createInstance(device_id)
+    device.setPerformanceMonitor("localhost")
+    device.setManageIp("127.1.2.3")
+    device.index_object()
+    notify(IndexingEvent(device))
 
-def add_contained(rel, obj):
-    rel._setObject(obj.id, obj)
-    p = rel._getOb(obj.id)
-    p.index_object()
-    notify(IndexingEvent(p))
-    return p
+    adm = ApplyDataMap()._applyDataMap
+
+    [adm(device, datamap) for datamap in datamaps]
+
+    for component in device.getDeviceComponentsNoIndexGen():
+        component.index_object()
+        notify(IndexingEvent(component))
+
+    return device
 
 
 class TestClassProxies(BaseTestCase):
@@ -126,15 +164,7 @@ class TestClassProxies(BaseTestCase):
             except Exception:
                 self.fail(traceback.format_exc(limit=0))
 
-    def test_class_proxies(self):
-        dc = self.dmd.Devices.createOrganizer("/Test")
-        dc.setZenProperty("zPythonClass", "ZenPacks.test.ClassProxies.MyDevice")
-        device = dc.createInstance("test-device")
-        device.setPerformanceMonitor("localhost")
-        device.setManageIp("127.1.2.3")
-        device.index_object()
-        notify(IndexingEvent(device))
-
+    def test_standard_catalogs(self):
         datamaps = [
             RelationshipMap(
                 modname="ZenPacks.test.ClassProxies.MyComponent",
@@ -234,12 +264,11 @@ class TestClassProxies(BaseTestCase):
                 objmaps=[ObjectMap({"id": "myWinService-1"})]),
             ]
 
-        adm = ApplyDataMap()._applyDataMap
-        [adm(device, datamap) for datamap in datamaps]
-
-        # ZEN-4087: Workaround issue where first indexed component may
-        # not be properly indexed.
-        device.componentSearch()[0].getObject().index_object()
+        device = create_device(
+            self.dmd,
+            zPythonClass="ZenPacks.test.ClassProxies.MyDevice",
+            device_id="test-device",
+            datamaps=datamaps)
 
         all_classnames = {
             'MyDevice',
@@ -293,6 +322,179 @@ class TestClassProxies(BaseTestCase):
             self.assertTrue(
                 len(results) == 1,
                 "{} not found in ComponentBaseSearch catalog".format(id_))
+
+    def test_subclass_catalogs(self):
+        rm = RelationshipMap(
+            modname="ZenPacks.test.ClassProxies.MyComponent",
+            relname="myComponents")
+
+        rm.extend([
+            ObjectMap(
+                modname="ZenPacks.test.ClassProxies.MyComponent",
+                data={
+                    "id": "myComponent-1",
+                    "idx_device": "myComponent-1",
+                    "idx_global": "myComponent-1"}),
+
+            ObjectMap(
+                modname="ZenPacks.test.ClassProxies.MyComponent",
+                data={
+                    "id": "myComponent-2",
+                    "idx_device": "myComponent-2",
+                    "idx_global": "myComponent-2"}),
+
+            ObjectMap(
+                modname="ZenPacks.test.ClassProxies.MyComponentSub1",
+                data={
+                    "id": "myComponent1-1",
+                    "idx_device": "myComponent1-1",
+                    "idx_global": "myComponent1-1",
+                    "idx_device_sub1": "myComponent1-1",
+                    "idx_global_sub1": "myComponent1-1"}),
+
+            ObjectMap(
+                modname="ZenPacks.test.ClassProxies.MyComponentSub1",
+                data={
+                    "id": "myComponent1-2",
+                    "idx_device": "myComponent1-2",
+                    "idx_global": "myComponent1-2",
+                    "idx_device_sub1": "myComponent1-2",
+                    "idx_global_sub1": "myComponent1-2"}),
+
+            ObjectMap(
+                modname="ZenPacks.test.ClassProxies.MyComponentSub2",
+                data={
+                    "id": "myComponent2-1",
+                    "idx_device": "myComponent2-1",
+                    "idx_global": "myComponent2-1",
+                    "idx_device_sub2": "myComponent2-1",
+                    "idx_global_sub2": "myComponent2-1"}),
+
+            ObjectMap(
+                modname="ZenPacks.test.ClassProxies.MyComponentSub2",
+                data={
+                    "id": "myComponent2-2",
+                    "idx_device": "myComponent2-2",
+                    "idx_global": "myComponent2-2",
+                    "idx_device_sub2": "myComponent2-2",
+                    "idx_global_sub2": "myComponent2-2"})])
+
+        # Describe what all of the catalogs should look like.
+        component_ids = [
+            "myComponent-1", "myComponent1-1", "myComponent2-1",
+            "myComponent-2", "myComponent1-2", "myComponent2-2",
+            ]
+
+        device_expected = {
+            "MyComponent": {"idx_device": component_ids},
+            "MyComponentSub1": {"idx_device_sub1": ["myComponent1-1", "myComponent1-2"]},
+            "MyComponentSub2": {"idx_device_sub2": ["myComponent2-1", "myComponent2-2"]}}
+
+        from ZenPacks.test.ClassProxies.MyComponent import MyComponent
+        from ZenPacks.test.ClassProxies.MyComponentSub1 import MyComponentSub1
+        from ZenPacks.test.ClassProxies.MyComponentSub2 import MyComponentSub2
+
+        global_expected = {
+            MyComponent: {"idx_global": component_ids * 2},
+            MyComponentSub1: {"idx_global_sub1": ["myComponent1-1", "myComponent1-2"] * 2},
+            MyComponentSub2: {"idx_global_sub2": ["myComponent2-1", "myComponent2-2"] * 2}}
+
+        def verify_all_catalogs():
+            for device in devices:
+                for catalog_name, indexes in device_expected.items():
+                    for index_name, expected_values in indexes.items():
+                        self.assertItemsEqual(
+                            expected_values,
+                            [getattr(x, index_name) for x in device.search(catalog_name)])
+
+            for class_, indexes in global_expected.items():
+                for index_name, expected_values in indexes.items():
+                    self.assertItemsEqual(
+                        expected_values,
+                        [getattr(x, index_name) for x in class_.class_search(self.dmd)])
+
+        # Create devices and components
+        devices = [
+            create_device(
+                self.dmd,
+                zPythonClass="ZenPacks.test.ClassProxies.MyDevice",
+                device_id="test-device{}".format(x),
+                datamaps=[rm])
+            for x in (1, 2)]
+
+        # Verify that all catalogs are correct after initial modeling.
+        verify_all_catalogs()
+
+        # Delete catalogs.
+        self.dmd.Devices._delObject("ZenPacks_test_ClassProxies_MyComponentSearch")
+        self.dmd.Devices._delObject("ZenPacks_test_ClassProxies_MyComponentSub1Search")
+        self.dmd.Devices._delObject("ZenPacks_test_ClassProxies_MyComponentSub2Search")
+
+        for device in devices:
+            device._delObject("ComponentBaseSearch")
+            device._delObject("MyComponentSearch")
+            device._delObject("MyComponentSub1Search")
+            device._delObject("MyComponentSub2Search")
+
+        # Index single component of one of the subclasses.
+        devices[0].myComponents._getOb("myComponent1-1").index_object()
+
+        # All components of superclasseses should now be indexed in
+        # device and global catalogs.
+        self.assertItemsEqual(
+            component_ids,
+            [x.id for x in devices[0].search("MyComponent")])
+
+        self.assertItemsEqual(
+            component_ids * 2,
+            [x.id for x in MyComponent.class_search(self.dmd)])
+
+        # All components of the same class should be indexed in device
+        # and global catalogs.
+        self.assertItemsEqual(
+            ["myComponent1-1", "myComponent1-2"],
+            [x.id for x in devices[0].search("MyComponentSub1")])
+
+        self.assertItemsEqual(
+            ["myComponent1-1", "myComponent1-2"] * 2,
+            [x.id for x in MyComponentSub1.class_search(self.dmd)])
+
+        # All components of classes not in the inheritence hierarchy
+        # should not yet be indexed in device or global catalogs.
+        self.assertItemsEqual(
+            [],
+            [x.id for x in devices[0].search("MyComponentSub2")])    
+
+        self.assertItemsEqual(
+            [],
+            [x.id for x in MyComponentSub2.class_search(self.dmd)])
+
+        # Index remaining unique device/subclass combinations.
+        devices[0].myComponents._getOb("myComponent2-1").index_object()
+        devices[1].myComponents._getOb("myComponent1-1").index_object()
+        devices[1].myComponents._getOb("myComponent2-1").index_object()
+
+        # Now all catalogs should be complete.
+        verify_all_catalogs()
+
+    def test_ipinterface_indexing(self):
+        datamaps = RelationshipMap(
+            modname="ZenPacks.test.ClassProxies.MyIpInterface",
+            compname="os",
+            relname="interfaces",
+            objmaps=[
+                ObjectMap({"id": "eth0", "macaddress": "01:23:45:67:89:ab"}),
+                ObjectMap({"id": "eth1", "macaddress": "01:23:45:67:89:ac"})])
+
+        device = create_device(
+            self.dmd,
+            zPythonClass="ZenPacks.test.ClassProxies.MyDevice",
+            device_id="test-device",
+            datamaps=[datamaps])
+
+        self.assertItemsEqual(
+            ["01:23:45:67:89:ab", "01:23:45:67:89:ac"],
+            device.getMacAddresses())
 
 
 def test_suite():
