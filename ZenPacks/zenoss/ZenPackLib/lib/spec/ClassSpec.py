@@ -505,7 +505,8 @@ class ClassSpec(Spec):
         properties = []
         relations = []
         templates = []
-        catalogs = {}
+        device_catalogs = {}
+        global_catalogs = {}
 
         # First inherit from bases.
         for base in self.resolved_bases:
@@ -513,13 +514,10 @@ class ClassSpec(Spec):
                 properties.extend(base._properties)
             if hasattr(base, '_templates'):
                 templates.extend(base._templates)
-            if hasattr(base, '_catalogs'):
-                catalogs.update(base._catalogs)
-
-        if self.name not in catalogs:
-            catalogs[self.name] = {'indexes': {}}
-
-        indexes = catalogs[self.name]['indexes']
+            if hasattr(base, '_device_catalogs'):
+                device_catalogs.update(base._device_catalogs)
+            if hasattr(base, '_global_catalogs'):
+                global_catalogs.update(base._global_catalogs)
 
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
@@ -557,13 +555,22 @@ class ClassSpec(Spec):
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
 
-            indexes.update(spec.catalog_indexes)
+            # Add class and instance catalogs.
+            for index_name, index_spec in spec.catalog_indexes.iteritems():
+                index_scope = index_spec.get('scope', 'device')
+                index_type = index_spec.get('type', 'field')
 
-        # Add a properly-scoped "id" index if needed
-        if len(indexes) > 0:
-            scopes = {x.get('scope', 'device') for x in indexes.values()}
-            indexes['id'] = {'type': 'field',
-                             'scope': 'device' if 'device' in scopes else 'global'}
+                if index_scope in ('both', 'device'):
+                    if self.name in device_catalogs:
+                        device_catalogs[self.name][index_name] = index_type
+                    else:
+                        device_catalogs[self.name] = {index_name: index_type}
+
+                if index_scope in ('both', 'global'):
+                    if self.name in global_catalogs:
+                        global_catalogs[self.name][index_name] = index_type
+                    else:
+                        global_catalogs[self.name] = {index_name: index_type}
 
         # Add local relations.
         for name, spec in self.relationships.iteritems():
@@ -581,7 +588,8 @@ class ClassSpec(Spec):
         attributes['_properties'] = tuple(properties)
         attributes['_v_local_relations'] = tuple(relations)
         attributes['_templates'] = tuple(templates)
-        attributes['_catalogs'] = catalogs
+        attributes['_device_catalogs'] = device_catalogs
+        attributes['_global_catalogs'] = global_catalogs
 
         # Add Impact stuff.
         attributes['impacts'] = self.impacts

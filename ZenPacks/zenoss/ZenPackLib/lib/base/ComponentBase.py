@@ -41,12 +41,10 @@ class ComponentBase(ModelBase):
             },),
         },)
 
-    _catalogs = {
+    _device_catalogs = {
         'ComponentBase': {
-            'indexes': {
-                'id': {'type': 'field'},
-                }
-            }
+            'id': 'field',
+            },
         }
 
     def __setattr__(self, name, value):
@@ -313,7 +311,7 @@ class ComponentBase(ModelBase):
                 # If 'all' mode, just include indirectly-related objects as well, in
                 # an unfiltered manner.
                 if recurse_all:
-                    for facet in obj.get_facets(root=root, seen=seen, path=path, depth=depth+1, recurse_all=True):
+                    for facet in obj.get_facets(root=root, seen=seen, path=path, depth=depth + 1, recurse_all=True):
                         yield facet
 
                 else:
@@ -325,7 +323,7 @@ class ComponentBase(ModelBase):
                         if not recurse:
                             continue
 
-                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, depth=depth+1):
+                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, depth=depth + 1):
                             if (self.id, relname, facet.id) in seen:
                                 # avoid a cycle
                                 continue
