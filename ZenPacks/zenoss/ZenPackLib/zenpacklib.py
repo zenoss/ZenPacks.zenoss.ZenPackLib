@@ -42,8 +42,26 @@ from lib.helpers.utils import load_yaml
 
 # these are the base classes for zenpacklib.Device, zenpacklib.Component, zenpacklib.HardwareComponent
 from lib.base.Device import Device
-from lib.base.Component import Component
-from lib.base.HardwareComponent import HardwareComponent
+from lib.base.Component import (
+    Component,
+    HWComponent,
+    HardwareComponent,
+    CPU,
+    ExpansionCard,
+    Fan,
+    HardDisk,
+    PowerSupply,
+    TemperatureSensor,
+    OSComponent,
+    FileSystem,
+    IpInterface,
+    IpRouteEntry,
+    OSProcess,
+    Service,
+    IpService,
+    WinService
+    )
+
 
 from lib.functions import relationships_from_yuml
 
