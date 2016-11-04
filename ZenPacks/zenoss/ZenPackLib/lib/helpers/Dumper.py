@@ -36,7 +36,7 @@ class Dumper(yaml.Dumper):
         be used for this specific zenpacklib.
     """
 
-    LOG=DEFAULTLOG
+    LOG = DEFAULTLOG
 
     def dict_representer(self, data):
         return yaml.MappingNode(u'tag:yaml.org,2002:map', data.items())
@@ -62,12 +62,7 @@ class Dumper(yaml.Dumper):
                 return self.represent_list(classes)
             else:
                 return self.represent_list(value)
-        elif v_type == 'RelationshipSchemaSpec':
-            return self.represent_str(self.relschemaspec_to_str(value))
-        elif v_type == 'Severity':
-            return self.represent_str(self.severity_to_str(value))
         else:
-            
             m = re.match('^SpecsParameter\((.*)\)$', v_type)
             if m:
                 spectype = m.group(1)
@@ -119,7 +114,7 @@ class Dumper(yaml.Dumper):
 
         mapping = OrderedDict()
 
-        param_defs = cls.init_params()
+        param_defs = cls.init_params
 
         for p_name, p_data in param_defs.iteritems():
             # determine what type of object this is
@@ -201,6 +196,17 @@ class Dumper(yaml.Dumper):
             node_value = self.represent_data(item_value)
             value.append((node_key, node_value))
         return yaml.MappingNode(u'tag:yaml.org,2002:map', value)
+
+    def represent_severity(self, data):
+        """represent Severity"""
+        orig = getattr(data, 'orig')
+        if orig:
+            if isinstance(orig, str):
+                return self.represent_str(orig)
+            elif isinstance(orig, int):
+                return self.represent_int(orig)
+        if orig is None:
+            raise ValueError("'{}' is not a valid value for severity.".format(orig))
 
     def relschemaspec_to_str(self, spec):
         # Omit relation names that are their defaults.
@@ -295,3 +301,7 @@ Dumper.add_representer(EventClassSpecParams, Dumper.represent_spec)
 Dumper.add_representer(EventClassMappingSpec, Dumper.represent_spec)
 Dumper.add_representer(ProcessClassOrganizerSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ProcessClassSpecParams, Dumper.represent_spec)
+# representers for custom types
+from ..base.types import Color, Severity
+Dumper.add_representer(Color, SafeRepresenter.represent_str)
+Dumper.add_representer(Severity, Dumper.represent_severity)

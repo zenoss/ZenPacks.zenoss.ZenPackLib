@@ -70,10 +70,6 @@ from Products.AdvancedQuery import Eq, Or
 from Products.AdvancedQuery.AdvancedQuery import _BaseQuery as BaseQuery
 from Products.Five import zcml
 
-from Products.ZenModel.Device import Device as BaseDevice
-from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
-from Products.ZenModel.HWComponent import HWComponent as BaseHWComponent
-from Products.ZenModel.ManagedEntity import ManagedEntity as BaseManagedEntity
 from Products.ZenModel.ZenossSecurity import ZEN_CHANGE_DEVICE
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
@@ -92,6 +88,26 @@ from Products.ZenUI3.utils.javascript import JavaScriptSnippet
 from Products.ZenUtils.guid.interfaces import IGlobalIdentifier
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
 from Products.ZenUtils.Utils import monkeypatch, importClass
+
+# Extendable Model Classes
+from Products.ZenModel.CPU import CPU as BaseCPU
+from Products.ZenModel.Device import Device as BaseDevice
+from Products.ZenModel.DeviceComponent import DeviceComponent as BaseDeviceComponent
+from Products.ZenModel.ExpansionCard import ExpansionCard as BaseExpansionCard
+from Products.ZenModel.Fan import Fan as BaseFan
+from Products.ZenModel.FileSystem import FileSystem as BaseFileSystem
+from Products.ZenModel.HardDisk import HardDisk as BaseHardDisk
+from Products.ZenModel.HWComponent import HWComponent as BaseHWComponent
+from Products.ZenModel.IpInterface import IpInterface as BaseIpInterface
+from Products.ZenModel.IpRouteEntry import IpRouteEntry as BaseIpRouteEntry
+from Products.ZenModel.IpService import IpService as BaseIpService
+from Products.ZenModel.ManagedEntity import ManagedEntity as BaseManagedEntity
+from Products.ZenModel.OSComponent import OSComponent as BaseOSComponent
+from Products.ZenModel.OSProcess import OSProcess as BaseOSProcess
+from Products.ZenModel.PowerSupply import PowerSupply as BasePowerSupply
+from Products.ZenModel.Service import Service as BaseService
+from Products.ZenModel.TemperatureSensor import TemperatureSensor as BaseTemperatureSensor
+from Products.ZenModel.WinService import WinService as BaseWinService
 
 from Products import Zuul
 from Products.Zuul import marshal
@@ -435,252 +451,187 @@ class ZenPack(ZenPackBase):
 
 
 class CatalogBase(object):
-    """Base class that implements cataloging a property"""
+    """Abstract base class that implements cataloging properties."""
 
-    # By Default there is no default catalog created.
-    _catalogs = {}
+    _device_catalogs = {}
+    _global_catalogs = {}
 
-    def search(self, name, *args, **kwargs):
-        """
-        Return iterable of matching brains in named catalog.
-        'name' is the catalog name (typically the name of a class)
-        """
+    # Searching ##############################################################
+
+    def device_search(self, name, *args, **kwargs):
+        """Return iterable of brains from named catalog that match."""
         return catalog_search(self, name, *args, **kwargs)
 
-    @classmethod
-    def class_search(cls, dmd, name, *args, **kwargs):
-        """
-        Return iterable of matching brains in named catalog.
-        'name' is the catalog name (typically the name of a class)
-        """
+    # Method alias for backwards compatibility.
+    search = device_search
 
-        name = cls.__module__.replace('.', '_')
+    @classmethod
+    def global_search(cls, dmd, name=None, *args, **kwargs):
+        """Return iterable of brains from named catalog that match."""
+        name = "{}_{}".format(
+            cls.zenpack_name.replace(".", "_"),
+            name or cls.__name__)
+
         return catalog_search(dmd.Devices, name, *args, **kwargs)
 
-    @classmethod
-    def get_catalog_name(cls, name, scope):
-        if scope == 'device':
-            return '{}Search'.format(name)
-        else:
-            name = cls.__module__.replace('.', '_')
-            return '{}Search'.format(name)
+    # Method alias for backwards compatibility.
+    class_search = global_search
 
-    @classmethod
-    def class_get_catalog(cls, dmd, name, scope, create=True):
-        """Return catalog by name."""
-        spec = cls._get_catalog_spec(name)
-        if not spec:
-            return
+    # Catalog Lookup #########################################################
 
-        if scope == 'device':
-            raise ValueError("device scoped catalogs are only available from device or component objects, not classes")
-        else:
-            try:
-                return getattr(dmd.Devices, cls.get_catalog_name(name, scope))
-            except AttributeError:
-                if create:
-                    return cls._class_create_catalog(dmd, name, 'global')
-        return
+    def get_all_catalogs(self):
+        """Return list of device and global catalogs for this object."""
+        catalogs = self.get_device_catalogs()
 
-    def get_catalog(self, name, scope, create=True):
-        """Return catalog by name."""
-
-        spec = self._get_catalog_spec(name)
-        if not spec:
-            return
-
-        if scope == 'device':
-            try:
-                return getattr(self.device(), self.get_catalog_name(name, scope))
-            except AttributeError:
-                if create:
-                    return self._create_catalog(name, 'device')
-        else:
-            try:
-                return getattr(self.dmd.Devices, self.get_catalog_name(name, scope))
-            except AttributeError:
-                if create:
-                    return self._create_catalog(name, 'global')
-        return
-
-    @classmethod
-    def get_catalog_scopes(cls, name):
-        """Return catalog scopes by name."""
-        spec = cls._get_catalog_spec(name)
-        if not spec:
-            []
-
-        scopes = [spec['indexes'][x].get('scope', 'device') for x in spec['indexes']]
-        if 'both' in scopes:
-            scopes = [x for x in scopes if x != 'both']
-            scopes.append('device')
-            scopes.append('global')
-        return set(scopes)
-
-    @classmethod
-    def class_get_catalogs(cls, dmd, whiteList=None):
-        """Return all catalogs for this class."""
-
-        catalogs = []
-        for name in cls._catalogs:
-            for scope in cls.get_catalog_scopes(name):
-                if scope == 'device':
-                    # device scoped catalogs are not available at the class level
-                    continue
-
-                if not whiteList:
-                    catalogs.append(cls.class_get_catalog(dmd, name, scope))
-                else:
-                    if scope in whiteList:
-                        catalogs.append(cls.class_get_catalog(dmd, name, scope, create=False))
-        return catalogs
-
-    def get_catalogs(self, whiteList=None):
-        """Return all catalogs for this class."""
-        catalogs = []
-        for name in self._catalogs:
-            for scope in self.get_catalog_scopes(name):
-                if not whiteList:
-                    catalogs.append(self.get_catalog(name, scope))
-                else:
-                    if scope in whiteList:
-                        catalogs.append(self.get_catalog(name, scope, create=False))
-        return catalogs
-
-    @classmethod
-    def _get_catalog_spec(cls, name):
-        if not hasattr(cls, '_catalogs'):
-            LOG.error("%s has no catalogs defined", cls)
-            return
-
-        spec = cls._catalogs.get(name)
-        if not spec:
-            LOG.error("%s catalog definition is missing", name)
-            return
-
-        if not isinstance(spec, dict):
-            LOG.error("%s catalog definition is not a dict", name)
-            return
-
-        if not spec.get('indexes'):
-            LOG.error("%s catalog definition has no indexes", name)
-            return
-
-        return spec
-
-    @classmethod
-    def _class_create_catalog(cls, dmd, name, scope='device'):
-        """Create and return catalog defined by name."""
-        from Products.ZCatalog.ZCatalog import manage_addZCatalog
-
-        spec = cls._get_catalog_spec(name)
-        if not spec:
-            return
-
-        if scope == 'device':
-            raise ValueError("device scoped catalogs may only be created from the device or component object, not classes")
-        else:
-            catalog_name = cls.get_catalog_name(name, scope)
-            deviceClass = dmd.Devices
-
-            if not hasattr(deviceClass, catalog_name):
-                manage_addZCatalog(deviceClass, catalog_name, catalog_name)
-
-            zcatalog = deviceClass._getOb(catalog_name)
-
-        cls._create_indexes(zcatalog, spec)
-        return zcatalog
-
-    def _create_catalog(self, name, scope='device'):
-        """Create and return catalog defined by name."""
-        from Products.ZCatalog.ZCatalog import manage_addZCatalog
-
-        spec = self._get_catalog_spec(name)
-        if not spec:
-            return
-
-        if scope == 'device':
-            catalog_name = self.get_catalog_name(name, scope)
-
-            device = self.device()
-            if not hasattr(device, catalog_name):
-                manage_addZCatalog(device, catalog_name, catalog_name)
-
-            zcatalog = device._getOb(catalog_name)
-        else:
-            catalog_name = self.get_catalog_name(name, scope)
-            deviceClass = self.dmd.Devices
-
-            if not hasattr(deviceClass, catalog_name):
-                manage_addZCatalog(deviceClass, catalog_name, catalog_name)
-
-            zcatalog = deviceClass._getOb(catalog_name)
-
-        self._create_indexes(zcatalog, spec)
-        return zcatalog
-
-    @classmethod
-    def _create_indexes(cls, zcatalog, spec):
-        from Products.ZCatalog.Catalog import CatalogError
-        from Products.Zuul.interfaces import ICatalogTool
-        catalog = zcatalog._catalog
-
-        # I think this is the original intent for setting classname, not sure why it would fail
         try:
-            classname = '%s.%s' % (cls.__module__, cls.__class__.__name__)
+            dmd = self.getDmd()
         except Exception:
-            classname = 'Products.ZenModel.DeviceComponent.DeviceComponent'
+            pass
+        else:
+            catalogs.extend(self.get_global_catalogs(dmd))
 
-        for propname, propdata in spec['indexes'].items():
-            index_type = propdata.get('type')
-            if not index_type:
-                LOG.error("%s index has no type", propname)
-                return
+        return catalogs
 
-            index_factory = {
-                'field': makeFieldIndex,
-                'keyword': makeKeywordIndex,
-                }.get(index_type.lower())
+    def get_device_catalogs(self):
+        """Return list of device catalogs for this object."""
+        return [self.get_device_catalog(x) for x in self._device_catalogs]
 
-            if not index_factory:
-                LOG.error("%s is not a valid index type", index_type)
-                return
+    @classmethod
+    def get_global_catalogs(cls, dmd):
+        """Return list of global catalogs for this class."""
+        return [cls.get_global_catalog(dmd, x) for x in cls._global_catalogs]
+
+    def get_device_catalog(self, name):
+        """Return device catalog by name."""
+        catalog = getattr(
+            self.device(),
+            "{}Search".format(name),
+            None)
+
+        if catalog:
+            return catalog
+        else:
+            return self.create_device_catalog(name)
+
+    @classmethod
+    def get_global_catalog(cls, dmd, name):
+        """Return global catalog by name."""
+        catalog = getattr(
+            dmd.Devices,
+            "{}_{}Search".format(cls.zenpack_name.replace('.', '_'), name),
+            None)
+
+        if catalog:
+            return catalog
+        else:
+            return cls.create_global_catalog(dmd, name)
+
+    # Catalog Creation and Maintenance #######################################
+
+    def create_device_catalog(self, name):
+        indexes = self._device_catalogs.get(name)
+        if indexes:
+            # Create an id index in all device catalogs.
+            expanded_indexes = {'id': 'field'}
+            expanded_indexes.update(indexes)
+            return self.create_catalog(
+                context=self.device(),
+                name='{}Search'.format(name),
+                indexes=expanded_indexes,
+                classname='{0}.{1}.{1}'.format(self.zenpack_name, name))
+
+    @classmethod
+    def create_global_catalog(cls, dmd, name):
+        indexes = cls._global_catalogs.get(name)
+        if indexes:
+            # Create id and device indexes in all global catalogs.
+            expanded_indexes = {'id': 'field', 'device_id': 'field'}
+            expanded_indexes.update(indexes)
+            return cls.create_catalog(
+                context=dmd.Devices,
+                name='{}_{}Search'.format(cls.zenpack_name.replace('.', '_'), name),
+                indexes=expanded_indexes,
+                classname='{0}.{1}.{1}'.format(cls.zenpack_name, name))
+
+    @staticmethod
+    def create_catalog(context, name, indexes, classname):
+        """Return catalog. Create it first if necessary."""
+        zcatalog = getattr(context, name, None)
+        if not zcatalog:
+            from Products.ZCatalog.ZCatalog import manage_addZCatalog
+            manage_addZCatalog(context, name, name)
+            zcatalog = context._getOb(name)
+
+        if CatalogBase.create_catalog_indexes(zcatalog, indexes):
+            CatalogBase.reindex_catalog(context, zcatalog, classname)
+
+        return zcatalog
+
+    @staticmethod
+    def create_catalog_indexes(zcatalog, indexes):
+        """Return True if zcatalog indexes were changed."""
+        from Products.ZCatalog.Catalog import CatalogError
+
+        changed = False
+        catalog = zcatalog._catalog
+        index_factories = {
+            'field': makeFieldIndex,
+            'keyword': makeKeywordIndex,
+            }
+
+        for index_name, index_type in indexes.iteritems():
+            index_factory = index_factories.get(
+                index_type.lower(),
+                makeFieldIndex)
 
             try:
-                catalog.addIndex(propname, index_factory(propname))
-                catalog.addColumn(propname)
+                catalog.addIndex(index_name, index_factory(index_name))
+                catalog.addColumn(index_name)
             except CatalogError:
                 # Index already exists.
                 pass
             else:
-                # the device if it's a device scoped catalog, or dmd.Devices
-                # if it's a global scoped catalog.
-                context = zcatalog.getParentNode()
+                changed = True
 
-                # reindex all objects of this type so they are added to the
-                # catalog.
-                results = ICatalogTool(context).search(types=(classname,))
-                for result in results:
-                    try:
-                        new_obj = result.getObject()
-                    except Exception as e:
-                        LOG.error("Trying to index non-existent object %s", e)
-                        continue
-                    else:
-                        if hasattr(new_obj, 'index_object'):
-                            new_obj.index_object()
+        return changed
+
+    @staticmethod
+    def reindex_catalog(context, zcatalog, classname):
+        from Products.Zuul.interfaces import ICatalogTool
+
+        for result in ICatalogTool(context).search(types=(classname,)):
+            try:
+                obj = result.getObject()
+            except Exception as e:
+                LOG.warning("failed to index non-existent object: %s", e)
+            else:
+                zcatalog.catalog_object(obj, obj.getPrimaryId())
+
+    # Indexing and Unindexing ################################################
 
     def index_object(self, idxs=None):
         """Index in all configured catalogs."""
-        for catalog in self.get_catalogs():
+        for catalog in self.get_all_catalogs():
             if catalog:
                 catalog.catalog_object(self, self.getPrimaryId())
 
     def unindex_object(self):
         """Unindex from all configured catalogs."""
-        for catalog in self.get_catalogs():
+        for catalog in self.get_all_catalogs():
             if catalog:
                 catalog.uncatalog_object(self.getPrimaryId())
+
+    def device_id(self):
+        """Return associated device id, or empty string if n/a.
+
+        Required for inclusion in zenpacklib global catalogs.
+
+        """
+        try:
+            device = self.device()
+            return device.id
+        except Exception:
+            return ''
 
 
 class ModelBase(CatalogBase):
@@ -766,12 +717,10 @@ class ComponentBase(ModelBase):
             },),
         },)
 
-    _catalogs = {
+    _device_catalogs = {
         'ComponentBase': {
-            'indexes': {
-                'id': {'type': 'field'},
-                }
-            }
+            'id': 'field',
+            },
         }
 
     def device(self):
@@ -1318,20 +1267,32 @@ def DeviceTypeFactory(name, bases):
     return device_type
 
 
-Device = DeviceTypeFactory(
-    'Device', (BaseDevice,))
-
-
 def ComponentTypeFactory(name, bases):
     """Return a "ZenPackified" component class given bases tuple."""
     return ModelTypeFactory(name, (ComponentBase,) + bases)
 
 
-Component = ComponentTypeFactory(
-    'Component', (BaseDeviceComponent, BaseManagedEntity))
+# Model Extension Classes
+Component = ComponentTypeFactory('Component', (BaseDeviceComponent, BaseManagedEntity))
+CPU = ComponentTypeFactory('CPU', (BaseCPU,))
+Device = DeviceTypeFactory('Device', (BaseDevice,))
+ExpansionCard = ComponentTypeFactory('ExpansionCard', (BaseExpansionCard,))
+Fan = ComponentTypeFactory('Fan', (BaseFan,))
+FileSystem = ComponentTypeFactory('FileSystem', (BaseFileSystem,))
+HardDisk = ComponentTypeFactory('HardDisk', (BaseHardDisk,))
+HWComponent = ComponentTypeFactory('HWComponent', (BaseHWComponent,))
+IpInterface = ComponentTypeFactory('IpInterface', (BaseIpInterface,))
+IpRouteEntry = ComponentTypeFactory('IpRouteEntry', (BaseIpRouteEntry,))
+IpService = ComponentTypeFactory('IpService', (BaseIpService,))
+OSComponent = ComponentTypeFactory('OSComponent', (BaseOSComponent,))
+OSProcess = ComponentTypeFactory('OSProcess', (BaseOSProcess,))
+PowerSupply = ComponentTypeFactory('PowerSupply', (BasePowerSupply,))
+Service = ComponentTypeFactory('Service', (BaseService,))
+TemperatureSensor = ComponentTypeFactory('TemperatureSensor', (BaseTemperatureSensor,))
+WinService = ComponentTypeFactory('WinService', (BaseWinService,))
 
-HardwareComponent = ComponentTypeFactory(
-    'HardwareComponent', (BaseHWComponent,))
+# Backwards-compatibility aliases.
+HardwareComponent = HWComponent
 
 
 class IHardwareComponentInfo(IBaseComponentInfo):
@@ -2607,7 +2568,8 @@ class ClassSpec(Spec):
         properties = []
         relations = []
         templates = []
-        catalogs = {}
+        device_catalogs = {}
+        global_catalogs = {}
 
         # First inherit from bases.
         for base in self.resolved_bases:
@@ -2615,13 +2577,10 @@ class ClassSpec(Spec):
                 properties.extend(base._properties)
             if hasattr(base, '_templates'):
                 templates.extend(base._templates)
-            if hasattr(base, '_catalogs'):
-                catalogs.update(base._catalogs)
-
-        if self.name not in catalogs:
-            catalogs[self.name] = {'indexes': {}}
-
-        indexes = catalogs[self.name]['indexes']
+            if hasattr(base, '_device_catalogs'):
+                device_catalogs.update(base._device_catalogs)
+            if hasattr(base, '_global_catalogs'):
+                global_catalogs.update(base._global_catalogs)
 
         # Add local properties and catalog indexes.
         for name, spec in self.properties.iteritems():
@@ -2656,13 +2615,22 @@ class ClassSpec(Spec):
             if spec.ofs_dict:
                 properties.append(spec.ofs_dict)
 
-            indexes.update(spec.catalog_indexes)
+            # Add class and instance catalogs.
+            for index_name, index_spec in spec.catalog_indexes.iteritems():
+                index_scope = index_spec.get('scope', 'device')
+                index_type = index_spec.get('type', 'field')
 
-        # Add a properly-scoped "id" index if needed
-        if len(indexes) > 0:
-            scopes = {x.get('scope', 'device') for x in indexes.values()}
-            indexes['id'] = {'type': 'field',
-                             'scope': 'device' if 'device' in scopes else 'global'}
+                if index_scope in ('both', 'device'):
+                    if self.name in device_catalogs:
+                        device_catalogs[self.name][index_name] = index_type
+                    else:
+                        device_catalogs[self.name] = {index_name: index_type}
+
+                if index_scope in ('both', 'global'):
+                    if self.name in global_catalogs:
+                        global_catalogs[self.name][index_name] = index_type
+                    else:
+                        global_catalogs[self.name] = {index_name: index_type}
 
         # Add local relations.
         for name, spec in self.relationships.iteritems():
@@ -2680,7 +2648,8 @@ class ClassSpec(Spec):
         attributes['_properties'] = tuple(properties)
         attributes['_v_local_relations'] = tuple(relations)
         attributes['_templates'] = tuple(templates)
-        attributes['_catalogs'] = catalogs
+        attributes['_device_catalogs'] = device_catalogs
+        attributes['_global_catalogs'] = global_catalogs
 
         # Add Impact stuff.
         attributes['impacts'] = self.impacts

@@ -88,6 +88,12 @@ class ZenPackSpec(Spec):
     #####
     """
 
+    _zenpack_class = None
+    _ordered_classes = None
+    _device_js_snippet = None
+    _dynamicview_nav_js_snippet = None
+    _zenpack_module = None
+
     def __init__(
             self,
             name,
@@ -282,7 +288,9 @@ class ZenPackSpec(Spec):
     @property
     def ordered_classes(self):
         """Return ordered list of ClassSpec instances."""
-        return sorted(self.classes.values(), key=operator.attrgetter('order'))
+        if not self._ordered_classes:
+            self._ordered_classes = sorted(self.classes.values(), key=operator.attrgetter('order'))
+        return self._ordered_classes
 
     def create(self):
         """Implement specification."""
@@ -291,13 +299,7 @@ class ZenPackSpec(Spec):
         for spec in self.zProperties.itervalues():
             spec.create()
 
-        # try to avoid import errors on class overrides
-        # by creating specs first
         for spec in self.classes.itervalues():
-            spec.create_schema_classes()
-
-        for spec in self.classes.itervalues():
-            spec.create_zenpack_classes()
             spec.create_registered()
 
         self.create_product_names()
@@ -505,6 +507,11 @@ class ZenPackSpec(Spec):
 
     @property
     def device_js_snippet(self):
+        if not self._device_js_snippet:
+            self._device_js_snippet = self.get_device_js_snippet()
+        return self._device_js_snippet
+
+    def get_device_js_snippet(self):
         """Return device JavaScript snippet for ZenPack."""
         snippets = []
         for spec in self.ordered_classes:
@@ -530,6 +537,11 @@ class ZenPackSpec(Spec):
 
     @property
     def dynamicview_nav_js_snippet(self):
+        if not self._dynamicview_nav_js_snippet:
+            self._dynamicview_nav_js_snippet = self.create_dynamicview_nav_js_snippet()
+        return self._dynamicview_nav_js_snippet
+
+    def create_dynamicview_nav_js_snippet(self):
         if not DYNAMICVIEW_INSTALLED:
             return ""
 
@@ -564,14 +576,17 @@ class ZenPackSpec(Spec):
     @property
     def zenpack_module(self):
         """Return ZenPack module."""
-        return importlib.import_module(self.name)
+        if not self._zenpack_module:
+            self._zenpack_module = importlib.import_module(self.name)
+        return self._zenpack_module
 
     @property
     def zenpack_class(self):
         """Return ZenPack class."""
-        return self.create_zenpack_class()
+        if not self._zenpack_class:
+            self._zenpack_class = create_zenpack_class()
+        return self._zenpack_class
 
-    @memoize
     def create_zenpack_class(self):
         """Create ZenPack class."""
         packZProperties = [

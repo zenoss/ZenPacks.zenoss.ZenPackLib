@@ -20,6 +20,7 @@ from Products.Zuul.interfaces import IInfo
 
 from ..functions import fix_kwargs, create_module
 from ..helpers.ZenPackLibLog import DEFAULTLOG
+from ..base.ClassProperty import ClassProperty
 
 
 def MethodInfoProperty(method_name, entity=False, enum=None):
@@ -43,11 +44,13 @@ def MethodInfoProperty(method_name, entity=False, enum=None):
         else:
             if enum and isinstance(enum, dict):
                 try:
-                    return enum.get(int(result),'Unknown')
+                    return enum.get(int(result), 'Unknown')
                 except Exception:
                     return result
             else:
                 return result
+
+    return property(getter)
 
 def EnumInfoProperty(data, enum):
     """Return a property filtered via an enum."""
@@ -139,7 +142,7 @@ class Spec(object):
 
     source_location = None
     speclog = None
-
+    _init_params = None
     LOG = DEFAULTLOG
 
     def __init__(self, _source_location=None, zplog=None):
@@ -202,7 +205,7 @@ class Spec(object):
             for k, v in dictionary.iteritems():
                 dictionary[k] = dict(defaults, **v)
                 if 'extra_params' in dictionary[k].keys():
-                    extra_params = defaults.get('extra_params',{})
+                    extra_params = defaults.get('extra_params', {})
                     dictionary_params = dictionary[k]['extra_params']
                     for i, j in extra_params.items():
                         if i not in dictionary_params.keys():
@@ -233,8 +236,15 @@ class Spec(object):
 
         return specs
 
+    @ClassProperty
     @classmethod
     def init_params(cls):
+        if not cls._init_params:
+            cls._init_params = cls.get_init_params()
+        return cls._init_params
+
+    @classmethod
+    def get_init_params(cls):
         """Return a dictionary describing the parameters accepted by __init__"""
 
         argspec = inspect.getargspec(cls.__init__)
@@ -283,7 +293,7 @@ class Spec(object):
         if type(self) != type(other):
             return False
 
-        params = self.init_params()
+        params = self.init_params
         for p in params:
             if p in ignore_params:
                 continue
@@ -324,10 +334,10 @@ class Spec(object):
         """Create and return described class."""
         if isinstance(module, basestring):
             module = create_module(module)
-    
+
         schema_class = self.create_schema_class(
             schema_module, classname, bases, attributes)
-    
+
         return self.create_stub_class(module, schema_class, classname)
 
     def create_schema_class(self, schema_module, classname, bases, attributes):

@@ -102,6 +102,15 @@ class ClassSpec(Spec):
     to double adapters doing the same thing.
     """
 
+    _model_schema_class = None
+    _model_class = None
+    _iinfo_schema_class = None
+    _iinfo_class = None
+    _info_schema_class = None
+    _info_class = None
+    _formbuilder_class = None
+    _icon_url = None
+
     def __init__(
             self,
             zenpack,
@@ -228,7 +237,7 @@ class ClassSpec(Spec):
         self.plural_label_width = plural_label_width or self.label_width + 7
         self.content_width = content_width or label_width
 
-        self.icon_url = icon
+        self.icon = icon
 
         # Force properties into the 5.0 - 5.9 order range.
         if not order:
@@ -328,28 +337,6 @@ class ClassSpec(Spec):
                 self.path_pattern_streams.append(pattern_stream)
         else:
             self.extra_paths = []
-
-    def create(self):
-        """Implement specification."""
-        self.create_schema_classes()
-        self.create_zenpack_classes()
-        self.create_registered()
-
-    def create_schema_classes(self):
-        self.create_model_schema_class()
-        self.create_iinfo_schema_class()
-        self.create_info_schema_class()
-
-    def create_zenpack_classes(self):
-        self.create_model_class()
-        self.create_iinfo_class()
-        self.create_info_class()
-        if self.is_component or self.is_hardware_component:
-            self.create_formbuilder_class()
-
-    def create_registered(self):
-        self.register_dynamicview_adapters()
-        self.register_impact_adapters()
 
     @property
     @memoize
@@ -460,18 +447,19 @@ class ClassSpec(Spec):
     @property
     def icon_url(self):
         """Return relative URL to icon."""
+        if not self._icon_url:
+            self._icon_url = self.get_icon_url()
         return self._icon_url
 
-    @icon_url.setter
-    def icon_url(self, icon):
+    def get_icon_url(self):
         """Set icon_url"""
         self._icon_url = None
         # if it's already given with the path
-        if icon and icon.startswith('/'):
-            self._icon_url = icon
+        if self.icon and self.icon.startswith('/'):
+            self._icon_url = self.icon
         else:
             # otherwise check if it exists whether or not it's given
-            icon_filename = icon or '{}.png'.format(self.name)
+            icon_filename = self.icon or '{}.png'.format(self.name)
             zenpack_path = get_zenpack_path(self.zenpack.name)
             if zenpack_path:
                 icon_path = os.path.join(
@@ -490,7 +478,9 @@ class ClassSpec(Spec):
     @property
     def model_schema_class(self):
         """Return model schema class."""
-        return self.create_model_schema_class()
+        if not self._model_schema_class:
+            self._model_schema_class = self.create_model_schema_class()
+        return self._model_schema_class
 
     def create_model_schema_class(self):
         """Create and return model schema class."""
@@ -611,7 +601,9 @@ class ClassSpec(Spec):
     @property
     def model_class(self):
         """Return model class."""
-        return self.create_model_class()
+        if not self._model_class:
+            self._model_class = self.create_model_class()
+        return self._model_class
 
     def create_model_class(self):
         """Create and return model class."""
@@ -623,7 +615,9 @@ class ClassSpec(Spec):
     @property
     def iinfo_schema_class(self):
         """Return I<name>Info schema class."""
-        return self.create_iinfo_schema_class()
+        if not self._iinfo_schema_class:
+            self._iinfo_schema_class = self.create_iinfo_schema_class()
+        return self._iinfo_schema_class
 
     def create_iinfo_schema_class(self):
         """Create and return I<name>Info schema class."""
@@ -670,7 +664,9 @@ class ClassSpec(Spec):
     @property
     def iinfo_class(self):
         """Return I<name>Info class."""
-        return self.create_iinfo_class()
+        if not self._iinfo_class:
+            self._iinfo_class = self.create_iinfo_class()
+        return self._iinfo_class
 
     def create_iinfo_class(self):
         """Create and return I<Info>Info class."""
@@ -682,7 +678,9 @@ class ClassSpec(Spec):
     @property
     def info_schema_class(self):
         """Return <name>Info schema class."""
-        return self.create_info_schema_class()
+        if not self._info_schema_class:
+            self._info_schema_class = self.create_info_schema_class()
+        return self._info_schema_class
 
     def create_info_schema_class(self):
         """Create and return <name>Info schema class."""
@@ -736,7 +734,9 @@ class ClassSpec(Spec):
     @property
     def info_class(self):
         """Return Info subclass."""
-        return self.create_info_class()
+        if not self._info_class:
+            self._info_class = self.create_info_class()
+        return self._info_class
 
     def create_info_class(self):
         """Create and return Info subclass."""
@@ -744,16 +744,15 @@ class ClassSpec(Spec):
             get_symbol_name(self.zenpack.name, self.name),
             self.info_schema_class,
             '{}Info'.format(self.name))
-
         classImplements(info_class, self.iinfo_class)
-        GSM.registerAdapter(info_class, (self.model_class,), self.iinfo_class)
-
         return info_class
 
     @property
     def formbuilder_class(self):
         """Return FormBuilder subclass."""
-        return self.create_formbuilder_class()
+        if not self._formbuilder_class:
+            self._formbuilder_class = self.create_formbuilder_class()
+        return self._formbuilder_class
 
     def create_formbuilder_class(self):
         """Create and return FormBuilder subclass.
@@ -785,9 +784,15 @@ class ClassSpec(Spec):
             attributes)
 
         classImplements(formbuilder, IFormBuilder)
-        GSM.registerAdapter(formbuilder, (self.info_class,), IFormBuilder)
 
         return formbuilder
+
+    def create_registered(self):
+        GSM.registerAdapter(self.info_class, (self.model_class,), self.iinfo_class)
+        if self.is_component or self.is_hardware_component:
+            GSM.registerAdapter(self.formbuilder_class, (self.info_class,), IFormBuilder)
+        self.register_dynamicview_adapters()
+        self.register_impact_adapters()
 
     def register_dynamicview_adapters(self):
         if not DYNAMICVIEW_INSTALLED:
@@ -1167,8 +1172,7 @@ class ClassSpec(Spec):
         programatically-registered adapters are in place for testing.
 
         """
-        self.create_iinfo_class()
-        self.create_info_class()
+        self.create_registered()
         self.register_dynamicview_adapters()
         self.register_impact_adapters()
 

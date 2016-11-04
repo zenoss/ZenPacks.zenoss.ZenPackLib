@@ -42,7 +42,6 @@ classes or relationships.
     * OSProcess (os/processes)
     * IpService (os/ipservices)
     * WinService (os/winservices)
-    * Software (os/software)
 
 
 .. _zenpacklib-classes:
@@ -58,24 +57,23 @@ of the following two base classes provided by zenpacklib.
 
 * zenpacklib.Component
 
-   * zenpacklib.HWComponent
+  * zenpacklib.HWComponent
 
-      * zenpacklib.CPU
-      * zenpacklib.ExpansionCard
-      * zenpacklib.Fan
-      * zenpacklib.HardDisk
-      * zenpacklib.PowerSupply
-      * zenpacklib.TemperatureSensor
+    * zenpacklib.CPU
+    * zenpacklib.ExpansionCard
+    * zenpacklib.Fan
+    * zenpacklib.HardDisk
+    * zenpacklib.PowerSupply
+    * zenpacklib.TemperatureSensor
 
-   * zenpacklib.OSComponent
+  * zenpacklib.OSComponent
 
-      * zenpacklib.FileSystem
-      * zenpacklib.IpInterface
-      * zenpacklib.IpRouteEntry
-      * zenpacklib.OSProcess
-      * zenpacklib.Software
+    * zenpacklib.FileSystem
+    * zenpacklib.IpInterface
+    * zenpacklib.IpRouteEntry
+    * zenpacklib.OSProcess
 
-   * zenpacklib.Service
+    * zenpacklib.Service
 
       * zenpacklib.IpService
       * zenpacklib.WinService
@@ -93,6 +91,7 @@ have many components of types such as *Pool*, *StorageRepository* and
 The other supported classes are proxies for their platform equivalents, and are
 to be used when you want to extend one of the platform component types rather
 than creating a totally new component type.
+
 
 .. _zenpacklib-relationships:
 
@@ -223,7 +222,7 @@ name
   :Default Value: *(implied from key in classes map)*
 
 base
-  :Description: List of base classes to extend.  See :ref:`Classes <zenpacklib-classes>`
+  :Description: List of base classes to extend. See :ref:`Classes <zenpacklib-classes>`
   :Required: No
   :Type: list<classname>
   :Default Value: [zenpacklib.Component]
