@@ -24,11 +24,9 @@ Features
 * Ability to use ZenPack-provided zenpacklib module
 * Added support for Process Class definitions
 * Deprecated support for python-based "yaml" specifications
-* Add base class proxies for all platform component classes.
 
 Fixes
 
-* Fix support for extending platform component classes. (ZEN-25559)
 * Fix handling of boolean datasource options (ZEN-25315)
 * Merge Detail View groups into 'Overview' group (ZEN-24759)
 * Ensure that component detail pane honors relation "details_display" (ZEN-24762)
@@ -63,8 +61,6 @@ Fixes
 * Ensure that datapoint alias keys do not exceed 31 chars (ZEN-17950)
 * Log obscure error with ill-defined relationships (ZEN-16701)
 
-Documentation
-
 
 Version 1.1
 ===========
@@ -80,6 +76,7 @@ Features
 * Improve performance of entity properties in component grids.
 * Simplify what device status means to critical event(s) in /Status.
 * Improve grid performance with streamlined info adapters
+* Add base class proxies for all platform component classes.
 
 Fixes
 
@@ -97,11 +94,13 @@ Fixes
 * Ensure that subcomponent nav JS uses relationship label if given (ZEN-24305)
 * Fix for setting of zProperty values before zProperty exists
 * Fix "unexpected keyword default" message
+* Fix support for extending platform component classes. (ZEN-25559)
 
 Documentation
 
 * Fix YAML reference for dynamicview_group class field.
 * Fix documentation of default value for dynamicview_views.
+* Document new component class proxies such as IpInterface and FileSystem.
 
 
 Version 1.0
