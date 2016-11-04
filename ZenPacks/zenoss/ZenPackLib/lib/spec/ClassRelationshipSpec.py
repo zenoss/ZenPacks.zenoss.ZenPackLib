@@ -81,6 +81,7 @@ class ClassRelationshipSpec(Spec):
             self.LOG = zplog
         self.class_ = class_
         self.name = name
+        # schema should always be None
         self.schema = schema
         self.label = label
         self.short_label = short_label
@@ -102,6 +103,34 @@ class ClassRelationshipSpec(Spec):
                 if self.render_with_type else 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'
 
             self.renderer = self.renderer.format(zenpack_id_prefix=self.class_.zenpack.id_prefix)
+
+    def plumb(self):
+        """ Check if this should be added ZenPack NEW_RELATION and NEW_COMPONENT_TYPES, which 
+            tracks components and relations related to imported classes
+        """
+        relname = self.schema.remoteName
+        zp = self.class_.zenpack
+        remoteClass = self.schema.remoteClass
+        remoteClassObj = zp.imported_classes.get(remoteClass)
+        if remoteClassObj:
+            remote_module_id = remoteClassObj.__module__
+
+            if relname not in zp.NEW_RELATIONS[remote_module_id]:
+                zp.NEW_RELATIONS[remote_module_id].append(relname)
+
+            component_type = '.'.join((self.class_.symbol_name, self.class_.name))
+            if component_type not in zp.NEW_COMPONENT_TYPES:
+                zp.NEW_COMPONENT_TYPES.append(component_type)
+
+    def update_inherited_params(self):
+        """Copy any inherited parameters if they are not default or already specified here"""
+        custom = self.get_custom_params()
+        rel_spec = self.class_.find_relation_in_base_specs(self.name)
+        if not rel_spec:
+            return
+        for k, v in rel_spec.get_custom_params().items():
+            if k not in custom:
+                setattr(self, k, v)
 
     @property
     def zenrelations_tuple(self):

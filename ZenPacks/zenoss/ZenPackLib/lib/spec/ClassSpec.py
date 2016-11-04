@@ -210,6 +210,7 @@ class ClassSpec(Spec):
             self.LOG = zplog
         self.zenpack = zenpack
         self.name = name
+        self.symbol_name = get_symbol_name(self.zenpack.name, self.name)
 
         # Verify that bases is a tuple of base types.
         if isinstance(base, (tuple, list, set)):
@@ -249,7 +250,9 @@ class ClassSpec(Spec):
         self.properties = self.specs_from_param(
             ClassPropertySpec, 'properties', properties, zplog=self.LOG)
 
-        # Relationships.
+        # Relationships
+        # If these exist, they will refer to relationship display properties, but won't have a schema
+        # defined (yet).  The schema is added later
         self.relationships = self.specs_from_param(
             ClassRelationshipSpec, 'relationships', relationships, zplog=self.LOG)
 
@@ -337,6 +340,78 @@ class ClassSpec(Spec):
                 self.path_pattern_streams.append(pattern_stream)
         else:
             self.extra_paths = []
+
+    _plumbed = False
+
+    def plumb_class_relations(self):
+        """
+            Plumb class relations and update 
+            remote class _v_local_relations/_relations
+            as well as updating NEW_RELATIONS and NEW_COMPONENT_TYPES
+        """
+        if not self._plumbed:
+            for relname, relationship in self.relationships.iteritems():
+                # if no schema was ever allocated, remove this relationship from the class
+                # this happens if the ClassSpec sets display properties for a nonexistent relation
+                if not relationship.schema:
+                    self.LOG.error("Removing invalid display config for relationship {} from  {}.{}".format(
+                                relname, self.zenpack.name, self.name))
+                    self.relationships.pop(relname)
+                    continue
+                relationship.plumb()
+            self._plumbed = True
+
+    def update_inherited_relation_parameters(self):
+        """inherit parent relationship properties if not overridden locally"""
+        for rel_spec in self.relationships.values():
+            rel_spec.update_inherited_params()
+
+    def update_child_relations(self, relname):
+        """ Update relationships with any that 
+            should be inherited from base classes
+        """
+        # process descendants first
+        for d in self.get_descendant_specs():
+            self.zenpack.classes.get(d).update_child_relations(relname)
+
+        # find this relation
+        found_rel = self.find_relation_in_base_specs(relname)
+        if found_rel:
+            # add if it's not already here
+            if relname not in self.relationships:
+                self.relationships[relname] = found_rel
+            else:
+                # otherwise ensure it has a schema
+                if not self.relationships[relname].schema:
+                    self.relationships[relname].schema = found_rel.schema
+
+    def find_relation_in_base_specs(self, relname):
+        '''return inherited RelationshipSpec'''
+        base_specs = self.get_base_specs(bases=[])
+        for base in base_specs:
+            base_cls = self.zenpack.classes.get(base)
+            if relname in base_cls.relationships:
+                return base_cls.relationships.get(relname)
+        return None
+
+    def get_base_specs(self, bases=[]):
+        '''Return ClassSpec bases in order of nearest proximity'''
+        for base in self.bases:
+            base_cls = self.zenpack.classes.get(base)
+            if not base_cls:
+                continue
+            if base not in bases:
+                bases.append(base)
+            bases = base_cls.get_base_specs(bases)
+        return bases
+
+    def get_descendant_specs(self):
+        """Return ClassSpec descendants of this class"""
+        descendents = []
+        for cls in self.zenpack.classes.values():
+            if self.name in cls.bases:
+                descendents.append(cls.name)
+        return descendents
 
     @property
     @memoize
