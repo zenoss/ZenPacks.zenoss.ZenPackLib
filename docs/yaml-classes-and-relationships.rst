@@ -366,6 +366,41 @@ extra_paths
   :Required: No
   :Type: list<list<regexp>>
   :Default Value: [] *(empty list)*
+  :Example 1: ['resourcePool', 'owner'] # from cluster or standalone
+  :Example 2: ['resourcePool', '(parentResourcePool)+'] # from all parent resource pools, recursively.
+
+.. note::
+
+      Each item in extra_paths is expressed as a tuple of
+      regular expression patterns that are matched
+      in order against the actual relationship path structure
+      as it is traversed and built up get_facets.
+      
+      To facilitate matching, we construct a compiled set of
+      regular expressions that can be matched against the
+      entire path string, from root to leaf.
+      
+      So:
+        
+        ('orgComponent', '(parentOrg)+')
+        
+      is transformed into a "pattern stream", which is a list
+      of regexps that can be applied incrementally as we traverse
+      the possible paths:
+      
+        (
+        re.compile(^orgComponent), 
+        re.compile(^orgComponent/(parentOrg)+), 
+        re.compile(^orgComponent/(parentOrg)+/?$' 
+        )
+      
+      Once traversal embarks upon a stream, these patterns are
+      matched in order as the traversal proceeds, with the
+      first one to fail causing recursion to stop.
+      When the final one is matched, then the objects on that
+      relation are matched.  Note that the final one may
+      match multiple times if recursive relationships are
+      in play.
 
 .. todo:: Add section on Impact & DynamicView.
 
