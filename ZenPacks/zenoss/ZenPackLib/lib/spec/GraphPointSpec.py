@@ -79,7 +79,9 @@ class GraphPointSpec(Spec):
         self.limit = limit
         self.rpn = rpn
         self.cFunc = cFunc
-        self.color = Color(color)
+        self.color = color
+        if color:
+            self.color = Color(color)
         self.includeThresholds = includeThresholds
 
         # Shorthand for datapoints that have the same name as their datasource.

@@ -54,6 +54,8 @@ device_classes:
               E:
                 dpName: test_c
                 color: JJJ0020
+              F:
+                dpName: test_c
 """
 
 EXPECTED = """name: ZenPacks.zenoss.ZenPackLib
@@ -85,6 +87,8 @@ device_classes:
               E:
                 dpName: test_c
                 color: FFF002
+              F:
+                dpName: test_c
 """
 
 class TestValidInput(BaseTestCase):
