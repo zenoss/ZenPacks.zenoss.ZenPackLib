@@ -110,6 +110,8 @@ class ClassSpec(Spec):
     _info_class = None
     _formbuilder_class = None
     _icon_url = None
+    _created = False
+    _plumbed = False
 
     def __init__(
             self,
@@ -337,6 +339,36 @@ class ClassSpec(Spec):
                 self.path_pattern_streams.append(pattern_stream)
         else:
             self.extra_paths = []
+
+    def create(self):
+        """ 
+            Ensure that ancestor classes are created before descendants
+            to avoid potential conflicts due to creation order
+            
+            model_class -(depends)-> model_schema_class (self)
+            model_schema_class -(depends)-> model_class (bases)
+            
+            iinfo_class -(depends)-> iinfo_schema_class (self)
+            iinfo_schema_class -(depends)-> iinfo_class (bases)
+            
+            info_class -(depends)-> info_schema_class (self)
+            info_class -(depends)-> model_class(self)
+            info_class -(depends)-> iinfo_class (self)
+            info_schema_class -(depends)-> info_class (of bases)
+        """
+        # execute this method on any ancestors before this one
+        for spec in self.base_class_specs():
+            spec.create()
+
+        if not self._created:
+            # each schema version of the class is created implicitly when referenced
+            for x in ['model_class', 'iinfo_class', 'info_class']:
+                attr = '_{}'.format(x)
+                if not getattr(self, attr):
+                    cls = getattr(self, x)
+            # register created classes
+            self.create_registered()
+            self._created = True
 
     @property
     @memoize
@@ -796,6 +828,7 @@ class ClassSpec(Spec):
         return formbuilder
 
     def create_registered(self):
+        """register classes with GSM"""
         GSM.registerAdapter(self.info_class, (self.model_class,), self.iinfo_class)
         if self.is_component or self.is_hardware_component:
             GSM.registerAdapter(self.formbuilder_class, (self.info_class,), IFormBuilder)
