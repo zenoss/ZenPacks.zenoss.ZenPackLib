@@ -32,6 +32,7 @@ class GraphPointSpec(Spec):
             colorindex=None,
             color=None,
             includeThresholds=False,
+            thresholdLegends=None,
             _source_location=None,
             zplog=None
             ):
@@ -62,7 +63,8 @@ class GraphPointSpec(Spec):
             :type colorindex: int
             :param includeThresholds: TODO
             :type includeThresholds: bool
-
+            :param thresholdLegends: map of {thresh_id: {legend: TEXT, color: HEXSTR}
+            :type thresholdLegends: dict(str)
         """
         super(GraphPointSpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -83,6 +85,7 @@ class GraphPointSpec(Spec):
         if color:
             self.color = Color(color)
         self.includeThresholds = includeThresholds
+        self.thresholdLegends = thresholdLegends
 
         # Shorthand for datapoints that have the same name as their datasource.
         if '_' not in dpName:
@@ -112,6 +115,27 @@ class GraphPointSpec(Spec):
                 raise ValueError("'%s' is not a valid graphpoint lineType. Valid lineTypes: %s" % (
                                  lineType, ', '.join(valid_linetypes)))
 
+    @property
+    def thresholdLegends(self):
+        return self._thresholdLegends
+
+    @thresholdLegends.setter
+    def thresholdLegends(self, value):
+        if value is None:
+            self._thresholdLegends = {}
+        elif isinstance(value, dict):
+            self._thresholdLegends = value
+        elif isinstance(value, str):
+            self.LOG.debug('setting default thresholdLegends for {}'.format(value))
+            self._thresholdLegends = {value: None}
+        else:
+            raise ValueError("thresholdLegends must be specified as a dict or string (got {})".format(value))
+        for id, data in self._thresholdLegends.items():
+            if not isinstance(data, dict):
+                data = {'legend': None, 'color': None}
+            self._thresholdLegends[id]['legend'] = data.get('legend')
+            self._thresholdLegends[id]['color'] = data.get('color')
+
     def create(self, graph_spec, graph, sequence=None):
         graphpoint = graph.createGraphPoint(DataPointGraphPoint, self.name)
         self.speclog.debug("adding graphpoint")
@@ -140,4 +164,15 @@ class GraphPointSpec(Spec):
             graphpoint.color = self.color
 
         if self.includeThresholds:
-            graph.addThresholdsForDataPoint(self.dpName)
+            thresh_gps = graph.addThresholdsForDataPoint(self.dpName)
+            for thresh_gp in thresh_gps:
+                entry = self.thresholdLegends.get(thresh_gp.id)
+                if not entry:
+                    continue
+                legend = entry.get('legend')
+                color = entry.get('color')
+                if legend:
+                    thresh_gp.legend = legend
+                if color:
+                    thresh_gp.color = color
+
