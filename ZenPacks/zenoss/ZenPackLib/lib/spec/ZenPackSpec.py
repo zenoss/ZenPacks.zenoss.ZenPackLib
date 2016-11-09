@@ -12,7 +12,6 @@ import importlib
 import operator
 import types
 from Products.Five import zcml
-from Products.Zuul.decorators import memoize
 from Products.ZenUtils.Utils import monkeypatch, importClass
 from Products.Zuul.routers.device import DeviceRouter
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
@@ -584,7 +583,7 @@ class ZenPackSpec(Spec):
     def zenpack_class(self):
         """Return ZenPack class."""
         if not self._zenpack_class:
-            self._zenpack_class = create_zenpack_class()
+            self._zenpack_class = self.create_zenpack_class()
         return self._zenpack_class
 
     def create_zenpack_class(self):
