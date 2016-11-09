@@ -350,6 +350,94 @@ Built-In
 
 .. todo:: Document commonly-used types added by ZenPacks.
 
+.. _custom-datasource-types:
+
+Custom Datasource and Datapoint Types
+-------------------------------------
+
+Some datasource (and datapoint) types are provided by a particular ZenPack and only available 
+if that ZenPack is installed.  These types often have unique paramters that control their function.
+ZenPackLib allows the specification of these parameters, but the degree of documentation for each 
+varies.  As a result, designing YAML templates using these requires a bit of investigation.  The 
+available properties depend on the datasource or datapoint type being used.  Currently, examination of 
+the related source code is a good way to investigate them, but an alternative is given below.
+
+The following exmaple demonstrates how to create a YAML template that relies on the 
+ZenPacks.zenoss.CalculatedPerformance ZenPack.  Please note that the datasource properties used are 
+not documented below, since they are provided by the CalculatedPerformance ZenPack.  
+
+First, we want to determine a list of available parameters, and we can use ZenDMD to display them as follows:
+
+.. code-block:: python
+
+      # This is the reference class and its properties are documented here.
+      from Products.ZenModel.RRDDataSource import RRDDataSource as Reference
+      # replace the import path and class with the class you are interested in 
+      from ZenPacks.zenoss.CalculatedPerformance.datasources.AggregatingDataSource \
+         import AggregatingDataSource as Comparison
+      # this prints out the list of non-standard properties and their types
+      props = [p for p in Comparison._properties if p not in Reference._properties]
+      print '\n'.join(['{} ({})'.format(p['id'], p['type']) for p in props])
+
+In this case, we should see the following output:
+
+.. code-block:: python
+
+      targetMethod (string)
+      targetDataSource (string)
+      targetDataPoint (string)
+      targetRRA (string)
+      targetAsRate (boolean)
+      debug (boolean)
+
+An example tempalte using the CalculatedPerformance datasources might resemble the following:
+
+.. code-block:: yaml
+
+      name: ZenPacks.zenoss.ZenPackLib
+      device_classes:
+        /Device:
+          templates:
+            ExampleCalculatedPerformanceTemplate:
+              datasources:
+                # standard SNMP datasources
+                memAvailReal:
+                  type: SNMP
+                  oid: 1.3.6.1.4.1.2021.4.6.0
+                  datapoints:
+                    memAvailReal: GAUGE
+                memAvailSwap:
+                  type: SNMP
+                  oid: 1.3.6.1.4.1.2021.4.4.0
+                  datapoints:
+                    memAvailSwap: GAUGE
+                # CalculatedPerformance datasources
+                totalAvailableMemory
+                  type: Calculated Performance
+                  # "expression" paramter is unique to the 
+                  # CalculatedPerformance datasource
+                  expression: memAvailReal + memAvailSwap
+                  datapoints:
+                    totalAvailableMemory: GAUGE
+                # Aggregated Datasource
+                agg_out_octets:
+                  # These are standard parameters
+                  type: Datapoint Aggregator
+                  # The following parameters are "extra" parameters,
+                  # attributes of the "Datapoint Aggregator" datasource 
+                  targetDataSource: ethernetcmascd_64
+                  targetDataPoint: ifHCOutOctets
+                  targetMethod: os.interfaces
+                  # AggregatingDataPoint is subclassed from RRDDataPoint and 
+                  # has the unique "operation" paramter
+                  datapoints:
+                    aggifHCOutOctets:
+                      operation: sum
+
+Further experimentation, though, is required to determine workable values for these properties, and creating
+templates manually using the Zenoss GUI is a good way to do so.
+
+
 .. _datapoint-fields:
 
 Datapoint Fields
