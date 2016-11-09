@@ -10,9 +10,9 @@ from Products.Zuul.form import schema
 from Products.Zuul.interfaces.component import IComponentInfo
 
 
-class IHardwareComponentInfo(IComponentInfo):
+class IHWComponentInfo(IComponentInfo):
 
-    """Info interface for ZenPackHardwareComponent.
+    """Info interface for ZPL HWComponent.
 
     This exists because Zuul has no HWComponent info interface.
     """
@@ -20,3 +20,5 @@ class IHardwareComponentInfo(IComponentInfo):
     manufacturer = schema.Entity(title=u'Manufacturer')
     product = schema.Entity(title=u'Model')
 
+
+IHardwareComponentInfo = IHWComponentInfo

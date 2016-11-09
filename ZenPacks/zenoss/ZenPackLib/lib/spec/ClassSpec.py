@@ -17,24 +17,18 @@ from Products.ZenRelations.RelSchema import ToMany, ToManyCont
 from Products.Zuul.form import schema
 from Products.Zuul.form.interfaces import IFormBuilder
 from Products.Zuul.infos import InfoBase, ProxyProperty
-from Products.Zuul.infos.component import ComponentInfo
-from Products.Zuul.infos.device import DeviceInfo
 from Products.Zuul.interfaces import IInfo
-from Products.Zuul.interfaces.component import IComponentInfo
-from Products.Zuul.interfaces.device import IDeviceInfo
 
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
-from ..info import HardwareComponentInfo
-from ..interfaces import IHardwareComponentInfo
 from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
 
 from ..gsm import get_gsm
 from ..functions import pluralize, get_symbol_name, relname_from_classname, \
     get_zenpack_path, ordered_values
 
-from ..base.HardwareComponent import HardwareComponent
-from ..base.Component import Component
+from ..base.Component import Component, HWComponent, Service
 from ..base.Device import Device
+from ..zuul import schema_map
 
 DYNAMICVIEW_INSTALLED = dynamicview_installed()
 if DYNAMICVIEW_INSTALLED:
@@ -429,6 +423,20 @@ class ClassSpec(Spec):
         """Return True if this class is a subclass of type_."""
         return issubclass(self.model_schema_class, type_)
 
+    def get_info_base(self):
+        """Return appropriate info class"""
+        for cls, map in schema_map.items():
+            if self.is_a(cls):
+                return map.get('info', InfoBase)
+        return InfoBase
+
+    def get_interfaces_base(self):
+        """Return appropriate interfaces class"""
+        for cls, map in schema_map.items():
+            if self.is_a(cls):
+                return map.get('interface', IInfo)
+        return IInfo
+
     @property
     def is_device(self):
         """Return True if this class is a Device."""
@@ -436,13 +444,30 @@ class ClassSpec(Spec):
 
     @property
     def is_component(self):
-        """Return True if this class is a Component."""
+        """
+            **Deprecated
+            Return True if this class is a Component.
+        """
+
         return self.is_a(Component)
 
     @property
     def is_hardware_component(self):
-        """Return True if this class is a HardwareComponent."""
-        return self.is_a(HardwareComponent)
+        """
+            **Deprecated
+            Return True if this class is a HWComponent.
+        """
+        return self.is_a(HWComponent)
+
+    @property
+    def is_a_component(self):
+        """Return True if this class is a component class."""
+        for cls in schema_map.keys():
+            if cls == Device or cls == Service:
+                continue
+            if self.is_a(cls):
+                return True
+        return False
 
     @property
     def icon_url(self):
@@ -635,14 +660,7 @@ class ClassSpec(Spec):
                 bases.append(self.zenpack.classes[base_classname].iinfo_class)
 
         if not bases:
-            if self.is_device:
-                bases = [IDeviceInfo]
-            elif self.is_component:
-                bases = [IComponentInfo]
-            elif self.is_hardware_component:
-                bases = [IHardwareComponentInfo]
-            else:
-                bases = [IInfo]
+            bases = [self.get_interfaces_base()]
 
         attributes = {}
 
@@ -700,18 +718,10 @@ class ClassSpec(Spec):
         attributes = {}
 
         if not bases:
+            bases = [self.get_info_base()]
             if self.is_device:
-                bases = [DeviceInfo]
-
                 # Override how status is determined for devices.
                 attributes["status"] = DeviceInfoStatusProperty()
-
-            elif self.is_component:
-                bases = [ComponentInfo]
-            elif self.is_hardware_component:
-                bases = [HardwareComponentInfo]
-            else:
-                bases = [InfoBase]
 
         attributes.update({
             'class_label': ProxyProperty('class_label'),
@@ -797,7 +807,7 @@ class ClassSpec(Spec):
 
     def create_registered(self):
         GSM.registerAdapter(self.info_class, (self.model_class,), self.iinfo_class)
-        if self.is_component or self.is_hardware_component:
+        if self.is_a_component:
             GSM.registerAdapter(self.formbuilder_class, (self.info_class,), IFormBuilder)
         self.register_dynamicview_adapters()
         self.register_impact_adapters()

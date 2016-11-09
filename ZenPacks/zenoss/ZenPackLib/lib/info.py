@@ -10,18 +10,17 @@ from zope.component import adapts
 from zope.interface import  implements
 from Products.Zuul.decorators import info
 from Products.Zuul.infos.component import ComponentInfo
-from .base.HardwareComponent import HardwareComponent
-from .interfaces import IHardwareComponentInfo
+from .base.Component import HWComponent, HardwareComponent
+from .interfaces import IHWComponentInfo, IHardwareComponentInfo
 
-class HardwareComponentInfo(ComponentInfo):
+class HWComponentInfo(ComponentInfo):
 
-    """Info adapter factory for ZenPackHardwareComponent.
-
+    """Info adapter factory for ZPL HWComponent.
     This exists because Zuul has no HWComponent info adapter.
     """
 
-    implements(IHardwareComponentInfo)
-    adapts(HardwareComponent)
+    implements(IHWComponentInfo)
+    adapts(HWComponent)
 
     @property
     @info
@@ -37,3 +36,4 @@ class HardwareComponentInfo(ComponentInfo):
         """Return Info for hardware product class."""
         return self._object.productClass()
 
+HardwareComponentInfo = HWComponentInfo
