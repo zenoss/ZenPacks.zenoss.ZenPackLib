@@ -156,6 +156,16 @@ class ClassPropertySpec(Spec):
         else:
             self.order = 4 + (max(0, min(100, order)) / 100.0)
 
+    def update_inherited_params(self):
+        """Copy any inherited parameters if they are not default or already specified here"""
+        custom = self.get_custom_params()
+        prop_spec = self.class_spec.find_property_in_base_specs(self.name)
+        if not prop_spec:
+            return
+        for k, v in prop_spec.get_custom_params().items():
+            if k not in custom:
+                setattr(self, k, v)
+
     @property
     def ofs_dict(self):
         """Return OFS _properties dictionary."""

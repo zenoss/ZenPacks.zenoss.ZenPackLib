@@ -2,6 +2,51 @@ from ..helpers.ZenPackLibLog import DEFAULTLOG as LOG
 
 import string
 
+
+from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
+
+class Relationship(str):
+    cls = None
+    name = None
+    cardinality = None
+
+    _relTypeCardinality = {
+        'ToOne': '1',
+        'ToMany': 'M',
+        'ToManyCont': 'MC'
+    }
+
+    _relTypeClasses = {
+        "ToOne": ToOne,
+        "ToMany": ToMany,
+        "ToManyCont": ToManyCont
+    }
+
+    _relTypeNames = {
+        ToOne: "ToOne",
+        ToMany: "ToMany",
+        ToManyCont: "ToManyCont"
+    }
+
+    def __new__(cls, value):
+        return str.__new__(cls, cls.validate(value))
+
+    @classmethod
+    def validate(cls, value):
+        if not value:
+            raise ValueError('Relationship cannot be None')
+        if not isinstance(value, str):
+            raise ValueError('Invalid type ({}) given for Relationship'.format(type(value)))
+        if value not in ['ToOne', 'ToMany', 'ToManyCont']:
+            raise ValueError('Invalid value ({}) given for Relationship'.format(value))
+        return value
+
+    def __init__(self, value):
+        self.name = value
+        self.cls = self._relTypeClasses.get(value)
+        self.cardinality = self._relTypeCardinality.get(value)
+
+
 class Color(str):
     """Hexadecimal string representation for color"""
     def __new__(cls, value):
