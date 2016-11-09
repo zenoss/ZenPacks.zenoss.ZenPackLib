@@ -27,7 +27,7 @@ from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 
 
-YAML_DOC="""
+YAML_DOC = """
 name: ZenPacks.zenoss.OpenStackInfrastructure
 zProperties:
   DEFAULTS:
@@ -67,7 +67,7 @@ classes:
     order: 2
     relationships:
       childOrgs:
-        grid_display: False
+        grid_display: True
         details_display: False
 """
 
@@ -80,9 +80,12 @@ class TestZen23763(BaseTestCase):
 
     def test_inherited_relation_display(self):
         CFG = zenpacklib.load_yaml(YAML_DOC)
-        az = CFG.classes.get('AvailabilityZone')
-        rel = az.relationships.get('parentOrg')
-        self.assertEquals(rel.label, 'Parent Region', 'Inherited relation display properties failed')
+        rel = CFG.classes.get('AvailabilityZone').relationships.get('parentOrg')
+        self.assertEquals(rel.label, 'Parent Region', 'Inherited relation label failed')
+        rel = CFG.classes.get('AvailabilityZone').relationships.get('endpoint')
+        self.assertEquals(rel.grid_display, True, 'Inherited relation grid_display failed')
+        rel = CFG.classes.get('AvailabilityZone').relationships.get('childOrgs')
+        self.assertEquals(rel.grid_display, True, 'Inherited relation grid_display failed')
 
 def test_suite():
     """Return test suite for this module."""

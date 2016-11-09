@@ -236,6 +236,18 @@ class Spec(object):
 
         return specs
 
+    def get_custom_params(self):
+        """ Return dictionary of attributes that deviate
+            from class defaults
+        """
+        params = {}
+        for k, v in self.init_params.items():
+            val = getattr(self, k, None)
+            default = v.get('default', None)
+            if val != default:
+                params[k] = val
+        return params
+
     @ClassProperty
     @classmethod
     def init_params(cls):
