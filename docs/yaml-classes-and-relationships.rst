@@ -51,7 +51,7 @@ Classes
 *******
 
 If you need more than the standard classes provide, you will need to extend one
-of the following two base classes provided by zenpacklib.
+of the following base classes provided by zenpacklib.
 
 * zenpacklib.Device
 
@@ -205,6 +205,152 @@ and *VirtualMachine* component types.
 
 Classes and their properties allow for a wide range of control. See the
 following section for details.
+
+.. _extending-zenpacklib-classes:
+
+****************************
+Extending ZenPackLib Classes
+****************************
+
+Occasionally, you may wish to add your own custom methods to your YAML-defined classes 
+or otherwise extend their functionality beyond ZenPackLib's current capabilities.  Doing 
+so requires creating a Python file that imports and overrides the class you wish to modify,
+and this is relatively straightforward.
+
+Suppose we have a component class called "BasicComponent", and we want to provide
+a method called "hello world" that, when called, will return the string "Hello World" and
+display it in the component grid.
+
+Our YAML file looks like this:
+
+.. code-block:: yaml
+      
+      name: ZenPacks.zenoss.BasicZenPack
+      class_relationships:
+      - BasicDevice 1:MC BasicComponent
+      classes:
+        BasicDevice:
+          base: [zenpacklib.Device]
+        BasicComponent:
+          base: [zenpacklib.Component]
+          properties:
+            hello_world:
+              # this will appear as the column header 
+              # in the component grid
+              label: Hello World
+              # this should be displayed in the component grid
+              grid_display: true
+              # tells ZenPackLib that this isn't a typical 
+              # property like a string, integer, boolean, etc...
+              api_only: true
+              # this is the type of property
+              api_backendtype: method
+
+First, the ZenPack's init file:
+
+.. code-block:: bash
+      
+      $ZPDIR/ZenPacks.zenoss.BasicZenPack/ZenPacks/zenoss/BasicZenPack/__init__.py
+
+should contain the following lines:
+
+.. code-block:: python
+      
+      from ZenPacks.zenoss.ZenPackLib import zenpacklib
+      CFG = zenpacklib.load_yaml()
+      schema = CFG.zenpack_module.schema
+
+Next, we create the file:
+
+.. code-block:: bash
+      
+      $ZPDIR/ZenPacks.zenoss.BasicZenPack/ZenPacks/zenoss/BasicZenPack/BasicComponent.py
+      
+
+and it should contain the lines:
+
+.. code-block:: python
+      
+      from . import schema
+      
+      class BasicComponent(schema.BasicComponent):
+          """Class override for BasisComponent"""
+
+From here, we proceed to add our "hello_world" method to obtain:
+
+.. code-block:: python
+      
+      from . import schema
+      
+      class BasicComponent(schema.BasicComponent):
+          """Class override for BasisComponent"""
+          def hello_world(self):
+              return 'Hello World!'
+
+And we're done.  
+
+The "Hello World" column will now display in the component grid, 
+and the string "Hello World!" will be printed in each row of component output.
+
+We can also override ZenPackLib's built-in methods, but must be careful doing so
+to avoid undesirable results.  Supposing that our YAML specifies some monitoring templates
+(not defined here) for BasicComponent, and for some reason we want to randomly choose 
+which ones are displayed in the GUI.  To do so, we need to override the 
+"getRRDTemplates" method.
+
+Our YAML file is modified:
+
+.. code-block:: yaml
+      
+      name: ZenPacks.zenoss.BasicZenPack
+      class_relationships:
+      - BasicDevice 1:MC BasicComponent
+      classes:
+        BasicDevice:
+          base: [zenpacklib.Device]
+        BasicComponent:
+          base: [zenpacklib.Component]
+          properties:
+            hello_world:
+              label: Hello World
+              api_only: true
+              api_backendtype: method
+              grid_display: true
+          monitoring_templates: [ThisTemplate, ThatTemplate]
+
+And we further modify our BaseComponent.py as follows:
+
+.. code-block:: python
+      
+      import random
+      from . import schema
+      
+      class BasicComponent(schema.BasicComponent):
+          """Class override for BasisComponent"""
+          def hello_world(self):
+              return 'Hello World!'
+      
+          def getRRDTemplates(self):
+              """ Safely override the ZenPackLib 
+                  getRRDTemplates method, returning 
+                  randomly chosen templates. """
+              templates = []
+              # make sure we call the base method when we override it
+              for template in super(BasicComponent, self).getRRDTemplates():
+                  # rolling the dice
+                  if bool(random.randint(0,1)):
+                      templates.append(template)
+              return templates
+
+The key point to remember here is the call to:
+
+.. code-block:: python
+      
+      super(BasicComponent, self).getRRDTemplates()
+
+which instructs Python to use the original method before we modify its output.  Similar care 
+must be excercised when overriding built-in methods and properties, assuming a safer method
+cannot be found.
 
 
 .. _class-fields:
