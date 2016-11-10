@@ -25,6 +25,7 @@ Features
 * Added support for Process Class definitions
 * Deprecated support for python-based "yaml" specifications
 * Support for threshold graphpoint legend and color (ZEN-24904)
+* Ability to specify an initial sort column on a component grid
 
 Fixes
 
