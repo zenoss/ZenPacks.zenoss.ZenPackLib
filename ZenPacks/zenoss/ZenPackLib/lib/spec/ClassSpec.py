@@ -483,10 +483,9 @@ class ClassSpec(Spec):
 
     def get_icon_url(self):
         """Set icon_url"""
-        self._icon_url = None
         # if it's already given with the path
         if self.icon and self.icon.startswith('/'):
-            self._icon_url = self.icon
+            return self.icon
         else:
             # otherwise check if it exists whether or not it's given
             icon_filename = self.icon or '{}.png'.format(self.name)
@@ -498,12 +497,11 @@ class ClassSpec(Spec):
                     'icon',
                     icon_filename)
                 if os.path.isfile(icon_path):
-                    self._icon_url = '/++resource++{zenpack_name}/icon/{filename}'.format(
+                    return '/++resource++{zenpack_name}/icon/{filename}'.format(
                         zenpack_name=self.zenpack.name,
                         filename=icon_filename)
         # fall back to default
-        if not self._icon_url:
-            self._icon_url = '/zport/dmd/img/icons/noicon.png'
+        return '/zport/dmd/img/icons/noicon.png'
 
     @property
     def model_schema_class(self):
