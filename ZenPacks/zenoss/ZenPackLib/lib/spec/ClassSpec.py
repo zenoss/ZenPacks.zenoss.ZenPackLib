@@ -116,6 +116,7 @@ class ClassSpec(Spec):
             short_label=None,
             plural_short_label=None,
             auto_expand_column='name',
+            initial_sort_column='name',
             label_width=80,
             plural_label_width=None,
             content_width=None,
@@ -159,6 +160,9 @@ class ClassSpec(Spec):
                    available space in the grid display.  Defaults to the first
                    column ('name').
             :type auto_expand_column: str
+            :param initial_sort_column: The name of the column on which to initially sort.
+                    Defaults to the first column ('name').
+            :type initial_sort_column: str
             :param label_width: Optionally overrides ZPL's label width
                    calculation with a higher value.
             :type label_width: int
@@ -226,6 +230,7 @@ class ClassSpec(Spec):
             self.plural_short_label = plural_short_label or self.plural_label
 
         self.auto_expand_column = auto_expand_column
+        self.initial_sort_column = initial_sort_column
 
         self.label_width = int(label_width)
         self.plural_label_width = plural_label_width or self.label_width + 7
@@ -996,7 +1001,8 @@ class ClassSpec(Spec):
                 "header: _t('{}')".format(header),
                 "width: {}".format(width),
                 "renderer: {}".format(renderer),
-                ]
+                "sortable: true"
+            ]
 
             columns.append('{{{}}}'.format(','.join(column_fields)))
 
@@ -1090,6 +1096,10 @@ class ClassSpec(Spec):
             "        config = Ext.applyIf(config||{{}}, {{\n"
             "            componentType: '{meta_type}',\n"
             "            autoExpandColumn: '{auto_expand_column}',\n"
+            "            sortInfo: {{\n"
+            "                        field: '{initial_sort_column}',\n"
+            "                        direction: 'ASC'\n"
+            "                       }}\n,"
             "            fields: [{fields}],\n"
             "            columns: [{columns}]\n"
             "        }});\n"
@@ -1102,6 +1112,7 @@ class ClassSpec(Spec):
                 meta_type=self.meta_type,
                 zenpack_id_prefix=self.zenpack.id_prefix,
                 auto_expand_column=self.auto_expand_column,
+                initial_sort_column=self.initial_sort_column,
                 fields=','.join(
                     default_fields +
                     self.containing_js_fields +

@@ -435,6 +435,12 @@ auto_expand_column
   :Type: string
   :Default Value: name
   
+initial_sort_column
+  :Description: Column (property) to initially sort in component grid.
+  :Required: No
+  :Type: string
+  :Default Value: name
+
 order
   :Description: Order to display this class among other classes. (0-100)
   :Required: No
