@@ -25,10 +25,10 @@ from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
 from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
 # zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib import zenpacklib
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 
-YAML = """
+YAML_DOC = """
 name: ZenPacks.zenoss.SimplevSphere
 
 class_relationships:
@@ -77,6 +77,14 @@ classes:
 
 """
 
+simple_vsphere_zp = ZPLTestHarness(YAML_DOC)
+
+from ZenPacks.zenoss.SimplevSphere.Datacenter import Datacenter
+from ZenPacks.zenoss.SimplevSphere.Folder import Folder
+from ZenPacks.zenoss.SimplevSphere.Cluster import Cluster
+from ZenPacks.zenoss.SimplevSphere.ResourcePool import ResourcePool
+from ZenPacks.zenoss.SimplevSphere.VirtualMachine import VirtualMachine
+
 
 # When a manually-created python object is first added to its container, we
 # need to reload it, as its in-memory representation is changed.
@@ -122,7 +130,7 @@ class TestExtraPaths(BaseTestCase):
         self.dmd.Devices.SimplevSphere._setProperty('zPythonClass', 'ZenPacks.zenoss.SimplevSphere.Endpoint')
 
         # Load the YAML
-        self.CFG = zenpacklib.load_yaml(YAML)
+        self.CFG = simple_vsphere_zp.cfg
 
         # And create the model.
         self._create_device()
@@ -132,12 +140,12 @@ class TestExtraPaths(BaseTestCase):
         ep = self.dmd.Devices.SimplevSphere.createInstance('testdevice')
 
         # Datacenter
-        from ZenPacks.zenoss.SimplevSphere.Datacenter import Datacenter
+
         datacenter = Datacenter("Datacenter")
         datacenter = addContained(ep, "datacenters", datacenter)  # link into endpoin
 
         # Create a couple of nested folders
-        from ZenPacks.zenoss.SimplevSphere.Folder import Folder
+
         folder_top = Folder("Folder-Top")
         folder_top = addContained(ep, "folders", folder_top)
 
@@ -146,13 +154,13 @@ class TestExtraPaths(BaseTestCase):
         folder_child = addNonContained(folder_top, "childFolders", folder_child)
 
         # A cluster
-        from ZenPacks.zenoss.SimplevSphere.Cluster import Cluster
+
         cluster = Cluster("Cluster")
         cluster = addContained(datacenter, "computeResources", cluster)  # link into DC
         cluster = addNonContained(folder_top, "childEntities", cluster)  # link into folder
 
         # And a couple of nested resource pools
-        from ZenPacks.zenoss.SimplevSphere.ResourcePool import ResourcePool
+
         cluster_rp = ResourcePool("ResourcePool-Top")
         cluster_rp = addContained(datacenter, "resourcePools", cluster_rp)
         cluster_rp = addNonContained(cluster, "resourcePools", cluster_rp)
@@ -164,8 +172,6 @@ class TestExtraPaths(BaseTestCase):
         cluster = addNonContained(sub_rp, "owner", cluster)
 
         # VMs
-        from ZenPacks.zenoss.SimplevSphere.VirtualMachine import VirtualMachine
-
         # One at the top level
         vm1 = VirtualMachine("VirtualMachine-1")
         vm1 = addContained(ep, "vms", vm1)

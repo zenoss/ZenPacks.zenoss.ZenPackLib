@@ -25,61 +25,17 @@ from Products.ZenTestCase.BaseTestCase import BaseTestCase
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
+def vsphere_installed():
+    """Return True if vSphere is installed"""
+    try:
+        from ZenPacks.zenoss.vSphere.Datacenter import Datacenter
+    except ImportError:
+        pass
+    else:
+        return True
+    return False
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
-zProperties:
-  DEFAULTS:
-    category: VMware vSphere
-  zVSphereEndpointHost:
-    type: string
-  zVSphereEndpointPort:
-    type: int
-    default: 443
-  zVSphereEndpointUser:
-    type: string
-    default: admin
-  zVSphereEndpointPassword:
-    type: password
-  zVSphereEndpointUseSsl:
-    type: boolean
-    default: True
-  zVSpherePerfDelayCollectionMinutes:
-    type: int
-  zVSpherePerfQueryChunkSize:
-    type: int
-    default: 250
-  zVSpherePerfQueryVcChunkSize:
-    type: int
-    default: 64
-  zVSpherePerfQueryRaw20:
-    type: boolean
-    default: True
-  zVSpherePerfQueryVcRaw20:
-    type: boolean
-    default: False
-  zVSpherePerfMaxAgeMinutes:
-    type: int
-    default: 28
-  zVSpherePerfRecoveryMinutes:
-    type: int
-    default: 240
-  zVSpherePerfParallelQueries:
-    type: int
-    default: 6
-  zVSpherePerfQueryTimeout:
-    type: int
-    default: 200
-  zVSphereModelIgnore:
-    type: lines
-  zVSphereModelCache:
-    type: lines
-  zVSphereHostSystemUser:
-    type: string
-    default: admin
-  zVSphereHostSystemPassword:
-    type: password
-  zVSphereHostCollectionClusterWhitelist:
-    type: lines
 class_relationships:
   - Endpoint 1:MC Datacenter
   - Endpoint 1:MC Folder
@@ -1042,16 +998,19 @@ class TestSubComponentNavJS(BaseTestCase):
 
     def test_nav_js(self):
         ''''''
-        z = ZPLTestHarness(YAML_DOC)
-        cls = z.cfg.classes.get('ResourcePool')
-        self.assertEquals(cls.subcomponent_nav_js_snippet,
-                          expected_rp,
-                          'Unexpected subcomponent_nav_js_snippet for ResourcePool')
+        if not vsphere_installed():
+            z = ZPLTestHarness(YAML_DOC)
+            cls = z.cfg.classes.get('ResourcePool')
+            self.assertEquals(cls.subcomponent_nav_js_snippet,
+                              expected_rp,
+                              'Unexpected subcomponent_nav_js_snippet for ResourcePool')
 
-        cls = z.cfg.classes.get('VirtualApp')
-        self.assertEquals(cls.subcomponent_nav_js_snippet,
-                          expected_va,
-                          'Unexpected subcomponent_nav_js_snippet for ResourcePool')
+            cls = z.cfg.classes.get('VirtualApp')
+            self.assertEquals(cls.subcomponent_nav_js_snippet,
+                              expected_va,
+                              'Unexpected subcomponent_nav_js_snippet for ResourcePool')
+        else:
+            print "TestSubComponentNavJS cannot run if ZenPacks.zenoss.vSphere is installed"
 
 def test_suite():
     """Return test suite for this module."""

@@ -21,8 +21,7 @@ unused(Globals)
 from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
 # zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-from ZenPacks.zenoss.ZenPackLib.tests.test_keywords import LOG, WarningLoader, LogCapture
+from ZenPacks.zenoss.ZenPackLib.tests.test_keywords import LogCapture
 
 # should be OK
 GOOD_YAML = """

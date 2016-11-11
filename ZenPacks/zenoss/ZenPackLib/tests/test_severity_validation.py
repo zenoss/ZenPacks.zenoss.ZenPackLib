@@ -17,8 +17,6 @@ import yaml
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Loader import Loader
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
 
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-
 # Zenoss Imports
 import Globals  # noqa
 from Products.ZenUtils.Utils import unused

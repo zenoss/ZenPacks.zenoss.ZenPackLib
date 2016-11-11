@@ -24,9 +24,6 @@ from Products.ZenTestCase.BaseTestCase import BaseTestCase
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
-from ZenPacks.zenoss.ZenPackLib.lib.params.RRDTemplateSpecParams import RRDTemplateSpecParams
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.Loader import Loader
 
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib

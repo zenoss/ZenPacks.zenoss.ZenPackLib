@@ -12,9 +12,6 @@
 """Class proxy tests."""
 
 # stdlib Imports
-import os
-import site
-import tempfile
 import traceback
 
 # Zope Imports
@@ -22,6 +19,8 @@ from zope.event import notify
 
 # Zenoss Imports
 import Globals  # noqa
+from Products.ZenUtils.Utils import unused
+unused(Globals)
 
 from Products.DataCollector.ApplyDataMap import ApplyDataMap
 from Products.DataCollector.plugins.DataMaps import ObjectMap, RelationshipMap

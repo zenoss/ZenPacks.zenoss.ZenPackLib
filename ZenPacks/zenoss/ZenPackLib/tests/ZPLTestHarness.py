@@ -1,6 +1,6 @@
 import yaml
 import logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARN)
 log = logging.getLogger('zen.zenpacklib.tests')
 from Products.ZenRelations.Exceptions import RelationshipExistsError
 from Acquisition import aq_base
@@ -52,12 +52,13 @@ def _add(ob, obj):
 
 class ZPLTestHarness(ZenScriptBase):
     '''Class containing methods to build out dummy objects representing YAML class instances'''
+    templates = None
 
-    def __init__(self, filename, connect=False):
+    def __init__(self, filename, connect=False, verbose=False):
         ''''''
         ZenScriptBase.__init__(self)
         self.filename = filename
-        self.cfg = zenpacklib.load_yaml(filename, verbose=True)
+        self.cfg = zenpacklib.load_yaml(filename, verbose=verbose)
         self.yaml = load_yaml_single(filename, useLoader=False)
         self.zp = self.cfg.zenpack_module
         self.schema = self.zp.schema
@@ -118,7 +119,7 @@ class ZPLTestHarness(ZenScriptBase):
 
     def link_obs(self, ob_from, ob_to):
         '''link two schema instance objects'''
-        #get object specs and relation specs
+        # get object specs and relation specs
         rspec = self.find_relspec(ob_from, ob_to)
         # get object relations
         from_rel = self.get_ob_rel(ob_from, rspec)
@@ -190,12 +191,12 @@ class ZPLTestHarness(ZenScriptBase):
             if not passed:
                 return False
         return True
-        
+
     def check_ob_relations(self):
         '''compare class vs spec relations'''
         passed = True
         for i, j in self.find_pairs():
-            if not self.check_rel(i,j):
+            if not self.check_rel(i, j):
                 passed = False
         return passed
 
@@ -325,7 +326,7 @@ class ZPLTestHarness(ZenScriptBase):
             if intended == 'None':
                 log.debug('{} ({}) has default value of "None" (string)'.format(cls_id, name))
             # mismatch between intended and actual
-            errmsg = '{} ({}) type or value mismatch between spec "{}" ({}) and class "{}" ({})'.format(cls_id, name, 
+            errmsg = '{} ({}) type or value mismatch between spec "{}" ({}) and class "{}" ({})'.format(cls_id, name,
                                                                                                    intended, type(intended).__name__,
                                                                                                    actual, type(actual).__name__)
             if intended is None:
@@ -338,17 +339,30 @@ class ZPLTestHarness(ZenScriptBase):
                 passed = False
         return passed
 
+    def get_templates(self):
+        """Build list of templates for testing"""
+        self.templates = {}
+        self.connect()
+        for dcid, dcs in self.cfg.device_classes.items():
+            self.templates[dcid] = {}
+            for tid, tcs in dcs.templates.items():
+                # create a dummy template object
+                self.templates[dcid][tid] = None
+                try:
+                    self.templates[dcid][tid] = tcs.create(self.dmd, False)
+                except Exception as e:
+                    log.warn("Could not create {}/{}: {}".format(dcid, tid, e))
+                    continue
+
     def check_templates_vs_specs(self):
         '''check that template objects match the specs'''
-        self.connect()
+        if not self.templates:
+            self.get_templates()
         passed = True
         for dcid, dcs in self.cfg.device_classes.items():
             for tid, tcs in dcs.templates.items():
-                # create a dummy template object
-                try:
-                    t = tcs.create(self.dmd, False)
-                except Exception as e:
-                    log.warn("Could not test {}: {}".format(tid, e))
+                t = self.templates.get(dcid, {}).get(tid, {})
+                if not t:
                     continue
                 for th in t.thresholds():
                     thcs = tcs.thresholds.get(th.id)
@@ -395,7 +409,7 @@ class ZPLTestHarness(ZenScriptBase):
         for p in ob._properties:
             id = p.get('id')
             default = getattr(ob, id)
-            spec_default = getattr(dscs, id, getattr(dscs,'extra_params',{}).get(id))
+            spec_default = getattr(dscs, id, getattr(dscs, 'extra_params', {}).get(id))
             # skip if not defined:
             if not spec_default:
                 continue
@@ -406,7 +420,8 @@ class ZPLTestHarness(ZenScriptBase):
 
     def check_templates_vs_yaml(self):
         '''check that template objects match the yaml'''
-        self.connect()
+        if not self.templates:
+            self.get_templates()
         passed = True
         for dcid, dcs in self.cfg.device_classes.items():
             # get data from unparsed, loaded yaml
@@ -414,11 +429,8 @@ class ZPLTestHarness(ZenScriptBase):
             y_templates = y_dcs.get('templates')
             for tid, tcs in dcs.templates.items():
                 y_t = y_templates.get(tid)
-                # create a dummy template object
-                try:
-                    t = tcs.create(self.dmd, False)
-                except Exception as e:
-                    log.warn("Could not test {}: {}".format(tid, e))
+                t = self.templates.get(dcid, {}).get(tid, {})
+                if not t:
                     continue
                 if not self.check_ob_vs_yaml(t, y_templates):
                     passed = False
@@ -450,12 +462,12 @@ class ZPLTestHarness(ZenScriptBase):
     def check_ob_vs_yaml(self, ob, data):
         '''compare object values to YAML'''
         passed = True
-        ob_data = data.get('DEFAULTS',{})
-        if not isinstance(data.get(ob.id,{}), dict):
+        ob_data = data.get('DEFAULTS', {})
+        if not isinstance(data.get(ob.id, {}), dict):
             # this is the dataoint aliases
             if self.classname(ob) == 'RRDDataPoint':
                 return passed
-        ob_data.update(data.get(ob.id,{}))
+        ob_data.update(data.get(ob.id, {}))
         for k, v in ob_data.items():
             if isinstance(v, dict):
                 continue
@@ -471,8 +483,8 @@ class ZPLTestHarness(ZenScriptBase):
                 if k in ['rrdmin', 'rrdmax']:
                     if str(expected) == str(actual):
                         continue
-                log.warn('{} ({}) property {}: acutal: {} ({}) did not match expected: {} ({})'.format(ob.id, ob.meta_type, k, 
-                                                                                                actual, type(actual).__name__, 
+                log.warn('{} ({}) property {}: acutal: {} ({}) did not match expected: {} ({})'.format(ob.id, ob.meta_type, k,
+                                                                                                actual, type(actual).__name__,
                                                                                                 expected, type(expected).__name__))
                 passed = False
         return passed
@@ -501,7 +513,7 @@ class ZPLTestHarness(ZenScriptBase):
         if reverse:
             return base_string.format(cls_t, rel_t, type_t,
                                   type_f, rel_f, cls_f)
-        return base_string.format(cls_f, rel_f, type_f, 
+        return base_string.format(cls_f, rel_f, type_f,
                               type_t, rel_t, cls_t)
 
     def print_relations(self):
@@ -525,7 +537,7 @@ class ZPLTestHarness(ZenScriptBase):
         rel = getattr(ob, relname)
         return self.rel_string(self.classname(ob),
                                relname,
-                               self.classname(rel).replace('Relationship',''),
+                               self.classname(rel).replace('Relationship', ''),
                                rel.remoteType().__name__,
                                rel.remoteName(),
                                rel.remoteClass().__name__,
@@ -571,9 +583,9 @@ class ZPLTestHarness(ZenScriptBase):
     def print_attrs(self, data):
         for name, spec in data.items():
             print '#### {}'.format(name)
-            for k,v in spec.__dict__.items():
+            for k, v in spec.__dict__.items():
                 if v is None: continue
-                print '  {}: {}'.format(k,v)
+                print '  {}: {}'.format(k, v)
             print ''
 
     def list_all_paths(self):
@@ -610,7 +622,7 @@ class ZPLTestHarness(ZenScriptBase):
                     path.insert(0, obj.id)
             included_paths.add(component.meta_type + ":" + "/".join(path) + ":" + facet.meta_type)
             class_summary[component.meta_type].add(facet.meta_type)
-        
+
         print "Paths\n-----\n"
         for path in sorted(all_paths):
             if path in included_paths:
