@@ -32,17 +32,10 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
         self.zProperties = self.specs_from_param(
             ZPropertySpecParams, 'zProperties', zProperties, leave_defaults=True, zplog=self.LOG)
 
-        self.class_relationships = []
-        if class_relationships:
-            if not isinstance(class_relationships, list):
-                raise ValueError("class_relationships must be a list, not a %s" % type(class_relationships))
-
-            for rel in class_relationships:
-                rel['zplog'] = self.LOG
-                self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
-
         self.classes = self.specs_from_param(
             ClassSpecParams, 'classes', classes, leave_defaults=True, zplog=self.LOG)
+
+        self.class_relationships = class_relationships
 
         self.device_classes = self.specs_from_param(
             DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True, zplog=self.LOG)

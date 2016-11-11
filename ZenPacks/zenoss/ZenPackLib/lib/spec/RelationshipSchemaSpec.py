@@ -10,10 +10,17 @@ from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 from Products.ZenRelations.Exceptions import ZenSchemaError
 from ..functions import relname_from_classname
 from .Spec import Spec
+from .ClassRelationshipSpec import ClassRelationshipSpec
 
+from ..base.types import Relationship
+from Products.ZenUtils.Utils import monkeypatch, importClass
 
 class RelationshipSchemaSpec(Spec):
     """RelationshipSchemaSpec"""
+    _left_schema = None
+    _right_schema = None
+    _left_type = None
+    _right_type = None
 
     def __init__(
         self,
@@ -53,12 +60,79 @@ class RelationshipSchemaSpec(Spec):
             raise ZenSchemaError("In %s(%s) - (%s)%s, invalid orientation- left and right may be reversed." % (left_class, left_relname, right_relname, right_class))
 
         self.zenpack_spec = zenpack_spec
+        self.left_rel = Relationship(left_type)
         self.left_class = left_class
         self.left_relname = left_relname
-        self.left_schema = self.make_schema(left_type, right_type, right_class, right_relname)
+        self.left_spec = self.zenpack_spec.classes.get(self.left_class)
+        # if spec is not provded, import the target class
+        if not self.left_spec:
+            self.get_imported_class(self.left_class)
+
+        self.right_rel = Relationship(right_type)
         self.right_class = right_class
         self.right_relname = right_relname
-        self.right_schema = self.make_schema(right_type, left_type, left_class, left_relname)
+        self.right_spec = self.zenpack_spec.classes.get(self.right_class)
+        # if spec is not provded, import the target class
+        if not self.right_spec:
+            self.get_imported_class(self.right_class)
+
+        # update ClassRelationshipSpec or imported class
+        self.update_class_relationship_spec(self.left_spec, self.left_relname, self.left_schema, self.left_class)
+        self.update_class_relationship_spec(self.right_spec, self.right_relname, self.right_schema, self.right_class)
+
+    def get_imported_class(self, classname):
+        """import target class by reference"""
+        if '.' in classname and classname.split('.')[-1] not in self.zenpack_spec.classes:
+            module = ".".join(classname.split('.')[0:-1])
+            try:
+                kls = importClass(module)
+                self.zenpack_spec.imported_classes[classname] = importClass(module)
+            except ImportError:
+                self.LOG.error('Failed to add relation ({}) to imported class: {}'.format(relname, module))
+                pass
+
+    def update_children(self):
+        """update child classes of this relationship's target specs"""
+        spec_map = {self.left_relname: self.left_spec,
+                    self.right_relname: self.right_spec}
+        for relname, spec in spec_map.items():
+            # skip if this is an imported class
+            if not spec:
+                continue
+            spec.update_child_relations(relname)
+
+    def update_class_relationship_spec(self, spec, relname, schema, classname):
+        """Add or Update ClassRelationshipSpec based on this RelationshipSpec"""
+        if spec:
+            # this shouldn't happen
+            if not schema:
+                self.LOG.error('Schema relation not provided for {} ({})'.format(spec, relname))
+                return
+            # ClassRelationshipSpec may exist already if relationships property overrides were
+            # specified in the YAML, but they won't have a schema since it wasn't
+            # created yet
+            if relname in spec.relationships:
+                rel_spec = spec.relationships[relname]
+                if not rel_spec.schema:
+                    rel_spec.schema = schema
+            # Otherwise we create it now with defaults
+            else:
+                spec.relationships[relname] = ClassRelationshipSpec(spec, relname, schema)
+        # if ClassSpec doesn't exist, then we are modifying an imported class
+        else:
+            kls = self.zenpack_spec.imported_classes.get(classname)
+            if kls:
+                if relname not in (x[0] for x in kls._relations):
+                    rel = ((relname, schema.__class__(schema.remoteType,
+                                                      schema.remoteClass,
+                                                      schema.remoteName)),)
+                    # avoid modifying _relations if this is a ZPL-derived class
+                    if hasattr(kls, '_v_local_relations'):
+                        kls._v_local_relations += rel
+                    else:
+                        kls._relations += rel
+            else:
+                self.LOG.error('Failed to add relationship ({}) to imported class ({}).'.format(relname, classname))
 
     @classmethod
     def valid_orientation(cls, left_type, right_type):
@@ -85,39 +159,33 @@ class RelationshipSchemaSpec(Spec):
 
         return False
 
-    _relTypeCardinality = {
-        ToOne: '1',
-        ToMany: 'M',
-        ToManyCont: 'MC'
-    }
-
-    _relTypeClasses = {
-        "ToOne": ToOne,
-        "ToMany": ToMany,
-        "ToManyCont": ToManyCont
-    }
-
-    _relTypeNames = {
-        ToOne: "ToOne",
-        ToMany: "ToMany",
-        ToManyCont: "ToManyCont"
-    }
-
     @property
     def left_type(self):
-        return self._relTypeNames.get(self.right_schema.__class__)
+        if not self._left_type:
+            self._left_type = self.left_rel.name
+        return self._left_type
+
+    @left_type.setter
+    def left_type(self, value):
+        pass
 
     @property
     def right_type(self):
-        return self._relTypeNames.get(self.left_schema.__class__)
+        if not self._right_type:
+            self._right_type = self.right_rel.name
+        return self._right_type
+
+    @right_type.setter
+    def right_type(self, value):
+        pass
 
     @property
     def left_cardinality(self):
-        return self._relTypeCardinality.get(self.right_schema.__class__)
+        return self.right_rel.cardinality
 
     @property
     def right_cardinality(self):
-        return self._relTypeCardinality.get(self.left_schema.__class__)
+        return self.left_rel.cardinality
 
     @property
     def default_left_relname(self):
@@ -131,21 +199,22 @@ class RelationshipSchemaSpec(Spec):
     def cardinality(self):
         return '%s:%s' % (self.left_cardinality, self.right_cardinality)
 
-    def make_schema(self, relTypeName, remoteRelTypeName, remoteClass, remoteName):
-        relType = self._relTypeClasses.get(relTypeName, None)
-        if not relType:
-            raise ValueError("Unrecognized Relationship Type '%s'" % relTypeName)
+    @property
+    def left_schema(self):
+        if not self._left_schema:
+            self._left_schema = self.left_rel.cls(self.right_rel.cls, self.right_class, self.right_relname)
+            self.qualify_remote_class(self._left_schema)
+        return self._left_schema
 
-        remoteRelType = self._relTypeClasses.get(remoteRelTypeName, None)
-        if not remoteRelType:
-            raise ValueError("Unrecognized Relationship Type '%s'" % remoteRelTypeName)
+    @property
+    def right_schema(self):
+        if not self._right_schema:
+            self._right_schema = self.right_rel.cls(self.left_rel.cls, self.left_class, self.left_relname)
+            self.qualify_remote_class(self._right_schema)
+        return self._right_schema
 
-        schema = relType(remoteRelType, remoteClass, remoteName)
-
-        # Qualify unqualified classnames.
+    def qualify_remote_class(self, schema):
+        """Qualify unqualified classnames"""
         if '.' not in schema.remoteClass:
             schema.remoteClass = '{}.{}'.format(
                 self.zenpack_spec.name, schema.remoteClass)
-
-        return schema
-

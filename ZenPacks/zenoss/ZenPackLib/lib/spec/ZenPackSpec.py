@@ -12,6 +12,7 @@ import importlib
 import operator
 import types
 from Products.Five import zcml
+from Products.Zuul.decorators import memoize
 from Products.ZenUtils.Utils import monkeypatch, importClass
 from Products.Zuul.routers.device import DeviceRouter
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
@@ -28,7 +29,6 @@ from ..base.ZenPack import ZenPack
 from .Spec import Spec
 from .ClassSpec import ClassSpec
 from .DeviceClassSpec import DeviceClassSpec
-from .ClassRelationshipSpec import ClassRelationshipSpec
 from .RelationshipSchemaSpec import RelationshipSchemaSpec
 from .ZPropertySpec import ZPropertySpec
 from .EventClassSpec import EventClassSpec
@@ -92,6 +92,7 @@ class ZenPackSpec(Spec):
     _device_js_snippet = None
     _dynamicview_nav_js_snippet = None
     _zenpack_module = None
+    imported_classes = {}
 
     def __init__(
             self,
@@ -126,18 +127,7 @@ class ZenPackSpec(Spec):
         super(ZenPackSpec, self).__init__(_source_location=_source_location)
         if zplog:
             self.LOG = zplog
-        # The parameters from which this zenpackspec was originally
-        # instantiated.
-        from ..params.ZenPackSpecParams import ZenPackSpecParams
-        self.specparams = ZenPackSpecParams(
-            name,
-            zProperties=zProperties,
-            classes=classes,
-            class_relationships=class_relationships,
-            device_classes=device_classes,
-            event_classes=event_classes,
-            process_class_organizers=process_class_organizers,
-            zplog=self.LOG)
+
         self.name = name
         self.LOG.debug("------ {} ------".format(self.name))
         self.id_prefix = name.replace(".", "_")
@@ -149,6 +139,12 @@ class ZenPackSpec(Spec):
         self.zProperties = self.specs_from_param(
             ZPropertySpec, 'zProperties', zProperties, zplog=self.LOG)
 
+        # Classes
+        self.classes = self.specs_from_param(ClassSpec, 'classes', classes, zplog=self.LOG)
+
+        # update properties from ancestor classes
+        self.plumb_properties()
+
         # Class Relationship Schema
         self.class_relationships = []
         if class_relationships:
@@ -158,119 +154,12 @@ class ZenPackSpec(Spec):
                 rel['zplog'] = self.LOG
                 self.class_relationships.append(RelationshipSchemaSpec(self, **rel))
 
-        # Classes
-        self.classes = self.specs_from_param(ClassSpec, 'classes', classes, zplog=self.LOG)
-
-        self.imported_classes = {}
-
-        # Import any external classes referred to in the schema
+        # update relationships for ClassSpec child classes
         for rel in self.class_relationships:
-            for relschema in (rel.left_schema, rel.right_schema):
-                className = relschema.remoteClass
-                if '.' in className and className.split('.')[-1] not in self.classes:
-                    module = ".".join(className.split('.')[0:-1])
-                    try:
-                        kls = importClass(module)
-                        self.imported_classes[className] = kls
-                    except ImportError:
-                        pass
+            rel.update_children()
 
-        # Class Relationships
-        if classes:
-            for classname, classdata in classes.iteritems():
-                if 'relationships' not in classdata:
-                    classdata['relationships'] = []
-
-                relationships = classdata['relationships']
-                for relationship in relationships:
-                    # We do not allow the schema to be specified directly.
-                    if 'schema' in relationships[relationship]:
-                        raise ValueError("Class '%s': 'schema' may not be defined or modified in an individual class's relationship.  Use the zenpack's class_relationships instead." % classname)
-
-        def find_relation_in_bases(bases, relname):
-            '''return inherited relationship spec'''
-            for base in bases:
-                base_cls = self.classes.get(base)
-                if relname in base_cls.relationships:
-                    return base_cls.relationships.get(relname)
-            return None
-
-        def get_bases(cls, bases=[]):
-            '''find all available base classes for this class'''
-            for base in cls.bases:
-                base_cls = self.classes.get(base)
-                if not base_cls:
-                    continue
-                if base not in bases:
-                    bases.append(base)
-                bases = get_bases(base_cls, bases)
-            return bases
-
-        for class_ in self.classes.values():
-            # list of all base classes for this class
-            bases = get_bases(class_, bases=[])
-            # Link the appropriate predefined (class_relationships) schema into place on this class's relationships list.
-            for rel in self.class_relationships:
-                # handle both directions
-                for direction in ['left', 'right']:
-                    target_class = getattr(rel, '%s_class' % direction)
-                    target_relname = getattr(rel, '%s_relname' % direction)
-                    target_schema = getattr(rel, '%s_schema' % direction)
-                    # these are directly specified for the class in yaml
-                    if class_.name == target_class:
-                        if target_relname not in class_.relationships:
-                            class_.relationships[target_relname] = ClassRelationshipSpec(class_, target_relname)
-                        if not class_.relationships[target_relname].schema:
-                            class_.relationships[target_relname].schema = target_schema
-                    # look for relations inherited from base classes
-                    # go through these in order
-                    else:
-                        # these are in order from nearest to farthest
-                        for base in bases:
-                            if target_class == base:
-                                # see if we have an existing relspec
-                                found_rel = find_relation_in_bases(bases, target_relname)
-                                # we need to inherit in this case
-                                if found_rel:
-                                    if target_relname not in class_.relationships:
-                                        class_.relationships[target_relname] = found_rel
-                                    if not class_.relationships[target_relname].schema:
-                                        class_.relationships[target_relname].schema = target_schema
-                                    continue
-
-        for class_ in self.classes.values():
-            # Plumb _relations
-            for relname, relationship in class_.relationships.iteritems():
-                if not relationship.schema:
-                    self.LOG.error("Removing invalid display config for relationship {} from  {}.{}".format(relname, self.name, class_.name))
-                    class_.relationships.pop(relname)
-                    continue
-
-                if relationship.schema.remoteClass in self.imported_classes.keys():
-                    remoteClass = relationship.schema.remoteClass  # Products.ZenModel.Device.Device
-                    relname = relationship.schema.remoteName  # coolingFans
-                    modname = relationship.class_.model_class.__module__  # ZenPacks.zenoss.HP.Proliant.CoolingFan
-                    className = relationship.class_.model_class.__name__  # CoolingFan
-                    remoteClassObj = self.imported_classes[remoteClass]  # Device_obj
-                    remoteType = relationship.schema.remoteType  # ToManyCont
-                    localType = relationship.schema.__class__  # ToOne
-                    remote_relname = relationship.zenrelations_tuple[0]  # products_zenmodel_device_device
-
-                    if relname not in (x[0] for x in remoteClassObj._relations):
-                        rel = ((relname, remoteType(localType, modname, remote_relname)),)
-                        # do this differently if it's on a ZPL-based class
-                        if hasattr(remoteClassObj, '_v_local_relations'):
-                            remoteClassObj._v_local_relations += rel
-                        else:
-                            remoteClassObj._relations += rel
-
-                    remote_module_id = remoteClassObj.__module__
-                    if relname not in self.NEW_RELATIONS[remote_module_id]:
-                        self.NEW_RELATIONS[remote_module_id].append(relname)
-
-                    component_type = '.'.join((modname, className))
-                    if component_type not in self.NEW_COMPONENT_TYPES:
-                        self.NEW_COMPONENT_TYPES.append(component_type)
+        # update relations on imported classes
+        self.plumb_relations()
 
         # Device Classes
         self.device_classes = self.specs_from_param(
@@ -283,6 +172,40 @@ class ZenPackSpec(Spec):
         # Process Classes
         self.process_class_organizers = self.specs_from_param(
             ProcessClassOrganizerSpec, 'process_class_organizers', process_class_organizers)
+        # The parameters from which this zenpackspec was originally
+        # instantiated.
+        from ..params.ZenPackSpecParams import ZenPackSpecParams
+        self.specparams = ZenPackSpecParams(
+            name,
+            zProperties=zProperties,
+            classes=classes,
+            class_relationships=self.class_relationships,
+            device_classes=device_classes,
+            event_classes=event_classes,
+            process_class_organizers=process_class_organizers,
+            zplog=self.LOG)
+
+    def plumb_properties(self):
+        """
+            Plumb class properties by ancestors first
+        """
+        for class_ in self.classes.values():
+            for name in class_.get_base_specs():
+                spec = self.classes.get(name)
+                spec.update_inherited_property_parameters()
+            class_.update_inherited_property_parameters()
+
+    def plumb_relations(self):
+        """
+            Plumb class relations by ancestors first
+        """
+        for class_ in self.classes.values():
+            for name in class_.get_base_specs():
+                spec = self.classes.get(name)
+                spec.update_inherited_relation_parameters()
+                spec.plumb_class_relations()
+            class_.update_inherited_relation_parameters()
+            class_.plumb_class_relations()
 
     @property
     def ordered_classes(self):
