@@ -63,7 +63,7 @@ device_classes:
 """
 
 EXPECTED = {'A': {'color': '', 'legend': '${graphPoint/id}'},
-            'a': {'color': 234234, 'legend': 'test_a'},
+            'a': {'color': '234234', 'legend': 'test_a'},
             'b': {'color': '', 'legend': 'test_b'},
             'c': {'color': 'AAAAAA', 'legend': '${graphPoint/id}'}}
 

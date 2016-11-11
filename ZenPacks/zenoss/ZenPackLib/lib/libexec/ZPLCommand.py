@@ -8,8 +8,6 @@
 ##############################################################################
 import os
 import os.path
-import re
-import inspect
 import sys
 import yaml
 import collections
@@ -20,17 +18,13 @@ import Globals
 from Products.ZenUtils.Utils import unused
 
 from Acquisition import aq_base
-from Products.ZenModel.ZenPack import ZenPack
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
-from ..functions import create_module
 from ..params.ZenPackSpecParams import ZenPackSpecParams
-from ..params.DeviceClassSpecParams import DeviceClassSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 from ..params.EventClassSpecParams import EventClassSpecParams
 from ..params.EventClassMappingSpecParams import EventClassMappingSpecParams
 from ..params.ProcessClassOrganizerSpecParams import ProcessClassOrganizerSpecParams
-from ..params.ProcessClassSpecParams import ProcessClassSpecParams
 from ..resources.templates import SETUP_PY
 from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
 from ..helpers.WarningLoader import WarningLoader
@@ -113,7 +107,7 @@ class ZPLCommand(ZenScriptBase):
             )
         else:
             try:
-                file = open(self.options.filename)
+                open(self.options.filename)
                 valid = True
             except IOError as e:
                 errorMessage = ('WARN: unable to read file {filename} '

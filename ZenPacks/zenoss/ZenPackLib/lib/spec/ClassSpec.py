@@ -10,6 +10,7 @@ import os
 import math
 import re
 import time
+import copy
 from zope.interface import classImplements
 from Products.Zuul.decorators import memoize
 from Products.Zuul.utils import ZuulMessageFactory as _t
@@ -104,6 +105,8 @@ class ClassSpec(Spec):
     _info_class = None
     _formbuilder_class = None
     _icon_url = None
+    _plumbed = False
+    _property_defaults = {}
 
     def __init__(
             self,
@@ -208,6 +211,7 @@ class ClassSpec(Spec):
             self.LOG = zplog
         self.zenpack = zenpack
         self.name = name
+        self.symbol_name = get_symbol_name(self.zenpack.name, self.name)
 
         # Verify that bases is a tuple of base types.
         if isinstance(base, (tuple, list, set)):
@@ -244,11 +248,18 @@ class ClassSpec(Spec):
         else:
             self.order = 5 + (max(0, min(100, order)) / 100.0)
 
+        # save property defaults so they can be reapplied later
+        if properties:
+            self._property_defaults = properties.get('DEFAULTS', {})
+
         # Properties.
         self.properties = self.specs_from_param(
             ClassPropertySpec, 'properties', properties, zplog=self.LOG)
 
-        # Relationships.
+
+        # Relationships
+        # If these exist, they will refer to relationship display properties, but won't have a schema
+        # defined (yet).  The schema is added later
         self.relationships = self.specs_from_param(
             ClassRelationshipSpec, 'relationships', relationships, zplog=self.LOG)
 
@@ -336,6 +347,114 @@ class ClassSpec(Spec):
                 self.path_pattern_streams.append(pattern_stream)
         else:
             self.extra_paths = []
+
+    def check_ancestor_properties(self, spec_name):
+        """Update any inheritable properties from ancestor"""
+        base_spec = self.zenpack.classes.get(spec_name)
+        for prop_name, prop_spec in base_spec.properties.items():
+            # if we don't have it, create our own copy
+            if prop_name not in self.properties:
+                self.properties[prop_name] = copy.copy(prop_spec)
+                this_prop_spec = self.properties[prop_name]
+                this_prop_spec.class_spec = self
+
+                # override any inherited properties with properties DEFAULTS
+                for k, v in self._property_defaults.items():
+                    # avoid unwanted keys like _source_location
+                    if k not in this_prop_spec.init_params.keys():
+                        continue
+                    setattr(this_prop_spec, k, v)
+
+    def update_inherited_property_parameters(self):
+        """ Update properties and property parameters from ancestors """
+        # Retrieve missing properties from bases
+        for base_name in self.get_base_specs():
+            self.check_ancestor_properties(base_name)
+
+        # For existing, update any inheritable property parameters
+        for prop_spec in self.properties.values():
+            prop_spec.update_inherited_params()
+
+    def plumb_class_relations(self):
+        """
+            Plumb class relations and update 
+            remote class _v_local_relations/_relations
+            as well as updating NEW_RELATIONS and NEW_COMPONENT_TYPES
+        """
+        if not self._plumbed:
+            for relname, relationship in self.relationships.iteritems():
+                # if no schema was ever allocated, remove this relationship from the class
+                # this happens if the ClassSpec sets display properties for a nonexistent relation
+                if not relationship.schema:
+                    self.LOG.error("Removing invalid display config for relationship {} from  {}.{}".format(
+                                relname, self.zenpack.name, self.name))
+                    self.relationships.pop(relname)
+                    continue
+                relationship.plumb()
+            self._plumbed = True
+
+    def update_inherited_relation_parameters(self):
+        """inherit parent relationship properties if not overridden locally"""
+        for rel_spec in self.relationships.values():
+            rel_spec.update_inherited_params()
+
+    def update_child_relations(self, relname):
+        """ Update relationships with any that 
+            should be inherited from base classes
+        """
+        # process descendants first
+        for d in self.get_descendant_specs():
+            self.zenpack.classes.get(d).update_child_relations(relname)
+
+        # find this relation
+        found_rel = self.find_relation_in_base_specs(relname)
+        if found_rel:
+            # add if it's not already here
+            if relname not in self.relationships:
+                self.relationships[relname] = found_rel
+            else:
+                # otherwise ensure it has a schema
+                if not self.relationships[relname].schema:
+                    self.relationships[relname].schema = found_rel.schema
+
+    def find_property_in_base_specs(self, propname):
+        '''return nearest inherited ClassPropertySpec'''
+        base_specs = self.get_base_specs()
+        for base in base_specs:
+            base_cls = self.zenpack.classes.get(base)
+            if propname in base_cls.properties:
+                return base_cls.properties.get(propname)
+        return None
+
+    def find_relation_in_base_specs(self, relname):
+        '''return nearest inherited RelationshipSpec'''
+        base_specs = self.get_base_specs()
+        for base in base_specs:
+            base_cls = self.zenpack.classes.get(base)
+            if relname in base_cls.relationships:
+                return base_cls.relationships.get(relname)
+        return None
+
+    def get_base_specs(self, bases=None):
+        '''Return ClassSpec bases in order of nearest proximity'''
+        if not bases:
+            bases = []
+        for base in self.bases:
+            base_cls = self.zenpack.classes.get(base)
+            if not base_cls:
+                continue
+            if base not in bases:
+                bases.append(base)
+            bases = base_cls.get_base_specs(bases)
+        return bases
+
+    def get_descendant_specs(self):
+        """Return ClassSpec descendants of this class"""
+        descendents = []
+        for cls in self.zenpack.classes.values():
+            if self.name in cls.bases:
+                descendents.append(cls.name)
+        return descendents
 
     @property
     @memoize
