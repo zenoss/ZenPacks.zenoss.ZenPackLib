@@ -161,7 +161,7 @@ class GraphPointSpec(Spec):
         if self.cFunc is not None:
             graphpoint.cFunc = self.cFunc
         if self.color is not None:
-            graphpoint.color = self.color
+            graphpoint.color = str(self.color)
 
         if self.includeThresholds:
             thresh_gps = graph.addThresholdsForDataPoint(self.dpName)
@@ -174,5 +174,5 @@ class GraphPointSpec(Spec):
                 if legend:
                     thresh_gp.legend = legend
                 if color:
-                    thresh_gp.color = color
+                    thresh_gp.color = str(color)
 
