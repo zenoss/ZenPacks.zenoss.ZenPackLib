@@ -9,10 +9,7 @@
 #
 ##############################################################################
 
-""" Multi-YAML import load
-
-Tests YAML loading from multiple files
-
+""" Test Catalog Scope (ZEN-18269)
 """
 # Zenoss Imports
 import Globals  # noqa
@@ -73,17 +70,18 @@ class TestCatalogScope(BaseTestCase):
 
     def test_catalog_specs(self):
         ''''''
-        data = {'DeviceIndexedComponent': {'device'},
-                'GlobalIndexedComponent': {'global'},
-                'GlobalAndDeviceIndexedComponent': {'device', 'global'},
+        data = {'DeviceIndexedComponent': ['device_idx'],
+                'GlobalIndexedComponent': ['global_idx'],
+                'GlobalAndDeviceIndexedComponent': ['device_idx', 'global_idx'],
                 }
         for name, expected in data.items():
             actual = self.get_scope(name)
+
             self.assertEqual(actual, expected, 'Expected catalog scope {}, got {} for {}'.format(expected, actual, name))
 
     def get_scope(self, name):
         ob = self.Z.build_ob(name)
-        return ob.get_catalog_scopes(name)
+        return ob._device_catalogs.get(name, {}).keys() + ob._global_catalogs.get(name, {}).keys()
 
 
 def test_suite():
