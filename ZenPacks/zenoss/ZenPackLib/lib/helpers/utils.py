@@ -7,7 +7,6 @@
 #
 ##############################################################################
 import os
-import logging
 from collections import OrderedDict
 import yaml
 import time

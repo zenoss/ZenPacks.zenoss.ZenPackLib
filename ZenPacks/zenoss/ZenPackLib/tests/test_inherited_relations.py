@@ -27,7 +27,7 @@ from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 
 
-YAML_DOC="""
+YAML_DOC = """
 name: ZenPacks.zenoss.OpenStackInfrastructure
 zProperties:
   DEFAULTS:
@@ -45,7 +45,7 @@ classes:
     base: [zenpacklib.Component]
     relationships:
       endpoint:
-        grid_display: True
+        grid_display: true
         label: Endpoint
   OrgComponent:
     base: [OpenstackComponent]
@@ -66,9 +66,11 @@ classes:
     label: Availability Zone
     order: 2
     relationships:
+      parentOrg:
+        label: Parent
       childOrgs:
-        grid_display: False
-        details_display: False
+        grid_display: false
+        details_display: false
 """
 
 
@@ -80,9 +82,40 @@ class TestZen23763(BaseTestCase):
 
     def test_inherited_relation_display(self):
         CFG = zenpacklib.load_yaml(YAML_DOC)
+        comp = CFG.classes.get('OpenstackComponent')
+        org = CFG.classes.get('OrgComponent')
         az = CFG.classes.get('AvailabilityZone')
-        rel = az.relationships.get('parentOrg')
-        self.assertEquals(rel.label, 'Parent Region', 'Inherited relation display properties failed')
+
+        self.property_value(comp, 'endpoint', 'grid_display', True)
+        self.property_value(comp, 'endpoint', 'label', 'Endpoint')
+        self.property_value(org, 'endpoint', 'grid_display', True)
+        self.property_value(org, 'endpoint', 'label', 'Endpoint')
+        self.property_value(az, 'endpoint', 'grid_display', True)
+        self.property_value(az, 'endpoint', 'label', 'Endpoint')
+
+        self.property_value(org, 'parentOrg', 'grid_display', True)
+        self.property_value(org, 'parentOrg', 'label', 'Parent Region')
+        self.property_value(org, 'parentOrg', 'label_width', 60)
+
+        self.property_value(az, 'parentOrg', 'grid_display', True)
+        self.property_value(az, 'parentOrg', 'label', 'Parent')
+        self.property_value(az, 'parentOrg', 'label_width', 60)
+
+        self.property_value(org, 'childOrgs', 'grid_display', True)
+        self.property_value(org, 'childOrgs', 'label', 'Children')
+        self.property_value(org, 'childOrgs', 'label_width', 60)
+
+        self.property_value(az, 'childOrgs', 'grid_display', False)
+        self.property_value(az, 'childOrgs', 'label', 'Children')
+        self.property_value(az, 'childOrgs', 'label_width', 60)
+
+    def property_value(self, spec, rel_name, attr_name, expected):
+        rel = spec.relationships.get(rel_name)
+        actual = getattr(rel, attr_name, None)
+        self.assertEquals(expected, actual,
+                          '{} has unexpected value for "{}", expected: {}, actual: {}'.format(
+                          spec.name, rel_name, expected, actual)
+                          )
 
 def test_suite():
     """Return test suite for this module."""

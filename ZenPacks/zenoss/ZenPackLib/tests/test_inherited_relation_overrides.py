@@ -62,7 +62,7 @@ classes:
     label: API Queue
 """
 
-EXPECTED = ["{id: 'RabbitMQAPI_Node',dataIndex: 'rabbitMQAPI_Node',header: _t('Node'),width: 100,renderer: Zenoss.render.zenpacklib_ZenPacks_zenoss_ZenPackLib_entityLinkFromGrid}"]
+EXPECTED = ["{id: 'RabbitMQAPI_Node',dataIndex: 'rabbitMQAPI_Node',header: _t('Node'),width: 100,renderer: Zenoss.render.zenpacklib_ZenPacks_zenoss_ZenPackLib_entityLinkFromGrid,sortable: true}"]
 
 class TestZen21966(BaseTestCase):
     """Test fix for ZEN-21966
@@ -73,7 +73,7 @@ class TestZen21966(BaseTestCase):
         z = ZPLTestHarness(YAML_DOC)
         cls = z.cfg.classes.get('RabbitMQAPI_VHost')
         actual = cls.containing_js_columns
-        self.assertEquals(EXPECTED, actual, 'component_grid_panel_js expected , got {}'.format(EXPECTED, actual))
+        self.assertEquals(EXPECTED, actual, 'containing_js_columns expected:\n{}\ngot:\n{}\n'.format(EXPECTED, actual))
 
 
 

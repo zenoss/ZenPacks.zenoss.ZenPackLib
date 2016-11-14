@@ -15,7 +15,7 @@ import keyword
 from collections import OrderedDict
 from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
-from ..base.types import Color, Severity
+from ..base.types import Severity
 
 
 class Loader(yaml.Loader):
