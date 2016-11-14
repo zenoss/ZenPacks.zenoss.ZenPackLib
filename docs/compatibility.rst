@@ -26,7 +26,9 @@ older zenpacklib.py files
    install until the dependency is met.  Similarly, ZenPackLib 2.0 should refuse removal if dependent ZenPacks
    are still installed.  To achieve this, make sure that the INSTALL_REQUIRES variable in the setup.py file 
    contains the following:
-      INSTALL_REQUIRES = ['ZenPacks.zenoss.ZenPackLib']
+   
+   INSTALL_REQUIRES = ['ZenPacks.zenoss.ZenPackLib']
+   
    Please note that "INSTALL_REQUIRES" may already contain entries, and these should be preserved if they exist.
    
    This can also be configured in the GUI if the dependent ZenPack is installed in develop mode.
@@ -79,6 +81,27 @@ or added if it does not exist.
 
    Import statements should also be checked throughout any class overrides or 
    other python files, since the statements will fail if they refer to the older zenpacklib.py.
+
+
+.. _new-logging:
+
+*******************
+Version 2.0 Logging
+*******************
+
+Logging has been substantially enhanced for ZenPackLib version 2.0 and provides numerous
+features to aid during development or troubleshooting.  Logging can now be controlled on 
+a per-ZenPack basis by supplying additional paramters to the "load_yaml()" method call 
+in the ZenPack's __init__.py.file:
+
+.. code-block:: python
+
+   CFG = zenpacklib.load_yaml(verbose=True, level=10)
+
+In this example, logging verbosity is enabled with at the DEBUG level.
+
+
+.. _older-versions:
 
 *******************************
 Older Versions of zenpacklib.py
