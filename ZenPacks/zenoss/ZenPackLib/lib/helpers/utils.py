@@ -8,7 +8,7 @@
 ##############################################################################
 import os
 import logging
-from collections import OrderedDict
+from collections import OrderedDict, Mapping
 import yaml
 import time
 from .ZenPackLibLog import DEFAULTLOG
@@ -62,23 +62,7 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
         if len(yaml_doc) == 1:
             return load_yaml(yaml_doc[0], verbose, level)
         # build python dict of merged YAML data
-        cfg_data = {}
-        # this is to make sure ZP names don't conflict
-        zp_id = None
-        for f in yaml_doc:
-            # load as a raw Python dictionary
-            f_cfg = load_yaml_single(f, useLoader=False)
-            name = f_cfg.get('name')
-            if not zp_id:
-                zp_id = name
-            else:
-                # if we already have a ZP id, but this yaml
-                # has a different one, then there's a problem.
-                if name and name != zp_id:
-                    DEFAULTLOG.error('Skipping {} because multiple ZenPack names found: {} vs {}'.format(f, zp_id, name))
-                    continue
-            # update the python dict
-            cfg_data.update(f_cfg)
+        cfg_data = get_merged_docs(yaml_doc)
         # once loaded, optimize
         optimized_yaml = get_optimized_yaml(cfg_data)
         # resubmit merged YAML
@@ -114,6 +98,32 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
         DEFAULTLOG.error("Unable to load {}".format(yaml_doc))
     return CFG
 
+
+def get_merged_docs(docs=[]):
+    '''return recursively merged dictionnary'''
+    def merge_dict(target, source):
+        for k, v in source.items():
+            if (k in target and isinstance(target[k], dict)
+                    and isinstance(source[k], Mapping)):
+                merge_dict(target[k], source[k])
+            elif (k in target and isinstance(target[k], list)
+                  and isinstance(source[k], list)):
+                target[k].extend(source[k])
+            else:
+                target[k] = source[k]
+    new = {}
+    for doc in docs:
+        zp_id = new.get('name')
+        cfg = load_yaml_single(doc, useLoader=False)
+        # check for conflicting zenpack ids
+        if zp_id:
+            name = cfg.get('name')
+            if name and name != zp_id:
+                DEFAULTLOG.error('Skipping {} since conflicting ZenPack names '\
+                    'found: {} vs {}'.format(doc, zp_id, name))
+                continue
+        merge_dict(new, cfg)
+    return new
 
 def load_yaml_single(yaml_doc, useLoader=True, loader=Loader):
     ''''''

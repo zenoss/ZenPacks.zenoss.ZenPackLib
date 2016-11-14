@@ -353,6 +353,64 @@ must be excercised when overriding built-in methods and properties, assuming a s
 cannot be found.
 
 
+.. _class-multi-file:
+
+*********************************************
+Support for multiple YAML files (Version 2.0)
+*********************************************
+
+For particularly complex ZenPacks the YAML file can grow to be quite large, potentially making 
+management cumbersome.  To address this concern, ZenPackLib now supports splitting the zenpack.yaml
+files into multiple files.  The following conditions should be observed when using multiple files:
+
+* The YAML files should have a .yaml extension.
+
+* The "load_yaml" method will detect and load yaml files automatically. This behavior can be overridden by calling load_yaml(yaml_doc=[doc1, doc2]).  In this case the full file paths will need to be specified: 
+
+.. code-block:: python
+
+      import os
+      files = ['file1.yaml', 'file2.yaml']
+      YAML_DOCS = [os.path.join(os.path.dirname(__file__), f) for f in files]
+      from ZenPacks.zenoss.ZenPackLib import zenpacklib
+      CFG = zenpacklib.load_yaml(yaml_doc=YAML_DOCS)
+      schema = CFG.zenpack_module.schema
+
+
+* The 'name' parameter (ZenPack name), if used in multiple files, should be identical between them
+
+* If a given YAML section (device_classes, classes, device_classes, etc) is split between files, then each file should give the complete path to the defined objects.  The following is valid:
+
+.. code-block:: yaml
+
+      # File 1
+      name: ZenPacks.zenoss.BasicZenPack
+      class_relationships:
+      - BaseComponent 1:MC AuxComponent
+      classes:
+        BasicDevice:
+          base: [zenpacklib.Device]
+          monitoring_templates: [BasicDevice]
+        BasicComponent:
+          base: [zenpacklib.Component]
+          monitoring_templates: [BasicComponent]
+
+.. code-block:: yaml
+
+      # File 2
+      class_relationships:
+      - BaseDevice 1:MC BaseComponent
+      classes:
+        SubComponent:
+          base: [BasicComponent]
+          monitoring_templates: [SubComponent]
+        AuxComponent:
+          base: [SubComponent]
+          monitoring_templates: [AuxComponent]
+
+* Using conflicting parameters (like setting different DEFAULTS for the same entity in different files) will likely lead to undesirable results.
+
+
 .. _class-fields:
 
 ************
