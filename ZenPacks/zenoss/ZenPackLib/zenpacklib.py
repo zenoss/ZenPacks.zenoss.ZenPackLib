@@ -62,8 +62,8 @@ from lib.base.Component import (
     WinService
     )
 
-
-from lib.functions import relationships_from_yuml
+from lib.spec import ZenPackSpec
+from lib.functions import relationships_from_yuml, catalog_search, ucfirst, relname_from_classname
 
 if __name__ == '__main__':
     from lib.libexec.ZPLCommand import ZPLCommand
