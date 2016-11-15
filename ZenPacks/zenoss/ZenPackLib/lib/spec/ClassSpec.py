@@ -105,6 +105,7 @@ class ClassSpec(Spec):
     _info_class = None
     _formbuilder_class = None
     _icon_url = None
+    _datapoints_to_fetch = None
     _plumbed = False
     _property_defaults = {}
 
@@ -679,7 +680,7 @@ class ClassSpec(Spec):
                         r = self.cacheRRDValue(datapoint, default=default)
                     else:
                         if HAS_METRICFACADE:
-                            r = self.getRRDValue(datapoint)
+                            r = self.getFetchedDataPoint(datapoint)
                         else:
                             r = self.getRRDValue(datapoint, start=time.time() - 1800)
 
@@ -864,6 +865,8 @@ class ClassSpec(Spec):
 
         for spec in self.inherited_relationships().itervalues():
             attributes.update(spec.info_properties)
+
+        attributes['dataPointsToFetch'] = self.datapoints_to_fetch
 
         return self.create_schema_class(
             get_symbol_name(self.zenpack.name, 'schema'),
@@ -1064,6 +1067,22 @@ class ClassSpec(Spec):
         hidden = {x.meta_type for x in self.filter_hide_from_class_specs}
 
         return list(containing | faceting - hidden)
+
+    @property
+    def datapoints_to_fetch(self):
+        if not self._datapoints_to_fetch:
+            self._datapoints_to_fetch = self.get_datapoints_to_fetch()
+        return self._datapoints_to_fetch
+
+    def get_datapoints_to_fetch(self):
+        """return list of datapoint names for templates associated with this class"""
+        dsnames = []
+        for dc_spec in self.zenpack.device_classes.values():
+            for t_name, t_spec in dc_spec.templates.items():
+                if t_name in self.monitoring_templates:
+                    dsnames += t_spec.datapoints_to_fetch
+        dsnames = list(set(dsnames))
+        return dsnames
 
     @property
     def containing_js_fields(self):
