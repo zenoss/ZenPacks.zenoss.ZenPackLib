@@ -26,6 +26,7 @@ Features
 * Deprecated support for python-based "yaml" specifications
 * Support for threshold graphpoint legend and color (ZEN-24904)
 * Ability to specify an initial sort column on a component grid
+* Performance enhancments for grid display of metrics (ZEN-23870)
 
 Fixes
 
