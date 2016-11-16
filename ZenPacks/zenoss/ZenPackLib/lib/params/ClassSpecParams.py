@@ -11,6 +11,7 @@ from .ClassPropertySpecParams import ClassPropertySpecParams
 from .ClassRelationshipSpecParams import ClassRelationshipSpecParams
 from ..spec.ClassSpec import ClassSpec
 
+
 class ClassSpecParams(SpecParams, ClassSpec):
     def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, monitoring_templates=[], **kwargs):
         SpecParams.__init__(self, **kwargs)
@@ -31,4 +32,3 @@ class ClassSpecParams(SpecParams, ClassSpec):
 
         self.relationships = self.specs_from_param(
             ClassRelationshipSpecParams, 'relationships', relationships, leave_defaults=True, zplog=self.LOG)
-
