@@ -9,10 +9,12 @@
 from .SpecParams import SpecParams
 from .ClassPropertySpecParams import ClassPropertySpecParams
 from .ClassRelationshipSpecParams import ClassRelationshipSpecParams
+from .ImpactTriggerSpecParams import ImpactTriggerSpecParams
 from ..spec.ClassSpec import ClassSpec
 
+
 class ClassSpecParams(SpecParams, ClassSpec):
-    def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, monitoring_templates=[], **kwargs):
+    def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, impact_triggers=None, monitoring_templates=[], **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
 
@@ -32,3 +34,5 @@ class ClassSpecParams(SpecParams, ClassSpec):
         self.relationships = self.specs_from_param(
             ClassRelationshipSpecParams, 'relationships', relationships, leave_defaults=True, zplog=self.LOG)
 
+        self.impact_triggers = self.specs_from_param(
+            ImpactTriggerSpecParams, 'impact_triggers', impact_triggers, leave_defaults=True, zplog=self.LOG)

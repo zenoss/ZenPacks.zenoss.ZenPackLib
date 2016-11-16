@@ -7,12 +7,12 @@
 #
 ##############################################################################
 from .SpecParams import SpecParams
-from ..spec.ClassPropertySpec import ClassPropertySpec
+from ..spec.ImpactTriggerSpec import ImpactTriggerSpec
 
+class ImpactTriggerSpecParams(SpecParams, ImpactTriggerSpec):
+    """ImpactTriggerSpecParams"""
 
-class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
-    """ClassPropertySpecParams"""
-
-    def __init__(self, class_spec, name, **kwargs):
+    def __init__(self, zenpack_spec, name, **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
+

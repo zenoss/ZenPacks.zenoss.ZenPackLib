@@ -546,7 +546,13 @@ impacted_by
   :Required: No
   :Type: list<*relationship_or_method_name*>
   :Default Value: [] *(empty list)*
-  
+ 
+impact_triggers
+  :Description: Impact trigger policy definitions for this class.
+  :Required: No
+  :Type: map<name, :ref:`Impact Trigger <impact-trigger-fields>`>
+  :Default Value: {} *(empty map)*
+ 
 dynamicview_views
   :Description: Names of Dynamic Views objects of this class can appear in.
   :Required: No
@@ -826,3 +832,58 @@ render_with_type
   :Required: No
   :Type: boolean
   :Default Value: false
+
+
+.. _impact-trigger-fields:
+
+*********************
+Impact Trigger Fields
+*********************
+
+The following fields are valid for an Impact trigger entry.
+
+name
+  :Description: Name (e.g. avail_pct_5). Must be a valid Python variable name.
+  :Required: Yes
+  :Type: string
+  :Default Value: *(implied from key in properties map)*
+  
+policy
+  :Description: Type of policy, one of: AVAILABILITY, PERFORMANCE, CAPACITY
+  :Required: Yes
+  :Type: string
+  :Default Value: AVAILABILITY
+  
+trigger:
+  :Description: Type of trigger, one of: policyPercentageTrigger, policyThresholdTrigger, or negativeThresholdTrigger
+  :Required: Yes
+  :Type: string
+  :Default Value: policyPercentageTrigger
+  
+threshold:
+  :Description: Numerical boundary for the trigger
+  :Required: Yes
+  :Type: int
+  :Default Value: 50
+  
+state:
+  :Description: State of this object when trigger criteria met (see note)
+  :Required: Yes
+  :Type: str
+  :Default Value: UNKNOWN
+  
+dependent_state:
+  :Description: State of dependent objects meeting trigger criteria (see note)
+  :Required: Yes
+  :Type: str
+  :Default Value: UNKNOWN
+
+.. note::
+  
+  Valid values for both **state** and **dependent_state** depend on the choice of
+  **policy** parameter:
+  
+  * **AVAILABILITY**:  DOWN, UP, DEGRADED, ATRISK, or UNKNOWN
+  * **PERFORMANCE**:  UNACCEPTABLE, DEGRADED, ACCEPTABLE, or UNKNOWN
+  * **CAPACITY**:  UNACCEPTABLE, REDUCED, ACCEPTABLE, or UNKNOWN
+

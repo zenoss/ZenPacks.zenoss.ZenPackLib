@@ -39,13 +39,15 @@ if DYNAMICVIEW_INSTALLED:
 
 IMPACT_INSTALLED = impact_installed()
 if IMPACT_INSTALLED:
-    from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipDataProvider
+    from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipDataProvider, INodeTriggers
     from ..impact import ImpactRelationshipDataProvider
+    from ..base.BaseTriggers import BaseTriggers
 
 from .Spec import Spec, DeviceInfoStatusProperty, \
     RelationshipInfoProperty, RelationshipGetter, RelationshipSetter
 from .ClassPropertySpec import ClassPropertySpec
 from .ClassRelationshipSpec import ClassRelationshipSpec
+from .ImpactTriggerSpec import ImpactTriggerSpec
 
 HAS_METRICFACADE = has_metricfacade()
 
@@ -128,6 +130,7 @@ class ClassSpec(Spec):
             order=None,
             properties=None,
             relationships=None,
+            impact_triggers=None,
             impacts=None,
             impacted_by=None,
             monitoring_templates=None,
@@ -185,6 +188,8 @@ class ClassSpec(Spec):
             :type properties: SpecsParameter(ClassPropertySpec)
             :param relationships: TODO
             :type relationships: SpecsParameter(ClassRelationshipSpec)
+            :param impact_triggers: Impact Trigger
+            :type impact_triggers: SpecsParameter(ImpactTriggerSpec)
             :param impacts: TODO
             :type impacts: list(str)
             :param impacted_by: TODO
@@ -267,6 +272,10 @@ class ClassSpec(Spec):
         # Impact.
         self.impacts = impacts
         self.impacted_by = impacted_by
+
+        # Properties.
+        self.impact_triggers = self.specs_from_param(
+            ImpactTriggerSpec, 'impact_triggers', impact_triggers, zplog=self.LOG)
 
         # Monitoring Templates.
         if monitoring_templates is None:
@@ -742,6 +751,8 @@ class ClassSpec(Spec):
         # Add Impact stuff.
         attributes['impacts'] = self.impacts
         attributes['impacted_by'] = self.impacted_by
+        attributes['impact_triggers'] = [t.get_trigger() for t in self.impact_triggers.values()]
+
         attributes['dynamicview_relations'] = self.dynamicview_relations
 
         # And facet patterns.
@@ -753,6 +764,7 @@ class ClassSpec(Spec):
             self.name,
             self.resolved_bases,
             attributes)
+
 
     @property
     def model_class(self):
@@ -970,6 +982,12 @@ class ClassSpec(Spec):
                 ImpactRelationshipDataProvider,
                 required=(self.model_class,),
                 provided=IRelationshipDataProvider)
+
+        if self.impact_triggers:
+            GSM.registerSubscriptionAdapter(
+                BaseTriggers,
+                required=(self.model_class,),
+                provided=INodeTriggers)
 
     @property
     def containing_components(self):
