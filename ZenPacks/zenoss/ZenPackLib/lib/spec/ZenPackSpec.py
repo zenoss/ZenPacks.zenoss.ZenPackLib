@@ -9,6 +9,7 @@
 import os
 import collections
 import importlib
+import inspect
 import operator
 import types
 from Products.Five import zcml
@@ -18,6 +19,7 @@ from zope.publisher.interfaces.browser import IDefaultBrowserLayer
 from zope.viewlet.interfaces import IViewlet
 from zope.browser.interfaces import IBrowserView
 from Products.ZenUI3.browser.interfaces import IMainSnippetManager
+from Products.ZenModel.interfaces import IExpandedLinkProvider
 from Products.ZenUI3.utils.javascript import JavaScriptSnippet
 from ..utils import dynamicview_installed
 from ..functions import get_symbol_name, get_zenpack_path
@@ -32,6 +34,8 @@ from .RelationshipSchemaSpec import RelationshipSchemaSpec
 from .ZPropertySpec import ZPropertySpec
 from .EventClassSpec import EventClassSpec
 from .ProcessClassOrganizerSpec import ProcessClassOrganizerSpec
+from .LinkProviderSpec import LinkProviderSpec
+from ..links import DeviceLinkProvider
 
 DYNAMICVIEW_INSTALLED = dynamicview_installed()
 
@@ -102,6 +106,7 @@ class ZenPackSpec(Spec):
             device_classes=None,
             event_classes=None,
             process_class_organizers=None,
+            link_providers=None,
             _source_location=None,
             zplog=None):
         """
@@ -122,6 +127,8 @@ class ZenPackSpec(Spec):
             :type event_classes: SpecsParameter(EventClassSpec)
             :param process_class_organizers: Process Class Specs
             :type process_class_organizers: SpecsParameter(ProcessClassOrganizerSpec)
+            :param link_providers: Link Provider Specs
+            :type link_providers: SpecsParameter(LinkProviderSpec)
         """
         super(ZenPackSpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -170,6 +177,10 @@ class ZenPackSpec(Spec):
         # Process Classes
         self.process_class_organizers = self.specs_from_param(
             ProcessClassOrganizerSpec, 'process_class_organizers', process_class_organizers)
+
+        # Link Providers
+        self.link_providers = self.specs_from_param(
+            LinkProviderSpec, 'link_providers', link_providers, zplog=self.LOG)
 
         # The parameters from which this zenpackspec was originally
         # instantiated.
@@ -229,6 +240,32 @@ class ZenPackSpec(Spec):
         self.create_device_js_snippet()
         self.register_browser_resources()
         self.apply_platform_patches()
+        self.register_link_providers()
+
+    def register_link_providers(self):
+        if not self.link_providers:
+            return
+
+        # register for base Device type
+        GSM.registerSubscriptionAdapter(
+            DeviceLinkProvider,
+            required=(Device,),
+            provided=IExpandedLinkProvider)
+
+        for key, provider in self.link_providers.iteritems():
+            class_name = provider.link_class.split('.')
+            try:
+                module = importlib.import_module('.'.join(class_name[:-1]))
+                klass = getattr(module, class_name[-1:][0], None)
+            except (ImportError, AttributeError, IndexError):
+                self.LOG.warn('Problem attempting to find and load link_class '
+                              '{} for provider {}.'.format(provider.link_class, key))
+            if Device not in inspect.getmro(klass):
+                # if class is not derived from base Device, register it
+                GSM.registerSubscriptionAdapter(
+                    DeviceLinkProvider,
+                    required=(klass,),
+                    provided=IExpandedLinkProvider)
 
     def create_product_names(self):
         """Add all classes to ZenPack's productNames list.

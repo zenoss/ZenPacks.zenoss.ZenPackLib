@@ -19,6 +19,7 @@ from Products.Zuul.form import schema
 from Products.Zuul.form.interfaces import IFormBuilder
 from Products.Zuul.infos import InfoBase, ProxyProperty
 from Products.Zuul.interfaces import IInfo
+from Products.ZenModel.interfaces import IExpandedLinkProvider
 
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
 from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
@@ -31,6 +32,12 @@ from ..base.Component import Component, HWComponent, Service
 from ..base.Device import Device
 from ..zuul import schema_map
 
+from .Spec import Spec, DeviceInfoStatusProperty, \
+    RelationshipInfoProperty, RelationshipGetter, RelationshipSetter
+from .ClassPropertySpec import ClassPropertySpec
+from .ClassRelationshipSpec import ClassRelationshipSpec
+from .ImpactTriggerSpec import ImpactTriggerSpec
+
 DYNAMICVIEW_INSTALLED = dynamicview_installed()
 if DYNAMICVIEW_INSTALLED:
     from ZenPacks.zenoss.DynamicView.interfaces import IRelatable, IRelationsProvider
@@ -42,12 +49,6 @@ if IMPACT_INSTALLED:
     from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipDataProvider, INodeTriggers
     from ..impact import ImpactRelationshipDataProvider
     from ..base.BaseTriggers import BaseTriggers
-
-from .Spec import Spec, DeviceInfoStatusProperty, \
-    RelationshipInfoProperty, RelationshipGetter, RelationshipSetter
-from .ClassPropertySpec import ClassPropertySpec
-from .ClassRelationshipSpec import ClassRelationshipSpec
-from .ImpactTriggerSpec import ImpactTriggerSpec
 
 HAS_METRICFACADE = has_metricfacade()
 
@@ -262,7 +263,6 @@ class ClassSpec(Spec):
         self.properties = self.specs_from_param(
             ClassPropertySpec, 'properties', properties, zplog=self.LOG)
 
-
         # Relationships
         # If these exist, they will refer to relationship display properties, but won't have a schema
         # defined (yet).  The schema is added later
@@ -387,7 +387,7 @@ class ClassSpec(Spec):
 
     def plumb_class_relations(self):
         """
-            Plumb class relations and update 
+            Plumb class relations and update
             remote class _v_local_relations/_relations
             as well as updating NEW_RELATIONS and NEW_COMPONENT_TYPES
         """
@@ -397,7 +397,7 @@ class ClassSpec(Spec):
                 # this happens if the ClassSpec sets display properties for a nonexistent relation
                 if not relationship.schema:
                     self.LOG.error("Removing invalid display config for relationship {} from  {}.{}".format(
-                                relname, self.zenpack.name, self.name))
+                        relname, self.zenpack.name, self.name))
                     self.relationships.pop(relname)
                     continue
                 relationship.plumb()
@@ -409,7 +409,7 @@ class ClassSpec(Spec):
             rel_spec.update_inherited_params()
 
     def update_child_relations(self, relname):
-        """ Update relationships with any that 
+        """ Update relationships with any that
             should be inherited from base classes
         """
         # process descendants first
@@ -656,8 +656,8 @@ class ClassSpec(Spec):
                 'weight': self.dynamicview_weight,
                 'type': self.zenpack.name,
                 'icon': self.icon_url,
-                },
-            }
+            },
+        }
 
         properties = []
         relations = []
@@ -754,6 +754,9 @@ class ClassSpec(Spec):
         attributes['impact_triggers'] = [t.get_trigger() for t in self.impact_triggers.values()]
 
         attributes['dynamicview_relations'] = self.dynamicview_relations
+
+        # Add link provider
+        attributes['link_providers'] = self.zenpack.link_providers
 
         # And facet patterns.
         if self.path_pattern_streams:
