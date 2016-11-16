@@ -411,6 +411,43 @@ files into multiple files.  The following conditions should be observed when usi
 * Using conflicting parameters (like setting different DEFAULTS for the same entity in different files) will likely lead to undesirable results.
 
 
+.. _device-link-providers:
+
+*********************
+Device Link Providers
+*********************
+
+A device link provider is a subscriber interface that gives a hook for adding context-specific html links (for example, the device links on the Device Details page).  To add a link provider into your class, you will need to define the class in a python module that has a hook named *getExpandedLinks*.
+
+For example, to add a link provider for a Device defined in the yaml, supply the module name and class name for the link provider:
+
+.. code-block:: yaml
+
+      name: ZenPacks.zenoss.BasicZenPack
+      classes:
+        BasicDevice:
+          base: [zenpacklib.Device]
+          link_provider: BaseDevice.DeviceLinkProvider
+
+Supply the class definition in BaseDevice.py:
+
+.. code-block:: python
+
+    class DeviceLinkProvider(object):
+    """Provides a link on the overview page to a linked device."""
+        def __init__(self, device):
+            self._device = device
+
+        def getExpandedLinks(self):
+            vm = self._device.getLinkedDevice()
+            if vm:
+                return ['<a href="{}">Linked Device \'{}}\' on {}</a>'.format(
+                    vm.getPrimaryUrlPath(), vm.titleOrId(), vm.endpoint().titleOrId())]
+
+            return []
+
+*getExpandedLinks* should return a list of html elements with links.
+
 .. _class-fields:
 
 ************
@@ -570,6 +607,12 @@ dynamicview_relations
   :Required: No
   :Type: map<relationship_name, list<*relationship_or_method_name*>>
   :Default Value: {} *(empty map)*
+
+link_provider
+  :Description: Supply the module and class name of the link provider.  This **must** be defined in *Module.Class* format.  e.g. Device.DeviceLinkProvider
+  :Required: No
+  :Type: string
+  :Default Value: None
 
 extra_paths
   :Description: By default, components are indexed based upon paths that include objects they have a direct relationship to.  This option allows additional paths to be specified (this can be useful when indirect containment is used)

@@ -19,6 +19,7 @@ from Products.Zuul.form import schema
 from Products.Zuul.form.interfaces import IFormBuilder
 from Products.Zuul.infos import InfoBase, ProxyProperty
 from Products.Zuul.interfaces import IInfo
+from Products.ZenModel.interfaces import IExpandedLinkProvider
 
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
 from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
@@ -136,6 +137,7 @@ class ClassSpec(Spec):
             dynamicview_group=None,
             dynamicview_weight=None,
             dynamicview_relations=None,
+            link_provider=None,
             extra_paths=None,
             _source_location=None,
             zplog=None
@@ -202,6 +204,9 @@ class ClassSpec(Spec):
             :type dynamicview_weight: float
             :param dynamicview_relations: TODO
             :type dynamicview_relations: dict
+            :param link_provider: The module name and class name of the device link provider.
+                    Use Module.Class as the format
+            :type link_provider: str
             :param extra_paths: TODO
             :type extra_paths: list(ExtraPath)
 
@@ -256,7 +261,6 @@ class ClassSpec(Spec):
         self.properties = self.specs_from_param(
             ClassPropertySpec, 'properties', properties, zplog=self.LOG)
 
-
         # Relationships
         # If these exist, they will refer to relationship display properties, but won't have a schema
         # defined (yet).  The schema is added later
@@ -302,6 +306,8 @@ class ClassSpec(Spec):
         else:
             # TAG_NAME: ['relationship', 'or_method']
             self.dynamicview_relations = dict(dynamicview_relations)
+
+        self.link_provider = link_provider
 
         # Paths
         self.path_pattern_streams = []
@@ -377,7 +383,7 @@ class ClassSpec(Spec):
 
     def plumb_class_relations(self):
         """
-            Plumb class relations and update 
+            Plumb class relations and update
             remote class _v_local_relations/_relations
             as well as updating NEW_RELATIONS and NEW_COMPONENT_TYPES
         """
@@ -387,7 +393,7 @@ class ClassSpec(Spec):
                 # this happens if the ClassSpec sets display properties for a nonexistent relation
                 if not relationship.schema:
                     self.LOG.error("Removing invalid display config for relationship {} from  {}.{}".format(
-                                relname, self.zenpack.name, self.name))
+                        relname, self.zenpack.name, self.name))
                     self.relationships.pop(relname)
                     continue
                 relationship.plumb()
@@ -399,7 +405,7 @@ class ClassSpec(Spec):
             rel_spec.update_inherited_params()
 
     def update_child_relations(self, relname):
-        """ Update relationships with any that 
+        """ Update relationships with any that
             should be inherited from base classes
         """
         # process descendants first
@@ -933,6 +939,32 @@ class ClassSpec(Spec):
             GSM.registerAdapter(self.formbuilder_class, (self.info_class,), IFormBuilder)
         self.register_dynamicview_adapters()
         self.register_impact_adapters()
+        self.register_link_provider()
+
+    def register_link_provider(self):
+        if not self.link_provider:
+            return
+
+        try:
+            module_name, class_name = self.link_provider.split('.')
+        except Exception:
+            self.LOG.warning('Link provider not in "Module.Class" format:  {}'.format(self.link_provider))
+            return
+        import importlib
+        try:
+            module = importlib.import_module(get_symbol_name(self.zenpack.name, module_name))
+        except ImportError:
+            self.LOG.warning('Could not load module {} to find link provider.'.format(module_name))
+            return
+        else:
+            link_class = getattr(module, class_name, None)
+            if link_class:
+                GSM.registerSubscriptionAdapter(
+                    link_class,
+                    required=(self.model_class,),
+                    provided=IExpandedLinkProvider)
+            else:
+                self.LOG.warning('No link provider found in {}:  {}'.format(module_name, class_name))
 
     def register_dynamicview_adapters(self):
         if not DYNAMICVIEW_INSTALLED:
