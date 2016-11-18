@@ -7,6 +7,7 @@
 #
 ##############################################################################
 import importlib
+import inspect
 from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
 
 
@@ -31,6 +32,15 @@ class TestCase(BaseTestCase):
     LOG = DEFAULTLOG
 
     disableLogging = True
+    zenpack_module_name = None
+
+    def get_caller(self):
+        """Return name of calling ZenPack"""
+        frm = inspect.stack()[-1]
+        file_name = inspect.getabsfile(frm[0])
+        first_part = file_name[file_name.find('ZenPacks.'):]
+        zp_name = first_part[:first_part.find('/')]
+        return zp_name
 
     def afterSetUp(self):
         ZenPackLibLog.enable_log_stderr(self.LOG)
@@ -42,7 +52,7 @@ class TestCase(BaseTestCase):
         zcml.load_config('configure.zcml', Products.ZenUI3)
 
         if not hasattr(self, 'zenpack_module_name') or self.zenpack_module_name is None:
-            self.zenpack_module_name = '.'.join(self.__module__.split('.')[:-2])
+            self.zenpack_module_name = self.get_caller()
 
         try:
             zenpack_module = importlib.import_module(self.zenpack_module_name)

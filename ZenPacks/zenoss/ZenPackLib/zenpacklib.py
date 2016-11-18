@@ -65,6 +65,10 @@ from lib.base.Component import (
 from lib.spec import ZenPackSpec
 from lib.functions import relationships_from_yuml, catalog_search, ucfirst, relname_from_classname
 
+def enableTesting():
+    """deprecated"""
+    pass
+
 if __name__ == '__main__':
     from lib.libexec.ZPLCommand import ZPLCommand
 
