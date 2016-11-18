@@ -58,8 +58,8 @@ device_classes:
           datasource:
             type: SNMP
             datapoints:
-              dp_counter_map: COUNTER
               dp_gauge: GAUGE
+              dp_counter_map: COUNTER
               dp_gauge_map_alias:
                 rrdtype: GAUGE
                 aliases: {dp_gauge_map: null}

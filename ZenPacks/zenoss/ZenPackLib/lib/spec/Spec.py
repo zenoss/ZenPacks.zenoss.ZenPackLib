@@ -226,10 +226,7 @@ class Spec(object):
                 self.apply_data_defaults(param_dict, leave_defaults=leave_defaults)
 
         specs = OrderedDict()
-        keys = param_dict.keys()
-        keys.sort()
-        for k in keys:
-            v = param_dict.get(k)
+        for k, v in param_dict.iteritems():
             args = fix_kwargs(v)
             args['zplog'] = zplog
             specs[k] = spec_type(self, k, **(args))
