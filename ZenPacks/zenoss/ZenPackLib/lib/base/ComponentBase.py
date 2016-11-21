@@ -69,7 +69,7 @@ class ComponentBase(ModelBase):
         if name in property_dict:
             # and if we know how to handle it
             target_class = target_type_map.get(property_dict.get(name))
-            if target_class:
+            if target_class and value is not None:
                 try:
                     value = target_class(value)
                 except Exception as e:
