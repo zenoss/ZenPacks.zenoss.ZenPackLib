@@ -70,9 +70,7 @@ LOG = logging.getLogger('zen.ZenPackLib')
 
 
 def enableTesting():
-    """This is for backwards compatibility.  For future tests, use ZPLTestHarness
-
-    Enable test mode. Only call from code under tests/.
+    """Enable test mode. Only call from code under tests/.
 
     If this is called from production code it will cause all Zope
     clients to start in test mode. Which isn't useful for anything but
