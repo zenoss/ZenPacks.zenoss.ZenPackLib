@@ -631,7 +631,7 @@ name
   :Default Value: *(implied from key in properties map)*
   
 type
-  :Description: Type of property: *string*, *int*, *float*, *boolean*, *lines*, *password* or *entity*.
+  :Description: Type of property: *string*, *int*, *float*, *boolean*, *lines*, *password* or *entity*.  All types are strictly enforced except for *entity*.
   :Required: No
   :Type: string
   :Default Value: string
