@@ -991,87 +991,74 @@ class ClassSpec(Spec):
 
     @property
     def containing_components(self):
+        return self.containing_component_specs()
+
+    @property
+    def containing_spec_relations(self):
+        return self.containing_component_specs(include_relations=True)
+
+    def containing_component_specs(self, include_relations=False):
         """Return iterable of containing component ClassSpec instances.
-
+        and optionally their matching ClassRelationshipSpec instances
         Instances will be sorted shallow to deep.
-
         """
         containing_specs = []
 
-        for relname, relschema in self.model_schema_class._relations:
-            if not issubclass(relschema.remoteType, ToManyCont):
+        for relname, relspec in self.relationships.items():
+            if not relspec.schema:
+                self.LOG.warn('{} relation {} has no schema'.format(self.name, relspec.name))
                 continue
 
-            remote_classname = relschema.remoteClass.split('.')[-1]
-            remote_spec = self.zenpack.classes.get(remote_classname)
+            if not issubclass(relspec.schema.remoteType, ToManyCont):
+                continue
+
+            remote_spec = relspec.remote_class_spec
             if not remote_spec or remote_spec.is_device:
                 continue
+            if remote_spec == self:
+                continue
 
-            containing_specs.extend(remote_spec.containing_components)
-            containing_specs.append(remote_spec)
+            containing_specs.extend(remote_spec.containing_component_specs(include_relations))
+
+            if include_relations:
+                containing_specs.append((remote_spec, relspec))
+            else:
+                containing_specs.append(remote_spec)
 
         return containing_specs
 
     @property
-    def containing_spec_relations(self):
-        """ Return iterable of containing component ClassSpec and RelationshipSpec instances.
-            Instances will be sorted shallow to deep.
-        """
-        containing_rels = []
-        for relname, relschema in self.model_schema_class._relations:
-            if not issubclass(relschema.remoteType, ToManyCont):
-                continue
-            remote_classname = relschema.remoteClass.split('.')[-1]
-            remote_spec = self.zenpack.classes.get(remote_classname)
-            relation_spec = self.relationships.get(relname)
-            if not remote_spec or remote_spec.is_device:
-                continue
-            containing_rels.extend(remote_spec.containing_spec_relations)
-            if not relation_spec:
-                relation_spec = self.inherited_relationships().get(relname)
-            containing_rels.append((remote_spec, relation_spec))
-        return containing_rels
-
-    @property
     def faceting_components(self):
-        """Return iterable of faceting component ClassSpec instances."""
-        faceting_specs = []
-
-        for relname, relschema in self.model_class._relations:
-            if relname in FACET_BLACKLIST:
-                continue
-
-            if not issubclass(relschema.remoteType, ToMany):
-                continue
-
-            remote_classname = relschema.remoteClass.split('.')[-1]
-            remote_spec = self.zenpack.classes.get(remote_classname)
-            if remote_spec:
-                for class_spec in [remote_spec] + remote_spec.subclass_specs():
-                    if class_spec and not class_spec.is_device:
-                        faceting_specs.append(class_spec)
-
-        return faceting_specs
+        return self.faceting_component_specs()
 
     @property
     def faceting_spec_relations(self):
-        """Return iterable of faceting component ClassSpec and RelationshipSpec instances."""
+        return self.faceting_component_specs(include_relations=True)
+
+    def faceting_component_specs(self, include_relations=False):
+        """Return iterable of faceting component ClassSpec and optionally RelationshipSpec instances."""
         faceting_specs = []
-        for relname, relschema in self.model_class._relations:
+        for relname, relspec in self.relationships.items():
+            # probably not relevant now
             if relname in FACET_BLACKLIST:
                 continue
-            if not issubclass(relschema.remoteType, ToMany):
+            # this shouldn't be possible
+            if not relspec.schema:
+                self.LOG.warn('{} relation {} has no schema'.format(self.name, relspec.name))
                 continue
-            remote_classname = relschema.remoteClass.split('.')[-1]
-            remote_spec = self.zenpack.classes.get(remote_classname)
-            remote_relname = relschema.remoteName
+            if not issubclass(relspec.schema.remoteType, ToMany):
+                continue
+            remote_spec = relspec.remote_class_spec
+            remote_relname = relspec.schema.remoteName
             if remote_spec:
                 for class_spec in [remote_spec] + remote_spec.subclass_specs():
                     if class_spec and not class_spec.is_device:
-                        relspec = class_spec.relationships.get(remote_relname)
-                        if not relspec:
-                            relspec = class_spec.inherited_relationships().get(remote_relname)
-                        faceting_specs.append((class_spec, relspec))
+                        if include_relations:
+                            remote_relspec = class_spec.relationships.get(remote_relname)
+                            faceting_specs.append((class_spec, remote_relspec))
+                        else:
+                            faceting_specs.append(class_spec)
+
         return faceting_specs
 
     @property
@@ -1304,27 +1291,32 @@ class ClassSpec(Spec):
                 "        ZC.{meta_type}Panel.superclass.setContext.apply(this, [uid]);\n"
                 "    }}\n"
                 "}}]);\n"
-                .format(meta_type=self.meta_type, id=id, label=label, cases=' '.join(cases)))
+                .format(meta_type=self.meta_type, id=id, label=label, cases='\n            '.join(cases)))
 
-        sections = {self.plural_short_label: []}
-
+        # list of containing and faceted class, relationship specs
         specs_rels = list(set(self.containing_spec_relations) | set(self.faceting_spec_relations))
+        # dictionary with meta_type keys
         specs_rels_dict = dict([(r[0].meta_type, r) for r in specs_rels])
+        # filtered class and relationship specs
         filtered = list(specs_rels_dict.get(f) for f in self.filterable_by)
 
+        # decide what labels to use for each relation
+        sections = {}
         for spec, relation in filtered:
+            # skip if spec is a descendant to prevent duplicate entries from its bases
+            if spec.name in self.get_descendant_specs():
+                continue
             # default if no label specified
-            if not relation:
-                sections[self.plural_short_label].append(spec.meta_type)
-            else:
-                # also default if not labeled
-                if not relation.label:
-                    sections[self.plural_short_label].append(spec.meta_type)
-                else:
-                    # new snippet if relation labeled
-                    if relation.label not in sections:
-                        sections[relation.label] = []
-                    sections[relation.label].append(spec.meta_type)
+            label = self.plural_short_label
+            # override with relation label
+            if relation and relation.label:
+                label = relation.label
+            # new snippet if relation labeled
+            if label not in sections:
+                sections[label] = []
+            # metatypes to which this label will apply
+            if spec.meta_type not in sections[label]:
+                sections[label].append(spec.meta_type)
 
         snippets = []
         for label, metatypes in sections.items():
