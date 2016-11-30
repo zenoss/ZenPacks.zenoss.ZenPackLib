@@ -106,10 +106,10 @@ class RRDTemplateSpec(Spec):
         valid_names = dp_names.intersection(ref_names)
         invalid_names = dp_names.difference(ref_names)
         if len(valid_names) == 0:
-            self.LOG.error('{} {} has no valid datapoints'.format(spec_type,
+            self.LOG.warn('{} {} has no valid datapoints'.format(spec_type,
                                                                   spec_name))
         if len(invalid_names) > 0:
-            self.LOG.error('{} {} has invalid datapoints: {}'.format(spec_type,
+            self.LOG.warn('{} {} has invalid datapoints: {}'.format(spec_type,
                                                             spec_name,
                                                             ', '.join(list(invalid_names))))
 
