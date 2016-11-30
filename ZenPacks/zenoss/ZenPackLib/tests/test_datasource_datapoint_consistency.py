@@ -111,16 +111,16 @@ class TestZen19461(BaseTestCase):
         self.assertEquals(actual, '', 'Datapoint validation failed:\n  {}'.format(actual))
 
     def test_invalid_yaml(self):
-        expected = '[ERROR] Threshold CPU Utilization has invalid datapoints: badReference_badReference\n' \
-            '[ERROR] Graph Point badGraphPoint has no valid datapoints\n'\
-            '[ERROR] Graph Point badGraphPoint has invalid datapoints: badReference_badReference\n'
+        expected = '[WARNING] Threshold CPU Utilization has invalid datapoints: badReference_badReference\n' \
+            '[WARNING] Graph Point badGraphPoint has no valid datapoints\n'\
+            '[WARNING] Graph Point badGraphPoint has invalid datapoints: badReference_badReference\n'
         actual = self.capture.test_yaml(INVALID_POINTS)
         self.assertEquals(actual, expected, 'Datapoint validation failed:\n  {}'.format(actual))
 
     def test_no_valid_yaml(self):
-        expected = '[ERROR] Threshold CPU Utilization has no valid datapoints\n'\
-        '[ERROR] Graph Point ssCpuRawIdle has no valid datapoints\n'\
-        '[ERROR] Graph Point ssCpuRawIdle has invalid datapoints: null_null\n'
+        expected = '[WARNING] Threshold CPU Utilization has no valid datapoints\n'\
+        '[WARNING] Graph Point ssCpuRawIdle has no valid datapoints\n'\
+        '[WARNING] Graph Point ssCpuRawIdle has invalid datapoints: null_null\n'
         actual = self.capture.test_yaml(NO_VALID_POINTS)
         self.assertEquals(actual, expected, 'Datapoint validation failed:\n  {}'.format(actual))
 
