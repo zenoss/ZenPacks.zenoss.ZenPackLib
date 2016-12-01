@@ -58,7 +58,7 @@ The following commands are supported:
 create
 ******
 
-The *--create* command will create a source directory for a zenpacklib-enabled
+The *---create* switch will create a source directory for a zenpacklib-enabled
 ZenPack. This will include a setup.py, MANIFEST.in, the namespace and module
 directories, and a zenpack.yaml in the module directory. It will also make a
 copy of zenpacklib.py inside the module directory. This ZenPack will be ready to
@@ -90,7 +90,7 @@ Running the above command would result in the following output.
 lint
 ****
 
-The *--lint* command will check the provided YAML file for correctness. It checks
+The *---lint* switch will check the provided YAML file for correctness. It checks
 that the provided file is syntactically-valid YAML, and it will also perform
 many others checks that validate that the contained entries, fields and their
 values are valid.
@@ -108,16 +108,16 @@ monitoring template.
 
 .. _zenpacklib-class_diagram:
 
-*************
-class_diagram
-*************
+*******
+diagram
+*******
 
-The *--diagram* command will use :ref:`classes-and-relationships` in the
+The *---diagram* switch will use :ref:`classes-and-relationships` in the
 provided YAML file to output the source for a yUML (http://yuml.me) class
 diagram. For ZenPacks with a non-trivial class model this can provide a useful
 view of the model.
 
-Using this example `zenpack.yaml` with class_diagram..
+Using this example `zenpack.yaml`:
 
 .. code-block:: yaml
 
@@ -169,11 +169,11 @@ into http://yuml.me to see what it looks like.
 
 .. _zenpacklib-list_paths:
 
-**********
-list_paths
-**********
+*****
+paths
+*****
 
-The *--paths* command shows the paths between defined component classes
+The *---paths* switch shows the paths between defined component classes
 in the zenpack, using the device name you have specified as a sample.  To
 obtain useful results, ensure that the device has at least one component
 of each type you are interested in.
@@ -185,7 +185,7 @@ class is selected from the filter dropdown.
 The default behavior is to show component of that type that are directly
 related to the selected component through 1:M or 1:MC relationships, but
 additional objects that are indirectly related can be added through
-the use of the 'extra_paths' configuration directive.   *list_paths* is
+the use of the 'extra_paths' configuration directive.   *---paths* is
 primarily intended as a debugging tool during the development of extra_paths
 patterns to verify that they are having the intended effect.
 
@@ -200,10 +200,10 @@ Example usage:
 .. _zenpacklib-dump_templates:
 
 **************
-dump_templates
+dump-templates
 **************
 
-The *--dump-templates* command is designed to export monitoring templates already
+The *---dump-templates* switch is designed to export monitoring templates already
 loaded into your Zenoss instance and associated with a ZenPack. It will export
 them to the YAML format required for `zenpack.yaml`. It is up to you to merge
 that YAML with your existing `zenpack.yaml`. file.
@@ -217,10 +217,10 @@ Example usage:
 .. _zenpacklib-dump_event_classes:
 
 ******************
-dump_event_classes
+dump-event-classes
 ******************
 
-The *--dump-event-classes* command is designed to export event class organizers and
+The *---dump-event-classes* switch is designed to export event class organizers and
 mappings already loaded into your Zenoss instance and associated with a ZenPack. It 
 will export them to the YAML format required for `zenpack.yaml`. It is up to you to merge
 that YAML with your existing `zenpack.yaml`. file.
@@ -234,10 +234,10 @@ Example usage:
 .. _zenpacklib-dump_process_classes:
 
 ********************
-dump_process_classes
+dump-process-classes
 ********************
 
-The *--dump-process-classes* command is designed to export process class organizers and
+The *---dump-process-classes* switch is designed to export process class organizers and
 classes already loaded into your Zenoss instance and associated with a ZenPack. It 
 will export them to the YAML format required for `zenpack.yaml`. It is up to you to merge
 that YAML with your existing `zenpack.yaml`. file.
@@ -254,7 +254,7 @@ Example usage:
 optimize
 ********
 
-The *--optimize* command (experimental) is designed to examine your `zenpack.yaml` file and 
+The *---optimize* switch (experimental) is designed to examine your `zenpack.yaml` file and 
 rearrange it for brevity and use of DEFAULTS where detected.  Once optimized, the command compares
 the original YAML file to the optimized version to ensure that the same objects are created.  The 
 change detection, however, is still being improved and may output false warnings.  It is recommended to
@@ -273,7 +273,7 @@ Example usage:
 version
 *******
 
-The *version* command prints the zenpacklib version.
+The *---version* switch prints the zenpacklib version.
 
 Example usage:
 

@@ -47,6 +47,7 @@ changes to:
    from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 while:
+
 .. code-block:: python
 
    CFG = zenpacklib.load_yaml()
@@ -100,6 +101,23 @@ in the ZenPack's __init__.py.file:
 
 In this example, logging verbosity is enabled with at the DEBUG level.
 
+Every class in ZenPackLib has a "LOG" attribute that can be called within any class override
+files you may have.  For example, given the file BasicComponent.py class extension, logging features
+would be accessed as follows:
+
+
+.. code-block:: python
+      
+      from . import schema
+      
+      class BasicComponent(schema.BasicComponent):
+          """Class override for BasisComponent"""
+          def hello_world(self):
+              self.LOG.info("You called hello_world")
+              return 'Hello World!'
+
+Logging used within class extension files will follow the verbosity and level parameters provided to the
+"load_yaml" method.
 
 .. _older-versions:
 

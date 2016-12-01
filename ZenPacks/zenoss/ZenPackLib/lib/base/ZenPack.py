@@ -67,13 +67,17 @@ class ZenPack(ZenPackBase):
                 except Exception as e:
                     self.LOG.error('buildRelations() failed for {} ({})'.format(d.id, e))
 
+        newline = False
         for d in self.dmd.Devices.getSubDevicesGen():
             build_relations(d)
             count += 1
             if count % batch == 0:
+                newline = True
                 sys.stdout.write('.')
                 commit()
         commit()
+        if newline:
+            sys.stdout.write('\n')
         self.LOG.info('Finished adding {} relationships to existing devices'.format(self.id))
 
     def install(self, app):
