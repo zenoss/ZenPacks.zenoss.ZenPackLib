@@ -153,7 +153,7 @@ AUTHOR = "Your Name Here"
 LICENSE = ""
 NAMESPACE_PACKAGES = {namespace_packages}
 PACKAGES = {packages}
-INSTALL_REQUIRES = [ZenPacks.zenoss.ZenPackLib]
+INSTALL_REQUIRES = ['ZenPacks.zenoss.ZenPackLib']
 COMPAT_ZENOSS_VERS = ""
 PREV_ZENPACK_NAME = ""
 # STOP_REPLACEMENTS
