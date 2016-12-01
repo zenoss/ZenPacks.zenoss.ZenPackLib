@@ -491,7 +491,7 @@ class ZenPackSpec(Spec):
                 "    }}\n"
                 "}}]);\n"
                 ).format(
-                    cases=' '.join(
+                    cases='\n            '.join(
                         "case '{}': return true;".format(x)
                         for x in service_view_metatypes))
         else:

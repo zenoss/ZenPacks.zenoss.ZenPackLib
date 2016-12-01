@@ -1145,7 +1145,7 @@ class ClassSpec(Spec):
                 "sortable: true"
             ]
 
-            columns.append('{{{}}}'.format(','.join(column_fields)))
+            columns.append('{{{}}}'.format(',\n                       '.join(column_fields)))
 
         return columns
 
@@ -1175,36 +1175,36 @@ class ClassSpec(Spec):
 
         default_left_columns = [(
             "{"
-            "id: 'severity',"
-            "dataIndex: 'severity',"
-            "header: _t('Events'),"
-            "renderer: Zenoss.render.severity,"
-            "width: 50"
+            "id: 'severity',\n"
+            "                       dataIndex: 'severity',\n"
+            "                       header: _t('Events'),\n"
+            "                       renderer: Zenoss.render.severity,\n"
+            "                       width: 50"
             "}"
         ), (
             "{"
-            "id: 'name',"
-            "dataIndex: 'name',"
-            "header: _t('Name'),"
-            "renderer: Zenoss.render.zenpacklib_" + self.zenpack.id_prefix + "_entityLinkFromGrid"
+            "id: 'name',\n"
+            "                       dataIndex: 'name',\n"
+            "                       header: _t('Name'),\n"
+            "                       renderer: Zenoss.render.zenpacklib_" + self.zenpack.id_prefix + "_entityLinkFromGrid"
             "}"
         )]
 
         default_right_columns = [(
             "{"
-            "id: 'monitored',"
-            "dataIndex: 'monitored',"
-            "header: _t('Monitored'),"
-            "renderer: Zenoss.render.checkbox,"
-            "width: 70"
+            "id: 'monitored',\n"
+            "                       dataIndex: 'monitored',\n"
+            "                       header: _t('Monitored'),\n"
+            "                       renderer: Zenoss.render.checkbox,\n"
+            "                       width: 70"
             "}"
         ), (
             "{"
-            "id: 'locking',"
-            "dataIndex: 'locking',"
-            "header: _t('Locking'),"
-            "renderer: Zenoss.render.locking_icons,"
-            "width: 65"
+            "id: 'locking',\n"
+            "                       dataIndex: 'locking',\n"
+            "                       header: _t('Locking'),\n"
+            "                       renderer: Zenoss.render.locking_icons,\n"
+            "                       width: 65"
             "}"
         )]
 
@@ -1237,10 +1237,7 @@ class ClassSpec(Spec):
             "        config = Ext.applyIf(config||{{}}, {{\n"
             "            componentType: '{meta_type}',\n"
             "            autoExpandColumn: '{auto_expand_column}',\n"
-            "            sortInfo: {{\n"
-            "                        field: '{initial_sort_column}',\n"
-            "                        direction: 'ASC'\n"
-            "                       }}\n,"
+            "            sortInfo: {{field: '{initial_sort_column}', direction: 'ASC'}},\n"
             "            fields: [{fields}],\n"
             "            columns: [{columns}]\n"
             "        }});\n"
@@ -1254,11 +1251,11 @@ class ClassSpec(Spec):
                 zenpack_id_prefix=self.zenpack.id_prefix,
                 auto_expand_column=self.auto_expand_column,
                 initial_sort_column=self.initial_sort_column,
-                fields=','.join(
+                fields=',\n                     '.join(
                     default_fields +
                     self.containing_js_fields +
                     fields),
-                columns=','.join(
+                columns=',\n                      '.join(
                     default_left_columns +
                     self.containing_js_columns +
                     ordered_values(ordered_columns) +
