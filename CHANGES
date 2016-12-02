@@ -27,6 +27,7 @@ Features
 * Support for threshold graphpoint legend and color (ZEN-24904)
 * Ability to specify an initial sort column on a component grid
 * Performance enhancments for grid display of metrics (ZEN-23870)
+* Existing device class modeler plugins appended by default (ZEN-24901) 
 
 Fixes
 

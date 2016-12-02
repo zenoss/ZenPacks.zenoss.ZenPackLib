@@ -285,9 +285,11 @@ class ZenPack(ZenPackBase):
         return diff
 
     def create_device_class(self, app, dcspec):
-        ''''''
+        """Return existing or created device class"""
+        exists = False
         try:
             dcObject = app.dmd.Devices.getOrganizer(dcspec.path)
+            exists = True
         except KeyError:
             self.LOG.info('Creating DeviceClass {}'.format(dcspec.path))
             dcObject = app.dmd.Devices.createOrganizer(dcspec.path)
@@ -295,6 +297,14 @@ class ZenPack(ZenPackBase):
         for zprop, value in dcspec.zProperties.iteritems():
             if dcObject.getPropertyType(zprop) is None:
                 self.LOG.error("Unable to set zProperty {} on {} (undefined zProperty)".format(zprop, dcspec.path))
+            # modeler plugins are a special case for preexisting device class
+            elif zprop == 'zCollectorPlugins' and exists:
+                if dcspec.overwrite_plugins:
+                    dcObject.setZenProperty('zCollectorPlugins', value)
+                else:
+                    plugins = [p for p in dcObject.zCollectorPlugins]
+                    plugins.extend([v for v in value if v not in plugins])
+                    dcObject.setZenProperty('zCollectorPlugins', plugins)
             else:
                 self.LOG.info('Setting zProperty {} on {}'.format(zprop, dcspec.path))
                 dcObject.setZenProperty(zprop, value)
@@ -305,11 +315,19 @@ class ZenPack(ZenPackBase):
         path = [p for p in dcspec.path.lstrip('/').split('/') if p != 'Devices']
         organizerPath = '/{}'.format('/'.join(['Devices'] + path))
         try:
-            app.dmd.Devices.getOrganizer(organizerPath)
-            try:
-                app.dmd.Devices.manage_deleteOrganizer(organizerPath)
-            except Exception as e:
-                self.LOG.error('Unable to remove DeviceClass {} ({})'.format(dcspec.path, e))
+            dcObject = app.dmd.Devices.getOrganizer(organizerPath)
+            if dcspec.remove:
+                try:
+                    app.dmd.Devices.manage_deleteOrganizer(organizerPath)
+                except Exception as e:
+                    self.LOG.error('Unable to remove DeviceClass {} ({})'.format(dcspec.path, e))
+            else:
+                # be sure to remove modeler plugins if leaving the device class
+                if 'zCollectorPlugins' in dcspec.zProperties:
+                    ours = dcspec.zProperties.get('zCollectorPlugins')
+                    plugins = [p for p in dcObject.zCollectorPlugins if p not in ours]
+                    dcObject.setZenProperty('zCollectorPlugins', plugins)
+
         except KeyError:
             self.LOG.warning('Unable to remove DeviceClass {} (not found)'.format(dcspec.path))
 
