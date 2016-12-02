@@ -76,8 +76,8 @@ class RelationshipSchemaSpec(Spec):
             self.get_imported_class(self.right_class)
 
         # update ClassRelationshipSpec or imported class
-        self.update_class_relationship_spec(self.left_spec, self.left_relname, self.left_schema, self.left_class)
-        self.update_class_relationship_spec(self.right_spec, self.right_relname, self.right_schema, self.right_class)
+        self.update_class_relationship_spec(self.left_spec, self.right_spec, self.left_relname, self.left_schema, self.left_class)
+        self.update_class_relationship_spec(self.right_spec, self.left_spec, self.right_relname, self.right_schema, self.right_class)
 
     def get_imported_class(self, classname):
         """import target class by reference"""
@@ -103,7 +103,7 @@ class RelationshipSchemaSpec(Spec):
                 continue
             spec.update_child_relations(relname)
 
-    def update_class_relationship_spec(self, spec, relname, schema, classname):
+    def update_class_relationship_spec(self, spec, remote_spec, relname, schema, classname):
         """Add or Update ClassRelationshipSpec based on this RelationshipSpec"""
         if spec:
             # this shouldn't happen
@@ -117,9 +117,11 @@ class RelationshipSchemaSpec(Spec):
                 rel_spec = spec.relationships[relname]
                 if not rel_spec.schema:
                     rel_spec.schema = schema
+                    rel_spec.remote_spec = remote_spec
             # Otherwise we create it now with defaults
             else:
                 spec.relationships[relname] = ClassRelationshipSpec(spec, relname, schema)
+                spec.relationships[relname].remote_spec = remote_spec
         # if ClassSpec doesn't exist, then we are modifying an imported class
         else:
             kls = self.zenpack_spec.imported_classes.get(classname)

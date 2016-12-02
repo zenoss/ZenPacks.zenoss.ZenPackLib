@@ -221,6 +221,9 @@ class ZenPackSpec(Spec):
             spec.create()
 
         for spec in self.classes.itervalues():
+            schema = spec.model_schema_class
+
+        for spec in self.classes.itervalues():
             spec.create_registered()
 
         self.create_product_names()

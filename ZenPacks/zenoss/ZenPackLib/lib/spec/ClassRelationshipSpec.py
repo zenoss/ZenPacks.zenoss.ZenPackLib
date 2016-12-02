@@ -16,6 +16,7 @@ from ..helpers.OrderAndValue import OrderAndValue
 
 class ClassRelationshipSpec(Spec):
     """ClassRelationshipSpec"""
+    remote_spec = None
 
     def __init__(
             self,
@@ -139,6 +140,22 @@ class ClassRelationshipSpec(Spec):
     @property
     def remote_classname(self):
         return self.schema.remoteClass.split('.')[-1]
+
+    @property
+    def remote_class_spec(self):
+        # this should exist
+        if self.remote_spec:
+            # but it might be an ancestor of this class, in which case we want ours
+            return self.descendent_class(self.remote_spec)
+        else:
+            # or fall back to default
+            cls = self.class_.zenpack.classes.get(self.remote_classname)
+            return self.descendent_class(cls)
+
+    def descendent_class(self, spec):
+        if spec and spec in self.class_.base_class_specs():
+            return self.class_
+        return spec
 
     @property
     def iinfo_schemas(self):
