@@ -269,6 +269,7 @@ from ..params.GraphPointSpecParams import GraphPointSpecParams
 from ..params.ProcessClassSpecParams import ProcessClassSpecParams
 from ..params.ProcessClassOrganizerSpecParams import ProcessClassOrganizerSpecParams
 from ..params.ImpactTriggerSpecParams import ImpactTriggerSpecParams
+from ..params.LinkProviderSpecParams import LinkProviderSpecParams
 
 # Spec subclasses
 Dumper.add_representer(ZenPackSpec, Dumper.represent_zenpackspec)
@@ -303,6 +304,7 @@ Dumper.add_representer(EventClassMappingSpec, Dumper.represent_spec)
 Dumper.add_representer(ProcessClassOrganizerSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ProcessClassSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ImpactTriggerSpecParams, Dumper.represent_spec)
+Dumper.add_representer(LinkProviderSpecParams, Dumper.represent_spec)
 # representers for custom types
 from ..base.types import Color, Severity
 Dumper.add_representer(Color, SafeRepresenter.represent_str)
