@@ -28,6 +28,7 @@ Features
 * Ability to specify an initial sort column on a component grid
 * Performance enhancments for grid display of metrics (ZEN-23870)
 * Support for Device Link Providers
+* Added troubleshooting aid for easily saving function data(writeDataToFile)
 
 Fixes
 

@@ -292,3 +292,79 @@ def sort_yaml_data(data):
         ordered[k] = sort_yaml_data(data.get(k))
     return ordered
 
+
+def writeDataToFile(keywords=[]):
+    '''
+    This is a decorator that will save arguments sent to a function.
+    It will write to the /tmp directory using the class name, method name
+    and write time as the file name.  It depends upon the 'ZPL_DUMP_DATA' env
+    variable existing to dump the pickle.  It then passes the args to the original
+    function.  Be sure to unset ZPL_DUMP_DATA or you'll see a peck of pickles.
+
+    keywords is a list of words that, if a match is found, will cause an object to not be pickled
+
+    usage:
+    class test1(object):
+        my_password = ''
+        my_datasource = ''
+        def __init__(self, pw, ds):
+            self.my_password = pw
+            self.my_datasource = ds
+
+    t1 = test1()
+
+    class foo(object):
+        @writeDataToFile()
+        def bar1(self, x, y):
+            print 'x: {}, y: {}'.format(x, y)
+
+        @writeDataToFile(keywords=['my_password', 'my_datasource'])
+        def bar2(self, x, y):
+            print 'testing'
+
+    f = foo()
+    f.bar1(1, 2)
+    # int(1) and int(2) will be pickled
+    f.bar2(t1, 'bar2')
+    # t1 will not be pickled, str('bar2') will be pickled
+
+    $ export ZPL_DUMP_DATA=1; python foo.py; unset ZPL_DUMP_DATA
+    '''
+    def wrap(f):
+        def dumper(self, *args, **kwargs):
+            import os
+            if os.environ.get('ZPL_DUMP_DATA', None):
+                import pickle
+                import time
+                import logging
+                words = keywords
+                if not isinstance(words, list):
+                    words = list(words)
+                filetime = time.strftime('%H%M%S', time.localtime())
+                fname = '_'.join((self.__class__.__name__, f.func_name, filetime))
+                with open(os.path.join('/tmp', fname + '.pickle'), 'w') as pkl_file:
+                    arguments = []
+                    for count, thing in enumerate(args):
+                        # ignore Logger, file objects, and user
+                        # defined keywords
+                        if (isinstance(thing, logging.Logger) or
+                                isinstance(thing, file) or
+                                [a for a in dir(thing) for kw in words if kw == a]):
+                                    continue
+                        arguments.append(thing)
+                    for name, thing in kwargs.items():
+                        # ignore Logger, file objects, and user
+                        # defined keywords
+                        if (isinstance(thing, logging.Logger) or
+                                isinstance(thing, file) or
+                                [a for a in dir(thing) for kw in words if kw == a]):
+                                    continue
+                        arguments.append('{}={}'.format(name, thing))
+                    try:
+                        pickle.dump(arguments, pkl_file)
+                    except TypeError:
+                        pass
+                    pkl_file.close()
+            return f(self, *args, **kwargs)
+        return dumper
+    return wrap
