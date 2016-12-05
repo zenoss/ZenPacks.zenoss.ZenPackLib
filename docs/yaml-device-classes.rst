@@ -162,3 +162,10 @@ protocol
   :Required: No
   :Type: string
   :Default Value: None
+
+overwrite_plugins
+  :Description: Should a preexisting device class have its modeler plugins overwritten?
+  :Required: No
+  :Type: boolean
+  :Default Value: false
+

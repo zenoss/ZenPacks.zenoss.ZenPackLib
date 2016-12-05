@@ -23,6 +23,7 @@ class DeviceClassSpec(Spec):
             templates=None,
             description=None,
             protocol=None,
+            overwrite_plugins=False,
             _source_location=None,
             zplog=None):
         """
@@ -40,6 +41,8 @@ class DeviceClassSpec(Spec):
             :type description: str
             :param protocol: Protocol to use for registered devtype
             :type protocol: str
+            :param overwrite_plugins: Whether to overwrite or append any given modeler plugins 
+            :type overwrite_plugins: bool
         """
         super(DeviceClassSpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -50,6 +53,7 @@ class DeviceClassSpec(Spec):
         self.remove = bool(remove)
         self.description = description
         self.protocol = protocol
+        self.overwrite_plugins = overwrite_plugins
 
         if zProperties is None:
             self.zProperties = {}
