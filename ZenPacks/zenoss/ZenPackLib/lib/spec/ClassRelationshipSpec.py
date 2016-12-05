@@ -288,6 +288,6 @@ class ClassRelationshipSpec(Spec):
         return [
             OrderAndValue(
                 order=self.order or remote_spec.order,
-                value='{{{}}}'.format(','.join(column_fields))),
+                value='{{{}}}'.format(',\n                       '.join(column_fields))),
             ]
 
