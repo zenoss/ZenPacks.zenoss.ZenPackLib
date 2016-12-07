@@ -150,6 +150,9 @@ class Loader(yaml.Loader):
                 self.LOG.error("No key found for {} in {}".format(yaml_key, param_name_map))
 
             # default construction
+            if value_node.tag == '!ZenPackSpec' and isinstance(value_node, yaml.MappingNode):
+                self.LOG.debug("Obsolete tag '!ZenPackSpec' found, changing to 'tag:yaml.org,2002:map'.")
+                value_node.tag = u'tag:yaml.org,2002:map'
             yaml_value = self.construct_object(value_node)
 
             # expected type should fall back to string if not given

@@ -83,6 +83,9 @@ or added if it does not exist.
    Import statements should also be checked throughout any class overrides or 
    other python files, since the statements will fail if they refer to the older zenpacklib.py.
 
+.. note::
+
+   The tag *!ZenPackSpec* is not necessary and should be removed from your yaml definitions.
 
 .. _new-logging:
 
