@@ -18,7 +18,7 @@ from Products.Zuul import marshal
 from Products.Zuul.infos import ProxyProperty
 from Products.ZenRelations import ToOneRelationship, ToManyRelationship
 from zope.interface.interface import InterfaceClass
-from Products.Zuul.interfaces import IInfo
+from Products.Zuul.interfaces import IInfo, IFacade
 
 from ..functions import fix_kwargs, create_module
 from ..helpers.ZenPackLibLog import DEFAULTLOG
@@ -414,7 +414,13 @@ class Spec(object):
 
     def get_class_factory(self, klass):
         """Return class factory for class."""
-        if issubclass(klass, IInfo):
+        if issubclass(klass, IInfo) or issubclass(klass, IFacade):
             return InterfaceClass
         else:
             return type
+
+    def object_from_string(self, name, text):
+        """Return a Python object from string representation"""
+        data = {}
+        exec text in data
+        return data.get(name)

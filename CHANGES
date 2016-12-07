@@ -43,6 +43,7 @@ Features
 * Support for Device Link Providers
 * Added troubleshooting aid for easily saving function data(writeDataToFile)
 * Avoid setting zProperties on existing device class (ZPS-137)
+* Support for adding components via the  Device Status Page "+" menu
 
 Fixes
 
