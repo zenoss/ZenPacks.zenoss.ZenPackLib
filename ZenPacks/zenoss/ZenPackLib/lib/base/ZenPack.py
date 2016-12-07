@@ -290,13 +290,20 @@ class ZenPack(ZenPackBase):
 
     def create_device_class(self, app, dcspec):
         ''''''
+        exists = False
         try:
             dcObject = app.dmd.Devices.getOrganizer(dcspec.path)
+            exists = True
         except KeyError:
             self.LOG.info('Creating DeviceClass {}'.format(dcspec.path))
             dcObject = app.dmd.Devices.createOrganizer(dcspec.path)
 
         for zprop, value in dcspec.zProperties.iteritems():
+            # Avoid setting zProperties on an existing device class
+            if exists:
+                if value != getattr(dcObject, zprop):
+                    self.LOG.debug('Not setting "{}" to "{}" on existing device class ({})'.format(zprop, value, dcspec.path))
+                continue
             if dcObject.getPropertyType(zprop) is None:
                 self.LOG.error("Unable to set zProperty {} on {} (undefined zProperty)".format(zprop, dcspec.path))
             else:

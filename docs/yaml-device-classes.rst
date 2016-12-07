@@ -61,6 +61,14 @@ set each time the ZenPack is installed.
          zWidgeterEnable: true
          zWidgeterInterval: 60
 
+
+.. note::
+
+   As of version 2.0, zProperties will not be set on existing device classes during
+   ZenPack installation.  Developers wishing to do so should handle these cases via 
+   migrate scripts that run during the installation process.
+
+
 The referenced zProperties must already exist in the Zenoss system, or be
 added by your ZenPack via a global :ref:`zProperties` entry.
 
