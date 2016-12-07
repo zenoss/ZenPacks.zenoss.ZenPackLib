@@ -62,7 +62,7 @@ classes:
     label: API Queue
 """
 
-EXPECTED = ["{id: 'RabbitMQAPI_Node',dataIndex: 'rabbitMQAPI_Node',header: _t('Node'),width: 100,renderer: Zenoss.render.zenpacklib_ZenPacks_zenoss_ZenPackLib_entityLinkFromGrid,sortable: true}"]
+EXPECTED = ["{id: 'RabbitMQAPI_Node',\n                       dataIndex: 'rabbitMQAPI_Node',\n                       header: _t('Node'),\n                       width: 100,\n                       renderer: Zenoss.render.zenpacklib_ZenPacks_zenoss_ZenPackLib_entityLinkFromGrid,\n                       sortable: true}"]
 
 class TestZen21966(BaseTestCase):
     """Test fix for ZEN-21966
