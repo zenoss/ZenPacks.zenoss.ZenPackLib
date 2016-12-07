@@ -464,6 +464,7 @@ class ZPLCommand(ZenScriptBase):
             zpsp = ZenPackSpecParams(zenpack_name,
                                      event_classes={x: {} for x in eventclasses})
             for ec_name in eventclasses:
+                zpsp.event_classes[ec_name] = eventclasses[ec_name]
                 zpsp.event_classes[ec_name].mappings = eventclasses[ec_name].mappings
 
             print yaml.dump(zpsp, Dumper=Dumper)
