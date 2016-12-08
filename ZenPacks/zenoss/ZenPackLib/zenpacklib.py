@@ -39,7 +39,8 @@ from Products.ZenUtils.Utils import unused
 unused(Globals)
 
 # ZenPacks use these to load their YAML files
-from lib.helpers.utils import load_yaml
+from lib.helpers.utils import load_yaml as yaml_loader
+from lib.helpers.utils import get_calling_dir
 
 # these are the base classes for zenpacklib.Device, zenpacklib.Component, zenpacklib.HardwareComponent
 from lib.base.Device import Device
@@ -67,6 +68,22 @@ from lib.spec import ZenPackSpec
 from lib.functions import relationships_from_yuml, catalog_search, ucfirst, relname_from_classname
 
 LOG = logging.getLogger('zen.ZenPackLib')
+
+# only need to load in yaml once.  dependent zenpacks such as
+# LinuxMonitor and OpenStackInfrastructure are causing problems
+# with circular loading
+CFGs = {}
+
+
+def load_yaml(yaml_doc=None, verbose=False, level=0):
+    global CFGs
+    calling_dir = get_calling_dir()
+    try:
+        CFG = CFGs[calling_dir]
+    except KeyError:
+        CFG = yaml_loader(yaml_doc, verbose, level)
+        CFGs[calling_dir] = CFG
+    return CFG
 
 
 def enableTesting():
