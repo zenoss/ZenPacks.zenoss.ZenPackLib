@@ -500,11 +500,32 @@ initial_sort_column
   :Default Value: name
 
 order
-  :Description: Order to display this class among other classes. (0-100)
+  :Description: Order to display this class among other classes. (1-100)
   :Required: No
   :Type: integer
-  :Default Value: 50
+  :Default Value: 100
   
+.. note::
+
+      The *order* parameter takes any integer value between 1 and 100.
+      However, it's behavior depends somewhat depending on whether it applies
+      to a Class, a Property, or a Relationship.  For a relationship, order 
+      behavior can further depend on the type of relationship.
+
+      There is an overall clustering for like items in the GUI component grid, following
+      this order:
+      
+      1. Containing Components
+      2. Properties
+      3. Contained Components
+
+      with container relationships listed before visible properties and finally any
+      containing relationships. 
+      
+      Earlier (pre-2.0) versions of ZenPackLib accepted float arguments for order.  However,
+      ZenPackLib now "normalizes" these values behind the scenes to integers between
+      1 and 100.
+      
 filter_display
   :Description: Will related components be filterable by components of this type?
   :Required: No
@@ -569,7 +590,7 @@ dynamicview_weight
   :Description: Dynamic View weight for objects of this class. Higher numbers are further to the right. Can be overridden by implementing getDynamicViewGroup() method on class.
   :Required: No
   :Type: float or int
-  :Default: 1000 + (order * 100)
+  :Default: 1000 + order * 10
   
 dynamicview_relations
   :Description: Map of Dynamic View relationships for this class and the relationship or method names that when called populate them.
@@ -691,10 +712,10 @@ grid_display
   :Default Value: true
   
 order
-  :Description: Order to display this property among other properties. (0-100)
+  :Description: Order to display this property among other properties. (1-100)
   :Required: No
   :Type: integer
-  :Default Value: 45
+  :Default Value: 100
   
 editable
   :Description: Should this property be editable in details?
@@ -816,10 +837,10 @@ grid_display
   :Default Value: true
   
 order
-  :Description: Order to display this relationship among other relationships and properties. (0-10)
+  :Description: Order to display this relationship among other relationships and properties. (1-100)
   :Required: No
-  :Type: float
-  :Default Value: 3.0 for To-One, 6.0 for To-Many.
+  :Type: integer
+  :Default Value: 100
   
 renderer
   :Description: JavaScript renderer for relationship value.

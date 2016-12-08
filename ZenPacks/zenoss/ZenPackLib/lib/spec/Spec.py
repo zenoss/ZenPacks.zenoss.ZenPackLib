@@ -9,6 +9,8 @@
 import inspect
 import re
 import logging
+import itertools
+import operator
 from collections import OrderedDict
 
 from Products import Zuul
@@ -143,6 +145,7 @@ class Spec(object):
     source_location = None
     speclog = None
     _init_params = None
+    _order = None
     LOG = DEFAULTLOG
 
     def __init__(self, _source_location=None, zplog=None):
@@ -170,6 +173,34 @@ class Spec(object):
             parts.append(super(Spec, self).__str__())
 
         return "{}({})".format(self.__class__.__name__, ' - '.join(parts))
+
+    @property
+    def order(self):
+        """order attribute used by ClassSpec, ClassRelationSpec, ClassPropertySpec"""
+        return self._order
+
+    @order.setter
+    def order(self, value):
+        """order should be an integer between 1 and 100"""
+        # deal with legacy cases
+        if isinstance(value, int):
+            self._order = int(max(0, min(100, value)))
+        else:
+            self._order = value
+
+    def normalize_child_order(self, items):
+        """Deal with legacy order given as float 
+        or with default value (100)
+        """
+        # case where any order is a float or all are default=100
+        if any(isinstance(x.order, float) for x in items) or all(x.order == 100 for x in items):
+            new_orders = itertools.chain(xrange(1, 101), itertools.repeat(100))
+            for c in sorted(items, key=operator.attrgetter("order")):
+                c.order = int(new_orders.next())
+
+    def scale_order(self, scale=1, offset=5):
+        """Return linear order transform"""
+        return scale * float(self.order) / 100 + offset
 
     def apply_data_defaults(self, dictionary, default_defaults=None, leave_defaults=False):
         """Modify dictionary to put values from DEFAULTS key into other keys.

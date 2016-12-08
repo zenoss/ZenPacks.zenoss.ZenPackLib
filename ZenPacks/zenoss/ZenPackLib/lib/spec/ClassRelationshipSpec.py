@@ -32,7 +32,7 @@ class ClassRelationshipSpec(Spec):
             grid_display=True,
             renderer=None,
             render_with_type=False,
-            order=None,
+            order=100,
             _source_location=None,
             zplog=None
             ):
@@ -73,8 +73,8 @@ class ClassRelationshipSpec(Spec):
                    may have several subclasses, such that the base class +
                    target object is not sufficiently descriptive on its own.
             :type render_with_type: bool
-            :param order: TODO
-            :type order: float
+            :param order: Rank for sorting this relationship among other relationships
+            :type order: int
 
         """
         super(ClassRelationshipSpec, self).__init__(_source_location=_source_location)
@@ -93,6 +93,7 @@ class ClassRelationshipSpec(Spec):
         self.grid_display = grid_display
         self.renderer = renderer
         self.render_with_type = render_with_type
+
         self.order = order
 
         if not self.display:
@@ -158,6 +159,13 @@ class ClassRelationshipSpec(Spec):
         return spec
 
     @property
+    def scaled_order(self):
+        if isinstance(self.schema, (ToOne)):
+            return self.scale_order(scale=1, offset=3)
+        else:
+            return self.scale_order(scale=1, offset=6)
+
+    @property
     def iinfo_schemas(self):
         """Return IInfo attribute schema dict."""
         remote_spec = self.class_.zenpack.classes.get(self.remote_classname)
@@ -179,13 +187,13 @@ class ClassRelationshipSpec(Spec):
                 schemas[self.name] = schema.Entity(
                     title=_t(self.label or remote_spec.label),
                     group="Overview",
-                    order=self.order or 3.0)
+                    order=self.scaled_order)
         else:
             relname_count = '{}_count'.format(self.name)
             schemas[relname_count] = schema.Int(
                 title=_t(u'Number of {}'.format(self.label or remote_spec.plural_label)),
                 group="Overview",
-                order=self.order or 6.0)
+                order=self.scaled_order)
 
         return schemas
 
@@ -287,7 +295,7 @@ class ClassRelationshipSpec(Spec):
 
         return [
             OrderAndValue(
-                order=self.order or remote_spec.order,
+                order=self.scaled_order or remote_spec.scaled_order,
                 value='{{{}}}'.format(',\n                       '.join(column_fields))),
             ]
 

@@ -146,6 +146,8 @@ class ZenPackSpec(Spec):
 
         # Classes
         self.classes = self.specs_from_param(ClassSpec, 'classes', classes, zplog=self.LOG)
+        # deal with float order parameters if they exist
+        self.normalize_child_order(self.classes.values())
 
         # update properties from ancestor classes
         self.plumb_properties()
@@ -289,7 +291,7 @@ class ZenPackSpec(Spec):
             if x.is_device}
 
         order = {
-            x.meta_type: float(x.order)
+            x.meta_type: x.scaled_order
             for x in self.classes.itervalues()}
 
         def getComponentTree(self, uid=None, id=None, **kwargs):
