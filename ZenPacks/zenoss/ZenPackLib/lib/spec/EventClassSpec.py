@@ -58,6 +58,13 @@ class EventClassSpec(Spec):
                 dmd.Events.createOrganizer(self.path)
                 ecObject = dmd.Events.getOrganizer(self.path)
                 bCreated = True
+        else:
+            try:
+                ecObject = dmd.Events.getOrganizer(self.path)
+            except KeyError:
+                self.LOG.warn('Event class {} not found.  '
+                              'Use create flag to create it.'.format(self.path))
+                return
         if self.description != '':
             if not ecObject.description == self.description:
                 ecObject.description = self.description
