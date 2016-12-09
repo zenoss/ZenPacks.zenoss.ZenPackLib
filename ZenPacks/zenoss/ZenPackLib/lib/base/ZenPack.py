@@ -301,7 +301,7 @@ class ZenPack(ZenPackBase):
         for zprop, value in dcspec.zProperties.iteritems():
             # Avoid setting zProperties on an existing device class
             if exists:
-                if value != getattr(dcObject, zprop):
+                if value != getattr(dcObject, zprop, None):
                     self.LOG.debug('Not setting "{}" to "{}" on existing device class ({})'.format(zprop, value, dcspec.path))
                 continue
             if dcObject.getPropertyType(zprop) is None:
