@@ -4,18 +4,11 @@
 Event Classes
 #############
 
-Event Classes are used to group together specific types of events.  This can be useful
-for situations where an event should be dropped or text should be altered to be more
-human readable.  This is typically done through a python transform.
+Event Classes are used to group together specific types of events.  This can be useful for situations where an event should be dropped or text should be altered to be more human readable.  This is typically done through a python transform.
 
-To define a class, supply the path to the class or classes.  Then, for each event class,
-supply the appropriate properties for the class.  These include the option to create
-and/or remove the event class during ZenPack installation/uninstallation, description,
-and a transform.  You can also define mappings to apply to events based on a key and
-supply an explanation and/or resolution to an issue.
+To define a class, supply the path to the class or classes.  Then, for each event class, supply the appropriate properties for the class.  These include the option to remove the event class during ZenPack installation/uninstallation, description, and a transform.  You can also define mappings to apply to events based on a key and supply an explanation and/or resolution to an issue.
 
-The following example shows an example of a `zenpack.yaml` file with an example
-of a definition of an event class.
+The following example shows an example of a `zenpack.yaml` file with an example of a definition of an event class.
 
 .. code-block:: yaml
 
@@ -23,7 +16,6 @@ of a definition of an event class.
 
     event_classes:
       /Status/Acme:
-        create: true
         remove: false
         description: Acme event class
         mappings:
@@ -40,7 +32,7 @@ of a definition of an event class.
 Event Class Fields
 ******************
 
-The following fields are valid for a process class organizer entry.
+The following fields are valid for an event class entry.
 
 path
   :Description: Path to the Event Class (e.g. /Status/Acme).  Must begin with "/".
@@ -54,14 +46,8 @@ description
   :Type: string
   :Default Value: None
 
-create
-  :Description: Create the event class during installation?
-  :Required: No
-  :Type: boolean
-  :Default Value: True
-
 remove
-  :Description: Remove the event class during uninstallation?
+  :Description: Remove the event class during ZenPack removal?  This will only apply to a ZenPack that has created the event class.  Any existing event classes not created by the ZenPack will not be removed.  Any event classes created by the platform will also never be removed.
   :Required: No
   :Type: boolean
   :Default Value: False

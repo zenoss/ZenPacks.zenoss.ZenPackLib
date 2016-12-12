@@ -26,7 +26,6 @@ EVENT_CLASS_YAML = """
 name: ZenPacks.zenoss.ZenPackLib
 event_classes:
   /Status/Test:
-    create: true
     remove: false
     description: Test event class
     transform: "from ZenPacks.zenoss.CiscoMonitor import transforms\\ntransforms.status_handler(device, component, evt)"
@@ -55,8 +54,6 @@ class TestEventClass(BaseTestCase):
         self.assertEquals(len(event_class_zp.yaml['event_classes']), len(event_class_zp.cfg.event_classes))
         self.assertEquals(event_class_zp.yaml['event_classes'].keys()[0], event_class_zp.cfg.event_classes.keys()[0])
         self.assertTrue('/Status/Test' in event_class_zp.cfg.event_classes.keys())
-        self.assertTrue(event_class_zp.yaml['event_classes']['/Status/Test']['create'])
-        self.assertTrue(event_class_zp.cfg.event_classes['/Status/Test'].create)
         self.assertFalse(event_class_zp.yaml['event_classes']['/Status/Test']['remove'])
         self.assertFalse(event_class_zp.cfg.event_classes['/Status/Test'].remove)
         self.assertEquals(len(event_class_zp.yaml['event_classes']['/Status/Test']['mappings']),
