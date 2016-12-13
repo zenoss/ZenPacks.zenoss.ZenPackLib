@@ -95,9 +95,9 @@ class RRDDatapointSpec(Spec):
         else:
             if self.use_shorthand():
                 self.shorthand = self.rrdtype
-                if self.rrdmin:
-                    self.shorthand += '_MIN_{}'.format(self.rrdmin)
-                if self.rrdmax:
+                if self.rrdmin is not None:
+                    self.shorthand += '_MIN_{}'.format(str(self.rrdmin))
+                if self.rrdmax is not None:
                     self.shorthand += '_MAX_{}'.format(self.rrdmax)
 
     def __eq__(self, other):
@@ -136,7 +136,10 @@ class RRDDatapointSpec(Spec):
 
     @rrdtype.setter
     def rrdtype(self, value):
-        if value and value.upper() not in ['GAUGE', 'DERIVE', 'COUNTER', 'RAW']:
+        valid_types = ['GAUGE', 'DERIVE', 'COUNTER', 'RAW']
+        if not value:
+            value = 'GAUGE'
+        if str(value).upper() not in valid_types:
             self.LOG.warning('Invalid rrdtype: {}, using GAUGE instead'.format(value.upper()))
             value = 'GAUGE'
         self._rrdtype = value
@@ -147,7 +150,7 @@ class RRDDatapointSpec(Spec):
 
     @rrdmin.setter
     def rrdmin(self, value):
-        if value:
+        if value is not None:
             try:
                 value = int(value)
             except Exception as e:
@@ -160,7 +163,7 @@ class RRDDatapointSpec(Spec):
 
     @rrdmax.setter
     def rrdmax(self, value):
-        if value:
+        if value is not None:
             try:
                 value = int(value)
             except Exception as e:
