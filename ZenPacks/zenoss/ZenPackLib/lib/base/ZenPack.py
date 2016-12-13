@@ -13,7 +13,6 @@ import difflib
 import time
 import sys
 
-from transaction import commit
 from ZODB.POSException import ConflictError
 
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
@@ -51,32 +50,13 @@ class ZenPack(ZenPackBase):
         super(ZenPack, self).__init__(*args, **kwargs)
 
     def _buildDeviceRelations(self, batch=10):
-        '''split device buildRelations across multiple commits'''
         count = 0
-
-        def build_relations(d, retries=5, count=0):
-            if count >= retries:
-                self.LOG.error('max retries exceeded for {}'.format(d.id))
-            else:
-                try:
-                    d.buildRelations()
-                except ConflictError as e:
-                    self.LOG.warn('Reattempting buildRelations() on {} ({})'.format(d.id, e))
-                    self.dmd._p_jar.sync()
-                    build_relations(d, retries, count + 1)
-                except Exception as e:
-                    self.LOG.error('buildRelations() failed for {} ({})'.format(d.id, e))
-
-        newline = False
         for d in self.dmd.Devices.getSubDevicesGen():
-            build_relations(d)
+            d.buildRelations()
             count += 1
             if count % batch == 0:
-                newline = True
                 sys.stdout.write('.')
-                commit()
-        commit()
-        if newline:
+        if count > batch:
             sys.stdout.write('\n')
         self.LOG.info('Finished adding {} relationships to existing devices'.format(self.id))
 
