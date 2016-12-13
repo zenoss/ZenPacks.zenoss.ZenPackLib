@@ -19,14 +19,11 @@ class EventClassSpec(Spec):
             path,
             description='',
             transform='',
-            create=True,
             remove=False,
             mappings=None,
             _source_location=None,
             zplog=None):
         """
-          :param create: Create the EventClass with ZenPack installation, if it does not exist?
-          :type create: bool
           :param remove: Remove the EventClass when ZenPack is removed?
           :type remove: bool
           :param description: Description of the EventClass
@@ -41,7 +38,6 @@ class EventClassSpec(Spec):
         self.path = path
         self.description = description
         self.transform = transform
-        self.create = bool(create)
         self.remove = bool(remove)
         if zplog:
             self.LOG = zplog
@@ -50,26 +46,26 @@ class EventClassSpec(Spec):
 
     def instantiate(self, dmd):
         bCreated = False
-        if self.create:
-            try:
-                ecObject = dmd.Events.getOrganizer(self.path)
-                bCreated = getattr(ecObject, 'zpl_managed', False)
-            except KeyError:
-                dmd.Events.createOrganizer(self.path)
-                ecObject = dmd.Events.getOrganizer(self.path)
-                bCreated = True
-        else:
-            try:
-                ecObject = dmd.Events.getOrganizer(self.path)
-            except KeyError:
-                self.LOG.warn('Event class {} not found.  '
-                              'Use create flag to create it.'.format(self.path))
-                return
+        try:
+            ecObject = dmd.Events.getOrganizer(self.path)
+            bCreated = getattr(ecObject, 'zpl_managed', False)
+        except KeyError:
+            dmd.Events.createOrganizer(self.path)
+            ecObject = dmd.Events.getOrganizer(self.path)
+            bCreated = True
         if self.description != '':
             if not ecObject.description == self.description:
+                self.LOG.debug('Description of Event Class {} has changed from'
+                               ' {} to {}'.format(self.path,
+                                                  ecObject.description,
+                                                  self.description))
                 ecObject.description = self.description
         if self.transform != '':
             if not ecObject.transform == self.transform:
+                self.LOG.debug('Transform for Event Class {} has changed from'
+                               '\n{}\n to \n{}'.format(self.path,
+                                                       ecObject.transform,
+                                                       self.transform))
                 ecObject.transform = self.transform
         # Flag this as a ZPL managed object, that is, one that should not be
         # exported to objects.xml  (contained objects will also be excluded)

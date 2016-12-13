@@ -22,24 +22,22 @@ class EventClassSpecParams(SpecParams, EventClassSpec):
             EventClassMappingSpecParams, 'mappings', mappings)
 
     @classmethod
-    def new(cls, eventclass, description='', transform='', create=False, remove=False):
+    def new(cls, eventclass, description='', transform='', remove=False):
         self = object.__new__(cls)
         SpecParams.__init__(self)
         self.path = eventclass
         self.description = description
         self.transform = transform
-        self.create = create
         self.remove = remove
         return self
 
     @classmethod
-    def fromObject(cls, eventclass, create=False, remove=False):
+    def fromObject(cls, eventclass, remove=False):
         self = object.__new__(cls)
         SpecParams.__init__(self)
 
         self.description = eventclass.description
         self.transform = eventclass.transform
-        self.create = create
         self.remove = remove
         self.mappings = {x.id: EventClassMappingSpecParams.fromObject(x) for x in eventclass.instances()}
         return self

@@ -478,18 +478,18 @@ class ZPLCommand(ZenScriptBase):
         eventclasses = collections.defaultdict(dict)
         for eventclass in [x for x in zenpack.packables() if x.meta_type == 'EventClass']:
             ec_name = "/" + "/".join(eventclass.getPrimaryUrlPath().split('/')[4:])
-            eventclasses[ec_name] = EventClassSpecParams.fromObject(eventclass, create=True, remove=True)
+            eventclasses[ec_name] = EventClassSpecParams.fromObject(eventclass, remove=True)
             for subclass in eventclass.getSubEventClasses():
                 ec_name = "/" + "/".join(subclass.getPrimaryUrlPath().split('/')[4:])
                 # Remove = false because the removing the parent will remove the child # This is a performance optimization
-                eventclasses[ec_name] = EventClassSpecParams.fromObject(subclass, create=True, remove=False)
+                eventclasses[ec_name] = EventClassSpecParams.fromObject(subclass, remove=False)
 
         for eventclassinst in [x for x in zenpack.packables() if x.meta_type == 'EventClassInst']:
             eventclass = eventclassinst.eventClass()
             ec_name = "/" + "/".join(eventclass.getPrimaryUrlPath().split('/')[4:])
 
             # Do not create/remove the eventclasses as we do not own them
-            eventclassspec = eventclasses.get(ec_name, EventClassSpecParams.new(ec_name, remove=False, create=False))
+            eventclassspec = eventclasses.get(ec_name, EventClassSpecParams.new(ec_name, remove=False))
             if eventclassinst.id in eventclassspec.mappings:
                 # we have already gotten this instance and we don't need a duplicate
                 continue
