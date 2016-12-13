@@ -23,7 +23,6 @@ from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
@@ -303,14 +302,19 @@ class TestTemplateModified(BaseTestCase):
         z_new = ZPLTestHarness(new_doc)
         z_orig.connect()
         z_new.connect()
-        zenpack = ZenPack(z_new.dmd)
+
         # original template spec
         orig_tspec = z_orig.cfg.device_classes.get('/Server').templates.get('Device')
         # template based on original spec
         orig_template = orig_tspec.create(z_orig.dmd, False)
+
+        zenpack = z_new.schema.ZenPack(z_new.dmd)
         # new temlate spec
         new_tspec = z_new.cfg.device_classes.get('/Server').templates.get('Device')
-        diff = zenpack.template_changed(z_new, orig_template, new_tspec)
+        new_tspec_param = zenpack._v_specparams.device_classes.get('/Server').templates.get('Device')
+
+        diff = zenpack.object_changed(z_new.dmd, orig_template, new_tspec, new_tspec_param)
+
         self.assertEquals(diff, expected, 'Expected:\n{}\ngot:\n{}'.format(expected, diff))
 
 

@@ -113,16 +113,19 @@ class RRDTemplateSpec(Spec):
                                                             spec_name,
                                                             ', '.join(list(invalid_names))))
 
-    def create(self, dmd, addToZenPack=True):
+    def create(self, dmd, addToZenPack=True, id=None):
         device_class = dmd.Devices.createOrganizer(self.deviceclass_spec.path)
 
-        existing_template = device_class.rrdTemplates._getOb(self.name, None)
+        # override object id if provided
+        t_id = id or self.name
+
+        existing_template = device_class.rrdTemplates._getOb(t_id, None)
         if existing_template:
             self.speclog.info("replacing template")
-            device_class.rrdTemplates._delObject(self.name)
+            device_class.rrdTemplates._delObject(t_id)
 
-        device_class.manage_addRRDTemplate(self.name)
-        template = device_class.rrdTemplates._getOb(self.name)
+        device_class.manage_addRRDTemplate(t_id)
+        template = device_class.rrdTemplates._getOb(t_id)
 
         # Flag this as a ZPL managed object, that is, one that should not be
         # exported to objects.xml  (contained objects will also be excluded)
@@ -156,3 +159,14 @@ class RRDTemplateSpec(Spec):
 
         if not addToZenPack:
             return template
+
+    def remove(self, dmd, id=None):
+        try:
+            device_class = dmd.Devices.getOrganizer(self.deviceclass_spec.path)
+        except KeyError:
+            return
+        # override object id if provided
+        t_id = id or self.name
+        existing_template = device_class.rrdTemplates._getOb(t_id, None)
+        if existing_template:
+            device_class.rrdTemplates._delObject(t_id)
