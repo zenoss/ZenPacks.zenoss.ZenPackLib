@@ -48,6 +48,15 @@ class DeviceBase(ModelBase):
         events are not considered as affecting the device's status.
 
         """
+
+        def get_sub_classes(name):
+            for ev in self.dmd.Events.getSubEventClasses():
+                evkey = ev.getDmdKey()
+                if name in evkey:
+                    yield evkey
+
+        ev_classes = filter(None, list(get_sub_classes(statusclass)))
+
         if not self.monitorDevice():
             return None
 
@@ -58,7 +67,7 @@ class DeviceBase(ModelBase):
                 element_sub_identifier=[""],
                 severity=[SEVERITY_CRITICAL],
                 status=[STATUS_NEW, STATUS_ACKNOWLEDGED],
-                event_class=filter(None, [statusclass]))
+                event_class=ev_classes)
 
             result = zep.getEventSummaries(0, filter=event_filter, limit=0)
         except Exception:
