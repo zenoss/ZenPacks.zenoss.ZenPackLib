@@ -477,7 +477,7 @@ class ZPLCommand(ZenScriptBase):
 
         eventclasses = collections.defaultdict(dict)
         for eventclass in [x for x in zenpack.packables() if x.meta_type == 'EventClass']:
-            ec_name = "/" + "/".join(eventclass.getPrimaryUrlPath().split('/')[4:])
+            ec_name = "/" + "/".join(eventclass.getPrimaryPath()[4:])
             eventclasses[ec_name] = EventClassSpecParams.fromObject(eventclass, remove=True)
             for subclass in eventclass.getSubEventClasses():
                 ec_name = "/" + "/".join(subclass.getPrimaryUrlPath().split('/')[4:])
@@ -486,7 +486,7 @@ class ZPLCommand(ZenScriptBase):
 
         for eventclassinst in [x for x in zenpack.packables() if x.meta_type == 'EventClassInst']:
             eventclass = eventclassinst.eventClass()
-            ec_name = "/" + "/".join(eventclass.getPrimaryUrlPath().split('/')[4:])
+            ec_name = "/" + "/".join(eventclass.getPrimaryPath()[4:])
 
             # Do not create/remove the eventclasses as we do not own them
             eventclassspec = eventclasses.get(ec_name, EventClassSpecParams.new(ec_name, remove=False))

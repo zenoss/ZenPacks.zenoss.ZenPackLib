@@ -49,7 +49,7 @@ class ZPropertySpec(Spec):
                 'password': '',
                 'lines': [],
                 'boolean': False,
-                }.get(self.type_, None)
+            }.get(self.type_, None)
         else:
             self.default = default
 
@@ -62,4 +62,3 @@ class ZPropertySpec(Spec):
     def packZProperties(self):
         """Return packZProperties tuple for this zProperty."""
         return (self.name, self.default, self.type_)
-
