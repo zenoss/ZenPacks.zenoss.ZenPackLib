@@ -9,7 +9,7 @@
 #
 ##############################################################################
 
-""" Color format validation YAML dump/load
+""" Severity format validation YAML dump/load
 
 """
 # zenpacklib Imports
@@ -85,14 +85,14 @@ device_classes:
             type: SNMP
             severity: 5
             datapoints:
-              A: {}
+              A: GAUGE
             oid: .1.3.6.1.4.1.232.6.2.6.8.1.4
 """
 
 class TestValidSeverity(BaseTestCase):
-    """Test color input validation"""
+    """Test severity input validation"""
 
-    def test_valid_color(self):
+    def test_valid_severity(self):
         ''''''
         loaded = yaml.load(YAML_DOC, Loader=Loader)
         dumped = yaml.dump(loaded, Dumper=Dumper)
