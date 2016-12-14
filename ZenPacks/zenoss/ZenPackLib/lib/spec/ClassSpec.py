@@ -762,6 +762,7 @@ class ClassSpec(Spec):
         if self.path_pattern_streams:
             attributes['_v_path_pattern_streams'] = self.path_pattern_streams
 
+        attributes['LOG'] = self.LOG
         return self.create_schema_class(
             get_symbol_name(self.zenpack.name, 'schema'),
             self.name,

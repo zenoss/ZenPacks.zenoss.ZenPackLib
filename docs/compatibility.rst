@@ -119,8 +119,18 @@ would be accessed as follows:
               self.LOG.info("You called hello_world")
               return 'Hello World!'
 
-Logging used within class extension files will follow the verbosity and level parameters provided to the
-"load_yaml" method.
+
+
+.. note::
+
+   Log messages generated within the new logging framework are written to the Zope logger (event.log) 
+   and can be viewed there.  Logging used within class extension files will follow the verbosity 
+   and level parameters provided to the "load_yaml" method.
+   
+   Please note that additional Zope configuration may be required to see log messages, since Zope 
+   configuration determines what is accepted for writing to its event log.  For example, if Zope logging
+   is set to "warn", then any "info" or "debug" messages will not be logged regardless of the load_yaml parameters
+   used.  Zope logging in this case must be set to "info" for ZPL "info", "warning", and "critical" logging.
 
 .. _older-versions:
 
