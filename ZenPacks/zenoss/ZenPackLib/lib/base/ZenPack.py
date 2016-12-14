@@ -13,12 +13,9 @@ import difflib
 import time
 import sys
 
-from ZODB.POSException import ConflictError
-
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
 from ..helpers.ZenPackLibLog import ZenPackLibLog, new_log
-from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 from Products.ZenEvents import ZenEventClasses
 
 LOG = new_log('zpl.ZenPack')
@@ -55,9 +52,9 @@ class ZenPack(ZenPackBase):
             d.buildRelations()
             count += 1
             if count % batch == 0:
-                sys.stdout.write('.')
+                sys.stderr.write('.')
         if count > batch:
-            sys.stdout.write('\n')
+            sys.stderr.write('\n')
         self.LOG.info('Finished adding {} relationships to existing devices'.format(self.id))
 
     def install(self, app):
@@ -89,7 +86,35 @@ class ZenPack(ZenPackBase):
 
         # load monitoring templates
         for dcname, dcspec in self.device_classes.iteritems():
+            dcspecparam = self._v_specparams.device_classes.get(dcname)
+            deviceclass = self.dmd.Devices.getOrganizer(dcname)
+
             for mtname, mtspec in dcspec.templates.iteritems():
+                mtspecparam = dcspecparam.templates.get(mtname)
+
+                # there will be a backup of this template if this is an upgrade
+                try:
+                    template = deviceclass.rrdTemplates._getOb("{}-backup".format(mtname))
+                except AttributeError:
+                    template = None
+
+                if template:
+                    diff = self.object_changed(app, template, mtspec, mtspecparam)
+                    # preserve the backup if different
+                    if diff:
+                        backup_name = "{}-preupgrade-{}".format(mtname, int(time.time()))
+                        deviceclass.rrdTemplates.manage_renameObject(template.id, backup_name)
+                        LOG.info(
+                            "Existing monitoring template {}/{} differs from "
+                            "the newer version included with the {} ZenPack.  "
+                            "The existing template will be "
+                            "backed up to '{}'.  Please review and reconcile any "
+                            "local changes before deleting the backup:\n{}".format(
+                            dcname, mtname, self.id, backup_name, diff))
+                    else:
+                        # delete the backup template if unchanged
+                        template.getPrimaryParent()._delObject(template.id)
+                # create the template
                 mtspec.create(self.dmd)
 
         # Load event classes
@@ -117,11 +142,6 @@ class ZenPack(ZenPackBase):
                 try:
                     deviceclass = self.dmd.Devices.getOrganizer(dcname)
                 except KeyError:
-                    # DeviceClass.getOrganizer() can raise a KeyError if the
-                    # organizer doesn't exist.
-                    deviceclass = None
-
-                if deviceclass is None:
                     self.LOG.warning(
                         "DeviceClass {} has been removed at some point "
                         "after the {} ZenPack was installed.  It will be "
@@ -133,9 +153,6 @@ class ZenPack(ZenPackBase):
                     try:
                         template = deviceclass.rrdTemplates._getOb(orig_mtname)
                     except AttributeError:
-                        template = None
-
-                    if template is None:
                         self.LOG.warning(
                             "Monitoring template {}/{} has been removed at some point "
                             "after the {} ZenPack was installed.  It will be "
@@ -144,26 +161,8 @@ class ZenPack(ZenPackBase):
                         continue
 
                     # back up the template
-                    newname = "{}-upgrade-{}".format(orig_mtname, int(time.time()))
-                    deviceclass.rrdTemplates.manage_renameObject(template.id, newname)
-                    # corresponding DeviceClassSpec
-                    dc_spec = self.device_classes.get(dcname)
-                    # RRDTemplateSpec
-                    template_spec = dc_spec.templates.get(orig_mtname)
-
-                    diff = self.template_changed(app, template, template_spec)
-                    if diff:
-                        self.LOG.info(
-                            "Existing monitoring template {}/{} differs from "
-                            "the newer version included with the {} ZenPack.  "
-                            "The existing template will be "
-                            "backed up to '{}'.  Please review and reconcile any "
-                            "local changes before deleting the backup:\n{}".format(
-                            dcname, orig_mtname, self.id, template.id, diff))
-                    else:
-                        # if unchanged, delete the backup template
-                        template.getPrimaryParent()._delObject(template.id)
-
+                    backup_name = "{}-backup".format(orig_mtname)
+                    deviceclass.rrdTemplates.manage_renameObject(template.id, backup_name)
         else:
             dc = app.Devices
             for catalog in self.GLOBAL_CATALOGS:
@@ -246,30 +245,40 @@ class ZenPack(ZenPackBase):
                             self.LOG.info('Removing {} {} @ {}'.format(subclass_spec.klass_string, subclass_id, cspec.path))
                             remove_func(preppedId)
 
-    def template_changed(self, app, existing, new_spec):
+    def object_changed(self, app, object, spec, specparam):
+        """Compare new and old objects with prototype creation"""
+        # get YAML representation of object
+        object_yaml = yaml.dump(specparam.fromObject(object), Dumper=Dumper)
+
+        # get YAML representation of prototype
+        proto_id = '{}-new'.format(spec.name)
+        proto_object = spec.create(app.dmd, False, proto_id)
+        proto_object_param = specparam.fromObject(proto_object)
+        proto_object_yaml = yaml.dump(proto_object_param, Dumper=Dumper)
+        spec.remove(app.dmd, proto_id)
+
+        return self.get_yaml_diff(object_yaml, proto_object_yaml)
+
+    def object_changed_safe(self, object, specparam):
+        """Compare new and old objects without prototype creation 
+        or risk to existing Zope objects
         """
-            Return True if existing template is changed from spec
-        """
-        diff = None
-        # get spec params from object
-        existing_specparams = RRDTemplateSpecParams.fromObject(existing)
-        # build a dummy template based on YAML spec
-        # create new template
-        new_template = new_spec.create(app.dmd, False)
-        new_specparams = RRDTemplateSpecParams.fromObject(new_template)
-        # remove new template
-        new_template.getPrimaryParent()._delObject(new_template.id)
-        # dump to yaml for both specparams
-        yaml_existing = yaml.dump(existing_specparams, Dumper=Dumper)
-        yaml_new = yaml.dump(new_specparams, Dumper=Dumper)
+        # get YAML representation of object
+        object_yaml = yaml.dump(specparam.fromObject(object), Dumper=Dumper)
+        # get YAML representation from SpecPararm
+        proto_yaml = yaml.dump(specparam, Dumper=Dumper)
+        return self.get_yaml_diff(object_yaml, proto_yaml)
+
+    def get_yaml_diff(self, yaml_existing, yaml_new):
+        """Return diff between YAML files"""
         if yaml_existing != yaml_new:
             lines_existing = [x + '\n' for x in yaml_existing.split('\n')]
             lines_new = [x + '\n' for x in yaml_new.split('\n')]
-            diff = ''.join(difflib.unified_diff(lines_existing, lines_new))
-        return diff
+            return ''.join(difflib.unified_diff(lines_existing, lines_new))
+        return None
 
     def create_device_class(self, app, dcspec):
-        ''''''
+        """Create and return a DeviceClass"""
         exists = False
         try:
             dcObject = app.dmd.Devices.getOrganizer(dcspec.path)
@@ -292,7 +301,7 @@ class ZenPack(ZenPackBase):
         return dcObject
 
     def remove_device_class(self, app, dcspec):
-        ''''''
+        """Remove a DeviceClass"""
         path = [p for p in dcspec.path.lstrip('/').split('/') if p != 'Devices']
         organizerPath = '/{}'.format('/'.join(['Devices'] + path))
         try:
