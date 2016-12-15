@@ -177,7 +177,7 @@ Monitoring Template Fields
 The following fields are valid for a monitoring template entry.
 
 name
-  :Description: Name (e.g. WidgeterHealth). Must be a valid Zenoss object ID.  ZenPackLib also allows for defining a replacement or additional template by adding "-replacement" or "-additional" to the end of the template name.  For example, a defined *Device-replacement* template will replace the existing Device template on a device class.  A defined *Device-addition* template will be applied in addition to the existing Device template on a device class.
+  :Description: Name (e.g. WidgeterHealth). Must be a valid Zenoss object ID.
   :Required: Yes
   :Type: string
   :Default Value: *(implied from key in templates map)*
@@ -211,6 +211,11 @@ graphs
   :Required: No
   :Type: map<name, :ref:`Graph <graph-fields>`>
   :Default Value: {} *(empty map)*
+
+.. note::
+
+  ZenPackLib also allows for defining a replacement or additional template by adding "-replacement" or "-additional" to the end of the template name.  For example, a defined *Device-replacement* template will replace the existing Device template on a device class.  A defined *Device-addition* template will be applied in addition to the existing Device template on a device class.
+
 
 .. _datasource-fields:
 
