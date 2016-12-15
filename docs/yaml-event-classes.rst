@@ -26,6 +26,10 @@ The following example shows an example of a `zenpack.yaml` file with an example 
             transform: "if evt.message.find('Error reading value for') >= 0:\n\
               \   evt._action = 'drop'"
 
+.. note::
+
+  When you define an event class and/or mapping which already exists, any settings defined in your ZenPack will overwrite existing settings.
+
 .. _event-class-fields:
 
 ******************
