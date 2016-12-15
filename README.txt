@@ -7,12 +7,13 @@ maintain their own zenpacklib.py versions.
 Centralized Usage
 ************************
 
-To use this version of zenpacklib, change your ZenPack  __init__.py statement to:
+To use this version of zenpacklib, your ZenPack's  __init__.py must include:
 
-import os
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
-YAML = os.path.join(os.path.dirname(__file__), 'zenpack.yaml')
-CFG = zenpacklib.load_yaml(YAML)
+
+# verbose and level are optional
+CFG = zenpacklib.load_yaml(verbose=False, level=30)
+schema = CFG.zenpack_module.schema
 
 ************************
 Distributed Usage
