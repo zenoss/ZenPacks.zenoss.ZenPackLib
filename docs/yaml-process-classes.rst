@@ -32,6 +32,10 @@ of a definition of a process class.
             replaceRegex: .*
             replacement: Widget
 
+.. _note::
+
+  When you define a process class organizer and/or class which already exists, any settings defined in your ZenPack will overwrite existing settings.
+
 .. _process-class-organizer-fields:
 
 ******************************
