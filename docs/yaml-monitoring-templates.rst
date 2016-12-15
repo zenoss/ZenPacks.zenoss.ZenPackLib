@@ -164,8 +164,8 @@ zDeviceTemplates.
                     dpName: health_percent
                     format: "%7.2lf%%"
 
-Many different entry types are shown in the above example. See the references
-below for more information on each.
+
+Many different entry types are shown in the above example. See the references below for more information on each.
 
 
 .. _monitoring-template-fields:
@@ -177,7 +177,7 @@ Monitoring Template Fields
 The following fields are valid for a monitoring template entry.
 
 name
-  :Description: Name (e.g. WidgeterHealth). Must be a valid Zenoss object ID.
+  :Description: Name (e.g. WidgeterHealth). Must be a valid Zenoss object ID.  ZenPackLib also allows for defining a replacement or additional template by adding "-replacement" or "-additional" to the end of the template name.  For example, a defined *Device-replacement* template will replace the existing Device template on a device class.  A defined *Device-addition* template will be applied in addition to the existing Device template on a device class.
   :Required: Yes
   :Type: string
   :Default Value: *(implied from key in templates map)*
