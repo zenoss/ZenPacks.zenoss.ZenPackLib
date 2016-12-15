@@ -164,8 +164,8 @@ zDeviceTemplates.
                     dpName: health_percent
                     format: "%7.2lf%%"
 
-Many different entry types are shown in the above example. See the references
-below for more information on each.
+
+Many different entry types are shown in the above example. See the references below for more information on each.
 
 
 .. _monitoring-template-fields:
@@ -211,6 +211,11 @@ graphs
   :Required: No
   :Type: map<name, :ref:`Graph <graph-fields>`>
   :Default Value: {} *(empty map)*
+
+.. note::
+
+  ZenPackLib also allows for defining a replacement or additional template by adding "-replacement" or "-additional" to the end of the template name.  For example, a defined *Device-replacement* template will replace the existing Device template on a device class.  A defined *Device-addition* template will be applied in addition to the existing Device template on a device class.
+
 
 .. _datasource-fields:
 
