@@ -128,7 +128,7 @@ class ClassSpec(Spec):
             plural_label_width=None,
             content_width=None,
             icon=None,
-            order=None,
+            order=100,
             properties=None,
             relationships=None,
             impact_triggers=None,
@@ -183,8 +183,8 @@ class ClassSpec(Spec):
             :param icon: Filename (of a file within the zenpack's 'resources/icon'
                    directory).  Default is the {class name}.png
             :type icon: str
-            :param order: TODO
-            :type order: float
+            :param order: Rank for sorting this class among other classes
+            :type order: int
             :param properties: TODO
             :type properties: SpecsParameter(ClassPropertySpec)
             :param relationships: TODO
@@ -249,11 +249,7 @@ class ClassSpec(Spec):
 
         self.icon = icon
 
-        # Force properties into the 5.0 - 5.9 order range.
-        if not order:
-            self.order = 5.5
-        else:
-            self.order = 5 + (max(0, min(100, order)) / 100.0)
+        self.order = order
 
         # save property defaults so they can be reapplied later
         if properties:
@@ -263,11 +259,15 @@ class ClassSpec(Spec):
         self.properties = self.specs_from_param(
             ClassPropertySpec, 'properties', properties, zplog=self.LOG)
 
+        self.normalize_child_order(self.properties.values())
+
         # Relationships
         # If these exist, they will refer to relationship display properties, but won't have a schema
         # defined (yet).  The schema is added later
         self.relationships = self.specs_from_param(
             ClassRelationshipSpec, 'relationships', relationships, zplog=self.LOG)
+
+        self.normalize_child_order(self.relationships.values())
 
         # Impact.
         self.impacts = impacts
@@ -302,7 +302,7 @@ class ClassSpec(Spec):
             self.dynamicview_group = dynamicview_group
 
         if dynamicview_weight is None:
-            self.dynamicview_weight = 1000 + (self.order * 100)
+            self.dynamicview_weight = self.scale_order(scale=1000, offset=1000)
         else:
             self.dynamicview_weight = dynamicview_weight
 
@@ -357,6 +357,10 @@ class ClassSpec(Spec):
                 self.path_pattern_streams.append(pattern_stream)
         else:
             self.extra_paths = []
+
+    @property
+    def scaled_order(self):
+        return self.scale_order(scale=1, offset=5)
 
     def check_ancestor_properties(self, spec_name):
         """Update any inheritable properties from ancestor"""

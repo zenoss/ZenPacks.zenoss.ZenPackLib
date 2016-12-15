@@ -31,7 +31,7 @@ class ClassPropertySpec(Spec):
             details_display=True,
             grid_display=True,
             renderer=None,
-            order=None,
+            order=100,
             editable=False,
             api_only=False,
             api_backendtype='property',
@@ -79,8 +79,8 @@ class ClassPropertySpec(Spec):
                    to this property, rather than passing the text through
                    unformatted.
             :type renderer: str
-            :param order: TODO
-            :type order: float
+            :param order: Rank for sorting this property among other properties
+            :type order: int
             :param editable: TODO
             :type editable: bool
             :param api_only: TODO
@@ -150,11 +150,11 @@ class ClassPropertySpec(Spec):
                 "Property '%s': index_scope must be 'device', 'global', or 'both', not '%s'"
                 % (name, self.index_scope))
 
-        # Force properties into the 4.0 - 4.9 order range.
-        if not order:
-            self.order = 4.5
-        else:
-            self.order = 4 + (max(0, min(100, order)) / 100.0)
+        self.order = order
+
+    @property
+    def scaled_order(self):
+        return self.scale_order(scale=1, offset=4)
 
     def update_inherited_params(self):
         """Copy any inherited parameters if they are not default or already specified here"""
@@ -216,7 +216,7 @@ class ClassPropertySpec(Spec):
             self.name: schema_map[self.type_](
                 title=_t(self.label),
                 alwaysEditable=self.editable,
-                order=self.order)
+                order=self.scaled_order)
             }
 
     @property
