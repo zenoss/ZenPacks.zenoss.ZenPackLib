@@ -289,10 +289,9 @@ class ZPLCommand(ZenScriptBase):
         print "  - creating file: {}".format(init_fname)
         with open(init_fname, 'w') as init_f:
             init_f.write(
-                "import os\n"
                 "from ZenPacks.zenoss.ZenPackLib import zenpacklib\n\n"
-                "FILE=os.path.join(os.path.dirname(__file__), 'zenpack.yaml')\n"
-                "CFG = zenpacklib.load_yaml(FILE)\n")
+                "CFG = zenpacklib.load_yaml(verbose=False, level=30)\n"
+                "schema = CFG.zenpack_module.schema\n")
 
         # Create zenpack.yaml in ZenPack module directory.
         yaml_fname = os.path.join(module_directory, 'zenpack.yaml')
