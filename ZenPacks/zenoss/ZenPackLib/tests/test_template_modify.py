@@ -311,7 +311,7 @@ class TestTemplateModified(BaseTestCase):
         zenpack = z_new.schema.ZenPack(z_new.dmd)
         # new temlate spec
         new_tspec = z_new.cfg.device_classes.get('/Server').templates.get('Device')
-        new_tspec_param = zenpack._v_specparams.device_classes.get('/Server').templates.get('Device')
+        new_tspec_param = z_new.cfg.specparams.device_classes.get('/Server').templates.get('Device')
 
         diff = zenpack.object_changed(z_new.dmd, orig_template, new_tspec, new_tspec_param)
 
