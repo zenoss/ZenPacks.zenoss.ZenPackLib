@@ -22,6 +22,10 @@ extended in Python only if necessary.
 * Monitoring Templates
 * New Device and Component Types
 * Relationships between Device and Component Types
+* Event Classes
+* Process Classes
+* Device Link Providers
+* Impact Triggers
 
 It is this combination of declarative YAML and imperative Python extension that
 allows zenpacklib to make easy things easy and hard things possible.
@@ -143,3 +147,10 @@ them.
 
     class_relationships:
       - Widgeter 1:MC Widget
+
+
+************
+Known Issues
+************
+
+* When dumping existing event classes using the zenpacklib tool with *--dump-event-classes* option, some transforms and/or explanations may show as either unformatted text within double quotes or as formatted text within single quotes.  This is due to how the python yaml package handles strings.  Either of these two formats are acceptable when used in zenpack.yaml.
