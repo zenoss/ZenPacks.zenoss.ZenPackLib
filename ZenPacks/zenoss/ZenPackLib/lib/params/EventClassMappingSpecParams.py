@@ -6,9 +6,6 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
-from Acquisition import aq_base
-
 from .SpecParams import SpecParams
 from ..spec.EventClassMappingSpec import EventClassMappingSpec
 
@@ -38,17 +35,3 @@ class EventClassMappingSpecParams(SpecParams, EventClassMappingSpec):
         self.resolution = resolution
         self.transform = transform
         self.remove = remove
-
-    @classmethod
-    def fromObject(cls, mapping, remove=False):
-        self = object.__new__(cls)
-        SpecParams.__init__(self)
-        mapping = aq_base(mapping)
-
-        _properties = ['eventClassKey', 'sequence', 'rule', 'regex',
-                       'example', 'explanation', 'resolution', 'transform']
-        for x in _properties:
-            setattr(self, x, getattr(mapping, x, None))
-
-        self.remove = remove
-        return self

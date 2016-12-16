@@ -260,6 +260,7 @@ from ..params.ZPropertySpecParams import ZPropertySpecParams
 from ..params.ClassSpecParams import ClassSpecParams
 from ..params.ClassPropertySpecParams import ClassPropertySpecParams
 from ..params.ClassRelationshipSpecParams import ClassRelationshipSpecParams
+from ..params.RelationshipSchemaSpecParams import RelationshipSchemaSpecParams
 from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
 from ..params.RRDThresholdSpecParams import RRDThresholdSpecParams
 from ..params.RRDDatasourceSpecParams import RRDDatasourceSpecParams
@@ -286,6 +287,7 @@ Dumper.add_representer(ZPropertySpecParams, Dumper.represent_spec)
 Dumper.add_representer(ClassSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ClassPropertySpecParams, Dumper.represent_spec)
 Dumper.add_representer(ClassRelationshipSpecParams, Dumper.represent_spec)
+Dumper.add_representer(RelationshipSchemaSpecParams, Dumper.represent_relschemaspec)
 Dumper.add_representer(RRDTemplateSpecParams, Dumper.represent_spec)
 Dumper.add_representer(RRDThresholdSpecParams, Dumper.represent_spec)
 Dumper.add_representer(RRDDatasourceSpecParams, Dumper.represent_spec)
@@ -299,6 +301,11 @@ Dumper.add_representer(float, SafeRepresenter.represent_float)
 Dumper.add_representer(int, SafeRepresenter.represent_int)
 Dumper.add_representer(str, SafeRepresenter.represent_str)
 Dumper.add_representer(bool, SafeRepresenter.represent_bool)
+
+from datetime import date, datetime
+Dumper.add_representer(date, SafeRepresenter.represent_date)
+Dumper.add_representer(datetime, SafeRepresenter.represent_datetime)
+
 Dumper.add_representer(EventClassSpecParams, Dumper.represent_spec)
 Dumper.add_representer(EventClassMappingSpec, Dumper.represent_spec)
 Dumper.add_representer(ProcessClassOrganizerSpecParams, Dumper.represent_spec)

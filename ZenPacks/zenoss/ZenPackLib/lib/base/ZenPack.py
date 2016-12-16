@@ -104,7 +104,7 @@ class ZenPack(ZenPackBase):
                     if diff:
                         backup_name = "{}-preupgrade-{}".format(mtname, int(time.time()))
                         deviceclass.rrdTemplates.manage_renameObject(template.id, backup_name)
-                        LOG.info(
+                        self.LOG.info(
                             "Existing monitoring template {}/{} differs from "
                             "the newer version included with the {} ZenPack.  "
                             "The existing template will be "
@@ -128,6 +128,12 @@ class ZenPack(ZenPackBase):
     def remove(self, app, leaveObjects=False):
         if self._v_specparams is None:
             return
+
+        if self.zenpack_spec:
+            archive_path = '/tmp/{}-archive-{}.yaml'.format(self.zenpack_spec.name.lower(), int(time.time()))
+            self.LOG.info("Backing up existing Zenpack YAML to {}".format(archive_path))
+            with open(archive_path, 'w') as archive_path_f:
+                archive_path_f.write(yaml.dump(self.zenpack_spec.specparams, Dumper=Dumper))
 
         from Products.Zuul.interfaces import ICatalogTool
         if leaveObjects:
@@ -269,7 +275,8 @@ class ZenPack(ZenPackBase):
         proto_yaml = yaml.dump(specparam, Dumper=Dumper)
         return self.get_yaml_diff(object_yaml, proto_yaml)
 
-    def get_yaml_diff(self, yaml_existing, yaml_new):
+    @classmethod
+    def get_yaml_diff(cls, yaml_existing, yaml_new):
         """Return diff between YAML files"""
         if yaml_existing != yaml_new:
             lines_existing = [x + '\n' for x in yaml_existing.split('\n')]

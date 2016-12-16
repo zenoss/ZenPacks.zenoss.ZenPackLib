@@ -12,6 +12,7 @@ from .Spec import Spec
 
 class ZPropertySpec(Spec):
     """ZPropertySpec"""
+    _default = None
 
     def __init__(
             self,
@@ -44,14 +45,16 @@ class ZPropertySpec(Spec):
         self.category = category
 
         if default is None:
-            self.default = {
-                'string': '',
+            self.default = self.get_default()
+        else:
+            self.default = default
+
+    def get_default(self):
+        return {'string': '',
                 'password': '',
                 'lines': [],
                 'boolean': False,
             }.get(self.type_, None)
-        else:
-            self.default = default
 
     def create(self):
         """Implement specification."""

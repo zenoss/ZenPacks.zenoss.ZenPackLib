@@ -7,7 +7,6 @@
 #
 ##############################################################################
 from Acquisition import aq_base
-from collections import OrderedDict
 from .SpecParams import SpecParams
 from ..spec.RRDDatasourceSpec import RRDDatasourceSpec
 from .RRDDatapointSpecParams import RRDDatapointSpecParams
@@ -21,30 +20,11 @@ class RRDDatasourceSpecParams(SpecParams, RRDDatasourceSpec):
             RRDDatapointSpecParams, 'datapoints', datapoints, zplog=self.LOG)
 
     @classmethod
-    def fromObject(cls, datasource):
-        self = object.__new__(cls)
-        SpecParams.__init__(self)
-        datasource = aq_base(datasource)
+    def fromObject(cls, ob):
+        self = super(RRDDatasourceSpecParams, cls).fromObject(ob)
 
-        # Weed out any values that are the same as they would by by default.
-        # We do this by instantiating a "blank" datapoint and comparing
-        # to it.
-        sample_ds = datasource.__class__(datasource.id)
+        ob = aq_base(ob)
 
-        self.sourcetype = datasource.sourcetype
-        for propname in ('enabled', 'component', 'eventClass', 'eventKey',
-                         'severity', 'commandTemplate'):
-            if hasattr(sample_ds, propname):
-                setattr(self, '_%s_defaultvalue' % propname, getattr(sample_ds, propname))
-            if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
-                setattr(self, propname, getattr(datasource, propname, None))
-
-        self.extra_params = OrderedDict()
-        for propname in [x['id'] for x in datasource._properties]:
-            if propname not in self.init_params:
-                if getattr(datasource, propname, None) != getattr(sample_ds, propname, None):
-                    self.extra_params[propname] = getattr(datasource, propname, None)
-
-        self.datapoints = {x.id: RRDDatapointSpecParams.fromObject(x) for x in datasource.datapoints()}
+        self.datapoints = {x.id: RRDDatapointSpecParams.fromObject(x) for x in ob.datapoints()}
 
         return self

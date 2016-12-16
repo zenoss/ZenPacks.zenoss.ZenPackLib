@@ -558,7 +558,7 @@ class ZenPackSpec(Spec):
         attributes = {
             'packZProperties': packZProperties
             }
-
+        attributes['zenpack_spec'] = self
         attributes['device_classes'] = self.device_classes
         attributes['event_classes'] = self.event_classes
         attributes['process_class_organizers'] = self.process_class_organizers
