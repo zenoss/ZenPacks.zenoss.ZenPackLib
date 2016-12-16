@@ -56,3 +56,9 @@ The save functionality is disabled unless you use the *ZPL_DUMP_DATA* environmen
 
 
 The pickle file(s) will be written to your */tmp* folder using the class name and function name with current timestamp.  Using the definition from above, the file name would be *MyPlugin_process_XXXXXX.pickle* where *XXXXXX* is the time at which the data was processed.  Assuming *device* has either a zCommandPassword or windows_password attribute, the *self*, *device*, and *log* objects will not be pickled.
+
+************
+Known Issues
+************
+
+* When dumping existing event classes using the zenpacklib tool with *--dump-event-classes* option, some transforms and/or explanations may show as either unformatted text within double quotes or as formatted text within single quotes.  This is due to how the python yaml package handles strings.  Either of these two formats are acceptable when used in zenpack.yaml.

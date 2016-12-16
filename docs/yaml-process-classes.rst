@@ -12,7 +12,7 @@ To define a class, supply the Process Class Organizer under which the Process Cl
 will reside.  Optionally add a description of the organizer.  Then, for each Process
 Class, supply the processes to include/exclude, description, and replacement text.
 You can also optionally override specific zProperties of a process class, such as
-zMonitor or zFailSeverity.  See the :ref:`_process-class-fields` section below.
+zMonitor or zFailSeverity.  See the :ref:`Process Class Fields <process-class-fields>` section below.
 
 The following example shows an example of a `zenpack.yaml` file with an example
 of a definition of a process class.
@@ -32,7 +32,7 @@ of a definition of a process class.
             replaceRegex: .*
             replacement: Widget
 
-.. _note::
+.. note::
 
   When you define a process class organizer and/or class which already exists, any settings defined in your ZenPack will overwrite existing settings.
 
