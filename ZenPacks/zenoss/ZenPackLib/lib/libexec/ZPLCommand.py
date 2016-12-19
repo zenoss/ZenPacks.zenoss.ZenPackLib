@@ -284,6 +284,18 @@ class ZPLCommand(ZenScriptBase):
                 namespace_init_f.write(
                     "__import__('pkg_resources').declare_namespace(__name__)\n")
 
+        # Create common subdirectories
+        subdirs = ['datasources', 'thresholds', 'parsers',
+                   'migrate', 'resources', 'modeler', 'tests',
+                   'libexec', 'modeler/plugins', 'lib']
+        for subdir in subdirs:
+            dirpath = os.path.join(module_directory, subdir)
+            os.makedirs(dirpath)
+            init_fname = os.path.join(dirpath, '__init__.py')
+            print "  - creating file: {}".format(init_fname)
+            with open(init_fname, 'w') as init_f:
+                init_f.write("\n")
+
         # Create __init__.py in ZenPack module directory.
         init_fname = os.path.join(module_directory, '__init__.py')
         print "  - creating file: {}".format(init_fname)
