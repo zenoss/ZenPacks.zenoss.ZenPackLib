@@ -52,6 +52,7 @@ class RRDThresholdSpec(Spec):
         self.template_spec = template_spec
         self.dsnames = dsnames
         self.eventClass = eventClass
+        Severity.LOG = self.LOG
         self.severity = Severity(severity)
         self.enabled = enabled
         self.type_ = type_

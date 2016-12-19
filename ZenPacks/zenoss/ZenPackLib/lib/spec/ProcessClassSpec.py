@@ -86,6 +86,7 @@ class ProcessClassSpec(Spec):
         self.replacement = replacement
         self.monitor = monitor
         self.alert_on_restart = alert_on_restart
+        Severity.LOG = self.LOG
         self.fail_severity = Severity(fail_severity)
         self.modeler_lock = modeler_lock
         self.send_event_when_blocked = send_event_when_blocked

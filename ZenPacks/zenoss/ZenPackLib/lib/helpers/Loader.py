@@ -40,6 +40,7 @@ class Loader(yaml.Loader):
             value = int(value)
         except (TypeError, ValueError):
             value = str(value)
+        Severity.LOG = self.LOG
         sev = Severity(value)
         return sev.orig
 
