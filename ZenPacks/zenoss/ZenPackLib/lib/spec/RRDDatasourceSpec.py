@@ -64,6 +64,7 @@ class RRDDatasourceSpec(Spec):
         self.component = component
         self.eventClass = eventClass
         self.eventKey = eventKey
+        Severity.LOG = self.LOG
         self.severity = Severity(severity)
         self.commandTemplate = commandTemplate
         if extra_params is None:

@@ -47,6 +47,8 @@ class Relationship(str):
 
 class Color(str):
     """Hexadecimal string representation for color"""
+    LOG = LOG
+
     def __new__(cls, value):
         return str.__new__(cls, cls.validate(value))
 
@@ -58,10 +60,10 @@ class Color(str):
         # truncate or pad with 0s
         def check_length(value):
             if len(value) > 6:
-                LOG.warning('Max length exceeded, truncating: {}'.format(value))
+                cls.LOG.warning('Max length exceeded, truncating: {}'.format(value))
                 value = value[:6]
             elif len(value) < 6:
-                LOG.warning('Min length not met, padding: {}'.format(value))
+                cls.LOG.warning('Min length not met, padding: {}'.format(value))
                 value += '0'
                 value = check_length(value)
             return value
@@ -81,7 +83,7 @@ class Color(str):
         value = check_length(value)
 
         if not is_hex(value):
-            LOG.warning('Invalid Hex value given: {}, returning {}'.format(value, fix_hex(value)))
+            cls.LOG.warning('Invalid Hex value given: {}, returning {}'.format(value, fix_hex(value)))
             value = fix_hex(value)
         return value.upper()
 
@@ -92,6 +94,7 @@ class Severity(int):
     orig = None
     num = None
     text = None
+    LOG = LOG
 
     _valid_text = ['crit', 'critical', 'err', 'error',
                    'warn', 'warning', 'info', 'information', 'informational',
@@ -118,10 +121,10 @@ class Severity(int):
         try:
             value = int(value)
             if value < 0:
-                LOG.warning("Invalid severity value ({}), increasing to 0".format(value))
+                cls.LOG.warning("Invalid severity value ({}), increasing to 0".format(value))
                 value = 0
             elif value > 5:
-                LOG.warning("Invalid severity value ({}), reducing to 5".format(value))
+                cls.LOG.warning("Invalid severity value ({}), reducing to 5".format(value))
                 value = 5
         except (TypeError, ValueError):
             if isinstance(value, str):
@@ -129,7 +132,7 @@ class Severity(int):
                     value = cls.to_num.get(value.lower())
                 else:
                     sev_num_txt = [str(x) for x in cls._valid_num]
-                    LOG.warning("Invalid severity value ({}), "\
+                    cls.LOG.warning("Invalid severity value ({}), "\
                         "must be one of: ({}) or ({}).".format(value,
                                                 ', '.join(cls._valid_text),
                                                 ', '.join(sev_num_txt)))

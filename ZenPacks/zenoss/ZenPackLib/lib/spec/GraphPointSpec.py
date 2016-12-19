@@ -83,6 +83,7 @@ class GraphPointSpec(Spec):
         self.cFunc = cFunc
         self.color = color
         if color:
+            Color.LOG = self.LOG
             self.color = Color(color)
         self.includeThresholds = includeThresholds
         self.thresholdLegends = thresholdLegends
