@@ -4,9 +4,7 @@
 Getting Started
 ###############
 
-zenpacklib is a single Python module designed to be packaged with every ZenPack.
-There is a single file, `zenpacklib.py` that must be distributed with each
-ZenPack.
+ZenPack.zenoss.ZenPackLib provides the zenpacklib command and the functionality to manage a ZenPack through YAML.  It is a free download available from the Zenoss website.
 
 .. note::
 
@@ -19,34 +17,7 @@ ZenPack.
     unless otherwise noted. If you don't login to the host as the *zenoss* user,
     use ``su - zenoss`` to get a login shell.
 
-
-.. _downloading-zenpacklib-2:
-
-***********
-Downloading
-***********
-.. note::
-
-    The following applies to pre-2.0 versions of zenpacklib.py only.  
-    Starting with version 2.0, the zenpacklib command is included with the 
-    ZenPacks.zenoss.ZenPackLib ZenPack and symlinked to /opt/zenoss/bin/zenpacklib 
-
-Depending on what versions of Zenoss your ZenPack is supporting you may need to
-get a specific version of zenpacklib. See :ref:`compatibility` for more
-information. Since the latest version of zenpacklib is usually compatible with
-recent versions of Zenoss it's usually safe to get the most recent release. This
-can be done with the following commands.
-
-.. code-block:: bash
-
-    su - zenoss
-    cd /z
-    wget http://zenpacklib.zenoss.com/zenpacklib.py
-    chmod 755 zenpacklib.py
-
-Executing *zenpacklib* requires a live Zenoss environment. Always executing
-it as the *zenoss* user in your Zope container is a good way to have the right
-environment setup. The following commands show how to do this.
+Executing *zenpacklib* requires a live Zenoss environment. Always executing it as the *zenoss* user in your Zope container is a good way to have the right environment setup. The following commands demonstrate how to do this.
 
 .. code-block:: bash
 
@@ -63,6 +34,35 @@ the helper aliases and functions your ``.bashrc`` recommended in
 .. code-block:: bash
 
     zenpacklib --version
+
+.. note::
+  Formerly, zenpacklib was a single Python module designed to be packaged with every ZenPack.  There was a single file, `zenpacklib.py` that was distributed with each ZenPack.  If you need access to this file, see the :ref:`downloading-zenpacklib-2` section.
+
+
+.. _downloading-zenpacklib-2:
+
+********************
+Downloading (Legacy)
+********************
+
+.. note::
+
+    The following applies to pre-2.0 versions of zenpacklib.py only.  
+    Starting with version 2.0, the zenpacklib command is included with the 
+    ZenPacks.zenoss.ZenPackLib ZenPack and symlinked to /opt/zenoss/bin/zenpacklib 
+
+Depending on what versions of Zenoss your ZenPack is supporting you may need to
+get a specific version of zenpacklib. See :ref:`compatibility` for more
+information. Since the latest version of zenpacklib is usually compatible with
+recent versions of Zenoss it's usually safe to get the most recent release. This
+can be done with the following commands.
+
+.. code-block:: bash
+
+    su - zenoss
+    cd /z
+    wget https://zenpacklib.zenoss.com/zenpacklib.py
+    chmod 755 zenpacklib.py
 
 
 .. _creating-a-zenpack-2:
