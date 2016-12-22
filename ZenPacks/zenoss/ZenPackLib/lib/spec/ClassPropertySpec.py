@@ -271,7 +271,7 @@ class ClassPropertySpec(Spec):
 
         return [
             OrderAndValue(
-                order=self.order,
+                order=self.scaled_order,
                 value='{{{}}}'.format(',\n                       '.join(column_fields))),
             ]
 
