@@ -31,12 +31,49 @@ of every supported field.
 
     class_relationships:
       - Widgeter 1:MC Widget
-
+      
+   link_providers:
+     Virtual Machine:
+       link_class: ZenPacks.example.XenServer
+       catalog: device
+       device_class: /Server/XenServer
+       queries: [vm_id:manageIp]
+     XenServer:
+       global_search: True
+       queries: [manageIp:vm_id]
+       
+   event_classes:
+     /Status/Acme:
+       remove: false
+       description: Acme event class
+       mappings:
+         Widget:
+           eventClassKey: WidgetEvent
+           sequence:  10
+           remove: true
+           transform: "if evt.message.find('Error reading value for') >= 0:\n\
+             \   evt._action = 'drop'"
+             
+   process_class_organizers:
+     Widget:
+       description: Organizer for Widget process classes
+       process_classes:
+         widget:
+           description: Widget process class
+           includeRegex: sbin\/widget
+           excludeRegex: "\\b(vim|tail|grep|tar|cat|bash)\\b"
+           replaceRegex: .*
+           replacement: Widget
+           
+           
 See the following for more information on each of these fields.
 
 * :ref:`zProperties`
 * :ref:`device-classes`
 * :ref:`classes-and-relationships`
+* :ref:`device-link-providers`
+* :ref:`yaml-event-classes`
+* :ref:`yaml-process-classes`
 
 
 .. _zenpack-fields:
@@ -78,3 +115,22 @@ class_relationships
   :Required: No
   :Type: list<:ref:`Class Relationship <zenpacklib-relationships>`>
   :Default Value: [] *(empty list)*
+
+link_providers
+  :Description: Device Link Providers.
+  :Required: No
+  :Type: list<:ref:`Link Provider <device-link-provider-fields>`>
+  :Default Value: [] *(empty list)*
+  
+event_classes
+  :Description: Event Class organizers and mappings
+  :Required: No
+  :Type: list<:ref:`Event Class <event-class-fields>`>
+  :Default Value: [] *(empty list)*
+  
+process_class_organizers
+  :Description: Process Class organizers and mappings
+  :Required: No
+  :Type: list<:ref:`Process Class <process-class-organizer-fields>`>
+  :Default Value: [] *(empty list)*
+  

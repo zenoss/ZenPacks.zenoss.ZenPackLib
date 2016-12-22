@@ -150,3 +150,14 @@ Zenoss specific zProperties
 ***************************
 
 When changing modeler bindings using the zDeviceTemplates property, this will take effect on your ZenPack.  Any previously defined bindings will be replaced.  The same applies to the device level template bindings using the zCollectorPlugins property.
+
+.. note::
+
+   Beginning with ZenPackLib 2.0, this behavior has changed.  zProperties will no longer be overwritten if a target device class
+   already exists (i.e. during an upgrade or if the YAML affects a preexisting class such as /Devices/Server.  Instead, a warning
+   will be displayed to the user during installation, and the target zProperty will be left alone.
+   
+
+   
+   
+   
