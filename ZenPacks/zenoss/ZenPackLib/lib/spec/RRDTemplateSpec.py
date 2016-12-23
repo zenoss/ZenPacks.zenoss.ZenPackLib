@@ -121,7 +121,7 @@ class RRDTemplateSpec(Spec):
 
         existing_template = device_class.rrdTemplates._getOb(t_id, None)
         if existing_template:
-            self.speclog.info("replacing template")
+            self.speclog.debug("replacing template")
             device_class.rrdTemplates._delObject(t_id)
 
         device_class.manage_addRRDTemplate(t_id)
@@ -138,7 +138,7 @@ class RRDTemplateSpec(Spec):
             template.addToZenPack(pack=zenpack_name)
 
         if not existing_template:
-            self.speclog.info("adding template")
+            self.speclog.debug("adding template")
 
         if self.targetPythonClass is not None:
             template.targetPythonClass = self.targetPythonClass

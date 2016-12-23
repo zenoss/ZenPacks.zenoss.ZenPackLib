@@ -18,7 +18,7 @@ FACET_BLACKLIST = (
     )
 
 
-### functions to determine conditional imports elsewhere
+# ## functions to determine conditional imports elsewhere
 
 
 def yaml_installed():
@@ -40,7 +40,7 @@ def impact_installed():
         from ZenPacks.zenoss.Impact.impactd.relations import ImpactEdge
         from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipDataProvider
     except ImportError:
-        DEFAULTLOG.info('Impact is not installed and some functionality dependent on it will be disabled')
+        DEFAULTLOG.debug('Impact is not installed and some functionality dependent on it will be disabled')
         pass
     else:
         return True
@@ -54,7 +54,7 @@ def dynamicview_installed():
         from ZenPacks.zenoss.DynamicView.interfaces import IRelatable, IRelationsProvider, IGroupMappingProvider
         from ZenPacks.zenoss.DynamicView.model.adapters import BaseRelatable, BaseRelationsProvider
     except ImportError:
-        DEFAULTLOG.info('DynamicView is not installed and some functionality dependent on it will be disabled')
+        DEFAULTLOG.debug('DynamicView is not installed and some functionality dependent on it will be disabled')
         pass
     else:
         return True
@@ -66,7 +66,7 @@ def has_metricfacade():
     try:
         from Products.Zuul.facades import metricfacade
     except ImportError:
-        DEFAULTLOG.info('MetricFacade is not available and some functionality dependent on it will be disabled')
+        DEFAULTLOG.debug('MetricFacade is not available and some functionality dependent on it will be disabled')
         pass
     else:
         return True
