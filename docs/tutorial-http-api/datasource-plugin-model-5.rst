@@ -12,6 +12,10 @@ plugin to capture the what the `Conditions` API calls *weather* which is some
 text that looks like "Scattered Clouds" or "Sunny". We'll then show this value
 for each location in the web interface.
 
+.. note::
+
+  Model updates are much more expensive operations than creating events or collecting datapoints. It is better to perform as much modeling as possible using modeler plugins on their typical 12 hour interval, and perform only the absolutely necessary smaller model updates more frequently using a PythonDataSourcePlugin. Too much modeling activity can result in the degradation of a Zenoss' systems overall performance.
+
 Add Modeling to Conditions Data Source Plugin
 =============================================
 
