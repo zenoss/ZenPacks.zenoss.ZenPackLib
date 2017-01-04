@@ -260,6 +260,10 @@ should contain the following lines:
       CFG = zenpacklib.load_yaml()
       schema = CFG.zenpack_module.schema
 
+.. note::
+
+  For better performance, specify the explicit path(s) to your yaml file.  e.g. *CFG = zenpacklib.load_yaml([os.path.join(os.path.dirname(__file__), "zenpack.yaml")])*
+
 Next, we create the file:
 
 .. code-block:: bash
