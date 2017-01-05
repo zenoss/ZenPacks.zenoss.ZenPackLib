@@ -35,7 +35,7 @@ class EventClassSpec(Spec):
         """
         super(EventClassSpec, self).__init__(_source_location=_source_location)
         self.zenpack_spec = zenpack_spec
-        self.path = path
+        self.path = path.lstrip('/')
         self.description = description
         self.transform = transform
         self.remove = bool(remove)
