@@ -361,8 +361,6 @@ class Spec(object):
                 continue
 
             if self_val_or_default != other_val_or_default:
-                self.LOG.debug("Comparing {} to {}, parameter {} does not match ({} != {})".format(
-                          self, other, p, self_val_or_default, other_val_or_default))
                 return False
 
         return True
