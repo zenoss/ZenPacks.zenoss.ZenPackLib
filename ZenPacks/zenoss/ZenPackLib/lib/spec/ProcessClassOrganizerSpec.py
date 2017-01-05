@@ -9,7 +9,6 @@
 
 from .Spec import Spec
 from .ProcessClassSpec import ProcessClassSpec
-from Products.ZenModel.OSProcessOrganizer import manage_addOSProcessOrganizer
 
 
 class ProcessClassOrganizerSpec(Spec):
