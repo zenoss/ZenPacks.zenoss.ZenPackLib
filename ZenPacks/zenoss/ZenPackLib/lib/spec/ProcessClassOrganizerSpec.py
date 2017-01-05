@@ -31,7 +31,8 @@ class ProcessClassOrganizerSpec(Spec):
           :param remove: Remove Organizer on ZenPack removal
           :type remove: boolean
         """
-        self.path = path
+        self.zenpack_spec = zenpack_spec
+        self.path = path.lstrip('/')
         self.description = description
         self.remove = remove
         self.process_classes = self.specs_from_param(
@@ -44,7 +45,7 @@ class ProcessClassOrganizerSpec(Spec):
             porg = dmd.Processes.getOrganizer(self.path)
             bCreated = getattr(porg, 'zpl_managed', False)
         except KeyError:
-            manage_addOSProcessOrganizer(dmd.Processes, self.path)
+            dmd.Processes.createOrganizer(self.path)
             porg = dmd.Processes.getOrganizer(self.path)
             bCreated = True
 
