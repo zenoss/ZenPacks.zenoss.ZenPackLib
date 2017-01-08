@@ -48,7 +48,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'zenpacklib'
+project = u'ZenPack SDK'
 copyright = u'2015, Zenoss, Inc.'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -192,7 +192,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'zenpacklib.tex', u'zenpacklib Documentation',
+  ('index', 'zenpacklib.tex', u'ZenPack SDK Documentation',
    u'Zenoss, Inc.', 'manual'),
 ]
 
@@ -222,7 +222,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'zenpacklib', u'zenpacklib Documentation',
+    ('index', 'zenpacklib', u'ZenPack SDK Documentation',
      [u'Zenoss, Inc.'], 1)
 ]
 
@@ -236,7 +236,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'zenpacklib', u'zenpacklib Documentation',
+  ('index', 'zenpacklib', u'ZenPack SDK Documentation',
    u'Zenoss, Inc.', 'zenpacklib', 'One line description of project.',
    'Miscellaneous'),
 ]
@@ -257,7 +257,7 @@ texinfo_documents = [
 # -- Options for Epub output ----------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'zenpacklib'
+epub_title = u'ZenPack SDK'
 epub_author = u'Zenoss, Inc.'
 epub_publisher = u'Zenoss, Inc.'
 epub_copyright = u'2015, Zenoss, Inc.'
