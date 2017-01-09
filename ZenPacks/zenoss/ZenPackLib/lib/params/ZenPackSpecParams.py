@@ -32,6 +32,7 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
                  **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
+        self.id_prefix = name.replace(".", "_")
 
         self.zProperties = self.specs_from_param(
             ZPropertySpecParams, 'zProperties', zProperties, leave_defaults=True, zplog=self.LOG)

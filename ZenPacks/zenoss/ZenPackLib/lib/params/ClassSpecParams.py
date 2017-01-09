@@ -22,11 +22,18 @@ class ClassSpecParams(SpecParams, ClassSpec):
     def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, impact_triggers=None, monitoring_templates=[], **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
+        self.zenpack_spec = zenpack_spec
 
         if isinstance(base, (tuple, list, set)):
             self.base = tuple(base)
         else:
             self.base = (base,)
+
+        for b in self.base:
+            if isinstance(b, str):
+                continue
+            if 'ModelTypeFactory' in b.__module__:
+                b.__module__ = 'zenpacklib'
 
         if isinstance(monitoring_templates, (tuple, list, set)):
             self.monitoring_templates = list(monitoring_templates)
@@ -51,7 +58,7 @@ class ClassSpecParams(SpecParams, ClassSpec):
         self.name = ob.__class__.__name__
 
         bases = cls.get_my_bases(ob.__class__)
-        self.base = tuple([x.__name__ if 'ModelTypeFactory' not in x.__module__ else 'zenpacklib.{}'.format(x.__name__) for x in bases])
+        self.base = tuple([x.__name__ if 'zenpacklib' not in x.__module__ else 'zenpacklib.{}'.format(x.__name__) for x in bases])
 
         ignore = [x['id'] for x in ManagedEntity._properties]
         props = [x for x in ob._properties if x['id']  not in ignore]
@@ -61,8 +68,7 @@ class ClassSpecParams(SpecParams, ClassSpec):
         rels = [x for x in ob._relations if x[0] not in ignore]
         self.relationships = {x[0]: ClassRelationshipSpecParams.fromObject(x, ob) for x in rels}
 
-        self.monitoring_templates = [t for t in list(getattr(ob, '_templates', [])) if t not in self.base]
-
+        self.monitoring_templates = [t for t in list(getattr(ob, '_templates', [])) if t not in cls.get_base_names(ob.__class__)]
         return self
 
     @classmethod

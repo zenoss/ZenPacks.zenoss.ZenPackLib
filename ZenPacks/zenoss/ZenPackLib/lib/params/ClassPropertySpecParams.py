@@ -21,8 +21,9 @@ class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
     @classmethod
     def fromObject(cls, id, ob):
         """Generate SpecParams from example object and list of properties"""
-        self = object.__new__(cls)
-        SpecParams.__init__(self)
+        self = super(ClassPropertySpecParams, cls).fromObject(ob)
+        # self = object.__new__(cls)
+        # SpecParams.__init__(self)
 
         ob = aq_base(ob)
 

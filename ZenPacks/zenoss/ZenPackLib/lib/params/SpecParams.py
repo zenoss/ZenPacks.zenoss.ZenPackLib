@@ -75,13 +75,15 @@ class SpecParams(object):
             # set it locally if our property differs from the class default
             if getattr(ob, ob_prop, None) != getattr(proto, ob_prop, None):
                 setattr(self, spec_prop, getattr(ob, ob_prop, None))
-
+            else:
+                print 'skipping {} {} ({})'.format(ob.id, ob_prop, getattr(ob, ob_prop, None))
         # these have to be handled separately
         ignore = ['extra_params', 'aliases']
         # Spec fields
         propnames = [k for k, v in self.init_params.items() if k not in ignore and 'SpecsParameter' not in v['type']]
 
         for propname in propnames:
+            print 'handling', propname
             handle_prop(ob, proto, propname)
 
         # some object properties might be mapped to differently-named spec properties
