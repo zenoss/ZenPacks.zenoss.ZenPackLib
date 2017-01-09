@@ -230,7 +230,7 @@ class ZenPack(ZenPackBase):
                 if organizerPath in RESERVED_CLASSES:
                     continue
                 self.LOG.info('Removing {} {}'.format(organizer.__class__.__name__, cspec.path))
-                dmd_root.manage_deleteOrganizer(organizerPath)
+                dmd_root.manage_deleteOrganizer(organizer.getDmdKey())
             else:
                 sub_classes = getattr(cspec, sub_class, {})
                 remove_func = getattr(organizer, remove_name, None)
