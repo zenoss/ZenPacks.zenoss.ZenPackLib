@@ -116,7 +116,7 @@ class ClassSpecParams(SpecParams, ClassSpec):
         remote_class = rel_sparm.get_module_class(rel_sparm.right_class)
         remote_classname = remote_class.__name__
 
-        # need to check that reliation is bi-directional between classes and/or their bases
+        # need to check that relation is bi-directional between classes and/or their bases
         if remote_classname not in cls.get_base_names(remote_class) and local_classname not in cls.get_base_names(local_class):
             return False
 

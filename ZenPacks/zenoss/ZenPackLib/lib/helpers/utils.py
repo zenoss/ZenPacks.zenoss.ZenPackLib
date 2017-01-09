@@ -92,7 +92,7 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
     if CFG:
         CFG.create()
         end = time.time() - start
-        DEFAULTLOG.debug("Loaded {} in {:0.2f}s".format(CFG.name, end))
+        DEFAULTLOG.info("Loaded {} in {:0.2f}s".format(CFG.name, end))
     else:
         DEFAULTLOG.error("Unable to load {}".format(yaml_doc))
     return CFG

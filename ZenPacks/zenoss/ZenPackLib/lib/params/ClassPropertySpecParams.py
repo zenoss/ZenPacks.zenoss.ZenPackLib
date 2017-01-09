@@ -32,10 +32,12 @@ class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
 
         self.default = getattr(proto, id, None)
 
-        entry = next((p for p in proto._properties if p['id'] == id), None)
+        entry = next((p for p in proto._properties if p['id'] == id), {})
 
         if entry:
             self.type_ = entry.get('type', 'string')
             self.label = entry.get('label')
+            if entry.get('mode', '') == 'w':
+                self.editable = True
 
         return self

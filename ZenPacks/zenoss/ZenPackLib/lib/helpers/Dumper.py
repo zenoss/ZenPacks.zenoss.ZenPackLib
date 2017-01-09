@@ -139,9 +139,14 @@ class Dumper(yaml.Dumper):
             # it has changed the global default for this parameter.
             if hasattr(obj, 'name') and obj.name != 'DEFAULTS' and defaults is not None:
                 default_value = getattr(defaults, p_name, default_value)
+            # if type_ == 'ZPropertyDefaultValue':
+            #    default_value = obj.get_default()
+                # print 'getting default', obj.name, p_name, p_data, value, default_value
 
             # If the value is a default value, we can omit it from the export.
             if value == default_value:
+                # if type_ == 'ZPropertyDefaultValue':
+                #    print 'skipping {}:{} = {} ({})'.format(obj.name, p_name, value, default_value)
                 continue
 
             # If the value is null and the type is a list or dictionary, we can

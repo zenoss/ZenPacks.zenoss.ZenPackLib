@@ -32,7 +32,7 @@ class DeviceClassSpecParams(SpecParams, DeviceClassSpec):
 
         zprops = [x for x in deviceclass.zenPropertyIds(all=False) if deviceclass.isLocal(x)]
 
-        self.zProperties = {x: ZPropertySpecParams.fromObject(x, deviceclass) for x in zprops}
+        self.zProperties = {x: getattr(deviceclass, x) for x in zprops}
 
         templates = deviceclass.rrdTemplates()
 

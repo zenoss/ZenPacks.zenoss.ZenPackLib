@@ -99,6 +99,17 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
                                 if relspecparam not in self.class_relationships:
                                     self.class_relationships.append(relspecparam)
 
+        # if relation is M:M, then we want to avoid duplicates
+        for i, rel_i in enumerate(self.class_relationships):
+            if not ('ToMany' == rel_i.left_type == rel_i.right_type):
+                continue
+            for j in range(i):
+                rel_j = self.class_relationships[j]
+                if not ('ToMany' == rel_j.left_type == rel_j.right_type):
+                    continue
+                if rel_i.left_class == rel_j.right_class and rel_i.right_class == rel_j.left_class:
+                    self.class_relationships.remove(rel_j)
+
         if all or class_relationships:
             self.class_relationships.sort(key=lambda x: x.left_class)
 

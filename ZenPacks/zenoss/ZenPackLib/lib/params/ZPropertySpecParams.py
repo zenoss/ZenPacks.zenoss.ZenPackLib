@@ -25,13 +25,13 @@ class ZPropertySpecParams(SpecParams, ZPropertySpec):
         deviceclass = aq_base(deviceclass)
 
         self.name = id
-        entry = next((p.get('type', 'string') for p in deviceclass._properties if p['id'] == id), 'string')
-
-        self.type_ = entry
-
-        self.default = getattr(deviceclass, id)
-
-        self.category = getzPropertyCategory(id)
+#         entry = next((p.get('type', 'string') for p in deviceclass._properties if p['id'] == id), 'string')
+#
+#         self.type_ = entry
+#
+#         self.default = getattr(deviceclass, id)
+#
+#         self.category = getzPropertyCategory(id)
 
         return self
 
