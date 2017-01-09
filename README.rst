@@ -1,9 +1,9 @@
-######################
-Welcome to zenpacklib!
-######################
+###########################
+Welcome to the ZenPack SDK!
+###########################
 
-zenpacklib is a Python library that makes building common types of ZenPacks
-simpler, faster, more consistent and more accurate.
+The ZenPack SDK includes zenpacklib: a library that makes building common types
+of ZenPacks simpler, faster, more consistent and more accurate.
 
 ZenPacks are a plugin mechanism for Zenoss. Most commonly they're used to
 extend Zenoss to monitor new types of targets. It is specifically this common
