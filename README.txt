@@ -62,12 +62,19 @@ CFG = zenpacklib.load_yaml(YAML)
 Welcome to the ZenPack SDK!
 ###########################
 
-The ZenPack SDK includes zenpacklib: a library that makes building common types
-of ZenPacks simpler, faster, more consistent and more accurate.
+The ZenPack SDK is a collection of development tools and documentation that you
+can use to extend Zenoss' functionality.
 
 ZenPacks are a plugin mechanism for Zenoss. Most commonly they're used to
-extend Zenoss to monitor new types of targets. It is specifically this common
-case that zenpacklib is designed to simplify.
+extend Zenoss to monitor new types of targets. We developed zenpacklib to
+simplify the process of creating custom ZenPacks.
+
+*******************
+What is zenpacklib?
+*******************
+
+zenpacklib is a Python library that makes building common types of ZenPacks
+simpler, faster, more consistent, and more accurate.
 
 
 ************************
