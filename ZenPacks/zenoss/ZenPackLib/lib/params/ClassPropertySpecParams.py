@@ -21,9 +21,9 @@ class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
     @classmethod
     def fromObject(cls, id, ob):
         """Generate SpecParams from example object and list of properties"""
-        self = super(ClassPropertySpecParams, cls).fromObject(ob)
-        # self = object.__new__(cls)
-        # SpecParams.__init__(self)
+        # self = super(ClassPropertySpecParams, cls).fromObject(ob)
+        self = object.__new__(cls)
+        SpecParams.__init__(self)
 
         ob = aq_base(ob)
 
@@ -38,6 +38,8 @@ class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
         if entry:
             self.type_ = entry.get('type', 'string')
             self.label = entry.get('label')
+            if self.label == self.name:
+                self.label = None
             if entry.get('mode', '') == 'w':
                 self.editable = True
 

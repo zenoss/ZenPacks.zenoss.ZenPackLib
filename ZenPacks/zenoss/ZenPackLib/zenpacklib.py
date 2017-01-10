@@ -63,6 +63,17 @@ from lib.base.Component import (
     WinService
 )
 
+def find_proxy(klass):
+    for x in [ Device, CPU, ExpansionCard, Fan,
+              HardDisk, PowerSupply, TemperatureSensor,
+              OSComponent, FileSystem, IpInterface,
+              IpRouteEntry, OSProcess, Service, IpService,
+              WinService, HardwareComponent, HWComponent, Component]:
+        if issubclass(x, klass):
+            return x
+    return None
+
+
 from lib.spec import ZenPackSpec
 from lib.functions import relationships_from_yuml, catalog_search, ucfirst, relname_from_classname
 

@@ -53,6 +53,22 @@ class SpecParams(object):
 
         return params
 
+    def handle_prop(self, ob, proto, prop_name, spec_prop=None):
+        """Set default value and possible instance value"""
+        if not spec_prop:
+            spec_prop = prop_name
+
+        # find the default for the class
+        default_val = None
+        if hasattr(proto, prop_name):
+            default_val = getattr(proto, prop_name, None)
+            setattr(self, '_{}_defaultvalue'.format(spec_prop), default_val)
+
+        # set it locally if our property differs from the class default
+        local_val = getattr(ob, prop_name, None)
+        if local_val is not None and local_val != default_val:
+            setattr(self, spec_prop, local_val)
+
     @classmethod
     def fromObject(cls, ob, prop_map={}):
         """Generate SpecParams from example object and list of properties"""
@@ -65,34 +81,22 @@ class SpecParams(object):
         # to it.
         proto = ob.__class__(ob.id)
 
-        def handle_prop(ob, proto, ob_prop, spec_prop=None):
-            """Set default value and possible instance value"""
-            if not spec_prop:
-                spec_prop = ob_prop
-            # find the default for the class
-            if hasattr(proto, ob_prop):
-                setattr(self, '_{}_defaultvalue'.format(spec_prop), getattr(proto, ob_prop))
-            # set it locally if our property differs from the class default
-            if getattr(ob, ob_prop, None) != getattr(proto, ob_prop, None):
-                setattr(self, spec_prop, getattr(ob, ob_prop, None))
-            else:
-                print 'skipping {} {} ({})'.format(ob.id, ob_prop, getattr(ob, ob_prop, None))
         # these have to be handled separately
         ignore = ['extra_params', 'aliases']
         # Spec fields
-        propnames = [k for k, v in self.init_params.items() if k not in ignore and 'SpecsParameter' not in v['type']]
+        propnames = [k for k, v in cls.init_params.items() if k not in ignore and 'SpecsParameter' not in v['type']]
 
         for propname in propnames:
-            print 'handling', propname
-            handle_prop(ob, proto, propname)
+            # print 'handling', propname
+            self.handle_prop(ob, proto, propname)
 
         # some object properties might be mapped to differently-named spec properties
         for ob_prop, spec_prop in prop_map.items():
-            handle_prop(ob, proto, ob_prop, spec_prop)
+            self.handle_prop(ob, proto, ob_prop, spec_prop)
 
         # any custom object properties not defined in the spec will go in extra_params
         self.extra_params = OrderedDict()
-        ob_propnames = [x['id'] for x in ob._properties if x['id'] not in self.init_params]
+        ob_propnames = [x['id'] for x in ob._properties if x['id'] not in cls.init_params]
         for propname in ob_propnames:
             if getattr(ob, propname, None) != getattr(proto, propname, None):
                 self.extra_params[propname] = getattr(ob, propname, None)
