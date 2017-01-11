@@ -8,7 +8,6 @@
 ##############################################################################
 import StringIO
 from Acquisition import aq_base
-from collections import OrderedDict
 from ..spec.RRDDatapointSpec import RRDDatapointSpec
 from .SpecParams import SpecParams
 
@@ -21,30 +20,11 @@ class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
 
     @classmethod
     def fromObject(cls, datapoint):
-        self = object.__new__(cls)
-        SpecParams.__init__(self)
+        self = super(RRDDatapointSpecParams, cls).fromObject(datapoint)
+
         datapoint = aq_base(datapoint)
         sample_dp = datapoint.__class__(datapoint.id)
-
-        for propname in ('name', 'rrdtype', 'createCmd', 'isrow', 'rrdmin',
-                         'rrdmax', 'description',):
-            if hasattr(sample_dp, propname):
-                setattr(self, '_%s_defaultvalue' % propname, getattr(sample_dp, propname))
-            if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
-                setattr(self, propname, getattr(datapoint, propname, None))
-
-        if self.rrdmin is not None:
-            self.rrdmin = int(self.rrdmin)
-        if self.rrdmax is not None:
-            self.rrdmax = int(self.rrdmax)
-
         self.aliases = {x.id: x.formula for x in datapoint.aliases()}
-
-        self.extra_params = OrderedDict()
-        for propname in [x['id'] for x in datapoint._properties]:
-            if propname not in self.init_params:
-                if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
-                    self.extra_params[propname] = getattr(datapoint, propname, None)
 
         # Shorthand support.  The use of the shorthand field takes
         # over all other attributes.  So we can only use it when the rest of
@@ -63,11 +43,11 @@ class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
             shorthand.append(datapoint.rrdtype)
             shorthand_props['rrdtype'] = datapoint.rrdtype
 
-            if datapoint.rrdmin:
+            if datapoint.rrdmin is not None:
                 shorthand.append('MIN_%d' % int(datapoint.rrdmin))
                 shorthand_props['rrdmin'] = datapoint.rrdmin
 
-            if datapoint.rrdmax:
+            if datapoint.rrdmax is not None:
                 shorthand.append('MAX_%d' % int(datapoint.rrdmax))
                 shorthand_props['rrdmax'] = datapoint.rrdmax
 
@@ -104,4 +84,3 @@ class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
                     self.shorthand = '_'.join(shorthand)
 
         return self
-

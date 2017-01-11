@@ -6,7 +6,7 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
+from Acquisition import aq_base
 from .SpecParams import SpecParams
 from .EventClassMappingSpecParams import EventClassMappingSpecParams
 from ..spec.EventClassSpec import EventClassSpec
@@ -32,12 +32,18 @@ class EventClassSpecParams(SpecParams, EventClassSpec):
         return self
 
     @classmethod
-    def fromObject(cls, eventclass, remove=False):
-        self = object.__new__(cls)
-        SpecParams.__init__(self)
-
-        self.description = eventclass.description
-        self.transform = eventclass.transform
+    def fromObject(cls, eventclass, zenpack=None, remove=True):
+        self = super(EventClassSpecParams, cls).fromObject(eventclass)
         self.remove = remove
-        self.mappings = {x.id: EventClassMappingSpecParams.fromObject(x) for x in eventclass.instances()}
+        eventclass = aq_base(eventclass)
+
+        self.path = eventclass.getOrganizerName()
+
+        mappings = eventclass.instances()
+
+        if zenpack:
+            mappings = [x for x in mappings if x in zenpack.packables()]
+
+        self.mappings = {x.id: EventClassMappingSpecParams.fromObject(x) for x in mappings}
+
         return self

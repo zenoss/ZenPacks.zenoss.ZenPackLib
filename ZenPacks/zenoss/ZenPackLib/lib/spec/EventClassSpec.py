@@ -44,7 +44,7 @@ class EventClassSpec(Spec):
         self.mappings = self.specs_from_param(
             EventClassMappingSpec, 'mappings', mappings, zplog=self.LOG)
 
-    def instantiate(self, dmd):
+    def instantiate(self, dmd, addToZenPack=True):
         bCreated = False
         try:
             ecObject = dmd.Events.getOrganizer(self.path)
@@ -72,3 +72,11 @@ class EventClassSpec(Spec):
         ecObject.zpl_managed = bCreated
         for mapping_id, mapping_spec in self.mappings.items():
             mapping_spec.create(ecObject)
+
+        # set to false to facilitate testing without ZP installation
+        if addToZenPack:
+            zenpack_name = self.zenpack_spec.name
+            ecObject.addToZenPack(pack=zenpack_name)
+
+        if not addToZenPack:
+            return ecObject

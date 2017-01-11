@@ -66,7 +66,7 @@ class ZPLTestHarness(ZenScriptBase):
         # create relations between objects
         self.build_relations()
         self.build_cfg_relations()
-        self.exported_yaml = yaml.dump(self.cfg, Dumper=Dumper)
+        self.exported_yaml = yaml.dump(self.cfg.specparams, Dumper=Dumper)
         self.reloaded_yaml = load_yaml_single(self.exported_yaml, useLoader=False)
 
     def build_ob(self, cls_name, inst=0):

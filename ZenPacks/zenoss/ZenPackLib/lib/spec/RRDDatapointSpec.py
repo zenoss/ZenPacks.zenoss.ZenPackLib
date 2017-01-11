@@ -94,11 +94,7 @@ class RRDDatapointSpec(Spec):
         # otherwise build the shorthand if no other properties are found
         else:
             if self.use_shorthand():
-                self.shorthand = self.rrdtype
-                if self.rrdmin is not None:
-                    self.shorthand += '_MIN_{}'.format(str(self.rrdmin))
-                if self.rrdmax is not None:
-                    self.shorthand += '_MAX_{}'.format(self.rrdmax)
+                self.shorthand = self.get_shorthand()
 
     def __eq__(self, other):
         if self.shorthand:
@@ -176,6 +172,14 @@ class RRDDatapointSpec(Spec):
             if getattr(self, x):
                 return False
         return True
+
+    def get_shorthand(self):
+        shorthand = self.rrdtype
+        if self.rrdmin is not None:
+            shorthand += '_MIN_{}'.format(str(self.rrdmin))
+        if self.rrdmax is not None:
+            shorthand += '_MAX_{}'.format(self.rrdmax)
+        return shorthand
 
     def create(self, datasource_spec, datasource):
         datapoint = datasource.manage_addRRDDataPoint(self.name)

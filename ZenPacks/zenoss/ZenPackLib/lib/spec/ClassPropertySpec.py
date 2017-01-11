@@ -104,7 +104,7 @@ class ClassPropertySpec(Spec):
             self.LOG = zplog
         self.class_spec = class_spec
         self.name = name
-        self.default = default
+        # self.default = default
         self.type_ = type_
         self.label = label or self.name
         self.short_label = short_label or self.label
@@ -151,6 +151,19 @@ class ClassPropertySpec(Spec):
                 % (name, self.index_scope))
 
         self.order = order
+
+        if default is None:
+            self.default = self.get_default()
+        else:
+            self.default = default
+        # print 'HA', self.name, self.type_, self.category, self.default
+
+    def get_default(self):
+        return {'string': '',
+                'password': '',
+                'lines': [],
+                'boolean': False,
+            }.get(self.type_, None)
 
     @property
     def scaled_order(self):

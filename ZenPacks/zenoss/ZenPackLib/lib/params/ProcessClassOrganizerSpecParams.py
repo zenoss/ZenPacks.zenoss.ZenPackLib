@@ -6,7 +6,7 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
+from Acquisition import aq_base
 from .SpecParams import SpecParams
 from .ProcessClassSpecParams import ProcessClassSpecParams
 from ..spec.ProcessClassOrganizerSpec import ProcessClassOrganizerSpec
@@ -22,13 +22,20 @@ class ProcessClassOrganizerSpecParams(SpecParams, ProcessClassOrganizerSpec):
             ProcessClassSpecParams, 'process_classes', process_classes)
 
     @classmethod
-    def fromObject(cls, processclass, remove=False):
-        self = object.__new__(cls)
-        SpecParams.__init__(self)
+    def fromObject(cls, processclass, zenpack=None):
+        self = super(ProcessClassOrganizerSpecParams, cls).fromObject(processclass)
 
-        self.description = processclass.description
-        self.remove = remove
-        self.process_classes = {x.id: ProcessClassSpecParams.fromObject(x) for x in processclass.osProcessClasses()}
+        processclass = aq_base(processclass)
+
+        self.path = processclass.getOrganizerName()
+
+        organizers = processclass.osProcessClasses()
+
+        if zenpack:
+            organizers = [x for x in organizers if x in zenpack.packables()]
+
+        self.process_classes = {x.id: ProcessClassSpecParams.fromObject(x) for x in organizers}
+
         return self
 
     @classmethod
@@ -39,3 +46,4 @@ class ProcessClassOrganizerSpecParams(SpecParams, ProcessClassOrganizerSpec):
         self.description = description
         self.remove = remove
         return self
+

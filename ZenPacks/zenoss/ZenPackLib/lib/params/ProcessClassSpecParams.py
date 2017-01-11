@@ -6,9 +6,6 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
-from Acquisition import aq_base
-
 from .SpecParams import SpecParams
 from ..spec.ProcessClassSpec import ProcessClassSpec
 
@@ -44,17 +41,11 @@ class ProcessClassSpecParams(SpecParams, ProcessClassSpec):
         self.send_event_when_blocked = send_event_when_blocked
 
     @classmethod
-    def fromObject(cls, processclass, remove=False):
-        self = object.__new__(cls)
-        SpecParams.__init__(self)
-        processclass = aq_base(processclass)
+    def fromObject(cls, ob):
+        prop_map = {'zMonitor': 'monitor',
+                    'zModelerLock': 'modeler_lock',
+                    'zSendEventWhenBlockedFlag': 'send_event_when_blocked',
+                    'zFailSeverity': 'fail_severity',
+                    'zAlertOnRestart': 'alert_on_restart'}
 
-        _properties = ['description', 'includeRegex', 'excludeRegex',
-                       'replacement', 'zMonitor', 'zAlertOnRestart',
-                       'zFailSeverity', 'zModelerLock', 'zSendEventWhenBlockedFlag']
-
-        for x in _properties:
-            setattr(self, x, getattr(processclass, x, None))
-
-        self.remove = remove
-        return self
+        return super(ProcessClassSpecParams, cls).fromObject(ob, prop_map=prop_map)
