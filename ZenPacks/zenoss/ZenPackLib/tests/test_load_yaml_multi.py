@@ -278,8 +278,7 @@ class TestMultiYAML(BaseTestCase):
 
         compare_equals = compare_zenpackspecs(whole_yaml, multi_yaml)
 
-        self.assertTrue(compare_equals,
-                        'YAML Multiple file test failed')
+        self.assertTrue(compare_equals, 'YAML Multiple file test failed')
 
 
 def test_suite():

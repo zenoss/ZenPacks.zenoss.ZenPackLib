@@ -12,17 +12,7 @@
 """
     Test accurate detection of template modifications
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
@@ -289,32 +279,28 @@ device_classes:
 DIFF = "--- \n+++ \n@@ -4,8 +4,8 @@\n   CPU Utilization:\n     dsnames: [ssCpuRawIdle_ssCpuRawIdle]\n     eventClass: /Perf/CPU\n-    minval: '2'\n-    escalateCount: 5\n+    minval: '3'\n+    escalateCount: 7\n datasources:\n   memBuffer:\n     type: SNMP\n@@ -124,7 +124,6 @@\n     graphpoints:\n       laLoadInt5:\n         dpName: laLoadInt5_laLoadInt5\n-        lineType: AREA\n         format: '%0.2lf'\n         rpn: 100,/\n \n"
 
 
-class TestTemplateModified(BaseTestCase):
+class TestTemplateModified(ZPLTestBase):
     """
     Test installed vs spec template changes
     """
+    yaml_doc = [YAML_DOC, YAML_CHANGED]
 
     def test_modified(self):
-        self.get_result(YAML_DOC, YAML_DOC)
-        self.get_result(YAML_DOC, YAML_CHANGED, DIFF)
+        self.get_result(self.z, self.z)
+        self.get_result(self.z, self.z_1, DIFF)
 
-    def get_result(self, orig_doc, new_doc, expected=None):
-        z_orig = ZPLTestHarness(orig_doc)
-        z_new = ZPLTestHarness(new_doc)
-        z_orig.connect()
-        z_new.connect()
-
+    def get_result(self, orig, new, expected=None):
         # original template spec
-        orig_tspec = z_orig.cfg.device_classes.get('/Server').templates.get('Device')
+        orig_tspec = orig.cfg.device_classes.get('/Server').templates.get('Device')
         # template based on original spec
-        orig_template = orig_tspec.create(z_orig.dmd, False)
+        orig_template = orig_tspec.create(self.dmd, False)
 
-        zenpack = z_new.schema.ZenPack(z_new.dmd)
+        zenpack = new.schema.ZenPack(self.dmd)
         # new temlate spec
-        new_tspec = z_new.cfg.device_classes.get('/Server').templates.get('Device')
-        new_tspec_param = z_new.cfg.specparams.device_classes.get('/Server').templates.get('Device')
+        new_tspec = new.cfg.device_classes.get('/Server').templates.get('Device')
+        new_tspec_param = new.cfg.specparams.device_classes.get('/Server').templates.get('Device')
 
-        diff = zenpack.object_changed(z_new.dmd, orig_template, new_tspec, new_tspec_param)
+        diff = zenpack.object_changed(self.dmd, orig_template, new_tspec, new_tspec_param)
         self.assertEquals(diff, expected, 'Expected:\n{}\ngot:\n{}'.format(expected, diff))
 
 

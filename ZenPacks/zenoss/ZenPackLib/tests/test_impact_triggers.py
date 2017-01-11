@@ -79,19 +79,21 @@ classes:
     impacted_by: [basicDevice, subComponents]
 """
 
-ZP = ZPLTestHarness(YAML_DOC)
-ZP.connect()
-
 
 class TestImpactTriggers(ImpactTestCase):
     """Test Impact Triggers"""
 
     def afterSetUp(self):
         super(TestImpactTriggers, self).afterSetUp()
+        self.z = ZPLTestHarness(YAML_DOC)
+        self.z.connect()
         self.modelChangePublisher = ModelChangePublisher()
-        self.org = ZP.dmd.DynamicServices
+        self.org = self.z.dmd.DynamicServices
         self.graphChangeList = GraphChangeList()
-        self.factory = GraphChangeFactory(ZP.dmd, self.graphChangeList)
+        self.factory = GraphChangeFactory(self.z.dmd, self.graphChangeList)
+
+    def tearDown(self):
+         self.z.closeAll()
 
     def get_guid(self, ob):
         """hackish way to do this"""
@@ -111,8 +113,8 @@ class TestImpactTriggers(ImpactTestCase):
 
     def testFillTriggerProtoBuf(self):
         triggerPb = TriggerPb()
-        spec = ZP.cfg.classes.get('BasicComponent')
-        ob = ZP.obs[1]
+        spec = self.z.cfg.classes.get('BasicComponent')
+        ob = self.z.obs[1]
         self.get_guid(ob)
         impact_fact = BaseTriggers(ob)
 

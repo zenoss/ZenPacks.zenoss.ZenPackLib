@@ -12,17 +12,8 @@
 """ Color format validation YAML dump/load
 
 """
-# zenpacklib Imports
-import yaml
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.Loader import Loader
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
 YAML_DOC = """
 name: ZenPacks.zenoss.ZenPackLib
@@ -91,16 +82,15 @@ device_classes:
                 dpName: test_c
 """
 
-class TestValidInput(BaseTestCase):
+
+class TestValidInput(ZPLTestBase):
     """Test color input validation"""
+
+    yaml_doc = YAML_DOC
 
     def test_valid_color(self):
         ''''''
-        loaded = yaml.load(YAML_DOC, Loader=Loader)
-        dumped = yaml.dump(loaded, Dumper=Dumper)
-
-
-        self.assertEquals(dumped, EXPECTED,
+        self.assertEquals(self.z.exported_yaml, EXPECTED,
                         'YAML Color validation test failed')
 
 

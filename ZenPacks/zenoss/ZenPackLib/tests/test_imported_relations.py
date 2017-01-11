@@ -60,7 +60,7 @@ from ZenPacks.zenoss.ZPLDevice.NormDevice import NormDevice
 from ZenPacks.zenoss.ZPLDevice.ClusterDevice import ClusterDevice
 
 
-class TestZen24018(BaseTestCase):
+class TestImportedRelations(BaseTestCase):
     """Test fix for ZEN-24108
 
        Device relations between ZPL-based ZenPacks overwrite inherited Device relations
@@ -94,7 +94,7 @@ def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen24018))
+    suite.addTest(makeSuite(TestImportedRelations))
     return suite
 
 if __name__ == "__main__":
