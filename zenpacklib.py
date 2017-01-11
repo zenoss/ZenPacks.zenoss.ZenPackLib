@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "1.1.2"
+__version__ = "1.2.0dev"
 
 
 import logging
@@ -955,7 +955,7 @@ class ComponentBase(ModelBase):
                 # If 'all' mode, just include indirectly-related objects as well, in
                 # an unfiltered manner.
                 if recurse_all:
-                    for facet in obj.get_facets(root=root, seen=seen, path=path, depth=depth+1, recurse_all=True):
+                    for facet in obj.get_facets(root=root, seen=seen, path=path, depth=depth + 1, recurse_all=True):
                         yield facet
 
                 else:
@@ -968,7 +968,7 @@ class ComponentBase(ModelBase):
                         if not recurse:
                             continue
 
-                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, depth=depth+1):
+                        for facet in obj.get_facets(root=root, seen=seen, streams=[stream], path=path, depth=depth + 1):
                             if (self.id, relname, facet.id) in seen:
                                 # avoid a cycle
                                 continue
@@ -1165,16 +1165,16 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
             def _filter(item):
                 include = True
                 if fieldFilter:
-                    key=item[0]
+                    key = item[0]
                     include = fieldFilter(key)
                 else:
                     include = bool(item)
                 return include
-            for k,v in filter(_filter, f.iteritems()):
+            for k, v in filter(_filter, f.iteritems()):
                 c = self._dict(v)
                 c['name'] = k
-                value =  getattr(self.context, k, None)
-                c['value'] = value() if callable(value) else value                    
+                value = getattr(self.context, k, None)
+                c['value'] = value() if callable(value) else value
                 if c['xtype'] in ('autoformcombo', 'itemselector'):
                     c['values'] = self.vocabulary(v)
                 d[k] = c
@@ -2707,9 +2707,9 @@ class ClassSpec(Spec):
 
         for i, specs in enumerate(self.containing_spec_relations):
             spec, relspec = specs
-            attributes[relspec.name] = schema.Entity(
+            attributes[self.get_relname(spec, relspec)] = schema.Entity(
                 title=_t(spec.label),
-                group="Relationships",
+                group="Overview",
                 order=3 + i / 100.0)
 
         for spec in self.inherited_relationships().itervalues():
@@ -2769,7 +2769,11 @@ class ClassSpec(Spec):
         })
 
         for spec, relspec in self.containing_spec_relations:
-            attributes.update(relspec.info_properties)
+            if relspec:
+                attributes.update(relspec.info_properties)
+            else:
+                attr = relname_from_classname(spec.name)
+                attributes[attr] = RelationshipInfoProperty(attr)
 
         for spec in self.inherited_properties().itervalues():
             attributes.update(spec.info_properties)
@@ -2913,6 +2917,8 @@ class ClassSpec(Spec):
                 continue
 
             containing_rels.extend(remote_spec.containing_spec_relations)
+            if not relation_spec:
+                relation_spec = self.inherited_relationships().get(relname)
             containing_rels.append((remote_spec, relation_spec))
         return containing_rels
 
@@ -2983,7 +2989,7 @@ class ClassSpec(Spec):
         for spec, relspec in self.containing_spec_relations:
             if spec.name in filtered_relationships:
                 continue
-            fields.append("{{name: '{}'}}".format(relspec.name))
+            fields.append("{{name: '{}'}}".format(self.get_relname(spec, relspec)))
 
         return fields
 
@@ -3010,7 +3016,7 @@ class ClassSpec(Spec):
 
             column_fields = [
                 "id: '{}'".format(spec.name),
-                "dataIndex: '{}'".format(relspec.name),
+                "dataIndex: '{}'".format(self.get_relname(spec, relspec)),
                 "header: _t('{}')".format(spec.short_label),
                 "width: {}".format(width),
                 "renderer: {}".format(renderer),
@@ -3133,7 +3139,7 @@ class ClassSpec(Spec):
     @property
     def subcomponent_nav_js_snippet(self):
         """Return subcomponent navigation JavaScript snippet."""
-        
+
         def get_js_snippet(id, label, classes):
             """return basic JS nav snippet"""
             cases = []
@@ -3180,7 +3186,7 @@ class ClassSpec(Spec):
                     sections[relation.label].append(spec.meta_type)
 
         snippets = []
-        for label, metatypes in sections.items():        
+        for label, metatypes in sections.items():
             id = '_'.join(label.lower().split(' '))
             snippets.append(get_js_snippet(id, label, metatypes))
 
@@ -3193,6 +3199,12 @@ class ClassSpec(Spec):
             self.component_grid_panel_js_snippet,
             self.subcomponent_nav_js_snippet,
             ))
+
+    def get_relname(self, spec, relspec):
+        if relspec:
+            return relspec.name
+        else:
+            return relname_from_classname(spec.name)
 
     def test_setup(self):
         """Execute from a test suite's afterSetUp method.
@@ -3409,7 +3421,7 @@ class ClassPropertySpec(Spec):
         if self.api_backendtype == 'method':
             isEntity = self.type_ == 'entity'
             return {
-                self.name: MethodInfoProperty(self.name, entity=isEntity),
+                self.name: MethodInfoProperty(self.name, entity=isEntity, enum=self.enum),
                 }
         else:
             if not self.enum:
@@ -3709,15 +3721,16 @@ class ClassRelationshipSpec(Spec):
             remote_spec.label = remote_spec.meta_type
 
         if isinstance(self.schema, (ToOne)):
-            schemas[self.name] = schema.Entity(
-                title=_t(self.label or remote_spec.label),
-                group="Relationships",
-                order=self.order or 3.0)
+            if (self.label or remote_spec.label) != 'Device':
+                schemas[self.name] = schema.Entity(
+                    title=_t(self.label or remote_spec.label),
+                    group="Overview",
+                    order=self.order or 3.0)
         else:
             relname_count = '{}_count'.format(self.name)
             schemas[relname_count] = schema.Int(
                 title=_t(u'Number of {}'.format(self.label or remote_spec.plural_label)),
-                group="Relationships",
+                group="Overview",
                 order=self.order or 6.0)
 
         return schemas
@@ -5237,8 +5250,8 @@ if YAML_INSTALLED:
 
         params['_source_location'] = "%s: %s-%s" % (
             os.path.basename(node.start_mark.name),
-            node.start_mark.line+1,
-            node.end_mark.line+1)
+            node.start_mark.line + 1,
+            node.end_mark.line + 1)
 
         # TODO: When deserializing, we should check if required properties are present.
 
@@ -5748,7 +5761,7 @@ def DeviceInfoStatusProperty():
     return property(getter)
 
 
-def MethodInfoProperty(method_name, entity=False):
+def MethodInfoProperty(method_name, entity=False, enum=None):
     """Return a property with the Infos for object(s) returned by a method.
 
     A list of Info objects is returned for methods returning a list, or a single
@@ -5767,6 +5780,13 @@ def MethodInfoProperty(method_name, entity=False):
                 result,
                 keys=('name', 'meta_type', 'class_label', 'uid'))
         else:
+            if enum and isinstance(enum, dict):
+                try:
+                    return enum.get(int(result), 'Unknown')
+                except Exception:
+                    return result
+            else:
+                return result
             return result
 
     return property(getter)
@@ -5966,7 +5986,7 @@ def apply_defaults(dictionary, default_defaults=None, leave_defaults=False):
         for k, v in dictionary.iteritems():
             dictionary[k] = dict(defaults, **v)
             if 'extra_params' in  dictionary[k].keys():
-                extra_params = defaults.get('extra_params',{})
+                extra_params = defaults.get('extra_params', {})
                 dictionary_params = dictionary[k]['extra_params']
                 for i, j in extra_params.items():
                     if i not in dictionary_params.keys():

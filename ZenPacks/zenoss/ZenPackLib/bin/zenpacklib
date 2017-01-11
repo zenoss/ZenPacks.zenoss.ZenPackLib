@@ -1,0 +1,17 @@
+#! /usr/bin/env bash
+##############################################################################
+#
+# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+#
+# This content is made available according to terms specified in
+# License.zenoss under the directory where your Zenoss product is installed.
+#
+##############################################################################
+
+
+MYPATH=`python -c "import os.path; print os.path.realpath('$0')"`
+THISDIR=`dirname $MYPATH`
+PRGHOME=`dirname $THISDIR`
+PRGNAME=zenpacklib.py
+
+python $PRGHOME/$PRGNAME "$@"

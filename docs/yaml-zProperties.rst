@@ -24,7 +24,6 @@ the value at / (or /Devices) will be checked as a final resort. Since all
 zProperties must have a default values that is set at the root device class,
 there will always be a value for the zProperty. Even if it is an empty string.
 
-
 .. _adding-zProperties:
 
 ******************
@@ -67,15 +66,15 @@ on zWidgeterInterval.
        category: ACME Widgeter
        default: 300
 
-There is a special zProperty entry named *DEFAULT* that can be used to further
+There is a special zProperty entry named *DEFAULTS* that can be used to further
 shorten definitions in cases where you're adding many zProperties. The
-following example shows how *DEFAULT* can be used to replace the duplicated
+following example shows how *DEFAULTS* can be used to replace the duplicated
 *category* property.
 
 .. code-block:: yaml
 
    zProperties:
-     DEFAULT:
+     DEFAULTS:
        category: ACME Widgeter
 
      zWidgeterEnable:
@@ -88,6 +87,9 @@ following example shows how *DEFAULT* can be used to replace the duplicated
 Each zProperty listed in *zProperties* will be created when the ZenPack is
 installed, and removed when the ZenPack is removed.
 
+.. note::
+
+  When changing the default or category for a zProperty in the yaml, it changes in the zenoss system.  Removing a zProperty from yaml will not remove it from the zenoss system.  To remove it completely, you must write a migrate script to remove it.
 
 .. _zProperty-fields:
 
@@ -141,3 +143,21 @@ category
   :Required: No
   :Type: string
   :Default Value: "" (empty string)
+
+
+***************************
+Zenoss specific zProperties
+***************************
+
+When changing modeler bindings using the zDeviceTemplates property, this will take effect on your ZenPack.  Any previously defined bindings will be replaced.  The same applies to the device level template bindings using the zCollectorPlugins property.
+
+.. note::
+
+   Beginning with ZenPackLib 2.0, this behavior has changed.  zProperties will no longer be overwritten if a target device class
+   already exists (i.e. during an upgrade or if the YAML affects a preexisting class such as /Devices/Server.  Instead, a warning
+   will be displayed to the user during installation, and the target zProperty will be left alone.
+   
+
+   
+   
+   

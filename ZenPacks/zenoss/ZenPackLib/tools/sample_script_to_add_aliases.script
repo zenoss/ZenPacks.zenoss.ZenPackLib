@@ -1,0 +1,20 @@
+for x in dmd.Devices.Server.HP.getAllRRDTemplates():
+    dp={}
+    for y in x.getRRDDataSources():
+         for z in y.getRRDDataPoints():
+             dp[z.name()] = (z, y, x)
+    for gd in x.getGraphDefs():
+        for gp in gd.graphPoints():
+            if gp.meta_type == 'DataPointGraphPoint':
+                if gp.dpName in dp:
+                    (dpobj, dsobj, tobj) = dp[gp.dpName]
+                    if len(dpobj.aliases()) < 1:
+                        print 't.id: %s ds.id: %s dp.id: %s ' % (tobj.id, dsobj.id, dpobj.id)
+                        userData = raw_input('New Alias Id : ')
+                        dpobj.addAlias(userData, '')
+                    else:
+                        for a in dpobj.aliases():
+                            if a.formula == '' and a.id == dpobj.id:
+                                dpobj.removeAlias(a.id)
+                                #import pdb;pdb.set_trace()
+commit()

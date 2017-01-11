@@ -164,8 +164,8 @@ zDeviceTemplates.
                     dpName: health_percent
                     format: "%7.2lf%%"
 
-Many different entry types are shown in the above example. See the references
-below for more information on each.
+
+Many different entry types are shown in the above example. See the references below for more information on each.
 
 
 .. _monitoring-template-fields:
@@ -211,6 +211,11 @@ graphs
   :Required: No
   :Type: map<name, :ref:`Graph <graph-fields>`>
   :Default Value: {} *(empty map)*
+
+.. note::
+
+  ZenPackLib also allows for defining a replacement or additional template by adding "-replacement" or "-additional" to the end of the template name.  For example, a defined *Device-replacement* template will replace the existing Device template on a device class.  A defined *Device-addition* template will be applied in addition to the existing Device template on a device class.
+
 
 .. _datasource-fields:
 
@@ -350,6 +355,94 @@ Built-In
 
 .. todo:: Document commonly-used types added by ZenPacks.
 
+.. _custom-datasource-types:
+
+Custom Datasource and Datapoint Types
+-------------------------------------
+
+Some datasource (and datapoint) types are provided by a particular ZenPack and only available 
+if that ZenPack is installed.  These types often have unique paramters that control their function.
+ZenPackLib allows the specification of these parameters, but the degree of documentation for each 
+varies.  As a result, designing YAML templates using these requires a bit of investigation.  The 
+available properties depend on the datasource or datapoint type being used.  Currently, examination of 
+the related source code is a good way to investigate them, but an alternative is given below.
+
+The following exmaple demonstrates how to create a YAML template that relies on the 
+ZenPacks.zenoss.CalculatedPerformance ZenPack.  Please note that the datasource properties used are 
+not documented below, since they are provided by the CalculatedPerformance ZenPack.  
+
+First, we want to determine a list of available parameters, and we can use ZenDMD to display them as follows:
+
+.. code-block:: python
+
+      # This is the reference class and its properties are documented here.
+      from Products.ZenModel.RRDDataSource import RRDDataSource as Reference
+      # replace the import path and class with the class you are interested in 
+      from ZenPacks.zenoss.CalculatedPerformance.datasources.AggregatingDataSource \
+         import AggregatingDataSource as Comparison
+      # this prints out the list of non-standard properties and their types
+      props = [p for p in Comparison._properties if p not in Reference._properties]
+      print '\n'.join(['{} ({})'.format(p['id'], p['type']) for p in props])
+
+In this case, we should see the following output:
+
+.. code-block:: python
+
+      targetMethod (string)
+      targetDataSource (string)
+      targetDataPoint (string)
+      targetRRA (string)
+      targetAsRate (boolean)
+      debug (boolean)
+
+An example tempalte using the CalculatedPerformance datasources might resemble the following:
+
+.. code-block:: yaml
+
+      name: ZenPacks.zenoss.ZenPackLib
+      device_classes:
+        /Device:
+          templates:
+            ExampleCalculatedPerformanceTemplate:
+              datasources:
+                # standard SNMP datasources
+                memAvailReal:
+                  type: SNMP
+                  oid: 1.3.6.1.4.1.2021.4.6.0
+                  datapoints:
+                    memAvailReal: GAUGE
+                memAvailSwap:
+                  type: SNMP
+                  oid: 1.3.6.1.4.1.2021.4.4.0
+                  datapoints:
+                    memAvailSwap: GAUGE
+                # CalculatedPerformance datasources
+                totalAvailableMemory
+                  type: Calculated Performance
+                  # "expression" paramter is unique to the 
+                  # CalculatedPerformance datasource
+                  expression: memAvailReal + memAvailSwap
+                  datapoints:
+                    totalAvailableMemory: GAUGE
+                # Aggregated Datasource
+                agg_out_octets:
+                  # These are standard parameters
+                  type: Datapoint Aggregator
+                  # The following parameters are "extra" parameters,
+                  # attributes of the "Datapoint Aggregator" datasource 
+                  targetDataSource: ethernetcmascd_64
+                  targetDataPoint: ifHCOutOctets
+                  targetMethod: os.interfaces
+                  # AggregatingDataPoint is subclassed from RRDDataPoint and 
+                  # has the unique "operation" paramter
+                  datapoints:
+                    aggifHCOutOctets:
+                      operation: sum
+
+Further experimentation, though, is required to determine workable values for these properties, and creating
+templates manually using the Zenoss GUI is a good way to do so.
+
+
 .. _datapoint-fields:
 
 Datapoint Fields
@@ -388,16 +481,22 @@ rrdmax
   :Default Value: None *(no upper-bound on acceptable values)*
 
 aliases
-  :Description: Aliases for the datapoint.
+  :Description: Analytics aliases for the datapoint with optional RPN calculation. Learn more about `Reverse Polish Notiation <https://en.wikipedia.org/wiki/Reverse_Polish_notation>`_
   :Required: No
   :Type: map<name, formula>
   :Default Value: {} *(empty map)*
-
-.. todo:: Document datapoint alias formulas.
+  :Example 1: aliases: { datapointName: '1024,*' }
+  :Example 2: aliases: datapointName
 
 Datapoints also allow other ad-hoc options to be added not referenced in the
 above list. This is because datapoints are an extensible type in Zenoss, and
 depending on the value of the datasource's *type*, other fields may be valid.
+
+YAML datapoint specification also supports the use of an alternate "shorthand" notation for brevity.  Shorthand 
+notation follows a pattern of `RRDTYPE_MIN_X_MAX_X` where RRDTYPE is one of "GAUGE, DERIVE, COUNTER, RAW", 
+and the "MIN_X"/"MAX_X" parameters are optional.  
+
+For example, DERIVE, DERIVE_MIN_0, and DERIVE_MIN_0_MAX_100 are all valid shorthand notation.
 
 .. _threshold-fields:
 
@@ -429,8 +528,7 @@ dsnames
   :Required: No
   :Type: list
   :Default Value: [] *(empty list)*
-
-.. todo:: Better explain syntax for threshold.dsnames.
+  :Example: dsnames: ['status_status']
 
 eventClass
   :Description: Value for the *eventClass* field on events generated by the threshold.
@@ -443,6 +541,12 @@ severity
   :Required: No
   :Type: int
   :Default Value: 3 *(0=Clear, 1=Debug, 2=Info, 3=Warning, 4=Error, 5=Critical)* -- can vary depending on type.
+
+escalateCount:
+  :Description: Event count after which severity increases
+  :Required: No
+  :Type: int
+  :Default Value: None
 
 Thresholds also allow other ad-hoc options to be added not referenced in the
 above list. This is because thresholds are an extensible type in Zenoss, and
@@ -575,8 +679,7 @@ dpName
   :Required: Yes
   :Type: string
   :Default Value: None
-
-.. todo:: Better explain syntax for graphpoint.dpName.
+  :Example: dpName: 'status_status'
 
 lineType
   :Description: How to plot the data: "LINE", "AREA" or "DONTDRAW".
@@ -609,12 +712,10 @@ colorindex
   :Default Value: None
 
 format
-  :Description: String format for this graphpoint in the legend (e.g. %7.2lf%s).
+  :Description: String format for this graphpoint in the legend (e.g. %7.2lf%s).  The format option follows the `RRDTool PRINT Format <https://oss.oetiker.ch/rrdtool/doc/rrdgraph_graph.en.htm>`_
   :Required: No
   :Type: string
   :Default Value: "%5.2lf%s"
-
-.. todo:: Better explain graphpoint.format syntax.
 
 cFunc
   :Description: Consolidation function. One of AVERAGE, MIN, MAX, LAST.
@@ -629,15 +730,21 @@ limit
   :Default Value: -1
 
 rpn
-  :Description: RPN (Reverse Polish Notation) calculation to apply to datapoint.
+  :Description: RPN (Reverse Polish Notation) calculation to apply to datapoint. Learn more about `Reverse Polish Notiation <https://en.wikipedia.org/wiki/Reverse_Polish_notation>`_
   :Required: No
   :Type: string
   :Default Value: None
-
-..tood:: Better explain graphpoint.rpn syntax.
 
 includeThresholds
   :Description: Should thresholds associated with *dpName* be automatically added to the graph?
   :Required: No
   :Type: boolean
   :Default Value: false
+
+thresholdLegends
+  :Description: Mapping of threshold id to legend (string) and color (RRGGBB)
+  :Required: No
+  :Type: map
+  :Default Value: None
+  :Example: thresholdLegends: {threshold_id: {legend: Legend, color: OO1122}}
+  

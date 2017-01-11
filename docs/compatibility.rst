@@ -4,6 +4,146 @@
 Compatibility
 #############
 
+Starting with version 2.0, zenpacklib.py will ship as a separately installed ZenPack.
+This change offers several advantages over the earlier distribution method along with 
+many new features and fixes.  Existing ZenPacks based on earlier versions of zenpacklib.py
+should coexist peacefully with those based on the newer version, and eventual migration to
+version 2.0 should be relatively painless.  Future versions of Zenoss-provided ZenPacks will
+use the newer ZenPackLib version as they are developed and released.
+
+*************************
+Migrating ZenPacks to 2.0
+*************************
+
+For the most part, migrating to ZenPackLib 2.0 should be straightforward and requires minimal changes
+to your ZenPack.  These largely involve changing import statements where appropriate and removing the
+older zenpacklib.py files
+
+.. note::
+
+   ZenPacks based on ZenPackLib 2.0 will need to have a dependency set to prevent potential issues when 
+   installing or removing them.  If ZenPackLib 2.0 is not installed, a dependent ZenPack should refuse to
+   install until the dependency is met.  Similarly, ZenPackLib 2.0 should refuse removal if dependent ZenPacks
+   are still installed.  To achieve this, make sure that the INSTALL_REQUIRES variable in the setup.py file 
+   contains the following:
+   
+   INSTALL_REQUIRES = ['ZenPacks.zenoss.ZenPackLib']
+   
+   Please note that "INSTALL_REQUIRES" may already contain entries, and these should be preserved if they exist.
+   
+   This can also be configured in the GUI if the dependent ZenPack is installed in develop mode.
+
+
+The __init__.py file will need its import statements changed.
+
+.. code-block:: python
+
+   from . import zenpacklib
+
+changes to:
+
+.. code-block:: python
+
+   from ZenPacks.zenoss.ZenPackLib import zenpacklib
+
+while:
+
+.. code-block:: python
+
+   CFG = zenpacklib.load_yaml()
+
+remains unchanged unless some of the new logging capabilities are desired such as:
+
+.. code-block:: python
+
+   CFG = zenpacklib.load_yaml(verbose=True, level=10)
+
+
+In addition, the statement (if it exists):
+
+.. code-block:: python
+
+   from . import schema 
+
+should be changed to:
+
+.. code-block:: python
+
+   schema = CFG.zenpack_module.schema
+
+or added if it does not exist.
+
+.. note::
+
+   Care should also be taken to delete the zenpacklib.py and zenpacklib.pyc files in 
+   the ZenPack's source directory, since leaving them in place may cause unforseen behavior.
+
+.. note::
+
+   Import statements should also be checked throughout any class overrides or 
+   other python files, since the statements will fail if they refer to the older zenpacklib.py.
+
+.. note::
+
+   The tag *!ZenPackSpec* is not necessary and should be removed from your yaml definitions.
+
+.. _new-logging:
+
+*******************
+Version 2.0 Logging
+*******************
+
+Logging has been substantially enhanced for ZenPackLib version 2.0 and provides numerous
+features to aid during development or troubleshooting.  Logging can now be controlled on 
+a per-ZenPack basis by supplying additional paramters to the "load_yaml()" method call 
+in the ZenPack's __init__.py.file:
+
+.. code-block:: python
+
+   CFG = zenpacklib.load_yaml(verbose=True, level=10)
+
+In this example, logging verbosity is enabled with at the DEBUG level.
+
+Every class in ZenPackLib has a "LOG" attribute that can be called within any class override
+files you may have.  For example, given the file BasicComponent.py class extension, logging features
+would be accessed as follows:
+
+
+.. code-block:: python
+      
+      from . import schema
+      
+      class BasicComponent(schema.BasicComponent):
+          """Class override for BasisComponent"""
+          def hello_world(self):
+              self.LOG.info("You called hello_world")
+              return 'Hello World!'
+
+
+
+.. note::
+
+   Log messages generated within the new logging framework are written to the Zope logger (event.log) 
+   and can be viewed there.  Logging used within class extension files will follow the verbosity 
+   and level parameters provided to the "load_yaml" method.
+   
+   Please note that additional Zope configuration may be required to see log messages, since Zope 
+   configuration determines what is accepted for writing to its event log.  For example, if Zope logging
+   is set to "warn", then any "info" or "debug" messages will not be logged regardless of the load_yaml parameters
+   used.  Zope logging in this case must be set to "info" for ZPL "info", "warning", and "critical" logging.
+
+.. _older-versions:
+
+*******************************
+Older Versions of zenpacklib.py
+*******************************
+
+.. note::
+
+    The following applies to pre-2.0 versions of zenpacklib.py only.  
+    Starting with version 2.0, zenpacklib.py will ship as a separately installed 
+    ZenPack designed for use by dependent ZenPacks
+
 Distributing `zenpacklib.py` with each ZenPack allows different ZenPacks in
 the same Zenoss system to use different versions of zenpacklib. This can make
 things simpler for the ZenPack author as they know which version of zenpacklib
@@ -36,6 +176,18 @@ Zenoss. Maintenance or patch releases of each are always considered compatible.
 Determining Version
 *******************
 
+.. note::
+
+    Beginning with version 2.0, you can check the zenpacklib version with either:
+    
+      zenpacklib --version
+    
+    from the command line, or by navigating to: 
+      
+      Advanced -> Settings -> ZenPacks 
+    
+    in the Zenoss GUI
+
 You can check which version of zenpacklib you're using in two ways. The first is
 by using the *version* command line option.
 
@@ -58,6 +210,10 @@ Python code that has imported *zenpacklib* module through the module's
 ******************
 PyYAML Requirement
 ******************
+.. note::
+
+    Beginning with version 2.0, the ZenPacks.zenoss.ZenPackLib ZenPack will refuse
+    to install unless PyYAML is already installed
 
 zenpacklib requires that PyYAML be installed in the Zenoss system. PyYAML was
 not a standard part of a Zenoss system until Zenoss 5. To use zenpacklib, or to

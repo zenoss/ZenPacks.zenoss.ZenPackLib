@@ -61,6 +61,14 @@ set each time the ZenPack is installed.
          zWidgeterEnable: true
          zWidgeterInterval: 60
 
+
+.. note::
+
+   As of version 2.0, zProperties will not be set on existing device classes during
+   ZenPack installation.  Developers wishing to do so should handle these cases via 
+   migrate scripts that run during the installation process.
+
+
 The referenced zProperties must already exist in the Zenoss system, or be
 added by your ZenPack via a global :ref:`zProperties` entry.
 
@@ -127,6 +135,12 @@ path
   :Type: string
   :Default Value: *(implied from key in device_classes map)*
 
+create
+  :Description: Should the device class be created when the ZenPack is installed?
+  :Required: No
+  :Type: boolean
+  :Default Value: true
+
 remove
   :Description: Should the device class be removed when the ZenPack is removed?
   :Required: No
@@ -144,3 +158,15 @@ templates
   :Required: No
   :Type: map<name, :ref:`Monitoring Template <monitoring-template-fields>`>
   :Default Value: {} *(empty map)*
+
+description
+  :Description: Description used for devtype entry in device multi-add dialog
+  :Required: No
+  :Type: string
+  :Default Value: None
+
+protocol
+  :Description: Protocol used for devtype entry in device multi-add dialog
+  :Required: No
+  :Type: string
+  :Default Value: None

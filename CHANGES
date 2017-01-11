@@ -1,3 +1,91 @@
+Version 2.0
+===========
+
+Backwards Incompatible Changes
+
+* Any installed ZenPacks using older versions of zenpacklib.py will continue to function unchanged.
+* Using version 2.0 is slightly different.  The __init__.py file import statements should now contain the following:
+
+.. code-block:: python
+
+    from ZenPacks.zenoss.ZenPackLib import zenpacklib
+    CFG = zenpacklib.load_yaml()
+    schema = CFG.zenpack_module.schema
+
+.. note::
+
+  For better performance, specify the explicit path(s) to your yaml file.  e.g. *CFG = zenpacklib.load_yaml([os.path.join(os.path.dirname(__file__), "zenpack.yaml")])*
+
+* zProperties will not be updated automatically on existing device classes.  These should be handled on a case basis by using migrate scripts.
+
+Release 2.0.0
+-------------
+
+Features
+
+* zenpacklib is now an installable ZenPack
+* Added Event Class definitions (ZEN-24903)
+* Support multiple YAML file loading
+* Support directory loading for YAML
+* Support log verbosity per ZenPack
+* Centralized, per-derived ZenPack logging
+* Improved template change detection during install
+* Improved type handling of yaml loaded/dumped data
+* Support centralized use of older monolithic zenpacklib.py
+* Added --optimize parameter to zenpacklib
+* Dramatically enhanced unit testing
+* Support for using enum proprty with datapoint properties (string/int mapping)
+* Ability to call /opt/zenoss/bin/zenpacklib
+* Added ZPLCommand to handle running zenpacklib with arguments
+* Separated zenpacklib.py classes into module files
+* Ability to use ZenPack-provided zenpacklib module
+* Added support for Process Class definitions
+* Deprecated support for python-based "yaml" specifications
+* Support for threshold graphpoint legend and color (ZEN-24904)
+* Ability to specify an initial sort column on a component grid
+* Performance enhancments for grid display of metrics (ZEN-23870)
+* Support for Device Link Providers
+* Added troubleshooting aid for easily saving function data(writeDataToFile)
+* Avoid setting zProperties on existing device class (ZPS-137)
+
+Fixes
+
+* Fix handling of boolean datasource options (ZEN-25315)
+* Merge Detail View groups into 'Overview' group (ZEN-24759)
+* Ensure that component detail pane honors relation "details_display" (ZEN-24762)
+* Update ZenPackLib (ZP) Unit tests (ZEN-24599)
+* Ensure that subcomponent nav JS uses relationship label if provided (ZEN-24305)
+* Ensure ability to set label or a subclass on an inherited relationship (ZEN-24303)
+* Ensure inherited relationship name overrides displayed in details pane (ZEN-24302)
+* Ensure extra_paths is working (ZEN-24268)
+* Ensure that 'extra_params' get applied to template-related objects (ZEN-24083)
+* Improved handling of "custom columns exceed 750 pixels" warnings (ZEN-24022)
+* Avoid patching _relations on ZPL-derived subclasse (ZEN-24018)
+* Incorrect display of nested custom-named relations (ZEN-23995)
+* Fix missing relations (ZEN-23968)
+* Fix maximum recursion depth exceeded traceback in get_facets (ZEN-23840)
+* Allow specifying properties on an inherited relationship (ZEN-23763)
+* Zenpacklib logging  more helpful and less scary (ZEN-23621)
+* Batch buildRelations() commits during ZenPack installs (ZEN-22655)
+* Support adding devtypes (ZEN-22366)
+* Improve ImportError logging in class files (ZEN-22927)
+* Ensure non-cached datapoints return current value (ZEN-22288)
+* Fix issue when setting datapoint_cached to False (ZEN-22287)
+* Set all component property details to correct Python type (ZEN-22057)
+* Honor relationship label containing component overrides in component (ZEN-21966)
+* Prevent attempts to process relationships not in class_relationships (ZEN-21927)
+* Ensure component display properties honored (ZEN-19798)
+* Support setting datapoint alias as string (ZEN-19486)
+* Check datapoint consistency in template graph points and thresholds (ZEN-19461)
+* Check/warn against reserved keyword use (ZEN-19460)
+* getRRDTemplateName can return label of base class (ZEN-19025)
+* Ensure catalog creation respects spec property indexes (ZEN-18269)
+* Ensure device classes can be removed properly (ZEN-18134)
+* Ensure that datapoint alias keys do not exceed 31 chars (ZEN-17950)
+* Log obscure error with ill-defined relationships (ZEN-16701)
+* Fix handling of !ZenPackSpec tag in yaml definitions
+
+
 Version 1.1
 ===========
 

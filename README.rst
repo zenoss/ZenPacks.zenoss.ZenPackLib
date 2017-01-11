@@ -1,13 +1,20 @@
-######################
-Welcome to zenpacklib!
-######################
+###########################
+Welcome to the ZenPack SDK!
+###########################
 
-zenpacklib is a Python library that makes building common types of ZenPacks
-simpler, faster, more consistent and more accurate.
+The ZenPack SDK is a collection of development tools and documentation that you
+can use to extend Zenoss' functionality.
 
 ZenPacks are a plugin mechanism for Zenoss. Most commonly they're used to
-extend Zenoss to monitor new types of targets. It is specifically this common
-case that zenpacklib is designed to simplify.
+extend Zenoss to monitor new types of targets. We developed zenpacklib to
+simplify the process of creating custom ZenPacks.
+
+*******************
+What is zenpacklib?
+*******************
+
+zenpacklib is a Python library that makes building common types of ZenPacks
+simpler, faster, more consistent, and more accurate.
 
 
 ************************
@@ -22,6 +29,10 @@ extended in Python only if necessary.
 * Monitoring Templates
 * New Device and Component Types
 * Relationships between Device and Component Types
+* Event Classes
+* Process Classes
+* Device Link Providers
+* Impact Triggers
 
 It is this combination of declarative YAML and imperative Python extension that
 allows zenpacklib to make easy things easy and hard things possible.
@@ -143,3 +154,10 @@ them.
 
     class_relationships:
       - Widgeter 1:MC Widget
+
+
+************
+Known Issues
+************
+
+* When dumping existing event classes using the zenpacklib tool with *--dump-event-classes* option, some transforms and/or explanations may show as either unformatted text within double quotes or as formatted text within single quotes.  This is due to how the python yaml package handles strings.  Either of these two formats are acceptable when used in zenpack.yaml.

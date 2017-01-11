@@ -3,9 +3,9 @@
 .. toctree::
     :hidden:
 
-    development-environment-5
-    getting-started-5
-    tutorials-5
+    development-environment-2
+    getting-started-2
+    tutorials-2
     Tutorials / Monitoring an SNMP Device <tutorial-snmp-device/index>
     Tutorials / Monitoring an HTTP API <tutorial-http-api/index>
     troubleshooting
@@ -15,4 +15,4 @@
     changes
     license
 
-Click :ref:`Next <development-environment-5>` for information on setting up a development environment.
+Click :ref:`Next <development-environment-2>` for information on setting up a development environment.
