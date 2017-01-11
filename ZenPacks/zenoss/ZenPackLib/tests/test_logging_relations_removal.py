@@ -9,26 +9,12 @@
 #
 ##############################################################################
 
-"""extra_paths unit tests
-
-This module tests zenpacklib 'extra_paths' and path reporters.
-
-"""
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-import traceback
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib import zenpacklib
-
+"""Test removal of undefined relations"""
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase, LogCapture
 
 
 YAML_DOC = """
-name: ZenPacks.zenoss.SomeZenPack
+name: ZenPacks.zenoss.TestLogging
 
 classes:
   BaseDevice:
@@ -59,23 +45,27 @@ class_relationships:
 """
 
 
-class TestZen21927(BaseTestCase):
-    """Test removal of undefined relations"""
+EXPECTED = """[ERROR] Removing invalid display config for relationship auxComponents from  ZenPacks.zenoss.TestLogging.BaseDevice
+[ERROR] Removing invalid display config for relationship systems from  ZenPacks.zenoss.TestLogging.BaseDevice
+[ERROR] Removing invalid display config for relationship deviceClass from  ZenPacks.zenoss.TestLogging.BaseDevice
+[ERROR] Removing invalid display config for relationship auxComponents from  ZenPacks.zenoss.TestLogging.BaseComponent
+[ERROR] Removing invalid display config for relationship dependents from  ZenPacks.zenoss.TestLogging.AuxComponent
+"""
 
-    def test_undefined_relations(self):
-        ''''''
-        try:
-            CFG = zenpacklib.load_yaml(YAML_DOC)
-        except:
-            msg = traceback.format_exc(limit=0)
-            self.fail(msg)
+class TestLoggingRelationsRemoval(ZPLTestBase):
+    disableLogging = False
+    capture = LogCapture()
+
+    def test_undefined_relation_removal(self):
+        actual = self.capture.test_yaml(YAML_DOC)
+        self.assertEquals(actual, EXPECTED, 'Undefined relations removal testing failed:\n  {}'.format(actual))
 
 
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen21927))
+    suite.addTest(makeSuite(TestLoggingRelationsRemoval))
     return suite
 
 if __name__ == "__main__":

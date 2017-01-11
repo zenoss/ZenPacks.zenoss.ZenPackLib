@@ -12,25 +12,10 @@
 """Keyword Tests
 This test will use lint to load in example yaml with keywords used
 """
-# stdlib Imports
-import logging
-log = logging.getLogger('zen.zenpacklib.tests')
-
-# Zenoss Imports
-import Globals  # noqa
-
-from Products.ZenUtils.Utils import unused
-from BaseTestCommand import BaseTestCommand
-import io
-import yaml
-
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.WarningLoader import WarningLoader
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.ZenPackLibLog import ZPLOG
-
-unused(Globals)
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase, LogCapture
 
 
-RESERVED_YAML = """name: ZenPacks.zenoss.Example
+RESERVED_YAML = """name: ZenPacks.zenoss.TestLogging
 classes:
     ExampleDevice:
         base: [zenpacklib.Device]
@@ -75,7 +60,7 @@ device_classes:
                             breadCrumbs: 0
 """
 
-NO_RESERVED_YAML = """name: ZenPacks.zenoss.Example
+NO_RESERVED_YAML = """name: ZenPacks.zenoss.TestLogging
 
 classes:
     ExampleDevice:
@@ -112,33 +97,7 @@ device_classes:
                             rrdmax: 100
 """
 
-LOG = ZPLOG.add_log('ZenPacks.zenoss.Example')
-
-class WarningLoader(WarningLoader):
-    LOG = ZPLOG.add_log('ZenPacks.zenoss.Example')
-
-class LogCapture(object):
-    """"""
-    def start_capture(self):
-        self.buffer = io.StringIO()
-        WarningLoader.LOG.setLevel(logging.WARNING)
-        self.handler = logging.StreamHandler(self.buffer)
-        self.handler.setFormatter(logging.Formatter(u'[%(levelname)s] %(message)s'))
-        WarningLoader.LOG.addHandler(self.handler)
-    
-    def stop_capture(self):
-        WarningLoader.LOG.removeHandler(self.handler)
-        self.handler.flush()
-        self.buffer.flush()
-        return self.buffer.getvalue()
-
-    def test_yaml(self, yaml_doc):
-        self.start_capture()
-        cfg = yaml.load(yaml_doc, Loader=WarningLoader)
-        logs = self.stop_capture()
-        return str(logs)
-
-EXPECTED="""[WARNING] <string>:7:13: ["Found reserved Zenoss keyword 'uuid' from DeviceInfo, ComponentInfo"]
+EXPECTED = """[WARNING] <string>:7:13: ["Found reserved Zenoss keyword 'uuid' from DeviceInfo, ComponentInfo"]
 [ERROR] <string>:9:13: ["Found reserved keyword 'yield' while processing ClassPropertySpec"]
 [WARNING] <string>:11:13: ["Found reserved Zenoss keyword 'name' from Device, DeviceComponent, DeviceInfo, ComponentInfo"]
 [ERROR] <string>:15:5: ["Found reserved keyword 'lambda' while processing ClassSpec"]
@@ -146,24 +105,24 @@ EXPECTED="""[WARNING] <string>:7:13: ["Found reserved Zenoss keyword 'uuid' from
 [ERROR] <string>:29:13: ["Found reserved keyword 'lambda' while processing RRDTemplateSpec"]
 """
 
-class TestKeywords(BaseTestCommand):
-    capture = LogCapture()
+class TestLoggingKeywords(ZPLTestBase):
     disableLogging = False
+    capture = LogCapture()
+
     def test_reserved_keywords(self):
         actual = self.capture.test_yaml(RESERVED_YAML)
-        self.assertEquals(actual, EXPECTED,'Reserved keywords testing failed:\n  {}'.format(actual))
+        self.assertEquals(actual, EXPECTED, 'Reserved keywords testing failed:\n  {}'.format(actual))
 
     def test_no_reserved_keywords(self):
         actual = self.capture.test_yaml(NO_RESERVED_YAML)
-        self.assertEquals(actual, '','Non-reserved keywords testing failed:\n  {}'.format(actual))
-
+        self.assertEquals(actual, '', 'Non-reserved keywords testing failed:\n  {}'.format(actual))
 
 
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestKeywords))
+    suite.addTest(makeSuite(TestLoggingKeywords))
     return suite
 
 

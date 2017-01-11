@@ -13,21 +13,11 @@
     ToMany-ToMany (M:M) non-containing relationships cause infinite recursion in get_facets
     ZEN-23840
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """
-name: ZenPacks.zenoss.PS.SA.UGE
+name: ZenPacks.zenoss.ZenPackLib
 
 class_relationships:
   - UnivaGrid 1:MC UGEFilesystem
@@ -131,16 +121,17 @@ device_classes:
 """
 
 
-class TestZen23840(BaseTestCase):
+class TestGetFacets(ZPLTestBase):
     """Test fix for ZEN-23840
 
        ToMany-ToMany (M:M) non-containing relationships cause infinite recursion in get_facets
     """
 
-    def test_inherited_relation_display(self):
-        z = ZPLTestHarness(YAML_DOC)
+    yaml_doc = YAML_DOC
+
+    def test_get_facets_recursion(self):
         expected = 2
-        for ob in z.obs:
+        for ob in self.z.obs:
             if ob.meta_type == 'HPCNode':
                 facets = []
                 for f in ob.get_facets():
@@ -152,7 +143,7 @@ def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen23840))
+    suite.addTest(makeSuite(TestGetFacets))
     return suite
 
 if __name__ == "__main__":

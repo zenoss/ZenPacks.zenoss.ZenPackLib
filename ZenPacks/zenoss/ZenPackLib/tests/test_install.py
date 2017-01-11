@@ -15,45 +15,25 @@ This module tests ZenPack install, upgrade and remove.
 
 """
 import os
-import subprocess
-import logging
-
-logging.basicConfig(level=logging.INFO)
-LOG = logging.getLogger('zen.zenpacklib.tests')
-
-import Globals
-from Products.ZenUtils.Utils import unused, binPath
-unused(Globals)
-
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
+from Products.ZenUtils.Utils import binPath
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestCommand
 
 
-def get_cmd_output(cmd, vars):
-    LOG.info(" ".join(cmd))
-    env = dict(os.environ)
-    env.update(vars)
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         env=env)
-    out, err = p.communicate()
-    p.wait()
-    return (p,out,err)
-
-class TestInstall(BaseTestCase):
-
+class TestInstall(ZPLTestCommand):
+    """Test installation, upgrade, and removal of Example ZenPack"""
     zenpack_name = 'ZenPacks.zenoss.ZPLTest1'
     zenpack_path = os.path.join(os.path.dirname(__file__),
                                 "data/zenpacks/ZenPacks.zenoss.ZPLTest1")
-    disableLogging = False
 
     def test_install(self):
         """install the zenpack for the first time"""
         cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
-        out = self.run_cmd(cmd)
+        out = self.get_cmd_success(cmd)
 
     def test_install_upgrade(self):
         """install it a second time unchanged"""
         cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
-        out = self.run_cmd(cmd)
+        out = self.get_cmd_success(cmd)
 
     def test_install_upgrade_yaml(self):
         """
@@ -61,21 +41,13 @@ class TestInstall(BaseTestCase):
             adding a new monitoring template
         """
         cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
-        out = self.run_cmd(cmd, vars={'ZPL_YAML_FILENAME': 'yes'})
+        out = self.get_cmd_success(cmd, vars={'ZPL_YAML_FILENAME': 'yes'})
 
     def test_remove_if_installed(self):
         " remove the installed zenpack"
-        out = self.run_cmd([binPath('zenpack'), "--list"])
+        out = self.get_cmd_success([binPath('zenpack'), "--list"])
         if self.zenpack_name in out:
-            out = self.run_cmd([binPath('zenpack'), "--remove", self.zenpack_name])
-
-    def run_cmd(self, cmd, vars={}):
-        """execute a command and assert success"""
-        p,out,err = get_cmd_output(cmd, vars)
-        LOG.debug("out=%s, err=%s", out, err)
-        msg = 'Command "{}" failed with error:\n  {}'.format(cmd, err)
-        self.assertIs(p.returncode, 0, msg)
-        return out
+            out = self.get_cmd_success([binPath('zenpack'), "--remove", self.zenpack_name])
 
 
 def test_suite():

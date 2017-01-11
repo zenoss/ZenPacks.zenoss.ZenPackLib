@@ -1,5 +1,7 @@
+import os
 import yaml
 import logging
+import difflib
 logging.basicConfig(level=logging.WARN)
 log = logging.getLogger('zen.zenpacklib.tests')
 from Products.ZenRelations.Exceptions import RelationshipExistsError
@@ -54,12 +56,16 @@ class ZPLTestHarness(ZenScriptBase):
     '''Class containing methods to build out dummy objects representing YAML class instances'''
     templates = None
 
-    def __init__(self, filename, connect=False, verbose=False, level=20):
+    def __init__(self, filename, connect=False, verbose=False, level=20, specparams=False):
         ''''''
         ZenScriptBase.__init__(self)
         self.filename = filename
         self.cfg = zenpacklib.load_yaml(filename, verbose=verbose, level=level)
-        self.yaml = load_yaml_single(filename, useLoader=False)
+        self.yaml = None
+        if not os.path.isdir(filename):
+            self.yaml = load_yaml_single(filename, useLoader=False)
+        else:
+            self.yaml = yaml.dump(self.cfg, Dumper=Dumper)
         self.zp = self.cfg.zenpack_module
         self.schema = self.zp.schema
         self.build_cfg_obs()
@@ -68,6 +74,24 @@ class ZPLTestHarness(ZenScriptBase):
         self.build_cfg_relations()
         self.exported_yaml = yaml.dump(self.cfg, Dumper=Dumper)
         self.reloaded_yaml = load_yaml_single(self.exported_yaml, useLoader=False)
+        self.exported_yaml_specparams = None
+        if specparams:
+            self.exported_yaml_specparams = self.export_specparams_yaml()
+
+    def get_diff(self, expected, actual):
+        """Return diff between YAML files"""
+        lines_expected = [x + '\n' for x in expected.split('\n')]
+        lines_actual = [x + '\n' for x in actual.split('\n')]
+        return ''.join(difflib.unified_diff(lines_expected, lines_actual))
+
+    def export_specparams_yaml(self):
+        """Dump ZenPackSpecparams to YAML instead of ZenPackSpec"""
+        return yaml.dump(self.cfg.specparams, Dumper=Dumper)
+
+    def disconnect(self):
+        """remove connection to Zope if it exists"""
+        if getattr(self, 'db', None):
+            self.closeAll()
 
     def zenpack_installed(self):
         '''Return True if ZenPack is installed'''
@@ -412,18 +436,21 @@ class ZPLTestHarness(ZenScriptBase):
                 return False
         return True
 
-    def compare_template_ob_to_spec(self, ob, dscs):
+    def compare_template_ob_to_spec(self, ob, spec):
         '''compare template object to spec'''
         passed = True
         cls = self.classname(ob)
         msg = '{} passed inspection'.format(cls)
         for p in ob._properties:
             id = p.get('id')
-            default = getattr(ob, id)
-            spec_default = getattr(dscs, id, getattr(dscs, 'extra_params', {}).get(id))
+            default = getattr(ob, id, None)
+            spec_default = getattr(spec, id, getattr(spec, 'extra_params', {}).get(id, None))
             # skip if not defined:
-            if not spec_default:
+            if not default or not spec_default:
                 continue
+            # technically these are strings (in the class) but we treat as integers
+            if id in ['rrdmin', 'rrdmax']:
+                default = int(default)
             if default != spec_default:
                 msg = '{} property {} mismatch between class ({}) and spec ({})  and default'.format(ob.id, id, default, spec_default)
                 passed = False
