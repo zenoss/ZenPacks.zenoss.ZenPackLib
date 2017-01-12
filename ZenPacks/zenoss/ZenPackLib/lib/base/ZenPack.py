@@ -162,6 +162,15 @@ class ZenPack(ZenPackBase):
 
                     # back up the template
                     backup_name = "{}-backup".format(orig_mtname)
+                    # delete the template if it already exists
+                    # this could occur if zenpack installation fails and is reattempted
+                    try:
+                        backup_template = deviceclass.rrdTemplates._getOb(backup_name)
+                        if backup_template:
+                            backup_template.getPrimaryParent()._delObject(backup_template.id)
+                    except AttributeError:
+                        pass
+
                     deviceclass.rrdTemplates.manage_renameObject(template.id, backup_name)
         else:
             dc = app.Devices
