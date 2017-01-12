@@ -64,9 +64,15 @@ class ZenPack(ZenPackBase):
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
                 dcObject = self.create_device_class(app, dcspec)
-
+            else:
+                try:
+                    dcObject = self.dmd.Devices.getOrganizer(dcspec.path)
+                except KeyError:
+                    self.LOG.warn('Device Class ({}) not found'.format(dcspec.path))
+                    dcObject = None
             # if device class has description and protocol, register a devtype
-            if dcspec.description and dcspec.protocol:
+
+            if dcObject and dcspec.description and dcspec.protocol:
                 try:
                     if (dcspec.description, dcspec.protocol) not in dcObject.devtypes:
                         self.LOG.info('Registering devtype for {}: {} ({})'.format(dcObject,
