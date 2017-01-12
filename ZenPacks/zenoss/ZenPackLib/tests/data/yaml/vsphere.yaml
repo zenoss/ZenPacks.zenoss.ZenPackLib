@@ -1,4 +1,4 @@
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.vSphere
 
 zProperties:
   DEFAULTS:

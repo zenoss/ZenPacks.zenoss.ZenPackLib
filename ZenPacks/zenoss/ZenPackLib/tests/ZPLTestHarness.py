@@ -54,11 +54,11 @@ class ZPLTestHarness(ZenScriptBase):
     '''Class containing methods to build out dummy objects representing YAML class instances'''
     templates = None
 
-    def __init__(self, filename, connect=False, verbose=False):
+    def __init__(self, filename, connect=False, verbose=False, level=20):
         ''''''
         ZenScriptBase.__init__(self)
         self.filename = filename
-        self.cfg = zenpacklib.load_yaml(filename, verbose=verbose)
+        self.cfg = zenpacklib.load_yaml(filename, verbose=verbose, level=level)
         self.yaml = load_yaml_single(filename, useLoader=False)
         self.zp = self.cfg.zenpack_module
         self.schema = self.zp.schema
@@ -68,6 +68,17 @@ class ZPLTestHarness(ZenScriptBase):
         self.build_cfg_relations()
         self.exported_yaml = yaml.dump(self.cfg, Dumper=Dumper)
         self.reloaded_yaml = load_yaml_single(self.exported_yaml, useLoader=False)
+
+    def zenpack_installed(self):
+        '''Return True if ZenPack is installed'''
+        self.connect()
+        try:
+            zenpack = self.dmd.ZenPackManager.packs._getOb(self.cfg.name)
+        except AttributeError:
+            zenpack = None
+        if zenpack:
+            return True
+        return False
 
     def build_ob(self, cls_name, inst=0):
         '''build an instance object from schema class'''

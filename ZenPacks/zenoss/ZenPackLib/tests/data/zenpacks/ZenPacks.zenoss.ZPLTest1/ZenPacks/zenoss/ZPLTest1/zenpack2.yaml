@@ -292,7 +292,7 @@ classes:
         label_width: 85
         content_width: 160
         renderer: Zenoss.render.default_uid_renderer
-        order: 4.1
+        order: 1
         api_only: true
         api_backendtype: method
       vsphere_dvportgroup_ids:
@@ -300,7 +300,7 @@ classes:
         label: VMware vSphere dvPortgroup IDs
         index_type: keyword
         grid_display: false
-        order: 4.2
+        order: 2
     impacts: [fvAp, impacts_fvAEPgs, impacts_vnsGraphInsts]
     impacted_by: [fvBD, impacted_by_fvAEPgs, impacted_by_vnsGraphInsts, vsphere_dvportgroups,
       vsphere_vms, devices]
@@ -332,14 +332,14 @@ classes:
     plural_label: Contracts Consumed
     short_label: Consumes
     plural_short_label: Consumes
-    order: 14.2
+    order: 14
   FvRsProv:
     meta_type: ZPLTest1ContractProvided
     label: Contract Provided
     plural_label: Contracts Provided
     short_label: Provides
     plural_short_label: Provides
-    order: 14.1
+    order: 13
   FvTenant:
     meta_type: ZPLTest1Tenant
     label: Tenant
@@ -354,15 +354,15 @@ classes:
     properties:
       layer:
         label: Layer
-        order: 4.3
+        order: 3
       portT:
         label: Port Type
-        order: 4.2
+        order: 2
       speed:
         type: int
         label: Speed
         renderer: Zenoss.render.ZPLTest1_linkSpeed
-        order: 4.1
+        order: 1
     monitoring_templates: [L1PhysIf, Health]
   ManagedObject:
     base: [zenpacklib.Component]
@@ -370,16 +370,16 @@ classes:
       apic_classname:
         label: ACI Object Class
         grid_display: false
-        order: 4.93
+        order: 93
       apic_dn:
         label: ACI Distinguished Name (DN)
         index_type: field
         grid_display: false
-        order: 4.91
+        order: 91
       apic_health_dn:
         label: ACI Health Distinguished Name (DN)
         grid_display: false
-        order: 4.92
+        order: 92
   VnsCDev:
     meta_type: ZPLTest1VnsCDev
     label: Service Device
@@ -389,20 +389,20 @@ classes:
         label: Management Address
         index_type: field
         grid_display: false
-        order: 4.4
+        order: 4
       cmgmt_port:
         label: Management Port
         grid_display: false
-        order: 4.5
+        order: 5
       devCtxLbl:
         label: Context Label
-        order: 4.1
+        order: 1
       vcenterName:
         label: vCenter Name
-        order: 4.3
+        order: 3
       vmName:
         label: VM Name
-        order: 4.2
+        order: 2
     impacts: [vnsLDevVip]
     impacted_by: [cmgmt_devices]
     monitoring_templates: [Health]
@@ -416,7 +416,7 @@ classes:
         label: Graph DN
         label_width: 55
         content_width: 230
-        order: 4.1
+        order: 1
     impacts: [impacts_fvAEPgs]
     impacted_by: [impacted_by_fvAEPgs, vnsNodeInsts]
   VnsLDevVip:
@@ -428,27 +428,27 @@ classes:
         label: Management Address
         index_type: field
         grid_display: false
-        order: 4.6
+        order: 6
       cmgmt_port:
         label: Management Port
         grid_display: false
-        order: 4.7
+        order: 7
       contextAware:
         label: Context Aware
-        order: 4.3
+        order: 3
       devtype:
         label: Device Type
-        order: 4.1
+        order: 1
       funcType:
         label: Function Type
         grid_display: false
-        order: 4.5
+        order: 5
       mgmtType:
         label: Management Type
-        order: 4.2
+        order: 2
       mode:
         label: Mode
-        order: 4.4
+        order: 4
     impacts: [vnsNodeInsts]
     impacted_by: [vnsCDevs]
   VnsNodeInst:
@@ -459,12 +459,12 @@ classes:
     properties:
       funcType:
         label: Function Type
-        order: 4.1
+        order: 1
       lbvserver_name:
         label: Load Balancer Virtual Server Name
         index_type: field
         grid_display: false
-        order: 4.9
+        order: 9
     impacts: [vnsGraphInst]
     impacted_by: [vnsLDevVip, netscaler_virtual_servers]
   VzBrCP:
