@@ -24,6 +24,7 @@ Release 2.0.1
 Fixes
 
 * Ensure all datapoint attributes export to YAML (ZEN-26593)
+* Ensure subsquent installations complete if ZP install fails (ZPS-627)
 
 
 Release 2.0.0
