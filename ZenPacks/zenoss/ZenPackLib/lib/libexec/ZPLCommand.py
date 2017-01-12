@@ -122,7 +122,10 @@ class ZPLCommand(ZenScriptBase):
         '''Determine if ZenPack is valid'''
         self.connect()
         self.app = self.dmd
-        zenpack = self.dmd.ZenPackManager.packs._getOb(self.options.zenpack)
+        try:
+            zenpack = self.dmd.ZenPackManager.packs._getOb(self.options.zenpack)
+        except AttributeError:
+            zenpack = None
         if zenpack is None:
             return False
         return True

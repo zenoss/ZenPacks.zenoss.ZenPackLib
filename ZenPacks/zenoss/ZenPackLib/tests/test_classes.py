@@ -43,13 +43,17 @@ class TestClasses(BaseTestCase):
     def test_ZP(self):
         for file in self.files:
             try:
-                zp = ZPLTestHarness(file)
-                self.assertTrue(zp.check_properties(), "Property testing failed for {}".format(zp.filename))
-                self.assertTrue(zp.check_cfg_relations(), "Relation testing failed for {}".format(zp.filename))
-                self.assertTrue(zp.check_templates_vs_yaml(), "Template (YAML) testing failed for {}".format(zp.filename))
-                self.assertTrue(zp.check_templates_vs_specs(), "Template (Spec) testing failed for {}".format(zp.filename))
+                zp = ZPLTestHarness(file, verbose=True, level=40)
+                # only run if target ZP is installed
+                if zp.zenpack_installed():
+                    self.assertTrue(zp.check_properties(), "Property testing failed for {}".format(zp.filename))
+                    self.assertTrue(zp.check_cfg_relations(), "Relation testing failed for {}".format(zp.filename))
+                    self.assertTrue(zp.check_templates_vs_yaml(), "Template (YAML) testing failed for {}".format(zp.filename))
+                    self.assertTrue(zp.check_templates_vs_specs(), "Template (Spec) testing failed for {}".format(zp.filename))
+                else:
+                    print '\nSkipping test_zp since {} not installed'.format(zp.cfg.name)
             except Exception as e:
-                print 'Skipping test {} ({})'.format(file, e)
+                print '\nSkipping test_zp {} ({})'.format(file, e)
 
 
 def test_suite():

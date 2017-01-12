@@ -32,7 +32,7 @@ zProperties:
 
 
 class_relationships:
-  - ZenPacks.zenoss.Microsoft.Windows.OperatingSystem.OperatingSystem(winrmservices) 1:MC (os)WinService
+  - ZenPacks.zenoss.Microsoft.Windows.OperatingSystem.OperatingSystem(winrmservices) 1:MC (os)ZenPacks.zenoss.Microsoft.Windows.WinService.WinService
   - ZenPacks.zenoss.Microsoft.Windows.OperatingSystem.OperatingSystem(winrmiis) 1:MC (os)WinIIS
   - ZenPacks.zenoss.Microsoft.Windows.OperatingSystem.OperatingSystem(winsqlinstances) 1:MC (os)WinSQLInstance
   - ZenPacks.zenoss.Microsoft.Windows.OperatingSystem.OperatingSystem(clusterservices) 1:MC (os)ClusterService

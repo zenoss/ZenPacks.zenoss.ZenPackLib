@@ -26,7 +26,7 @@ from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 
 YAML_DOC = """
-name: ZenPacks.test.usePowershell
+name: ZenPacks.zenoss.Microsoft.Windows
 
 device_classes:
   /Server/Microsoft:
@@ -45,24 +45,15 @@ device_classes:
             parser: Auto
 """
 
-def win_shell_installed():
-    """Return True if ShellDataSource is installed"""
-    try:
-        from ZenPacks.zenoss.Microsoft.Windows.datasources.ShellDataSource import ShellDataSource
-    except ImportError:
-        pass
-    else:
-        return True
-    return False
 
-class TestZen25315(BaseTestCase):
+class TestUsePowershellDatasource(BaseTestCase):
     """
     "usePowershell" datasource option ignored in zenpacklib created ZenPacks (ZEN-25315)
     """
 
     def test_datasource_boolean(self):
-        if win_shell_installed():
-            z = ZPLTestHarness(YAML_DOC)
+        z = ZPLTestHarness(YAML_DOC)
+        if z.zenpack_installed():
             z.connect()
             # check properties on dummy template
             dcs = z.cfg.device_classes.get('/Server/Microsoft')
@@ -74,14 +65,15 @@ class TestZen25315(BaseTestCase):
                     'Datasource property (usePowershell) should be bool, got {}'.format(type(ds.usePowershell)))
             self.assertEquals(ds.usePowershell, False,
                     'Datasource property (usePowershell) should be False, got {}'.format(ds.usePowershell))
-
+        else:
+            print '\nSkipping test_integer_threshold since ZenPacks.zenoss.Microsoft.Windows not installed.'
 
 
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen25315))
+    suite.addTest(makeSuite(TestUsePowershellDatasource))
     return suite
 
 if __name__ == "__main__":

@@ -25,17 +25,8 @@ from Products.ZenTestCase.BaseTestCase import BaseTestCase
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
-def vsphere_installed():
-    """Return True if vSphere is installed"""
-    try:
-        from ZenPacks.zenoss.vSphere.Datacenter import Datacenter
-    except ImportError:
-        pass
-    else:
-        return True
-    return False
 
-YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
+YAML_DOC = """name: ZenPacks.zenoss.vSphere
 class_relationships:
   - Endpoint 1:MC Datacenter
   - Endpoint 1:MC Folder
@@ -998,8 +989,8 @@ class TestSubComponentNavJS(BaseTestCase):
 
     def test_nav_js(self):
         ''''''
-        if not vsphere_installed():
-            z = ZPLTestHarness(YAML_DOC)
+        z = ZPLTestHarness(YAML_DOC)
+        if z.zenpack_installed():
             cls = z.cfg.classes.get('ResourcePool')
             self.assertEquals(cls.subcomponent_nav_js_snippet,
                               expected_rp,
@@ -1010,7 +1001,7 @@ class TestSubComponentNavJS(BaseTestCase):
                               expected_va,
                               'Unexpected subcomponent_nav_js_snippet for ResourcePool')
         else:
-            print "TestSubComponentNavJS cannot run if ZenPacks.zenoss.vSphere is installed"
+            print "\nSkipping TestSubComponentNavJS since ZenPacks.zenoss.vSphere not installed"
 
 def test_suite():
     """Return test suite for this module."""
