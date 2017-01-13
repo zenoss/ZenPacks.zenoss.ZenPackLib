@@ -533,11 +533,10 @@ class ZPLCommand(ZenScriptBase):
 
         processclasses = collections.defaultdict(dict)
         for processclassorg in [x for x in zenpack.packables() if x.meta_type == 'OSProcessOrganizer']:
-            pc_name = "/".join(processclassorg.getPrimaryUrlPath().split('/')[4:])
-            processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(processclassorg, remove=True)
+            pc_name = processclassorg.getDmdKey()
+            processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(processclassorg)
             for subclass in processclassorg.getSubOrganizers():
-                pc_name = "/".join(subclass.getPrimaryUrlPath().split('/')[4:])
-                # Remove = false because the removing the parent will remove the child # This is a performance optimization
-                processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(subclass, remove=False)
+                pc_name = subclass.getDmdKey()
+                processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(subclass)
 
         return processclasses
