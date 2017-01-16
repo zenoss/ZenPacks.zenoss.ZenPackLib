@@ -28,9 +28,12 @@ LOG = logging.getLogger('zen.zenpacklib.tests')
 
 
 from ZenPacks.zenoss.ZenPackLib.tests.BaseTestCommand import BaseTestCommand
-
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 from ZenPacks.zenoss.ZenPackLib.tests.test_install import TestInstall, get_cmd_output
 
+YAML_DOC = '''
+name: ZenPacks.zenoss.DnsMonitor
+'''
 
 class TestCommands(BaseTestCommand):
 
@@ -52,13 +55,12 @@ class TestCommands(BaseTestCommand):
     def test_smoke_lint(self):
         self._smoke_command("--lint", self.yaml_path)
 
-    # Can't be tested with ZPLTest1, because that is already using YAML.
-    # Need to build another small zenpack if we want to do that.
-    # def test_smoke_py_to_yaml(self):
-    #     self._smoke_command("py_to_yaml", self.zenpack_name)
-
     def test_smoke_dump_templates(self):
-        self._smoke_command("--dump-templates", 'ZenPacks.zenoss.DnsMonitor')
+        z = ZPLTestHarness(YAML_DOC)
+        if z.zenpack_installed():
+            self._smoke_command("--dump-templates", 'ZenPacks.zenoss.DnsMonitor')
+        else:
+            print '\nSkipping test_smoke_dump_templates since ZenPacks.zenoss.DnsMonitor not installed.'
 
     def test_smoke_class_diagram(self):
         self._smoke_command("--diagram", self.yaml_path)

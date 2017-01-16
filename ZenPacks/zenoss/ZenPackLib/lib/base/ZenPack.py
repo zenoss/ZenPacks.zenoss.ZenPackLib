@@ -64,9 +64,15 @@ class ZenPack(ZenPackBase):
         for dcname, dcspec in self.device_classes.iteritems():
             if dcspec.create:
                 dcObject = self.create_device_class(app, dcspec)
-
+            else:
+                try:
+                    dcObject = self.dmd.Devices.getOrganizer(dcspec.path)
+                except KeyError:
+                    self.LOG.warn('Device Class ({}) not found'.format(dcspec.path))
+                    dcObject = None
             # if device class has description and protocol, register a devtype
-            if dcspec.description and dcspec.protocol:
+
+            if dcObject and dcspec.description and dcspec.protocol:
                 try:
                     if (dcspec.description, dcspec.protocol) not in dcObject.devtypes:
                         self.LOG.info('Registering devtype for {}: {} ({})'.format(dcObject,
@@ -162,6 +168,15 @@ class ZenPack(ZenPackBase):
 
                     # back up the template
                     backup_name = "{}-backup".format(orig_mtname)
+                    # delete the template if it already exists
+                    # this could occur if zenpack installation fails and is reattempted
+                    try:
+                        backup_template = deviceclass.rrdTemplates._getOb(backup_name)
+                        if backup_template:
+                            backup_template.getPrimaryParent()._delObject(backup_template.id)
+                    except AttributeError:
+                        pass
+
                     deviceclass.rrdTemplates.manage_renameObject(template.id, backup_name)
         else:
             dc = app.Devices
