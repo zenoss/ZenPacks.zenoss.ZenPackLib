@@ -122,7 +122,10 @@ class ZPLCommand(ZenScriptBase):
         '''Determine if ZenPack is valid'''
         self.connect()
         self.app = self.dmd
-        zenpack = self.dmd.ZenPackManager.packs._getOb(self.options.zenpack)
+        try:
+            zenpack = self.dmd.ZenPackManager.packs._getOb(self.options.zenpack)
+        except AttributeError:
+            zenpack = None
         if zenpack is None:
             return False
         return True
@@ -491,26 +494,23 @@ class ZPLCommand(ZenScriptBase):
 
         eventclasses = collections.defaultdict(dict)
         for eventclass in [x for x in zenpack.packables() if x.meta_type == 'EventClass']:
-            ec_name = "/" + "/".join(eventclass.getPrimaryPath()[4:])
+            ec_name = eventclass.getDmdKey()
             eventclasses[ec_name] = EventClassSpecParams.fromObject(eventclass, remove=True)
             for subclass in eventclass.getSubEventClasses():
-                ec_name = "/" + "/".join(subclass.getPrimaryUrlPath().split('/')[4:])
                 # Remove = false because the removing the parent will remove the child # This is a performance optimization
                 eventclasses[ec_name] = EventClassSpecParams.fromObject(subclass, remove=False)
 
-        for eventclassinst in [x for x in zenpack.packables() if x.meta_type == 'EventClassInst']:
-            eventclass = eventclassinst.eventClass()
-            ec_name = "/" + "/".join(eventclass.getPrimaryPath()[4:])
+        # get list of instances associated with event classes not already seen
+        instances = [x for x in zenpack.packables() if x.meta_type == 'EventClassInst' and x.eventClass().getDmdKey() not in eventclasses]
+        # list of unique event classes
+        inst_evs = list({x.eventClass() for x in instances})
 
-            # Do not create/remove the eventclasses as we do not own them
-            eventclassspec = eventclasses.get(ec_name, EventClassSpecParams.new(ec_name, remove=False))
-            if eventclassinst.id in eventclassspec.mappings:
-                # we have already gotten this instance and we don't need a duplicate
-                continue
-            else:
-                # This zenpack owns this mapping, lets make sure to remove it when we are done.
-                eventclassspec.mappings[eventclassinst.id] = EventClassMappingSpecParams.fromObject(eventclassinst, remove=True)
-            eventclasses[ec_name] = eventclassspec
+        for ev in inst_evs:
+            ec_name = ev.getDmdKey()
+            ev_spec = EventClassSpecParams.new(ec_name, remove=False)
+            ev_instances = [x for x in ev.instances() if x in zenpack.packables()]
+            ev_spec.mappings = { x.id: EventClassMappingSpecParams.fromObject(x, remove=True) for x in ev_instances }
+            eventclasses[ec_name] = ev_spec
 
         return eventclasses
 
@@ -533,11 +533,10 @@ class ZPLCommand(ZenScriptBase):
 
         processclasses = collections.defaultdict(dict)
         for processclassorg in [x for x in zenpack.packables() if x.meta_type == 'OSProcessOrganizer']:
-            pc_name = "/".join(processclassorg.getPrimaryUrlPath().split('/')[4:])
-            processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(processclassorg, remove=True)
+            pc_name = processclassorg.getDmdKey()
+            processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(processclassorg)
             for subclass in processclassorg.getSubOrganizers():
-                pc_name = "/".join(subclass.getPrimaryUrlPath().split('/')[4:])
-                # Remove = false because the removing the parent will remove the child # This is a performance optimization
-                processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(subclass, remove=False)
+                pc_name = subclass.getDmdKey()
+                processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(subclass)
 
         return processclasses

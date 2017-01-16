@@ -107,7 +107,7 @@ class Dumper(yaml.Dumper):
         """
         from ..spec.RRDDatapointSpec import RRDDatapointSpec
         cls = obj.__class__
-        if isinstance(obj, RRDDatapointSpec) and obj.shorthand:
+        if isinstance(obj, RRDDatapointSpec) and obj.shorthand and obj.use_shorthand():
             # Special case- we allow for a shorthand in specifying datapoints
             # as specs as strings rather than explicitly as a map.
             return self.represent_str(str(obj.shorthand))

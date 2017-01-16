@@ -24,18 +24,8 @@ from Products.ZenTestCase.BaseTestCase import BaseTestCase
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
-def duration_installed():
-    '''Return True if Duration Threshold is installed'''
-    try:
-        from ZenPacks.zenoss.DurationThreshold.thresholds.DurationThreshold import DurationThreshold
-    except ImportError:
-        pass
-    else:
-        return True
-    return False
-
 YAML_DOC = """
-name: ZenPacks.community.TestDEFAULSonDatasource
+name: ZenPacks.zenoss.DurationThreshold
 device_classes:
   /Device:
     templates:
@@ -56,15 +46,15 @@ device_classes:
 """
 
 
-class TestZen24079(BaseTestCase):
+class TestDurationThresholdInteger(BaseTestCase):
     """Test fix for ZEN-24079
 
        Duration threshold has a problem where you cant set the violationPercent as integer
     """
 
     def test_integer_threshold(self):
-        if duration_installed():
-            z = ZPLTestHarness(YAML_DOC)
+        z = ZPLTestHarness(YAML_DOC)
+        if z.zenpack_installed():
             z.connect()
             self.assertTrue(z.check_templates_vs_yaml(), "Template objects do not match YAML")
             self.assertTrue(z.check_templates_vs_specs(), "Template objects do not match Spec")
@@ -75,14 +65,15 @@ class TestZen24079(BaseTestCase):
             for th in t.thresholds():
                 self.assertTrue(isinstance(th.violationPercentage, int),
                     'DurationThreshold property (violationPercentage) should be int, got {}'.format(type(th.violationPercentage)))
-
+        else:
+            print '\nSkipping test_integer_threshold since ZenPacks.zenoss.DurationThreshold not installed.'
 
 
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen24079))
+    suite.addTest(makeSuite(TestDurationThresholdInteger))
     return suite
 
 if __name__ == "__main__":
