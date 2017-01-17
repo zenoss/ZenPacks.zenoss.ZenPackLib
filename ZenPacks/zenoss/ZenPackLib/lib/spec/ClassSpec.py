@@ -219,6 +219,7 @@ class ClassSpec(Spec):
         self.zenpack = zenpack
         self.name = name
         self.symbol_name = get_symbol_name(self.zenpack.name, self.name)
+        self.schema_name = get_symbol_name(self.zenpack.name, 'schema')
 
         # Verify that bases is a tuple of base types.
         if isinstance(base, (tuple, list, set)):
@@ -768,7 +769,7 @@ class ClassSpec(Spec):
 
         attributes['LOG'] = self.LOG
         return self.create_schema_class(
-            get_symbol_name(self.zenpack.name, 'schema'),
+            self.schema_name,
             self.name,
             self.resolved_bases,
             attributes)
@@ -784,7 +785,7 @@ class ClassSpec(Spec):
     def create_model_class(self):
         """Create and return model class."""
         return self.create_stub_class(
-            get_symbol_name(self.zenpack.name, self.name),
+            self.symbol_name,
             self.model_schema_class,
             self.name)
 
@@ -825,7 +826,7 @@ class ClassSpec(Spec):
             attributes.update(spec.iinfo_schemas)
 
         return self.create_schema_class(
-            get_symbol_name(self.zenpack.name, 'schema'),
+            self.schema_name,
             'I{}Info'.format(self.name),
             tuple(bases),
             attributes)
@@ -840,7 +841,7 @@ class ClassSpec(Spec):
     def create_iinfo_class(self):
         """Create and return I<Info>Info class."""
         return self.create_stub_class(
-            get_symbol_name(self.zenpack.name, self.name),
+            self.symbol_name,
             self.iinfo_schema_class,
             'I{}Info'.format(self.name))
 
@@ -889,7 +890,7 @@ class ClassSpec(Spec):
         attributes['dataPointsToFetch'] = self.datapoints_to_fetch
 
         return self.create_schema_class(
-            get_symbol_name(self.zenpack.name, 'schema'),
+            self.schema_name,
             '{}Info'.format(self.name),
             tuple(bases),
             attributes)
@@ -904,7 +905,7 @@ class ClassSpec(Spec):
     def create_info_class(self):
         """Create and return Info subclass."""
         info_class = self.create_stub_class(
-            get_symbol_name(self.zenpack.name, self.name),
+            self.symbol_name,
             self.info_schema_class,
             '{}Info'.format(self.name))
         classImplements(info_class, self.iinfo_class)
@@ -940,8 +941,8 @@ class ClassSpec(Spec):
         attributes['zenpack_id_prefix'] = self.zenpack.id_prefix
 
         formbuilder = self.create_class(
-            get_symbol_name(self.zenpack.name, self.name),
-            get_symbol_name(self.zenpack.name, 'schema'),
+            self.symbol_name,
+            self.schema_name,
             '{}FormBuilder'.format(self.name),
             tuple(bases),
             attributes)
