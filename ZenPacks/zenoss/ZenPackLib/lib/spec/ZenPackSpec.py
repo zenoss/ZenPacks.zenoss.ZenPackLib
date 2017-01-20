@@ -108,6 +108,7 @@ class ZenPackSpec(Spec):
             process_class_organizers=None,
             link_providers=None,
             _source_location=None,
+            installing=True,
             zplog=None):
         """
             Create a ZenPack Specification
@@ -168,17 +169,18 @@ class ZenPackSpec(Spec):
         # update relations on imported classes
         self.plumb_relations()
 
-        # Device Classes
-        self.device_classes = self.specs_from_param(
-            DeviceClassSpec, 'device_classes', device_classes, zplog=self.LOG)
+        if installing:
+            # Device Classes
+            self.device_classes = self.specs_from_param(
+                DeviceClassSpec, 'device_classes', device_classes, zplog=self.LOG)
 
-        # Event Classes
-        self.event_classes = self.specs_from_param(
-            EventClassSpec, 'event_classes', event_classes)
+            # Event Classes
+            self.event_classes = self.specs_from_param(
+                EventClassSpec, 'event_classes', event_classes)
 
-        # Process Classes
-        self.process_class_organizers = self.specs_from_param(
-            ProcessClassOrganizerSpec, 'process_class_organizers', process_class_organizers)
+            # Process Classes
+            self.process_class_organizers = self.specs_from_param(
+                ProcessClassOrganizerSpec, 'process_class_organizers', process_class_organizers)
 
         # Link Providers
         self.link_providers = self.specs_from_param(
@@ -195,7 +197,8 @@ class ZenPackSpec(Spec):
             device_classes=device_classes,
             event_classes=event_classes,
             process_class_organizers=process_class_organizers,
-            zplog=self.LOG)
+            zplog=self.LOG,
+            installing=installing)
 
     def plumb_properties(self):
         """

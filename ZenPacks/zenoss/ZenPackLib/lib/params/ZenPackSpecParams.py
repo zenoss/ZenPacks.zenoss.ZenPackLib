@@ -24,6 +24,7 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
                  device_classes=None,
                  event_classes=None,
                  process_class_organizers=None,
+                 installing=True,
                  **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
@@ -36,11 +37,12 @@ class ZenPackSpecParams(SpecParams, ZenPackSpec):
 
         self.class_relationships = class_relationships
 
-        self.device_classes = self.specs_from_param(
-            DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True, zplog=self.LOG)
+        if installing:
+            self.device_classes = self.specs_from_param(
+                DeviceClassSpecParams, 'device_classes', device_classes, leave_defaults=True, zplog=self.LOG)
 
-        self.event_classes = self.specs_from_param(
-            EventClassSpecParams, 'event_classes', event_classes, leave_defaults=True, zplog=self.LOG)
+            self.event_classes = self.specs_from_param(
+                EventClassSpecParams, 'event_classes', event_classes, leave_defaults=True, zplog=self.LOG)
 
-        self.process_class_organizers = self.specs_from_param(
-            ProcessClassOrganizerSpecParams, 'process_class_organizers', process_class_organizers, leave_defaults=True, zplog=self.LOG)
+            self.process_class_organizers = self.specs_from_param(
+                ProcessClassOrganizerSpecParams, 'process_class_organizers', process_class_organizers, leave_defaults=True, zplog=self.LOG)
