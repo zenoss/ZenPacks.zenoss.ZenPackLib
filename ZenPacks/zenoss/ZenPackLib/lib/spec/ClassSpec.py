@@ -18,8 +18,9 @@ from Products.ZenRelations.RelSchema import ToMany, ToManyCont
 from Products.Zuul.form import schema
 from Products.Zuul.form.interfaces import IFormBuilder
 from Products.Zuul.infos import InfoBase, ProxyProperty
-from Products.Zuul.interfaces import IInfo
-from Products.ZenModel.interfaces import IExpandedLinkProvider
+from Products.Zuul.interfaces import IInfo, IFacade
+from Products.Zuul.facades import ZuulFacade
+from Products.ZenUtils.Ext import DirectRouter, DirectResponse
 
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
 from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
@@ -27,16 +28,13 @@ from ..utils import impact_installed, dynamicview_installed, has_metricfacade, F
 from ..gsm import get_gsm
 from ..functions import pluralize, get_symbol_name, relname_from_classname, \
     get_zenpack_path, ordered_values
+from ..resources.templates import CREATE_METHOD, FACADE_ADD_METHOD, IFACADE_ADD_METHOD, \
+    ROUTER_GETFACADE, ROUTER_ADD_METHOD, ADD_COMPONENT_JS
 
+from Products.ZenModel.Device import Device as BaseDevice
 from ..base.Component import Component, HWComponent, Service
 from ..base.Device import Device
 from ..zuul import schema_map
-
-from .Spec import Spec, DeviceInfoStatusProperty, \
-    RelationshipInfoProperty, RelationshipGetter, RelationshipSetter
-from .ClassPropertySpec import ClassPropertySpec
-from .ClassRelationshipSpec import ClassRelationshipSpec
-from .ImpactTriggerSpec import ImpactTriggerSpec
 
 DYNAMICVIEW_INSTALLED = dynamicview_installed()
 if DYNAMICVIEW_INSTALLED:
@@ -49,6 +47,12 @@ if IMPACT_INSTALLED:
     from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipDataProvider, INodeTriggers
     from ..impact import ImpactRelationshipDataProvider
     from ..base.BaseTriggers import BaseTriggers
+
+from .Spec import Spec, DeviceInfoStatusProperty, \
+    RelationshipInfoProperty, RelationshipGetter, RelationshipSetter
+from .ClassPropertySpec import ClassPropertySpec
+from .ClassRelationshipSpec import ClassRelationshipSpec
+from .ImpactTriggerSpec import ImpactTriggerSpec
 
 HAS_METRICFACADE = has_metricfacade()
 
@@ -107,6 +111,9 @@ class ClassSpec(Spec):
     _info_schema_class = None
     _info_class = None
     _formbuilder_class = None
+    _facade_class = None
+    _ifacade_class = None
+    _router_class = None
     _icon_url = None
     _datapoints_to_fetch = None
     _plumbed = False
@@ -142,6 +149,7 @@ class ClassSpec(Spec):
             dynamicview_weight=None,
             dynamicview_relations=None,
             extra_paths=None,
+            allow_user_creation=False,
             _source_location=None,
             zplog=None
             ):
@@ -211,7 +219,8 @@ class ClassSpec(Spec):
             :type dynamicview_relations: dict
             :param extra_paths: TODO
             :type extra_paths: list(ExtraPath)
-
+            :param allow_user_creation: Whether or not this component can be added manually via GUI
+            :type allow_user_creation: bool
         """
         super(ClassSpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -259,6 +268,7 @@ class ClassSpec(Spec):
         # Properties.
         self.properties = self.specs_from_param(
             ClassPropertySpec, 'properties', properties, zplog=self.LOG)
+
 
         self.normalize_child_order(self.properties.values())
 
@@ -363,6 +373,8 @@ class ClassSpec(Spec):
     def scaled_order(self):
         return self.scale_order(scale=1, offset=5)
 
+        self.allow_user_creation = allow_user_creation
+
     def check_ancestor_properties(self, spec_name):
         """Update any inheritable properties from ancestor"""
         base_spec = self.zenpack.classes.get(spec_name)
@@ -392,7 +404,7 @@ class ClassSpec(Spec):
 
     def plumb_class_relations(self):
         """
-            Plumb class relations and update
+            Plumb class relations and update 
             remote class _v_local_relations/_relations
             as well as updating NEW_RELATIONS and NEW_COMPONENT_TYPES
         """
@@ -402,7 +414,7 @@ class ClassSpec(Spec):
                 # this happens if the ClassSpec sets display properties for a nonexistent relation
                 if not relationship.schema:
                     self.LOG.error("Removing invalid display config for relationship {} from  {}.{}".format(
-                        relname, self.zenpack.name, self.name))
+                                relname, self.zenpack.name, self.name))
                     self.relationships.pop(relname)
                     continue
                 relationship.plumb()
@@ -414,7 +426,7 @@ class ClassSpec(Spec):
             rel_spec.update_inherited_params()
 
     def update_child_relations(self, relname):
-        """ Update relationships with any that
+        """ Update relationships with any that 
             should be inherited from base classes
         """
         # process descendants first
@@ -661,8 +673,8 @@ class ClassSpec(Spec):
                 'weight': self.dynamicview_weight,
                 'type': self.zenpack.name,
                 'icon': self.icon_url,
-            },
-        }
+                },
+            }
 
         properties = []
         relations = []
@@ -759,9 +771,6 @@ class ClassSpec(Spec):
         attributes['impact_triggers'] = [t.get_trigger() for t in self.impact_triggers.values()]
 
         attributes['dynamicview_relations'] = self.dynamicview_relations
-
-        # Add link provider
-        attributes['link_providers'] = self.zenpack.link_providers
 
         # And facet patterns.
         if self.path_pattern_streams:
@@ -951,12 +960,147 @@ class ClassSpec(Spec):
 
         return formbuilder
 
+    @property
+    def facade_class(self):
+        """Return Facade class."""
+        if not self._facade_class:
+            self._facade_class = self.create_facade_class()
+        return self._facade_class
+
+    def create_facade_class(self):
+        """Create and return Facade class."""
+        bases = (ZuulFacade,)
+        attributes = {}
+        facade_method_name = 'add{}'.format(self.name)
+        facade_method_text = FACADE_ADD_METHOD.format(method_name=facade_method_name,
+                                class_name=self.name,
+                                class_label=self.label)
+
+        attributes[facade_method_name] = self.object_from_string(facade_method_name, facade_method_text)
+        facade = self.create_class(
+            get_symbol_name(self.zenpack.name, self.name),
+            get_symbol_name(self.zenpack.name, 'schema'),
+            '{}Facade'.format(self.name),
+            tuple(bases),
+            attributes)
+        classImplements(facade, self.ifacade_class)
+        return facade
+
+    @property
+    def ifacade_class(self):
+        """Return Facade class."""
+        if not self._ifacade_class:
+            self._ifacade_class = self.create_ifacade_class()
+        return self._ifacade_class
+
+    def create_ifacade_class(self):
+        """Create and return I<Info>Info class."""
+        bases = (IFacade,)
+        attributes = {}
+        facade_method_name = 'add{}'.format(self.name)
+        facade_method_text = IFACADE_ADD_METHOD.format(method_name=facade_method_name)
+        attributes[facade_method_name] = self.object_from_string(facade_method_name, facade_method_text)
+
+        return self.create_class(
+            get_symbol_name(self.zenpack.name, self.name),
+            get_symbol_name(self.zenpack.name, 'schema'),
+            'I{}Facade'.format(self.name),
+            tuple(bases),
+            attributes)
+
+    @property
+    def router_class(self):
+        """Return Router class."""
+        if not self._router_class:
+            self._router_class = self.create_router_class()
+        return self._router_class
+
+    def create_router_class(self):
+        """Create and return Router class."""
+        bases = (DirectRouter,)
+
+        attributes = {}
+
+        adapter_name = '{}adapter'.format(self.name)
+        router_get_text = ROUTER_GETFACADE.format(adapter_name=adapter_name)
+        attributes['_getFacade'] = self.object_from_string('_getFacade', router_get_text)
+
+        router_method_name = 'add{}Router'.format(self.name)
+        facade_method_name = 'add{}'.format(self.name)
+        router_method_text = ROUTER_ADD_METHOD.format(method_name=router_method_name,
+                                                  facade_method_name=facade_method_name)
+
+        attributes[router_method_name] = self.object_from_string(router_method_name, router_method_text)
+
+        router = self.create_class(
+            get_symbol_name(self.zenpack.name, self.name),
+            get_symbol_name(self.zenpack.name, 'schema'),
+            '{}Router'.format(self.name),
+            tuple(bases),
+            attributes)
+        # classImplements(router, IFacade)
+        return router
+
     def create_registered(self):
         GSM.registerAdapter(self.info_class, (self.model_class,), self.iinfo_class)
         if self.is_a_component:
             GSM.registerAdapter(self.formbuilder_class, (self.info_class,), IFormBuilder)
+            self.register_user_addable()
         self.register_dynamicview_adapters()
         self.register_impact_adapters()
+
+    def register_user_addable(self):
+        """"""
+        if not self.allow_user_creation:
+            return
+        relname, parent_class = self.get_parent_class_and_relname()
+        if not parent_class:
+            return
+        create_method_name = 'manage_add{}'.format(self.name)
+        create_method_text = CREATE_METHOD.format(method_name=create_method_name,
+                                                  zenpack_name=self.zenpack.name,
+                                                  class_name=self.name,
+                                                  relation=relname)
+        # print create_method_text
+        setattr(parent_class, create_method_name,
+                self.object_from_string(create_method_name, create_method_text))
+        GSM.registerAdapter(self.facade_class, (parent_class,), self.ifacade_class, self.adapter_name)
+
+    @property
+    def adapter_name(self):
+        return '{}adapter'.format(self.name)
+
+    @property
+    def router_name(self):
+        return '{}_router'.format(self.name)
+
+    @property
+    def add_component_js(self):
+        return ADD_COMPONENT_JS.format(label=self.label,
+                                       class_name=self.name,
+                                       properties=self.js_add_fields,
+                                       zenpack_name=self.zenpack.name,
+                                       router_class=self.router_class.__name__,
+                                       router_method='add{}Router'.format(self.name))
+
+    def get_editable(self):
+        editables = []
+        for name, prop in self.properties.items():
+            if not prop.editable:
+                continue
+            editables.append(prop)
+        editables.sort(key=lambda x: x.order)
+        return editables
+
+    @property
+    def js_add_fields(self):
+        text = """[{items}{formatting}],"""
+        fields = []
+        for prop in self.get_editable():
+            fields.append(prop.js_add_fields)
+        format_str = ',\n{}'.format(' ' * 36)
+        return text.format(formatting=format_str,
+                           items=format_str.join([str(f) for f in fields]))
 
     def register_dynamicview_adapters(self):
         if not DYNAMICVIEW_INSTALLED:
@@ -1070,6 +1214,23 @@ class ClassSpec(Spec):
 
         return faceting_specs
 
+    def get_parent_class_and_relname(self):
+        """Return parent class and relname"""
+        for relname, relspec in self.relationships.items():
+            if not relspec.schema:
+                continue
+            if not issubclass(relspec.schema.remoteType, ToManyCont):
+                continue
+            # see if parent is another spec
+            if relspec.remote_class_spec and relspec.remote_class_spec.is_device:
+                return (relspec.schema.remoteName, relspec.remote_class_spec.model_class)
+            # if not check imported classes
+            else:
+                remote_class = self.zenpack.imported_classes.get(relspec.schema.remoteClass)
+                if remote_class and issubclass(remote_class, BaseDevice):
+                    return (relspec.schema.remoteName, remote_class)
+        return (None, None)
+
     @property
     def filterable_by(self):
         """Return meta_types by which this class can be filtered."""
@@ -1154,7 +1315,7 @@ class ClassSpec(Spec):
                 "sortable: true"
             ]
 
-            columns.append('{{{}}}'.format(',\n                       '.join(column_fields)))
+            columns.append('{{{}}}'.format(','.join(column_fields)))
 
         return columns
 
@@ -1184,36 +1345,36 @@ class ClassSpec(Spec):
 
         default_left_columns = [(
             "{"
-            "id: 'severity',\n"
-            "                       dataIndex: 'severity',\n"
-            "                       header: _t('Events'),\n"
-            "                       renderer: Zenoss.render.severity,\n"
-            "                       width: 50"
+            "id: 'severity',"
+            "dataIndex: 'severity',"
+            "header: _t('Events'),"
+            "renderer: Zenoss.render.severity,"
+            "width: 50"
             "}"
         ), (
             "{"
-            "id: 'name',\n"
-            "                       dataIndex: 'name',\n"
-            "                       header: _t('Name'),\n"
-            "                       renderer: Zenoss.render.zenpacklib_" + self.zenpack.id_prefix + "_entityLinkFromGrid"
+            "id: 'name',"
+            "dataIndex: 'name',"
+            "header: _t('Name'),"
+            "renderer: Zenoss.render.zenpacklib_" + self.zenpack.id_prefix + "_entityLinkFromGrid"
             "}"
         )]
 
         default_right_columns = [(
             "{"
-            "id: 'monitored',\n"
-            "                       dataIndex: 'monitored',\n"
-            "                       header: _t('Monitored'),\n"
-            "                       renderer: Zenoss.render.checkbox,\n"
-            "                       width: 70"
+            "id: 'monitored',"
+            "dataIndex: 'monitored',"
+            "header: _t('Monitored'),"
+            "renderer: Zenoss.render.checkbox,"
+            "width: 70"
             "}"
         ), (
             "{"
-            "id: 'locking',\n"
-            "                       dataIndex: 'locking',\n"
-            "                       header: _t('Locking'),\n"
-            "                       renderer: Zenoss.render.locking_icons,\n"
-            "                       width: 65"
+            "id: 'locking',"
+            "dataIndex: 'locking',"
+            "header: _t('Locking'),"
+            "renderer: Zenoss.render.locking_icons,"
+            "width: 65"
             "}"
         )]
 
@@ -1246,7 +1407,10 @@ class ClassSpec(Spec):
             "        config = Ext.applyIf(config||{{}}, {{\n"
             "            componentType: '{meta_type}',\n"
             "            autoExpandColumn: '{auto_expand_column}',\n"
-            "            sortInfo: {{field: '{initial_sort_column}', direction: 'ASC'}},\n"
+            "            sortInfo: {{\n"
+            "                        field: '{initial_sort_column}',\n"
+            "                        direction: 'ASC'\n"
+            "                       }}\n,"
             "            fields: [{fields}],\n"
             "            columns: [{columns}]\n"
             "        }});\n"
@@ -1260,11 +1424,11 @@ class ClassSpec(Spec):
                 zenpack_id_prefix=self.zenpack.id_prefix,
                 auto_expand_column=self.auto_expand_column,
                 initial_sort_column=self.initial_sort_column,
-                fields=',\n                     '.join(
+                fields=','.join(
                     default_fields +
                     self.containing_js_fields +
                     fields),
-                columns=',\n                      '.join(
+                columns=','.join(
                     default_left_columns +
                     self.containing_js_columns +
                     ordered_values(ordered_columns) +
