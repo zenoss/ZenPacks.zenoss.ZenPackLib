@@ -49,7 +49,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'ZenPack SDK'
-copyright = u'2015, Zenoss, Inc.'
+copyright = u'2015-2017, Zenoss, Inc.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -260,7 +260,7 @@ texinfo_documents = [
 epub_title = u'ZenPack SDK'
 epub_author = u'Zenoss, Inc.'
 epub_publisher = u'Zenoss, Inc.'
-epub_copyright = u'2015, Zenoss, Inc.'
+epub_copyright = u'2015-2017, Zenoss, Inc.'
 
 # The basename for the epub file. It defaults to the project name.
 #epub_basename = u'zenpacklib'
