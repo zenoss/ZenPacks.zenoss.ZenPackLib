@@ -23,7 +23,7 @@ the sensors on our NetBotz device.
 
 .. code-block:: bash
 
-    snmpwalk 127.0.1.113 NETBOTZV2-MIB::tempSensorValueStr
+    snmpwalk 172.17.0.1 NETBOTZV2-MIB::tempSensorValueStr
 
 This gives of the current temperature (in celsius) for each sensor::
 
@@ -61,14 +61,23 @@ This OID (minus the leading .) is what we'll need.
 Add a Monitoring Template
 =========================
 
-In the *Component Modeling* section we added a `getRRDTemplateName` method to
-our `TemperatureSensor` class. We made this method return *TemperatureSensor*.
-This means that each temperature sensor will have a template by this name
-automatically bound to it.
+It is important to get the monitoring template's name correct when adding a
+monitoring template that will be used for components. A Zenoss administrator has
+no control over which monitoring templates will be bound to a component like
+they do with monitoring templates that are bound to devices.
 
-This makes life easy when adding a monitoring template to be used. All we have
-to do is create a monitoring template named *TemperatureSensor* in the
-*/NetBotz* device class.
+How do we know what to name a monitoring template that should be used to monitor
+our *NetBotzTemperatureSensor* components? By default the monitoring template
+should be named the same as the component class' *label* property with all
+spaces removed. In the *Component Modeling* section we set the label for the
+*NetBotzTemperatureSensor* class to be *Temperature Sensor*. This means out
+monitoring template should be named *TemperatureSensor*.
+
+If you'd rather specify the monitoring template's name, or the names of multiple
+monitoring templates to use for your component class, you can do so by
+specifying an explicit *monitoring_templates* value for it in *zenpack.yaml*.
+
+Perform the following steps to create our component's monitoring template.
 
 1. Navigate to *Advanced* -> *Monitoring Templates*.
 

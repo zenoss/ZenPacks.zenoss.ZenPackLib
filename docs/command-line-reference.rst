@@ -231,6 +231,15 @@ Example usage:
 
     zenpacklib --dump-event-classes ZenPacks.example.BetterAlreadyBeInstalled
 
+.. note::
+
+   When dumping existing event classes using the zenpacklib tool with
+   the *--dump-event-classes* option, some transforms and/or
+   explanations may show as either unformatted text within double quotes
+   or as formatted text within single quotes. This is due to how the
+   python yaml package handles strings. Either of these two formats are
+   acceptable when used in zenpack.yaml.
+
 .. _zenpacklib-dump_process_classes:
 
 ********************

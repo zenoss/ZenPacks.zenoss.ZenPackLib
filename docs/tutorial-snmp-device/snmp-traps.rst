@@ -98,7 +98,7 @@ Use the following steps to get your feet wet sending a basic trap.
 
    This will output something very close to the following:
 
-   .. code-block:: plain
+   .. code-block:: text
 
       ACCEPT     udp  --  0.0.0.0/0            172.17.0.29          udp dpt:162
 

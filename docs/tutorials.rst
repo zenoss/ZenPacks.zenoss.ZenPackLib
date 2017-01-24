@@ -1,4 +1,4 @@
-.. _tutorials-5:
+.. _tutorials:
 
 #########
 Tutorials
@@ -7,7 +7,7 @@ Tutorials
 The following tutorials provide step-by-step instructions on using zenpacklib to
 extend Zenoss is common ways.
 
-* :ref:`tutorial-snmp-device-5`
+* :ref:`tutorial-snmp-device`
 
   This tutorial starts with the very basics of creating a ZenPack through
   Zenoss' web interface and adding configuration to it. Then it progresses to
@@ -16,7 +16,7 @@ extend Zenoss is common ways.
 
   This is most likely the first tutorial you should do.
 
-* :ref:`tutorial-http-api-5`
+* :ref:`tutorial-http-api`
 
   In this tutorial the basics are skipped and we jump right into extending the
   model, modeling a custom HTTP API, and monitoring the same API using the

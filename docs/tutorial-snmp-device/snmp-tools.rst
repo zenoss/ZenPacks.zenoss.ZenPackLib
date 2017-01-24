@@ -73,14 +73,14 @@ install on our Zenoss host.
       snmpsimd.py \
         --process-user=snmpsim \
         --process-group=snmpsim \
-        --agent-udpv4-endpoint=172.17.42.1:161 \
+        --agent-udpv4-endpoint=172.17.0.1:161 \
         --daemonize
 
 4. Test the simulator with the following *snmpwalk* command.
 
    .. code-block:: bash
 
-      snmpwalk -v2c -c public 172.17.42.1 sysDescr
+      snmpwalk -v2c -c public 172.17.0.1 sysDescr
 
    You should see the following output.
 
@@ -102,7 +102,7 @@ Run the snmpwalk command.
 
 .. code-block:: bash
 
-    snmpwalk -v2c -c public 172.17.42.1 system
+    snmpwalk -v2c -c public 172.17.0.1 system
 
 .. code-block:: text
 
@@ -128,7 +128,7 @@ decode OIDs.
 
 .. code-block:: bash
 
-    snmpwalk -v2c -c public -On 172.17.42.1 system
+    snmpwalk -v2c -c public -On 172.17.0.1 system
 
 .. code-block:: text
 
@@ -159,7 +159,7 @@ Now we can run the original snmpwalk command again with the addition of the
 
 .. code-block:: bash
 
-    snmpwalk -v2c -c public -m all 172.17.42.1 system
+    snmpwalk -v2c -c public -m all 172.17.0.1 system
 
 .. code-block:: text
 
@@ -199,13 +199,13 @@ So now we can run this command.
 
 .. code-block:: bash
 
-    snmpwalk 172.17.42.1 sysObjectID
+    snmpwalk 172.17.0.1 sysObjectID
 
 And get the same results as if we ran.
 
 .. code-block:: bash
 
-    snmpwalk -v2c -c public -m all 172.17.42.1 sysObjectID
+    snmpwalk -v2c -c public -m all 172.17.0.1 sysObjectID
 
 This will save you time while developing this ZenPack, and others in the future.
 

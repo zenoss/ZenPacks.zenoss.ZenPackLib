@@ -45,7 +45,7 @@ device.
 
 .. code-block:: bash
 
-   snmpwalk 127.0.1.113 1.3.6.1.4.1.5528.100.4.1.1.1
+   snmpwalk 172.17.0.1 1.3.6.1.4.1.5528.100.4.1.1.1
 
 You should see a lot of output that begins with the following::
 
@@ -60,7 +60,7 @@ snmpwalk results to only show this row with a command like the following.
 
 .. code-block:: bash
 
-   snmpwalk 127.0.1.113 1.3.6.1.4.1.5528.100.4.1.1.1 | grep "\.21604919 ="
+   snmpwalk 172.17.0.1 1.3.6.1.4.1.5528.100.4.1.1.1 | grep "\.21604919 ="
 
 Which will show us the value of each column for that one temperature sensor::
 
@@ -269,7 +269,12 @@ modeler plugin we previously created to model the sensors instead.
       for each temperature sensor in the results. We use the `self.relMap` and
       `self.objectMap` utility methods to make this easier.
 
-2. Restart *zopectl* and *zenhub* to load the changed module.
+2. Restart *Zope* and *zenhub* to load the changed module.
+
+   .. code-block:: bash
+
+      serviced service restart zope
+      serviced service restart zenhub
 
 Test the Modeler Plugin
 -----------------------
