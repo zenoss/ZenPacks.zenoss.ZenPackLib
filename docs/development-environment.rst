@@ -1,4 +1,4 @@
-.. _development-environment-2:
+.. _development-environment:
 
 #######################
 Development Environment
@@ -16,7 +16,7 @@ The following recommendations provide a good starting point for anyone wanting
 to do ZenPack development on Zenoss 5.
 
 
-.. _installing-2:
+.. _installing:
 
 **********
 Installing
@@ -35,7 +35,7 @@ with the following notes.
 .. _docs.zenoss.com: http://docs.zenoss.com/
 
 
-.. _system-requirements-2:
+.. _system-requirements:
 
 System Requirements
 ===================
@@ -50,7 +50,7 @@ Your development system should have at least the following resources.
 - 75 GB storage.
 
 
-.. _configuring-system-2:
+.. _configuring-system:
 
 **********************
 Configuring the System
@@ -91,7 +91,7 @@ groups respectively.
     usermod -a -G wheel zenoss
     usermod -a -G docker zenoss
 
-.. _helper-aliases-and-functions-2:
+.. _helper-aliases-and-functions:
 
 Helper Aliases and Functions
 ----------------------------
@@ -178,19 +178,27 @@ Now we can configure serviced to automatically share (bind mount) the host's /z
 directory into every container it starts. This will let us use the same files on
 the host and in containers using the exact same path.
 
-Edit */lib/systemd/system/serviced.service*. Add a mount argument to the end of
-the *ExecStart* line so that it looks like this:
+Edit */etc/default/serviced*. Find the existing *SERVICED_OPTS* line. It will
+likely be commented out (with a #) and look like the following.
+
+.. code-block:: text
+
+    # Arbitrary serviced daemon args
+    # SERVICED_OPTS=
+
+Uncomment it, and add the bind mount configuration as follows.
+
+.. code-block:: text
+
+    # Arbitrary serviced daemon args
+    SERVICED_OPTS="--mount *,/z,/z"
+
+You must then restart serviced.
 
 .. code-block:: bash
 
-    ExecStart=/opt/serviced/bin/serviced --mount *,/z,/z
-
-You must then reload the configuration and restart the service.
-
-.. code-block:: bash
-
-    systemctl daemon-reload
     systemctl restart serviced
+
 
 Test "/z" Sharing
 =================
@@ -214,11 +222,11 @@ On the host:
     exit # back to host root user
 
 
-.. _configuring-zenoss-service-2:
+.. _configuring-zenoss-services:
 
-***********************
-Configuring the Service
-***********************
+***************************
+Configuring Zenoss Services
+***************************
 
 There are some optional tweaks you can make to Zenoss service definitions to
 make development faster and easier. We'll go through the following here.

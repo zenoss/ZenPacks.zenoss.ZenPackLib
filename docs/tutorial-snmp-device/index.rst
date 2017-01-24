@@ -1,4 +1,4 @@
-.. _tutorial-snmp-device-5:
+.. _tutorial-snmp-device:
 
 #########################
 Monitoring an SNMP Device
@@ -15,14 +15,14 @@ temperature, humidity, dew point, audio levels and air flow.
 .. note::
 
     This tutorial assumes your system is already setup as described in
-    :ref:`development-environment-5` and :ref:`getting-started-5`.
+    :ref:`development-environment` and :ref:`getting-started`.
 
 .. toctree::
     :maxdepth: 2
 
-    snmp-tools-5
-    device-monitoring-5
-    device-modeling-5
-    component-modeling-5
-    component-monitoring-5
-    snmp-traps-5
+    snmp-tools
+    device-monitoring
+    device-modeling
+    component-modeling
+    component-monitoring
+    snmp-traps

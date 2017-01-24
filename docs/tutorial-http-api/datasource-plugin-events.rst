@@ -60,7 +60,7 @@ Follow these instructions to define the dependency.
 
 4. Click `Save`.
 
-5. Export the ZenPack. (:ref:`export-zenpack`).  The resulting objects.xml should have an empty XML object for this ZenPack.
+5. Export the ZenPack.
 
 
 Create the Alerts Plugin

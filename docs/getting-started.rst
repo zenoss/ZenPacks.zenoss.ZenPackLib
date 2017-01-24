@@ -1,21 +1,46 @@
-.. _getting-started-2:
+.. _getting-started:
 
 ###############
 Getting Started
 ###############
 
-ZenPack.zenoss.ZenPackLib provides the zenpacklib command and the functionality to manage a ZenPack through YAML.  It is a free download available from the Zenoss website.
+The first thing we'll need to do is install the ZenPackLib ZenPack into our
+development system. This is done in the same way as it would be in any Zenoss
+system.
+
+The ZenPackLib ZenPack provides the zenpacklib command line tool, which will
+allow us to create ZenPacks.
 
 .. note::
 
-    Be sure that you have a good :ref:`development-environment-2` setup before
-    proceeding.
+    This tutorial assumes your system is already setup as described in
+    :ref:`development-environment` and :ref:`getting-started`.
+
+
+.. _installing-zenpacklib:
+
+*********************
+Installing ZenPackLib
+*********************
+
+The latest version of ZenPackLib can be downloaded from
+`its entry <https://www.zenoss.com/product/zenpacks/zenpacklib>`_ in the
+`ZenPack Catalog`_. The following commands show how you would download and
+install version 2.0.1.
+
+.. _ZenPack Catalog: https://www.zenoss.com/product/zenpacks
 
 .. note::
 
-    All commands in this section should be run as the *zenoss* user on the host
-    unless otherwise noted. If you don't login to the host as the *zenoss* user,
-    use ``su - zenoss`` to get a login shell.
+    From here on all command should be run as the *zenoss* user on the host
+    unless otherwise noted. If you don't login to the host as the *zenoss*
+    user, use ``su - zenoss`` to get a login shell.
+
+.. code-block:: bash
+
+    cd /tmp
+    wget http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.ZenPackLib/2.0.1/ZenPacks.zenoss.ZenPackLib-2.0.1.egg
+    serviced service run zope zenpack-manager install ZenPacks.zenoss.ZenPackLib-2.0.1.egg
 
 Executing *zenpacklib* requires a live Zenoss environment. Always executing it as the *zenoss* user in your Zope container is a good way to have the right environment setup. The following commands demonstrate how to do this.
 
@@ -29,51 +54,22 @@ Executing *zenpacklib* requires a live Zenoss environment. Always executing it a
 
 These five commands can be reduced to the following single command if you setup
 the helper aliases and functions your ``.bashrc`` recommended in
-:ref:`helper-aliases-and-functions-2`.
+:ref:`helper-aliases-and-functions`.
 
 .. code-block:: bash
 
     zenpacklib --version
 
-.. note::
-  Formerly, zenpacklib was a single Python module designed to be packaged with every ZenPack.  There was a single file, `zenpacklib.py` that was distributed with each ZenPack.  If you need access to this file, see the :ref:`downloading-zenpacklib-2` section.
 
-
-.. _downloading-zenpacklib-2:
-
-********************
-Downloading (Legacy)
-********************
-
-.. note::
-
-    The following applies to pre-2.0 versions of zenpacklib.py only.  
-    Starting with version 2.0, the zenpacklib command is included with the 
-    ZenPacks.zenoss.ZenPackLib ZenPack and symlinked to /opt/zenoss/bin/zenpacklib 
-
-Depending on what versions of Zenoss your ZenPack is supporting you may need to
-get a specific version of zenpacklib. See :ref:`compatibility` for more
-information. Since the latest version of zenpacklib is usually compatible with
-recent versions of Zenoss it's usually safe to get the most recent release. This
-can be done with the following commands.
-
-.. code-block:: bash
-
-    su - zenoss
-    cd /z
-    wget https://zenpacklib.zenoss.com/zenpacklib.py
-    chmod 755 zenpacklib.py
-
-
-.. _creating-a-zenpack-2:
+.. _creating-a-zenpack:
 
 ******************
 Creating a ZenPack
 ******************
 
 There are two ways to get started with zenpacklib. You can either use it to
-create a new ZenPack from the command line, or you can copy it into an existing
-ZenPack. We'll start by creating a ZenPack from the command line.
+create a new ZenPack from the command line, or you can update an existing
+ZenPack to use it. We'll start by creating a ZenPack from the command line.
 
 Run the following commands to create a new ZenPack.
 
@@ -95,11 +91,21 @@ installed.
       - creating file: ZenPacks.acme.Widgeter/MANIFEST.in
       - creating file: ZenPacks.acme.Widgeter/ZenPacks/__init__.py
       - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/datasources/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/thresholds/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/parsers/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/migrate/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/resources/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/modeler/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/tests/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/libexec/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/modeler/plugins/__init__.py
+      - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/lib/__init__.py
       - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/__init__.py
       - creating file: ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter/zenpack.yaml
 
-Now let's take a look at `zenpack.yaml`. This is the file that will define what
-our ZenPack does.
+Now let's take a look at `zenpack.yaml`. This is the file that will define a
+large part of what our ZenPack is.
 
 .. code-block:: yaml
 
@@ -169,7 +175,7 @@ Lint will print information about errors it finds in the YAML file. If nothing
 is printed, lint thinks the YAML is correct.
 
 
-.. _installing-a-zenpack-2:
+.. _installing-a-zenpack:
 
 ********************
 Installing a ZenPack
@@ -183,7 +189,8 @@ install it into our Zenoss system by running the following command.
     z zenpack --link --install ZenPacks.acme.Widgeter
 
 Zenoss must be restarted anytime a new ZenPack is installed. A full restart of
-the entire system can be performed by running one of the following command.
+the entire system can be performed by running one of the following commands
+depending on what distribution of Zenoss you have installed..
 
 .. code-block:: bash
 
@@ -192,8 +199,8 @@ the entire system can be performed by running one of the following command.
 
 Technically it isn't necessary to restart everything. A lot of the
 infrastructure services don't use ZenPack code. The following is a smaller list
-of services that you're likely to need to restart after installing and modifying
-ZenPacks during development.
+of services that you're likely to need to restart after installing and
+modifying ZenPacks during development.
 
 - Zope
 - zenhub
@@ -211,5 +218,5 @@ The following command will quickly restart just these services.
 What Next?
 **********
 
-You can either start with some :ref:`tutorials-2` or jump right into the
+You can either start with some :ref:`tutorials` or jump right into the
 :ref:`yaml-reference`.
