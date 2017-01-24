@@ -7,6 +7,30 @@ requires no code, and you can find instructions for doing it in the normal
 Zenoss documentation. However, there are some extra considerations and steps
 required to package your configuration in a ZenPack.
 
+.. note::
+
+    Commands in this section should be run on the host as the *zenoss* user
+    unless otherwise noted.
+
+Create a ZenPack
+================
+
+The first step will be to create and install a ZenPack to contain all of the
+NetBotz monitoring functionality we're going to build.
+
+.. code-block:: bash
+
+    cd /z
+    zenpacklib create ZenPacks.training.NetBotz
+    zenpack --link --install ZenPacks.training.NetBotz
+
+We should also restart at least *Zope* after installing the ZenPack so that we
+can work with it in the web interface.
+
+.. code-block:: bash
+
+    serviced service restart Zope
+
 Create a Device Class
 =====================
 
@@ -82,18 +106,12 @@ all settings in that device class to be added to the ZenPack. This includes
 modeler plugin configuration, configuration property values and monitoring
 templates.
 
-1. Make sure you've already created the ZenPack.
-
-   See :ref:`create-zenpack` if you need help creating the ZenPack. Be sure to
-   name the ZenPack *ZenPacks.training.NetBotz* as that's what we'll be
-   referring to throughout this tutorial.
-
-2. Make sure that you have the NetBotz device class selected in the
+1. Make sure that you have the NetBotz device class selected in the
    *Infrastructure* view.
 
-3. Choose *Add to ZenPack* from the gear menu in the bottom-left.
+2. Choose *Add to ZenPack* from the gear menu in the bottom-left.
 
-4. Select your NetBotz ZenPack then click *SUBMIT*.
+3. Select your NetBotz ZenPack then click *SUBMIT*.
 
 
 Add a NetBotz Device
@@ -105,9 +123,11 @@ be helpful to see what Zenoss' default settings will return for a device before
 we start adding features.
 
 You can add a the device through the web interface, or on the command line
-using zendisc as follows::
+using zendisc as follows:
 
-    zendisc run --deviceclass=/NetBotz --device=127.0.1.113
+.. code-block:: bash
+
+    z zendisc run --deviceclass=/NetBotz --device=172.17.0.1
 
 .. note::
 
@@ -181,7 +201,7 @@ Let's use ``snmpwalk`` to check if our NetBotz device supports *sysUpTime*. The
 OID listed for the *sysUpTime* datasource is ``1.3.6.1.2.1.1.3.0`` so we run the
 following command::
 
-    # snmpwalk 127.0.1.113 1.3.6.1.2.1.1.3.0
+    # snmpwalk 172.17.0.1 1.3.6.1.2.1.1.3.0
     DISMAN-EVENT-MIB::sysUpTimeInstance = Timeticks: (7275488) 20:12:34.88
 
 This response indicates that the NetBotz device does support the *sysUpTime*
@@ -230,7 +250,7 @@ the *NetBotz* device class, we need to add datasources, thresholds and graphs.
 We don't already know what might be interesting to graph for each NetBotz
 device, so let's go exploring with ``snmpwalk``::
 
-    # snmpwalk 127.0.1.113 .1.3
+    # snmpwalk 172.17.0.1 .1.3
     SNMPv2-MIB::sysDescr.0 = STRING: Linux Netbotz01 2.4.26 #1 Wed Oct 31 18:09:53 CDT 2007 ppc
     SNMPv2-MIB::sysObjectID.0 = OID: NETBOTZV2-MIB::netBotz420ERack
     ... lots of lines removed ...
@@ -408,18 +428,68 @@ and verify that we see our *NetBotzDevice (/NetBotz)* monitoring template listed
 at the bottom of the device's left navigation pane.
 
 Now we can test that our datasource will be collected by running the following
-command to do a single collection of the NetBotz device::
+command to do a single collection of the NetBotz device:
 
-    zenperfsnmp run -v10 --device=Netbotz01
+.. code-block:: bash
 
-We can look through the output to see what zenperfsnmp does. Personally I look
-for any lines that contain *zen.RRDUtil*. These lines will show the collected
-data being written to RRD files. If data isn't collected, these lines won't be
+    z zenperfsnmp run -v10 --device=Netbotz01
+
+We can look through the output to see what zenperfsnmp does. I usually look for
+any lines that contain *MetricWriter*. These lines will show the collected data
+being published to the database. If data isn't collected, these lines won't be
 present. Because of this you might run the following command instead to only see
-lines that contain this pattern::
+lines that contain this pattern:
 
-    zenperfsnmp run -v10 --device=Netbotz01 2>&1 | grep "zen.RRDUtil"
+.. code-block:: bash
 
-We should see about 16 datapoints being written into RRD files. You'll see
-*sysUpTime*, 14 interface datapoints and our custom *snmpInTotalReqVars* in
-there somewhere.
+    z zenperfsnmp run -v10 --device=Netbotz01 | grep "MetricWriter"
+
+We should see about 18 datapoints being published. You'll see two of
+*eventQueueLength*, *sysUpTime*, 14 interface datapoints and our custom
+*snmpInTotalReqVars* in there somewhere.
+
+Export the ZenPack
+==================
+
+Now that we've created a ZenPack and added some configuration to it, we need to
+export it. Exporting a ZenPack takes all of the object's you've added to your
+ZenPack through the web interface and compiles them into an ``objects.xml`` file
+that gets saved into your ZenPack's source directory in the file system.
+
+Follow these steps to export a ZenPack.
+
+1. Navigate to *Advanced* -> *ZenPacks* -> *Your ZenPack* in the web
+   interface.
+
+2. Scroll to the bottom of the page to see what objects the ZenPack provides.
+
+   All objects listed in the *ZenPack Provides* section and objects contained
+   within them will be exported.
+
+3. Choose *Export ZenPack* from the gear menu in the bottom-left of the screen.
+
+4. Choose to only export and not download then click *OK*.
+
+   You could also choose to download the ZenPack through your web browser.
+   However, the downloaded file will be the built *egg* distribution format of
+   the ZenPack. This means that it can be installed into other Zenoss systems,
+   but is not suitable for further development.
+
+This will export everything under *ZenPack Provides* to a directory within your
+ZenPack's source called *objects/*. No other files in your ZenPack's source
+directory are created or modified. You can find this file in a path such as the
+following.
+
+    /z/ZenPacks.acme.Widgeter/ZenPacks/acme/Widgeter
+
+Each time you add a new object to you ZenPack within the web interface, or
+modify an object that's already contained within your ZenPack, you should
+export the ZenPack again to update objects.xml. If you're using version control
+on your ZenPack's source directory this would be a good time to commit the
+resulting changes.
+
+.. warning::
+
+   Exporting a ZenPack overwrites files in the *objects/* directory. For this
+   reason it is recommended that files in this directory never be modified by
+   hand.

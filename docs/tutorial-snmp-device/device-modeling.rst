@@ -16,7 +16,7 @@ and *$ZP_DIR* environment variables have been set as follows.
 
 .. code-block:: bash
 
-    export ZP_TOP_DIR=$ZENHOME/ZenPacks/ZenPacks.training.NetBotz
+    export ZP_TOP_DIR=/z/ZenPacks.training.NetBotz
     export ZP_DIR=$ZP_TOP_DIR/ZenPacks/training/NetBotz
 
 Create the NetBotzDevice Class
@@ -31,27 +31,10 @@ to special device types.
 Use the following steps to create a *NetBotzDevice* class with a new attribute
 called *temp_sensor_count*.
 
-1. Add *zenpacklib* to the ZenPack.
-
-   .. code-block:: bash
-   
-       cd $ZP_DIR
-       wget https://raw.githubusercontent.com/zenoss/zenpacklib/master/zenpacklib.py
-       chmod 755 zenpacklib.py
-
-2. Modify ``$ZP_DIR/__init__.py`` to load a YAML file. Replace anything that's
-   already in the file.
-
-   .. code-block:: python
-   
-       from . import zenpacklib
-
-       zenpacklib.load_yaml()
-
-3. Create ``$ZP_DIR/zenpack.yaml`` with the following contents.
+1. Update ``$ZP_DIR/zenpack.yaml`` to contain following contents.
 
    .. code-block:: yaml
-   
+
        name: ZenPacks.training.NetBotz
 
        classes:
@@ -96,15 +79,19 @@ called *temp_sensor_count*.
       modeler plugins (*zCollectorPlugins*) even though it doesn't yet exist.
       This is safe to do, and we'll shortly be creating the modeler plugin.
 
-4. Reinstall the ZenPack to have the device class changes made.
+2. Reinstall the ZenPack to have the device class changes made.
 
    .. code-block:: bash
-   
-       zenpack --link --install $ZP_TOP_DIR
 
-5. Restart your *zopectl* process so the web interface can load our new module.
+      zenpack --link --install $ZP_TOP_DIR
 
-6. Reset the Python class of our existing device.
+3. Restart *Zope* process so the web interface can load our new module.
+
+   .. code-block:: bash
+
+      serviced service restart zope
+
+4. Reset the Python class of our existing device.
 
    Run ``zendmd`` and execute the following snippet.
 
@@ -147,11 +134,6 @@ ways we could approach this. One way is to use that NETBOTZV2-MIB as a
 reference to see if we can find anything about temperature sensors
 specifically.
 
-Zenoss comes with a tool called ``smidump`` that makes finding information in
-MIBs much easier. There are a lot of MIB browser tools out there that make this
-even easier, but I primarily use a Mac and haven't found very good options
-there.
-
 Find temperature information in NETBOTZV2-MIB using the following command.
 
 .. code-block:: bash
@@ -185,7 +167,7 @@ will return the data we need.
 
 .. code-block:: bash
 
-   snmpwalk 127.0.1.113 1.3.6.1.4.1.5528.100.4.1.1.1
+   snmpwalk 172.17.0.1 1.3.6.1.4.1.5528.100.4.1.1.1
 
 You'll see a lot of output that starts with::
 
@@ -329,7 +311,13 @@ Use the following steps to create our modeler plugin.
       *RelationshipMap* is a `list` wrapped with some meta-data and containing
       zero or more *ObjectMap* instances.
 
-4. Restart *zopectl* and *zenhub* to load the new module.
+4. Restart *Zope* and *zenhub* to load the new module.
+
+   .. code-block:: bash
+
+      serviced service restart zope
+      serviced service restart zenhub
+
 
 Test the Modeler Plugin
 -----------------------
@@ -397,6 +385,6 @@ Follow these steps to customize the device Overview page.
 Test the Device Overview
 ------------------------
 
-That's it. We can restart *zopectl* and navigate to our NetBotz device's
+That's it. We can restart *Zope* and navigate to our NetBotz device's
 overview page in the web interface. You should see ``# Temperature Sensors``
 label with a value of 14 at the bottom of the top-left panel.

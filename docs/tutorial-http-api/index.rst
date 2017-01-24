@@ -1,4 +1,4 @@
-.. _tutorial-http-api-5:
+.. _tutorial-http-api:
 
 ######################
 Monitoring an HTTP API
@@ -15,15 +15,15 @@ using The Weather Channel's Weather Underground API.
 .. note::
 
     This tutorial assumes your system is already setup as described in
-    :ref:`development-environment-5` and :ref:`getting-started-5`.
+    :ref:`development-environment` and :ref:`getting-started`.
 
 .. toctree::
     :maxdepth: 2
 
     wunderground-api
-    create-zenpack-5
-    modeler-plugin-5
-    add-device-class-5
-    datasource-plugin-events-5
-    datasource-plugin-datapoints-5
-    datasource-plugin-model-5
+    create-zenpack
+    modeler-plugin
+    add-device-class
+    datasource-plugin-events
+    datasource-plugin-datapoints
+    datasource-plugin-model
