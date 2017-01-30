@@ -253,7 +253,7 @@ Search this file for "Instances" with the quotes. You should see a section that
 looks something like the following. Change *Instances*, *Min*, and *Default* to
 1. Then save and quit.
 
-.. code-block:: json
+.. code-block:: text
 
     "Instances": 6,
     "InstanceLimits": {
@@ -288,7 +288,7 @@ automatically launch.
 Search this file for "Launch" with the quotes. You should see a section that
 looks like the following. Change *auto* to *manual*. Then save and quit.
 
-.. code-block:: json
+.. code-block:: text
 
     "Launch": "auto",
 
