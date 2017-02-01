@@ -12,6 +12,7 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
+  {{ metatags }}
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   {% block htmltitle %}
   <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
@@ -23,7 +24,6 @@
   {% endif %}
 
   {# CSS #}
-  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
 
   {# OPENSEARCH #}
   {% if not embedded %}
@@ -36,6 +36,10 @@
   <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}" type="text/css" />
 
   {% for cssfile in css_files %}
+    <link rel="stylesheet" href="{{ pathto(cssfile, 1) }}" type="text/css" />
+  {% endfor %}
+
+  {% for cssfile in extra_css_files %}
     <link rel="stylesheet" href="{{ pathto(cssfile, 1) }}" type="text/css" />
   {% endfor %}
 
@@ -68,45 +72,55 @@
   {%- block extrahead %} {% endblock %}
 
   {# Keep modernizr in head - http://modernizr.com/docs/#installing #}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+  <script src="{{ pathto('_static/js/modernizr.min.js', 1) }}"></script>
 
 </head>
 
 <body class="wy-body-for-nav" role="document">
 
+  {% block extrabody %} {% endblock %}
   <div class="wy-grid-for-nav">
 
     {# SIDE NAV, TOGGLES ON MOBILE #}
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-nav-search">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          {% block sidebartitle %}
 
-        {% block sidebartitle %}
-          <img id="zenoss-logo" src="{{ pathto('_static/logo-isolated.png', 1) }}">
-          <a href="{{ pathto(master_doc) }}" class="fa fa-home"> {{ project }}</a>
-        {% endblock %}
-        {% include "searchbox.html" %}
-      </div>
+          <a href="{{ pathto(master_doc) }}">
+            {% if logo %}
+            <img src="{{ pathto('_static/' + logo, 1) }}" class="logo" />
+            {% endif %}
+            <div class="icon icon-home" style="padding-left:10px">{{ project }}</div>
+          </a>
 
-      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-        {% block menu %}
-          {% set toctree = toctree(maxdepth=2, collapse=False, includehidden=True) %}
-          {% if toctree %}
-              {{ toctree }}
-          {% else %}
-              <!-- Local TOC -->
-              <div class="local-toc">{{ toc }}</div>
-          {% endif %}
-        {% endblock %}
+          {% include "searchbox.html" %}
+
+          {% endblock %}
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          {% block menu %}
+            {% set toctree = toctree(maxdepth=theme_navigation_depth|int, collapse=theme_collapse_navigation, includehidden=True) %}
+            {% if toctree %}
+                {{ toctree }}
+            {% else %}
+                <!-- Local TOC -->
+                <div class="local-toc">{{ toc }}</div>
+            {% endif %}
+          {% endblock %}
+        </div>
       </div>
-      &nbsp;
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       {# MOBILE NAV, TRIGGLES SIDE NAV ON TOGGLE #}
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="{{ pathto(master_doc) }}">{{ project }}</a>
+        {% block mobile_nav %}
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="{{ pathto(master_doc) }}">{{ project }}</a>
+        {% endblock %}
       </nav>
 
 
@@ -114,8 +128,13 @@
       <div class="wy-nav-content">
         <div class="rst-content">
           {% include "breadcrumbs.html" %}
-          <div role="main" class="document">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             {% block body %}{% endblock %}
+           </div>
+           <div class="articleComments">
+            {% block comments %}{% endblock %}
+           </div>
           </div>
           {% include "footer.html" %}
         </div>
@@ -134,7 +153,8 @@
             VERSION:'{{ release|e }}',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'{{ '' if no_search_suffix else file_suffix }}',
-            HAS_SOURCE:  {{ has_source|lower }}
+            HAS_SOURCE:  {{ has_source|lower }},
+            SOURCELINK_SUFFIX: '{{ sourcelink_suffix }}'
         };
     </script>
     {%- for scriptfile in script_files %}
@@ -143,9 +163,10 @@
 
   {% endif %}
 
-  <script type="text/javascript" src="{{ pathto('_static/js/theme.js', 1) }}"></script>
-
-  <img id="watermark"" src="{{ pathto('_static/macron-watermark.png', 1) }}">
+  {# RTD hosts this file, so just load on non RTD builds #}
+  {% if not READTHEDOCS %}
+    <script type="text/javascript" src="{{ pathto('_static/js/theme.js', 1) }}"></script>
+  {% endif %}
 
   {# STICKY NAVIGATION #}
   {% if theme_sticky_navigation %}

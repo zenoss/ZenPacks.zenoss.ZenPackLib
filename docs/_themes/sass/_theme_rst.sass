@@ -19,8 +19,13 @@
     max-width: 100%
     height: auto !important
 
+  .highlight > pre
+    line-height: normal
+
   div.figure
     margin-bottom: $base-line-height
+    p.caption
+      font-style: italic
 
   div.figure.align-center
     text-align: center
@@ -97,9 +102,11 @@
   .align-center
     margin: auto
     display: block
+  .toctree-wrapper p.caption
+    @extend h2
 
   // This is the #href that shows up on hover. Sphinx's is terrible so I hack it away.
-  h1, h2, h3, h4, h5, h6, dl dt
+  h1, h2, h3, h4, h5, h6, dl dt, p.caption
     .headerlink
       display: none
       visibility: hidden
@@ -120,8 +127,8 @@
     display: block
     margin: 0 0 $base-line-height $base-line-height
     padding: $base-line-height
-    background: $table-stripe-color
-    border: solid 1px $table-border-color
+    background: $sidebar-background-color
+    border: solid 1px $sidebar-border-color
     // Sidebar content is usually less relevant, so adjust the margins and sizes.
     p, ul, dl
       font-size: 90%
@@ -138,7 +145,7 @@
       font-size: 100%
   // Sphinx can highlight searched text with ?highlighted=searchterm
   .highlighted
-    background: $yellow
+    background: $highlight-color
     display: inline-block
     font-weight: bold
     padding: 0 $base-line-height / 4
@@ -162,6 +169,8 @@
       padding-left: 0
       padding-right: 0
       vertical-align: top
+    code
+      color: $gray
   table.docutils
     @extend .wy-table
     @extend .wy-table-bordered-all
@@ -186,17 +195,21 @@
       padding-left: 0
 
   // These are the "literals" that get spit out when you mark stuff as ``code`` as your write.
-  tt
+  tt, code
     @extend code
     color: $black
+    padding: 2px 5px
     big, em
       font-size: 100% !important
       line-height: normal
 
-    .xref, a &
+    &.literal
+      color: $text-code-color
+    &.xref, a &
       font-weight: bold
+      color: $text-codexref-color
   // If the literal is inside an a tag, let's color it like a link
-  a tt
+  a tt, a code
     color: $link-color
   dl
     margin-bottom: $base-line-height
@@ -221,13 +234,13 @@
       margin: $base-line-height / 4 0
       font-size: 90%
       line-height: normal
-      background: lighten($blue, 50%)
-      color: $blue
-      border-top: solid 3px lighten($blue, 20%)
+      background: lighten($class-color, 50%)
+      color: $class-color
+      border-top: solid 3px lighten($class-color, 20%)
       padding: $base-line-height / 4
       position: relative
       &:before
-        color: lighten($blue, 20%)
+        color: lighten($class-color, 20%)
       .headerlink
         color: $text-color
         font-size: 100% !important
@@ -237,14 +250,14 @@
       border: none
       border-left: solid 3px hsl(0,0%,80%)
       background: hsl(0,0%,94%)
-      color: $text-medium
+      color: $method-color
       .headerlink
-        color: $text-color
+        color: $headerlink-color
         font-size: 100% !important
     dt:first-child
       margin-top: 0
     // Since dts get the callout style, we treat this less as callouts.
-    tt
+    tt, code
       font-weight: bold
       &.descname, &.descclassname
         background-color: transparent
@@ -265,7 +278,7 @@
   // Doc links to sourcecode
   .viewcode-link, .viewcode-back
     display: inline-block
-    color: $green
+    color: $text-viewcode-color
     font-size: 80%
     padding-left: $base-line-height
   .viewcode-back
@@ -274,6 +287,20 @@
   p.rubric
     margin-bottom: 12px
     font-weight: bold
+  //Download link
+  code.download
+    background: inherit
+    padding: inherit
+    font-family: inherit
+    font-size: inherit
+    color: inherit
+    border: inherit
+    white-space: inherit
+    span:first-child
+      @extend .fa
+      @extend .fa-download
+      &:before
+        margin-right: 4px
 
 // Mobile specific
 +media($mobile)
