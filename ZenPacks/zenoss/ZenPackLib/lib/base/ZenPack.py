@@ -96,18 +96,22 @@ class ZenPack(ZenPackBase):
             deviceclass = self.dmd.Devices.getOrganizer(dcname)
 
             for mtname, mtspec in dcspec.templates.iteritems():
+                create_template = False
                 mtspecparam = dcspecparam.templates.get(mtname)
 
-                # there will be a backup of this template if this is an upgrade
+                # there will be a backup of this template if this is an upgrade from
+                # previous ZPL 2.0 install
                 try:
                     template = deviceclass.rrdTemplates._getOb("{}-backup".format(mtname))
                 except AttributeError:
+                    create_template = True
                     template = None
 
                 if template:
                     diff = self.object_changed(app, template, mtspec, mtspecparam)
                     # preserve the backup if different
                     if diff:
+                        create_template = True
                         backup_name = "{}-preupgrade-{}".format(mtname, int(time.time()))
                         deviceclass.rrdTemplates.manage_renameObject(template.id, backup_name)
                         LOG.info(
@@ -118,10 +122,12 @@ class ZenPack(ZenPackBase):
                             "local changes before deleting the backup:\n{}".format(
                             dcname, mtname, self.id, backup_name, diff))
                     else:
-                        # delete the backup template if unchanged
-                        template.getPrimaryParent()._delObject(template.id)
-                # create the template
-                mtspec.create(self.dmd)
+                        # if unchanged, restore original name
+                        deviceclass.rrdTemplates.manage_renameObject(template.id, mtname)
+
+                if create_template:
+                    # create the template
+                    mtspec.create(self.dmd)
 
         # Load event classes
         for ecname, ecspec in self.event_classes.iteritems():
