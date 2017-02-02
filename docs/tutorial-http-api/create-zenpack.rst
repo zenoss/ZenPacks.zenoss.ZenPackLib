@@ -9,7 +9,7 @@ following steps. These commands should be run as the *zenoss* user.
 .. code-block:: bash
 
     cd /z
-    zenpacklib create ZenPacks.training.WeatherUnderground
+    zenpacklib --create ZenPacks.training.WeatherUnderground
 
 You should see output similar to the following. Most importantly that
 *zenpack.yaml* file is being created.
