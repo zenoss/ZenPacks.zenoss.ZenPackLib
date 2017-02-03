@@ -9,7 +9,7 @@ following steps. These commands should be run as the *zenoss* user.
 .. code-block:: bash
 
     cd /z
-    zenpacklib create ZenPacks.training.WeatherUnderground
+    zenpacklib --create ZenPacks.training.WeatherUnderground
 
 You should see output similar to the following. Most importantly that
 *zenpack.yaml* file is being created.
@@ -22,9 +22,18 @@ You should see output similar to the following. Most importantly that
       - creating file: ZenPacks.training.WeatherUnderground/MANIFEST.in
       - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/__init__.py
       - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/datasources/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/thresholds/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/parsers/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/migrate/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/resources/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/modeler/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/tests/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/libexec/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/modeler/plugins/__init__.py
+      - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/lib/__init__.py
       - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/__init__.py
       - creating file: ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground/zenpack.yaml
-      - copying: ./zenpacklib.py to ZenPacks.training.WeatherUnderground/ZenPacks/training/WeatherUnderground
 
 Define zProperties and Classes
 ==============================
