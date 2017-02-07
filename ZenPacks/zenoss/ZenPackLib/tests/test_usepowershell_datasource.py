@@ -12,17 +12,7 @@
 """
     "usePowershell" datasource option ignored in zenpacklib created ZenPacks (ZEN-25315)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """
@@ -46,27 +36,28 @@ device_classes:
 """
 
 
-class TestUsePowershellDatasource(BaseTestCase):
+class TestUsePowershellDatasource(ZPLTestBase):
     """
     "usePowershell" datasource option ignored in zenpacklib created ZenPacks (ZEN-25315)
     """
 
-    def test_datasource_boolean(self):
-        z = ZPLTestHarness(YAML_DOC)
-        if z.zenpack_installed():
-            z.connect()
-            # check properties on dummy template
-            dcs = z.cfg.device_classes.get('/Server/Microsoft')
-            tcs = dcs.templates.get('TestTemplate')
-            t = tcs.create(z.dmd, False)
-            ds = t.datasources()[0]
+    yaml_doc = YAML_DOC
+    use_dmd = True
+    disableLogging = False
 
+    def test_datasource_boolean(self):
+        if self.z.zenpack_installed():
+            # check properties on dummy template
+            dcs = self.z.cfg.device_classes.get('/Server/Microsoft')
+            tcs = dcs.templates.get('TestTemplate')
+            t = tcs.create(self.z.dmd, False)
+            ds = t.datasources()[0]
             self.assertTrue(isinstance(ds.usePowershell, bool),
                     'Datasource property (usePowershell) should be bool, got {}'.format(type(ds.usePowershell)))
             self.assertEquals(ds.usePowershell, False,
                     'Datasource property (usePowershell) should be False, got {}'.format(ds.usePowershell))
         else:
-            print '\nSkipping test_integer_threshold since ZenPacks.zenoss.Microsoft.Windows not installed.'
+            self.log.warn('Skipping test_integer_threshold since ZenPacks.zenoss.Microsoft.Windows not installed.')
 
 
 def test_suite():

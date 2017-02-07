@@ -12,15 +12,8 @@
 """ 
     Test DataPointSpec shorthand handling
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
 
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
@@ -73,15 +66,16 @@ device_classes:
             oid: 1.3.6.1.4.1.2021.10.1.5.2
 """
 
-class TestDatapointShorthand(BaseTestCase):
+class TestDatapointShorthand(ZPLTestBase):
     """Test DataPointSpec shorthand handling"""
+
+    yaml_doc = YAML_DOC
 
     def test_datapoint_shorthand(self):
         ''''''
-        z = ZPLTestHarness(YAML_DOC)
-        self.assertEqual(z.exported_yaml, EXPECTED,
+        self.assertEqual(self.z.exported_yaml, EXPECTED,
                          'Datapoint shorthand expected {} got {}'.format(EXPECTED,
-                                                                         z.exported_yaml))
+                                                                         self.z.exported_yaml))
 
 
 def test_suite():

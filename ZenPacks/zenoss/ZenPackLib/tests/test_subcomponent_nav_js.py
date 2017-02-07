@@ -15,16 +15,7 @@
         ZPL creating doubled number of subpanels for same-named relations
 
 """
-# Zenoss Imports
-import difflib
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
@@ -115,12 +106,13 @@ expected_va = "Zenoss.nav.appendTo('Component', [{\n    id: 'component_vvirtuala
 
 
 
-class TestSubComponentNavJS(BaseTestCase):
+class TestSubComponentNavJS(ZPLTestBase):
     """Test catalog creation for specs"""
+
+    yaml_doc = YAML_DOC
 
     def test_nav_js(self):
         ''''''
-        self.z = ZPLTestHarness(YAML_DOC)
         self.get_test_result('ResourcePool', expected_rp)
         self.get_test_result('VirtualApp', expected_va)
 
@@ -130,13 +122,7 @@ class TestSubComponentNavJS(BaseTestCase):
         self.assertEquals(actual_js,
                           expected_js,
                           'Unexpected subcomponent_nav_js_snippet for {}, got: {}'.format(id,
-                                                                  self.get_diff(expected_js, actual_js)))
-
-    def get_diff(self, expected, actual):
-        """Return diff between YAML files"""
-        lines_expected = [x + '\n' for x in expected.split('\n')]
-        lines_actual = [x + '\n' for x in actual.split('\n')]
-        return ''.join(difflib.unified_diff(lines_expected, lines_actual))
+                                                                  self.z.get_diff(expected_js, actual_js)))
 
 
 def test_suite():

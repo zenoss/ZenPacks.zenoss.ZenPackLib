@@ -12,21 +12,12 @@
 """
     Verify that "escalateCount" property works correctly (ZEN-22840)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
 device_classes:
-  /Server:
+  /Devices:
     templates:
       Device:
         description: Net-SNMP template for late vintage unix device.  Has CPU threshold.
@@ -49,17 +40,17 @@ device_classes:
 """
 
 
-class TestZen22840(BaseTestCase):
+class TestEscalateCount(ZPLTestBase):
     """Test for ZEN-22840
        Verify that "escalateCount" property works correctly
     """
 
+    yaml_doc = YAML_DOC
+
     def test_escalate_count(self):
-        z = ZPLTestHarness(YAML_DOC)
-        deviceclass = z.cfg.device_classes.get('/Server')
+        deviceclass = self.z.cfg.device_classes.get('/Devices')
         template = deviceclass.templates.get('Device')
-        z.connect()
-        t = template.create(z.dmd, False)
+        t = template.create(self.dmd, False)
         th = t.thresholds.findObjectsById('CPU Utilization')[0]
         self.assertEquals(th.escalateCount, 5,
                           'Escalate Count expected {} ({}), got {} ({})'.format(5, 'int',
@@ -71,7 +62,7 @@ def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen22840))
+    suite.addTest(makeSuite(TestEscalateCount))
     return suite
 
 if __name__ == "__main__":

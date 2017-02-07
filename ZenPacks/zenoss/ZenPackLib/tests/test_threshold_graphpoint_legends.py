@@ -12,21 +12,12 @@
 """ 
     Test Threshold GraphPoint legend and coloring (ZEN-24904)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 YAML_DOC = """
 name: ZenPacks.zenoss.ZenPackLib
 device_classes:
-  /Device:
+  /Devices:
     templates:
       TEST:
         datasources:
@@ -68,21 +59,20 @@ EXPECTED = {'A': {'color': '', 'legend': '${graphPoint/id}'},
             'c': {'color': 'AAAAAA', 'legend': '${graphPoint/id}'}}
 
 
-class TestThresholdGraphPointLegends(BaseTestCase):
+class TestThresholdGraphPointLegends(ZPLTestBase):
     """Test Threshold GraphPoint legend and coloring"""
+
+    yaml_doc = YAML_DOC
 
     def test_threshold_graphpoint(self):
         ''''''
-        z = ZPLTestHarness(YAML_DOC)
-        z.connect()
-        tspec = z.cfg.device_classes.get('/Device').templates.get('TEST')
+        tspec = self.z.cfg.device_classes.get('/Devices').templates.get('TEST')
         # template based on original spec
-        template = tspec.create(z.dmd, False)
+        template = tspec.create(self.dmd, False)
         g = template.graphDefs()[0]
         actual = {}
         for gp in g.graphPoints():
             actual[gp.id] = {'legend': gp.legend, 'color': gp.color}
-
         self.assertEqual(actual, EXPECTED,
                          'Threshold GraphPoint legend/color testing failed, '\
                          'expected {} got {}'.format(EXPECTED, actual))

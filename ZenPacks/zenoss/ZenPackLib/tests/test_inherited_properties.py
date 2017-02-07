@@ -12,15 +12,8 @@
 """
     Test the proper handling of inherited ClassSpec properties 
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 YAML_DOC = """
 name: ZenPacks.zenoss.BasicZenPack
@@ -54,17 +47,17 @@ classes:
 """
 
 
-class TestInheritedProperties(BaseTestCase):
+class TestInheritedProperties(ZPLTestBase):
     """
         Test the proper handling of inherited ClassSpec properties 
     """
+    yaml_doc = YAML_DOC
 
     def test_inherited_properties_display(self):
-        z = ZPLTestHarness(YAML_DOC)
 
-        base = z.cfg.classes.get('BasicComponent')
-        sub = z.cfg.classes.get('SubComponent')
-        aux = z.cfg.classes.get('AuxComponent')
+        base = self.z.cfg.classes.get('BasicComponent')
+        sub = self.z.cfg.classes.get('SubComponent')
+        aux = self.z.cfg.classes.get('AuxComponent')
 
         # make sure the expected properties exist
         self.properties_exist(base, ['hello_world'])

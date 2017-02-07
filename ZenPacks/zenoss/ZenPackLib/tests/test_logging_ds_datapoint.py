@@ -12,22 +12,13 @@
 """
     Check DataPoint consistency (ZEN-19461)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.test_keywords import LogCapture
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase, LogCapture
 
 # should be OK
 GOOD_YAML = """
-name: ZenPacks.zenoss.Example
+name: ZenPacks.zenoss.TestLogging
 device_classes:
-  /Server:
+  /Devices:
     templates:
       Device:
         thresholds:
@@ -49,9 +40,9 @@ device_classes:
 
 # threshold/graph point has bad datapoints
 INVALID_POINTS = """
-name: ZenPacks.zenoss.Example
+name: ZenPacks.zenoss.TestLogging
 device_classes:
-  /Server:
+  /Devices:
     templates:
       Device:
         thresholds:
@@ -75,9 +66,9 @@ device_classes:
 
 # graph point has no valid datapoint
 NO_VALID_POINTS = """
-name: ZenPacks.zenoss.Example
+name: ZenPacks.zenoss.TestLogging
 device_classes:
-  /Server:
+  /Devices:
     templates:
       Device:
         thresholds:
@@ -97,14 +88,10 @@ device_classes:
                 dpName: null
 """
 
-class TestZen19461(BaseTestCase):
-    """Test fix for ZEN-19461
 
-       Check DataPoint consistency (ZEN-19461)
-    """
-
-    capture = LogCapture()
+class TestLoggingDatasourceDatapoint(ZPLTestBase):
     disableLogging = False
+    capture = LogCapture()
 
     def test_good_yaml(self):
         actual = self.capture.test_yaml(GOOD_YAML)
@@ -124,11 +111,12 @@ class TestZen19461(BaseTestCase):
         actual = self.capture.test_yaml(NO_VALID_POINTS)
         self.assertEquals(actual, expected, 'Datapoint validation failed:\n  {}'.format(actual))
 
+
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen19461))
+    suite.addTest(makeSuite(TestLoggingDatasourceDatapoint))
     return suite
 
 if __name__ == "__main__":

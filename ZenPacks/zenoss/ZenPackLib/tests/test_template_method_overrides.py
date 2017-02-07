@@ -13,17 +13,7 @@
     getRRDTemplateName can return label of base class if label is not set in a subclass
     (ZPS-100)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = '''name: ZenPacks.zenoss.PS.Viptela
@@ -54,19 +44,21 @@ classes:
 '''
 
 
-class TestTemplateMethodOverrides(BaseTestCase):
+class TestTemplateMethodOverrides(ZPLTestBase):
     """
     Ensure getRRDTemplateName returns the expected output
     """
 
-    def test_zProperties(self):
-        z = ZPLTestHarness(YAML_DOC)
-        for spec in z.cfg.classes.values():
+    yaml_doc = YAML_DOC
+
+    def test_getrrdtemplatename_override(self):
+        for spec in self.z.cfg.classes.values():
             if spec.is_device:
                 continue
-            ob = spec.model_class('test')
-            self.assertEquals(spec.label, ob.getRRDTemplateName(),
-                              'getRRDTemplateName expected "{}", got "{}"'.format(spec.label, ob.getRRDTemplateName()))
+            ob = self.z.build_ob(spec.name)
+            rrd_name = ob.getRRDTemplateName()
+            self.assertEquals(spec.label, rrd_name,
+                              'getRRDTemplateName expected "{}", got "{}"'.format(spec.label, rrd_name))
 
 def test_suite():
     """Return test suite for this module."""
