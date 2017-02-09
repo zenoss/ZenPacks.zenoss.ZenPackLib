@@ -27,6 +27,10 @@ Backwards Incompatible Changes
 Release 2.0.2
 -------------
 
+Features
+
+* Add support for ZProperty label and description (ZPS-747, ZPS-819)
+
 Fixes
 
 * Only create a monitoring template if it changes or does not exist (ZPS-570)
