@@ -170,7 +170,7 @@ Use the following steps to create our modeler plugin.
 
       Where does modname come from? It will be <name-of-zenpack>.<name-of-
       class>. So because we defined the `WundergroundLocation` class in
-      ``__init__.py``, and the ZenPack's name is
+      ``zenpack.yaml`` , and the ZenPack's name is
       `ZenPacks.training.WeatherUnderground`, the modname will be
       `ZenPacks.training.WeatherUnderground.WundergroundLocation`.
 
@@ -213,7 +213,7 @@ Use the following steps to create our modeler plugin.
       to get into a situation where the locations modeled successfully, but
       then failed to collect because an API key wasn't set.
 
-      Next we make suer that the user as configured at least one location in
+      Next we make sure that the user as configured at least one location in
       `zWundergroundLocations`. This is mandatory because this controls what
       locations will be modeled.
 
