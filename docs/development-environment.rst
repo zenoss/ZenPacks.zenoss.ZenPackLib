@@ -79,8 +79,8 @@ files.
 
 .. code-block:: bash
 
-    groupadd --gid=1206 zenoss
-    adduser --uid=1337 --gid=1206 zenoss
+    groupadd --gid=1337 zenoss
+    adduser --uid=1337 --gid=1337 zenoss
 
 It'll also be useful for our *zenoss* user to be able to use sudo and docker
 commands. We can allow that by adding the user to the *wheel* and *docker*
