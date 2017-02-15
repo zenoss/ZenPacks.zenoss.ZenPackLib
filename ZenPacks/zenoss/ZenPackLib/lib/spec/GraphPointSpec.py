@@ -9,6 +9,7 @@
 from Products.ZenModel.GraphPoint import GraphPoint
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
+from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
 from ..base.types import Color
 from .Spec import Spec
 
@@ -63,7 +64,7 @@ class GraphPointSpec(Spec):
             :type colorindex: int
             :param includeThresholds: TODO
             :type includeThresholds: bool
-            :param thresholdLegends: map of {thresh_id: {legend: TEXT, color: HEXSTR}
+            :param thresholdLegends: map of {thresh_id: {legend: TEXT, color: HEXSTR, threshId: TEXT}
             :type thresholdLegends: dict(str)
         """
         super(GraphPointSpec, self).__init__(_source_location=_source_location)
@@ -133,9 +134,14 @@ class GraphPointSpec(Spec):
             raise ValueError("thresholdLegends must be specified as a dict or string (got {})".format(value))
         for id, data in self._thresholdLegends.items():
             if not isinstance(data, dict):
-                data = {'legend': None, 'color': None}
+                data = {'legend': None, 'color': None, 'threshId': None}
             self._thresholdLegends[id]['legend'] = data.get('legend')
             self._thresholdLegends[id]['color'] = data.get('color')
+            self._thresholdLegends[id]['threshId'] = data.get('threshId', id)
+
+    def get_threshold_ids(self):
+        """find thresholds related to this datapoint"""
+        return [t.name for t in self.template_spec.template_spec.thresholds.values() if self.dpName in t.dsnames]
 
     def create(self, graph_spec, graph, sequence=None):
         graphpoint = graph.createGraphPoint(DataPointGraphPoint, self.name)
@@ -164,16 +170,21 @@ class GraphPointSpec(Spec):
         if self.color is not None:
             graphpoint.color = str(self.color)
 
+        # build threshold graph points
         if self.includeThresholds:
-            thresh_gps = graph.addThresholdsForDataPoint(self.dpName)
-            for thresh_gp in thresh_gps:
-                entry = self.thresholdLegends.get(thresh_gp.id)
-                if not entry:
-                    continue
-                legend = entry.get('legend')
-                color = entry.get('color')
-                if legend:
-                    thresh_gp.legend = legend
-                if color:
-                    thresh_gp.color = str(color)
-
+            thresh_ids = self.get_threshold_ids()
+            # if not specified, then create them generically
+            if not self.thresholdLegends:
+                thresh_gps = graph.addThresholdsForDataPoint(thresh_ids)
+            # otherwise proceed and use specified legends
+            else:
+                for id, data in self.thresholdLegends.items():
+                    if id in thresh_ids or data.get('threshId') in thresh_ids:
+                        thresh_gp = graph.createGraphPoint(ThresholdGraphPoint, id)
+                        thresh_gp.threshId = data.get('threshId') or id
+                        legend = data.get('legend')
+                        color = data.get('color')
+                        if legend:
+                            thresh_gp.legend = legend
+                        if color:
+                            thresh_gp.color = str(color)
