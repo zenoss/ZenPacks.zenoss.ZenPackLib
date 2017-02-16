@@ -276,7 +276,7 @@ device_classes:
                 rpn: 100,/
 """
 
-DIFF = "--- \n+++ \n@@ -4,8 +4,8 @@\n   CPU Utilization:\n     dsnames: [ssCpuRawIdle_ssCpuRawIdle]\n     eventClass: /Perf/CPU\n-    minval: '2'\n-    escalateCount: 5\n+    minval: '3'\n+    escalateCount: 7\n datasources:\n   memBuffer:\n     type: SNMP\n@@ -123,7 +123,6 @@\n     graphpoints:\n       laLoadInt5:\n         dpName: laLoadInt5_laLoadInt5\n-        lineType: AREA\n         format: '%0.2lf'\n         rpn: 100,/\n \n"
+DIFF = "--- \n+++ \n@@ -4,8 +4,8 @@\n   CPU Utilization:\n     dsnames: [ssCpuRawIdle_ssCpuRawIdle]\n     eventClass: /Perf/CPU\n-    minval: '2'\n-    escalateCount: 5\n+    minval: '3'\n+    escalateCount: 7\n datasources:\n   memBuffer:\n     type: SNMP\n@@ -124,7 +124,6 @@\n     graphpoints:\n       laLoadInt5:\n         dpName: laLoadInt5_laLoadInt5\n-        lineType: AREA\n         format: '%0.2lf'\n         rpn: 100,/\n \n"
 
 
 class TestTemplateModified(ZPLTestBase):
