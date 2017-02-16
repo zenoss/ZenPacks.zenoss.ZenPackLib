@@ -681,6 +681,13 @@ dpName
   :Default Value: None
   :Example: dpName: 'status_status'
 
+threshId
+  :Description: *threshold id* referenced by this datapoint.  Use this instead of dpName to signify a threshold graph point.
+  :Required: Yes
+  :Type: string
+  :Default Value: None
+  :Example: threshId: 'High Utilization'
+
 lineType
   :Description: How to plot the data: "LINE", "AREA" or "DONTDRAW".
   :Required: No

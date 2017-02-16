@@ -32,6 +32,7 @@ class GraphPointSpec(Spec):
             cFunc=None,
             colorindex=None,
             color=None,
+            threshId=None,
             includeThresholds=False,
             thresholdLegends=None,
             _source_location=None,
@@ -40,7 +41,7 @@ class GraphPointSpec(Spec):
         """
         Create a GraphPoint Specification
 
-            :param dpName: TODO
+            :param dpName: Referenced DataPointGraphPoint id
             :type dpName: str
             :param lineType: TODO
             :type lineType: str
@@ -50,7 +51,7 @@ class GraphPointSpec(Spec):
             :type stacked: bool
             :param format: TODO
             :type format: str
-            :param legend: TODO
+            :param legend: Graph legend text for this graph point
             :type legend: str
             :param limit: TODO
             :type limit: int
@@ -62,6 +63,8 @@ class GraphPointSpec(Spec):
             :type color: str
             :param colorindex: TODO
             :type colorindex: int
+            :param threshId: Referenced ThresholdGraphPoint id
+            :type threshId: str
             :param includeThresholds: TODO
             :type includeThresholds: bool
             :param thresholdLegends: map of {thresh_id: {legend: TEXT, color: HEXSTR, threshId: TEXT}
@@ -88,12 +91,16 @@ class GraphPointSpec(Spec):
             self.color = Color(color)
         self.includeThresholds = includeThresholds
         self.thresholdLegends = thresholdLegends
+        self.threshId = threshId
+        # if threshId is given, we assume this is a ThresholdGraphPoint
+        if self.threshId:
+            self.includeThresholds = False
+            self.thresholdLegends = None
 
         # Shorthand for datapoints that have the same name as their datasource.
-        if '_' not in dpName:
+        self.dpName = dpName
+        if dpName and '_' not in dpName:
             self.dpName = '{0}_{0}'.format(dpName)
-        else:
-            self.dpName = dpName
 
         # Allow color to be specified by color_index instead of directly. This is
         # useful when you want to keep the normal progression of colors, but need
@@ -144,10 +151,19 @@ class GraphPointSpec(Spec):
         return [t.name for t in self.template_spec.template_spec.thresholds.values() if self.dpName in t.dsnames]
 
     def create(self, graph_spec, graph, sequence=None):
-        graphpoint = graph.createGraphPoint(DataPointGraphPoint, self.name)
-        self.speclog.debug("adding graphpoint")
+        # this could be a ThresholdGraphPoint
+        if self.threshId:
+            graphpoint = graph.createGraphPoint(ThresholdGraphPoint, self.name)
+            graphpoint.threshId = self.threshId
+            # check that thresh ID is valid
+            thresh_ids = [t.name for t in self.template_spec.template_spec.thresholds.values()]
+            if self.threshId not in thresh_ids:
+                self.LOG.warn('"{}" is an invalid threshold id'.format(self.threshId))
+        else:
+            graphpoint = graph.createGraphPoint(DataPointGraphPoint, self.name)
+            graphpoint.dpName = self.dpName
 
-        graphpoint.dpName = self.dpName
+        self.speclog.debug("adding graphpoint")
 
         if sequence:
             graphpoint.sequence = sequence

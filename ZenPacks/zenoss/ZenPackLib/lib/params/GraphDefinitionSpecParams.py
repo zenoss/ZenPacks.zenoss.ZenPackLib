@@ -9,6 +9,7 @@
 from Acquisition import aq_base
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
+from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
 
 from ..spec.GraphDefinitionSpec import GraphDefinitionSpec
 from .SpecParams import SpecParams
@@ -36,7 +37,7 @@ class GraphDefinitionSpecParams(SpecParams, GraphDefinitionSpec):
             if getattr(graphdefinition, propname, None) != getattr(sample_gd, propname, None):
                 setattr(self, propname, getattr(graphdefinition, propname, None))
 
-        datapoint_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, DataPointGraphPoint)]
+        datapoint_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, DataPointGraphPoint) or isinstance(x, ThresholdGraphPoint)]
         self.graphpoints = {x.id: GraphPointSpecParams.fromObject(x, graphdefinition) for x in datapoint_graphpoints}
 
         comment_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, CommentGraphPoint)]

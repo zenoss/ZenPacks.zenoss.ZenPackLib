@@ -81,6 +81,8 @@ class RRDTemplateSpec(Spec):
         # check graph point references
         for g_name, g_spec in self.graphs.items():
             for gp_name, gp_spec in g_spec.graphpoints.items():
+                if gp_spec.threshId and not gp_spec.dpName:
+                    continue
                 self.check_ds_dp_names(gp_name,
                                        'Graph Point',
                                        set([gp_spec.dpName]),

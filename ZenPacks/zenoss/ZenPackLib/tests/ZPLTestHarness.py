@@ -500,16 +500,20 @@ class ZPLTestHarness(ZenScriptBase):
     def check_ob_vs_yaml(self, ob, data):
         '''compare object values to YAML'''
         passed = True
+        if not data:
+            return True
         ob_data = data.get('DEFAULTS', {})
         if not isinstance(data.get(ob.id, {}), dict):
             # this is the dataoint aliases
+            if self.classname(ob) == 'RRDDataPoint':
+                return passed
             if self.classname(ob) == 'RRDDataPoint':
                 return passed
         ob_data.update(data.get(ob.id, {}))
         for k, v in ob_data.items():
             if isinstance(v, dict):
                 continue
-            if k == 'type':
+            if k in ['type', 'comments']:
                 continue
             expected = v
             actual = getattr(ob, k)
