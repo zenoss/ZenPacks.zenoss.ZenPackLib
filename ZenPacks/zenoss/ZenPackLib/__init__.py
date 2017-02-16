@@ -57,3 +57,7 @@ class ZenPack(ZenPackBase):
         dest_path = zenPath('bin', 'zenpacklib')
         os.system('rm -f "%s"' % dest_path)
         LOG.info('Removing symlink {}'.format(dest_path))
+
+
+# Patch last to avoid import recursion problems.
+from ZenPacks.zenoss.ZenPackLib import patches

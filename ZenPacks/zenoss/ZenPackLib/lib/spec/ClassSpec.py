@@ -576,6 +576,13 @@ class ClassSpec(Spec):
                 return map.get('interface', IInfo)
         return IInfo
 
+    def get_facade_base(self):
+        """Return appropriate interfaces class"""
+        for cls, map in schema_map.items():
+            if self.is_a(cls):
+                return map.get('facade', None)
+        return None
+
     @property
     def is_device(self):
         """Return True if this class is a Device."""
@@ -774,7 +781,6 @@ class ClassSpec(Spec):
             self.resolved_bases,
             attributes)
 
-
     @property
     def model_class(self):
         """Return model class."""
@@ -957,6 +963,7 @@ class ClassSpec(Spec):
             GSM.registerAdapter(self.formbuilder_class, (self.info_class,), IFormBuilder)
         self.register_dynamicview_adapters()
         self.register_impact_adapters()
+        self.register_facade_types()
 
     def register_dynamicview_adapters(self):
         if not DYNAMICVIEW_INSTALLED:
@@ -997,6 +1004,13 @@ class ClassSpec(Spec):
                 BaseTriggers,
                 required=(self.model_class,),
                 provided=INodeTriggers)
+
+    def register_facade_types(self):
+        """Ensure this class gets listed in GUI elements"""
+        f_cls = self.get_facade_base()
+        if f_cls:
+            cls_name = '{}.{}'.format(self.symbol_name, self.name)
+            f_cls._types = tuple(set([f_cls._types] + [cls_name]))
 
     @property
     def containing_components(self):

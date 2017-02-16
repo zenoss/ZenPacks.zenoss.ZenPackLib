@@ -55,25 +55,28 @@ from Products.Zuul.interfaces.service import IServiceInfo
 from .info import HWComponentInfo
 from .interfaces import IHWComponentInfo
 
+from Products.Zuul.facades.processfacade import ProcessFacade
+from Products.Zuul.facades.servicefacade import ServiceFacade
+
 
 schema_map = {
-     Device: {'interface': IDeviceInfo, 'info': DeviceInfo},
-     Component: {'interface': IComponentInfo, 'info': ComponentInfo},
-     HWComponent: {'interface': IHWComponentInfo, 'info': HWComponentInfo},
-     HardwareComponent: {'interface': IHWComponentInfo, 'info': HWComponentInfo},
-     CPU: {'interface': ICPUInfo, 'info': CPUInfo},
-     ExpansionCard: {'interface': IExpansionCardInfo, 'info': ExpansionCardInfo},
-     Fan: {'interface': IFanInfo, 'info': FanInfo},
-     HardDisk: {'interface': IHWComponentInfo, 'info': HWComponentInfo},
-     PowerSupply: {'interface': IPowerSupplyInfo, 'info': PowerSupplyInfo},
-     TemperatureSensor: {'interface': ITemperatureSensorInfo, 'info': TemperatureSensorInfo},
-     OSComponent: {'interface': IComponentInfo, 'info': ComponentInfo},
-     FileSystem: {'interface': IFileSystemInfo, 'info': FileSystemInfo},
-     IpInterface: {'interface': IIpInterfaceInfo, 'info': IpInterfaceInfo},
-     IpRouteEntry: {'interface': IIpRouteEntryInfo, 'info': IpRouteEntryInfo},
-     OSProcess: {'interface': IOSProcessInfo, 'info': OSProcessInfo},
-     Service: {'interface': IServiceInfo, 'info': ServiceInfo},
-     IpService: {'interface': IIpServiceInfo, 'info': IpServiceInfo},
-     WinService: {'interface': IWinServiceInfo, 'info': WinServiceInfo},
+     Device: {'interface': IDeviceInfo, 'info': DeviceInfo, 'facade': None},
+     Component: {'interface': IComponentInfo, 'info': ComponentInfo, 'facade': None},
+     HWComponent: {'interface': IHWComponentInfo, 'info': HWComponentInfo, 'facade': None},
+     HardwareComponent: {'interface': IHWComponentInfo, 'info': HWComponentInfo, 'facade': None},
+     CPU: {'interface': ICPUInfo, 'info': CPUInfo, 'facade': None},
+     ExpansionCard: {'interface': IExpansionCardInfo, 'info': ExpansionCardInfo, 'facade': None},
+     Fan: {'interface': IFanInfo, 'info': FanInfo, 'facade': None},
+     HardDisk: {'interface': IHWComponentInfo, 'info': HWComponentInfo, 'facade': None},
+     PowerSupply: {'interface': IPowerSupplyInfo, 'info': PowerSupplyInfo, 'facade': None},
+     TemperatureSensor: {'interface': ITemperatureSensorInfo, 'info': TemperatureSensorInfo, 'facade': None},
+     OSComponent: {'interface': IComponentInfo, 'info': ComponentInfo, 'facade': None},
+     FileSystem: {'interface': IFileSystemInfo, 'info': FileSystemInfo, 'facade': None},
+     IpInterface: {'interface': IIpInterfaceInfo, 'info': IpInterfaceInfo, 'facade': None},
+     IpRouteEntry: {'interface': IIpRouteEntryInfo, 'info': IpRouteEntryInfo, 'facade': None},
+     OSProcess: {'interface': IOSProcessInfo, 'info': OSProcessInfo, 'facade': ProcessFacade},
+     IpService: {'interface': IIpServiceInfo, 'info': IpServiceInfo, 'facade': ServiceFacade},
+     WinService: {'interface': IWinServiceInfo, 'info': WinServiceInfo, 'facade': ServiceFacade},
+     Service: {'interface': IServiceInfo, 'info': ServiceInfo, 'facade': ServiceFacade},
      }
 
