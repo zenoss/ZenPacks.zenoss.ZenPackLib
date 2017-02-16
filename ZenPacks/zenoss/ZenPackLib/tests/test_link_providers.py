@@ -12,17 +12,10 @@
 """
     Test link providers
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-
-unused(Globals)
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
-LINK_PROVIDER_YAML = """
+YAML_DOC = """
 name: ZenPacks.zenoss.ZenPackLib
 link_providers:
     Cluster Node:
@@ -55,18 +48,18 @@ EXPECTED_YAML = {
     'name': 'ZenPacks.zenoss.ZenPackLib'
 }
 
-link_provider_zp = ZPLTestHarness(LINK_PROVIDER_YAML)
 
 
-class TestLinkProviders(BaseTestCase):
-    """Test Event Classes
+class TestLinkProviders(ZPLTestBase):
+    """Test Link Providers
     """
+    yaml_doc = YAML_DOC
 
     def test_link_providers(self):
         self.maxDiff = None
-        self.assertEquals(len(link_provider_zp.yaml['link_providers']), len(link_provider_zp.cfg.link_providers))
-        self.assertEquals(EXPECTED_YAML, link_provider_zp.yaml)
-        link_providers = link_provider_zp.cfg.link_providers
+        self.assertEquals(len(self.z.yaml['link_providers']), len(self.z.cfg.link_providers))
+        self.assertEquals(EXPECTED_YAML, self.z.yaml)
+        link_providers = self.z.cfg.link_providers
         self.assertFalse(link_providers['Cluster'].global_search)
         self.assertEquals(link_providers['Cluster'].link_class, 'ZenPacks.zenoss.Microsoft.Windows.Device.Device')
         self.assertEquals(link_providers['Cluster'].catalog, 'device')

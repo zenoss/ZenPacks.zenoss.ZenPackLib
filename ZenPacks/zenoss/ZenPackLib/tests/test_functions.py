@@ -14,24 +14,19 @@
 This module tests "public" zenpacklib functions.
 
 """
-
-# stdlib Imports
-import os
-import unittest
-import site
-
 # Zenoss Imports
 import Globals
 from Products.ZenUtils.Utils import unused
-
 unused(Globals)
 
+# stdlib Imports
+from Products.ZenTestCase.BaseTestCase import BaseTestCase
+
 # zenpacklib Imports
-site.addsitedir(os.path.join(os.path.dirname(__file__), '..'))
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 
-class TestFunctions(unittest.TestCase):
+class TestFunctions(BaseTestCase):
 
     """Functions test suite."""
 

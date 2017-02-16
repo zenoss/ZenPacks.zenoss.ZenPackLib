@@ -12,22 +12,13 @@
 """
     Duration threshold has a problem where you cant set the violationPercent as integer (ZEN-24079)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 YAML_DOC = """
 name: ZenPacks.zenoss.DurationThreshold
 device_classes:
-  /Device:
+  /Devices:
     templates:
       TESTTEMPLATE:
         description: Testing that Duration threshold accepts integer values
@@ -46,27 +37,28 @@ device_classes:
 """
 
 
-class TestDurationThresholdInteger(BaseTestCase):
+class TestDurationThresholdInteger(ZPLTestBase):
     """Test fix for ZEN-24079
 
        Duration threshold has a problem where you cant set the violationPercent as integer
     """
 
+    yaml_doc = YAML_DOC
+    disableLogging = False
+
     def test_integer_threshold(self):
-        z = ZPLTestHarness(YAML_DOC)
-        if z.zenpack_installed():
-            z.connect()
-            self.assertTrue(z.check_templates_vs_yaml(), "Template objects do not match YAML")
-            self.assertTrue(z.check_templates_vs_specs(), "Template objects do not match Spec")
+        if self.z.zenpack_installed():
+            self.assertTrue(self.z.check_templates_vs_yaml(), "Template objects do not match YAML")
+            self.assertTrue(self.z.check_templates_vs_specs(), "Template objects do not match Spec")
             # check properties on dummy template
-            dcs = z.cfg.device_classes.get('/Device')
+            dcs = self.z.cfg.device_classes.get('/Devices')
             tcs = dcs.templates.get('TESTTEMPLATE')
-            t = tcs.create(z.dmd, False)
+            t = tcs.create(self.dmd, False)
             for th in t.thresholds():
                 self.assertTrue(isinstance(th.violationPercentage, int),
                     'DurationThreshold property (violationPercentage) should be int, got {}'.format(type(th.violationPercentage)))
         else:
-            print '\nSkipping test_integer_threshold since ZenPacks.zenoss.DurationThreshold not installed.'
+            self.log.warn('Skipping test_integer_threshold since ZenPacks.zenoss.DurationThreshold not installed.')
 
 
 def test_suite():

@@ -12,17 +12,8 @@
 """
     Test that device classes can be removed (ZEN-18134)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
 
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 
 
@@ -37,35 +28,34 @@ device_classes:
 """
 
 
-class TestZen18134(BaseTestCase):
+class TestDeviceClassRemoval(ZPLTestBase):
     """
     Test that device classes can be removed (ZEN-18134)
     """
-    z = ZPLTestHarness(YAML_DOC)
+
+    yaml_doc = YAML_DOC
 
     def test_device_class(self):
-        self.z.connect()
-
         # instantiate the ZenPack class
-        zenpack = ZenPack(self.z.dmd)
+        zenpack = ZenPack(self.dmd)
 
         # create the device class
         for dcname, dcspec in self.z.cfg.device_classes.items():
-            dc = zenpack.create_device_class(self.z, dcspec)
+            zenpack.create_device_class(self, dcspec)
             # verify that it was created
             self.assertTrue(self.device_class_exists(dcspec.path),
                             'Device class {} was not created'.format(dcspec.path))
 
         for dcname, dcspec in self.z.cfg.device_classes.iteritems():
             if dcspec.remove:
-                zenpack.remove_device_class(self.z, dcspec)
+                zenpack.remove_device_class(self, dcspec)
                 # verify that it was removed
                 self.assertFalse(self.device_class_exists(dcspec.path),
                                 'Device class {} was not removed'.format(dcspec.path))
 
     def device_class_exists(self, path):
         try:
-            self.z.dmd.Devices.getOrganizer(path)
+            self.dmd.Devices.getOrganizer(path)
             return True
         except KeyError:
             return False
@@ -74,7 +64,7 @@ def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen18134))
+    suite.addTest(makeSuite(TestDeviceClassRemoval))
     return suite
 
 if __name__ == "__main__":

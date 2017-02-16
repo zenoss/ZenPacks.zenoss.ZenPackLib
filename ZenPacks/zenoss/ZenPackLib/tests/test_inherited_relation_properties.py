@@ -14,17 +14,7 @@
     zenpacklib.Device subclass wipes out other relations added to 
     Products.ZenModel.Device (ZEN-24108)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib import zenpacklib
-
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """
@@ -74,17 +64,17 @@ classes:
 """
 
 
-class TestZen23763(BaseTestCase):
+class TestInheritedRelationProperties(ZPLTestBase):
     """Test fix for ZEN-23763
 
        specifying properties (display, label, etc) on an inherited relationship
     """
+    yaml_doc = YAML_DOC
 
     def test_inherited_relation_display(self):
-        CFG = zenpacklib.load_yaml(YAML_DOC)
-        comp = CFG.classes.get('OpenstackComponent')
-        org = CFG.classes.get('OrgComponent')
-        az = CFG.classes.get('AvailabilityZone')
+        comp = self.z.cfg.classes.get('OpenstackComponent')
+        org = self.z.cfg.classes.get('OrgComponent')
+        az = self.z.cfg.classes.get('AvailabilityZone')
 
         self.property_value(comp, 'endpoint', 'grid_display', True)
         self.property_value(comp, 'endpoint', 'label', 'Endpoint')
@@ -121,7 +111,7 @@ def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen23763))
+    suite.addTest(makeSuite(TestInheritedRelationProperties))
     return suite
 
 if __name__ == "__main__":

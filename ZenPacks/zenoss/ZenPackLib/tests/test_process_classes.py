@@ -14,17 +14,10 @@
     process_classes:
 
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-
-unused(Globals)
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
-PROCESS_CLASS_YAML = """name: ZenPacks.zenoss.Processes
+YAML_DOC = """name: ZenPacks.zenoss.Processes
 process_class_organizers:
   Test:
     description: Description of the Process Class Organizer
@@ -49,21 +42,19 @@ process_class_organizers:
 """
 
 
-process_class_zp = ZPLTestHarness(PROCESS_CLASS_YAML)
-
-
-class TestProcessClass(BaseTestCase):
-    """Test Event Classes
+class TestProcessClass(ZPLTestBase):
+    """Test Process Classes
     """
+    yaml_doc = YAML_DOC
 
     def test_process_classes(self):
-        self.assertEquals(len(process_class_zp.yaml['process_class_organizers']), 1)
-        self.assertEquals(len(process_class_zp.yaml['process_class_organizers']), len(process_class_zp.cfg.process_class_organizers))
-        self.assertEquals(process_class_zp.yaml['process_class_organizers'].keys()[0], process_class_zp.cfg.process_class_organizers.keys()[0])
-        self.assertTrue('Test' in process_class_zp.cfg.process_class_organizers.keys())
-        self.assertEquals(process_class_zp.cfg.process_class_organizers['Test'].description, "Description of the Process Class Organizer")
+        self.assertEquals(len(self.z.yaml['process_class_organizers']), 1)
+        self.assertEquals(len(self.z.yaml['process_class_organizers']), len(self.z.cfg.process_class_organizers))
+        self.assertEquals(self.z.yaml['process_class_organizers'].keys()[0], self.z.cfg.process_class_organizers.keys()[0])
+        self.assertTrue('Test' in self.z.cfg.process_class_organizers.keys())
+        self.assertEquals(self.z.cfg.process_class_organizers['Test'].description, "Description of the Process Class Organizer")
 
-        cfg_process_classes = process_class_zp.cfg.process_class_organizers['Test'].process_classes
+        cfg_process_classes = self.z.cfg.process_class_organizers['Test'].process_classes
 
         self.assertIsNotNone(cfg_process_classes)
 
