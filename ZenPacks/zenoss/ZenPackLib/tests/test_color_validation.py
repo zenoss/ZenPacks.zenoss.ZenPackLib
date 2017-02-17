@@ -64,20 +64,20 @@ device_classes:
           Graph:
             graphpoints:
               A:
+                color: '403200'
                 dpName: test_a
-                color: '007700'
               B:
-                dpName: test_b
                 color: FF3300
+                dpName: test_b
               C:
-                dpName: test_c
                 color: 0000BB
+                dpName: test_c
               D:
+                color: '0'
                 dpName: test_c
-                color: '000000'
               E:
-                dpName: test_c
                 color: FFF002
+                dpName: test_c
               F:
                 dpName: test_c
 """
