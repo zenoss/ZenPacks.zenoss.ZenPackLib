@@ -6315,6 +6315,13 @@ def create_zenpack_srcdir(zenpack_name):
     import shutil
     import errno
 
+    # validate ZP name - it must begins with "ZenPacks.*"
+    if not zenpack_name.startswith('ZenPacks.'):
+        sys.exit(
+            "`{}` is a wrong name for ZenPack - zenpack name must starts "
+            "with `ZenPacks`. Please, check ZP name.".format(zenpack_name)
+        )
+
     if os.path.exists(zenpack_name):
         sys.exit("{} directory already exists.".format(zenpack_name))
 
