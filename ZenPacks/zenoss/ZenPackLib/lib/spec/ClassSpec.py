@@ -19,7 +19,7 @@ from Products.Zuul.form import schema
 from Products.Zuul.form.interfaces import IFormBuilder
 from Products.Zuul.infos import InfoBase, ProxyProperty
 from Products.Zuul.interfaces import IInfo
-from Products.ZenModel.interfaces import IExpandedLinkProvider
+from Products.Zuul.catalog.interfaces import IPathReporter
 
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
 from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
@@ -575,6 +575,20 @@ class ClassSpec(Spec):
                 return map.get('interface', IInfo)
         return IInfo
 
+    def get_facade_base(self):
+        """Return appropriate interfaces class"""
+        for cls, map in schema_map.items():
+            if self.is_a(cls):
+                return map.get('facade', None)
+        return None
+
+    def get_path_reporter(self):
+        """Return appropriate path reporter class"""
+        for cls, map in schema_map.items():
+            if self.is_a(cls):
+                return map.get('reporter', None)
+        return None
+
     @property
     def is_device(self):
         """Return True if this class is a Device."""
@@ -954,6 +968,8 @@ class ClassSpec(Spec):
         GSM.registerAdapter(self.info_class, (self.model_class,), self.iinfo_class)
         if self.is_a_component:
             GSM.registerAdapter(self.formbuilder_class, (self.info_class,), IFormBuilder)
+        self.register_facade_types()
+        self.register_path_adapters()
         self.register_dynamicview_adapters()
         self.register_impact_adapters()
 
@@ -996,6 +1012,22 @@ class ClassSpec(Spec):
                 BaseTriggers,
                 required=(self.model_class,),
                 provided=INodeTriggers)
+
+    def register_facade_types(self):
+        """Ensure this class gets listed in GUI elements using the _instanceClass property"""
+        f_cls = self.get_facade_base()
+        if f_cls:
+            cls_name = '{}.{}'.format(self.symbol_name, self.name)
+            if hasattr(f_cls, '_types'):
+                f_cls._types = tuple(set(list(f_cls._types) + [cls_name]))
+            else:
+                self.LOG.error("Could not register {} in {}".format(cls_name, f_cls.__name__))
+
+    def register_path_adapters(self):
+        """Register additional path adapters if needed"""
+        reporter = self.get_path_reporter()
+        if reporter:
+            GSM.registerAdapter(reporter, (self.model_class,), IPathReporter)
 
     @property
     def containing_components(self):

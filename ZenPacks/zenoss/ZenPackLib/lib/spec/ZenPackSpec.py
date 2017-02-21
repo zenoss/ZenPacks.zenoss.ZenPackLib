@@ -556,7 +556,7 @@ class ZenPackSpec(Spec):
             x.packZProperties for x in self.zProperties.itervalues()]
 
         attributes = {
-            'packZProperties': packZProperties
+            'packZProperties': packZProperties,
             }
 
         attributes['device_classes'] = self.device_classes

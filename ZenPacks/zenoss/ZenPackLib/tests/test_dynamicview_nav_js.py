@@ -14,19 +14,11 @@
 This module tests zenpacklib  DynamicView functionality
 
 """
-
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# zenpacklib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-from ZenPacks.zenoss.ZenPackLib import zenpacklib
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 from ZenPacks.zenoss.ZenPackLib.lib.utils import dynamicview_installed
 
 
-LINUX_YAML = """
+YAML_DOC = """
 name: ZenPacks.zenpacklib.TestLinuxStorage
 
 classes:
@@ -89,26 +81,27 @@ class_relationships:
 EXPECTED_SUBCOMPONENT_VIEW = "Zenoss.nav.appendTo('Component', [{\n    id: 'subcomponent_view',\n    text: _t('Dynamic View'),\n    xtype: 'dynamicview',\n    relationshipFilter: 'impacted_by',\n    viewName: 'service_view',\n    filterNav: function(navpanel) {\n        switch (navpanel.refOwner.componentType) {\n            case 'Application': return true;\n            case 'Linux': return true;\n            default: return false;\n        }\n    }\n}]);"
 
 
-class TestDynamicViewComponentNav(BaseTestCase):
+class TestDynamicViewComponentNav(ZPLTestBase):
     """Specs test suite."""
 
-    def test_DynamicViewComponentNav(self):
-        if dynamicview_installed():
-            zenpack = zenpacklib.load_yaml(LINUX_YAML)
+    yaml_doc = YAML_DOC
+    disableLogging = False
 
+    def test_dynamic_view_nav_js(self):
+        if dynamicview_installed():
             # dynamicview_nav_js_snippet is only used internally by zenpacklib, but
             # it should match exactly and be an easier test to make.
             self.assertMultiLineEqual(
-                zenpack.dynamicview_nav_js_snippet.strip(),
+                self.z.cfg.dynamicview_nav_js_snippet.strip(),
                 EXPECTED_SUBCOMPONENT_VIEW.strip())
 
             # device_js_snippet is actually used to create the JavaScript snippet,
             # and should contain our subcomponent_view among many other things.
             self.assertIn(
                 EXPECTED_SUBCOMPONENT_VIEW.strip(),
-                zenpack.device_js_snippet.strip())
+                self.z.cfg.device_js_snippet.strip())
         else:
-            print "\nSkipping TestDynamicViewComponentNav since ZenPacks.zenoss.DynamicView not installed"
+            self.log.warn("Skipping TestDynamicViewComponentNav since ZenPacks.zenoss.DynamicView not installed")
 
 
 def test_suite():

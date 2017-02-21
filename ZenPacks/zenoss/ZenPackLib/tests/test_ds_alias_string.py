@@ -13,15 +13,7 @@
     Test fix for ZEN-19486
     not entering dict of aliases in datapoint results in broken zenpack
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
@@ -52,18 +44,19 @@ device_classes:
             oid: 1.3.6.1.4.1.2021.10.1.5.2
 """
 
-class Test19486(BaseTestCase):
+class TestDatapointAliasAsString(ZPLTestBase):
     """Test fix for ZEN-19486"""
+
+    yaml_doc = [YAML_DOC, BAD_DOC]
 
     def test_datapoint_aliases(self):
         ''''''
-        dp_dict = self.get_alias(YAML_DOC)
-        dp_str = self.get_alias(BAD_DOC)
+        dp_dict = self.get_alias(self.z)
+        dp_str = self.get_alias(self.z_1)
         self.assertEqual(dp_dict.aliases, dp_str.aliases, 'Datapoint aliases {} and {} do not match'.format(
                                                         dp_dict.aliases, dp_str.aliases))
 
-    def get_alias(self, yaml_doc):
-        z = ZPLTestHarness(yaml_doc)
+    def get_alias(self, z):
         dcspec = z.cfg.device_classes.get('/Server')
         tspec = dcspec.templates.get('Device')
         return tspec.datasources.get('laLoadInt5').datapoints.get('laLoadInt5')
@@ -73,7 +66,7 @@ def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(Test19486))
+    suite.addTest(makeSuite(TestDatapointAliasAsString))
     return suite
 
 if __name__ == "__main__":

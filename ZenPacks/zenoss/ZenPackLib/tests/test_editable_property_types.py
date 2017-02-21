@@ -13,17 +13,7 @@
     This is designed to test whether or not ZenPack lib 
     sets editable class properties as strings regardless of type (ZEN-22057)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """
@@ -51,13 +41,13 @@ classes:
 """
 
 
-class TestZen22057(BaseTestCase):
+class TestEditableProperties(ZPLTestBase):
     """Test fix for ZEN-22057
     """
+    yaml_doc = YAML_DOC
 
-    def test_inherited_relation_display(self):
-        z = ZPLTestHarness(YAML_DOC)
-        ob = z.build_ob('SomeComponent')
+    def test_editable_properties(self):
+        ob = self.z.build_ob('SomeComponent')
         for x in ['1', True, 1.0, 1]:
             # check integer
             ob.property_int = x
@@ -86,7 +76,7 @@ def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen22057))
+    suite.addTest(makeSuite(TestEditableProperties))
     return suite
 
 if __name__ == "__main__":

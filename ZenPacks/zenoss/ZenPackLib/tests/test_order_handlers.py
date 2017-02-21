@@ -12,16 +12,8 @@
 """
     Validate handling, normalization, and scaling of order parameter across Specs
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 YAML_DOC = '''name: ZenPacks.zenoss.ZenPackLib
 class_relationships:
@@ -140,27 +132,27 @@ EXPECTED_FLOAT = {'AuxComponent': {'relationships': {'basicDevice': {'scaled': 3
 
 EXPECTED_DEFAULT = {'AuxComponent': {'relationships': {'basicDevice': {'scaled': 3.02, 'order': 2}, 'auxComponents': {'scaled': 6.01, 'order': 1}, 'subComponents': {'scaled': 7.0, 'order': 100}}, 'scaled': 5.04, 'properties': {'a': {'scaled': 4.01, 'order': 1}, 'b': {'scaled': 4.02, 'order': 2}}, 'order': 4}, 'BasicComponent': {'relationships': {'basicDevice': {'scaled': 4.0, 'order': 100}}, 'scaled': 5.02, 'properties': {'a': {'scaled': 4.01, 'order': 1}, 'b': {'scaled': 4.02, 'order': 2}}, 'order': 2}, 'BasicDevice': {'relationships': {'basicComponents': {'scaled': 7.0, 'order': 100}}, 'scaled': 5.01, 'properties': {'a': {'scaled': 4.01, 'order': 1}, 'c': {'scaled': 4.03, 'order': 3}, 'b': {'scaled': 4.02, 'order': 2}}, 'order': 1}, 'SubComponent': {'relationships': {'basicDevice': {'scaled': 3.02, 'order': 2}, 'auxComponents': {'scaled': 6.01, 'order': 1}}, 'scaled': 5.03, 'properties': {'a': {'scaled': 4.01, 'order': 1}, 'b': {'scaled': 4.02, 'order': 2}}, 'order': 3}}
 
-class TestOrderHandlers(BaseTestCase):
+
+class TestOrderHandlers(ZPLTestBase):
     """
         Validate handling, normalization, and scaling of order parameter across Specs
     """
 
+    yaml_doc = [YAML_DOC, YAML_DOC_INT, YAML_DOC_FLOAT]
+
     def test_order_as_default(self):
         """Test handling of default order assignment"""
-        z = ZPLTestHarness(YAML_DOC)
-        self.assertEquals(EXPECTED_DEFAULT, self.get_order_data(z),
+        self.assertEquals(EXPECTED_DEFAULT, self.get_order_data(self.z),
                           'Order parameter handling (default) failed validation')
 
     def test_order_as_float(self):
         """Test handling of legacy float order assignment"""
-        z = ZPLTestHarness(YAML_DOC_FLOAT)
-        self.assertEquals(EXPECTED_FLOAT, self.get_order_data(z),
+        self.assertEquals(EXPECTED_FLOAT, self.get_order_data(self.z_2),
                           'Order parameter handling (float) failed validation')
 
     def test_order_as_integer(self):
         """test ZPl 2.0 normal order"""
-        z = ZPLTestHarness(YAML_DOC_INT)
-        self.assertEquals(EXPECTED_INT, self.get_order_data(z),
+        self.assertEquals(EXPECTED_INT, self.get_order_data(self.z_1),
                           'Order parameter handling (integer) failed validation')
 
     def get_order_data(self, z):
@@ -172,6 +164,7 @@ class TestOrderHandlers(BaseTestCase):
             for r_spec in spec.relationships.values():
                 data[spec.name]['relationships'][r_spec.name] = {'order': r_spec.order, 'scaled': r_spec.scaled_order}
         return data
+
 
 def test_suite():
     """Return test suite for this module."""

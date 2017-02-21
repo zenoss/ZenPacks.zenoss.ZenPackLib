@@ -14,16 +14,7 @@
     zenpacklib.Device subclass wipes out other relations added to 
     Products.ZenModel.Device (ZEN-24108)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """
@@ -64,24 +55,24 @@ classes:
 
 EXPECTED = ["{id: 'RabbitMQAPI_Node',\n                       dataIndex: 'rabbitMQAPI_Node',\n                       header: _t('Node'),\n                       width: 100,\n                       renderer: Zenoss.render.zenpacklib_ZenPacks_zenoss_ZenPackLib_entityLinkFromGrid,\n                       sortable: true}"]
 
-class TestZen21966(BaseTestCase):
+
+class TestInheritedRelationOverrides(ZPLTestBase):
     """Test fix for ZEN-21966
        ZenPackLib ignores label/short_label on relationship overrides for 1 to 1 contained relationships
     """
+    yaml_doc = YAML_DOC
 
-    def test_inherited_relation_display(self):
-        z = ZPLTestHarness(YAML_DOC)
-        cls = z.cfg.classes.get('RabbitMQAPI_VHost')
+    def test_inherited_relation_overrides(self):
+        cls = self.z.cfg.classes.get('RabbitMQAPI_VHost')
         actual = cls.containing_js_columns
         self.assertEquals(EXPECTED, actual, 'containing_js_columns expected:\n{}\ngot:\n{}\n'.format(EXPECTED, actual))
-
 
 
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestZen21966))
+    suite.addTest(makeSuite(TestInheritedRelationOverrides))
     return suite
 
 if __name__ == "__main__":

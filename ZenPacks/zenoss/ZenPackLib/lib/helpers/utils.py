@@ -111,8 +111,10 @@ def load_yaml_single(yaml_doc, useLoader=True, loader=Loader):
         return yaml.load(yaml_doc)
 
 
-def get_merged_docs(docs=[]):
+def get_merged_docs(docs=None):
     '''return recursively merged dictionnary'''
+    if docs is None:
+        docs = []
     def merge_dict(target, source):
         for k, v in source.items():
             if (k in target and isinstance(target[k], dict)
@@ -293,7 +295,7 @@ def sort_yaml_data(data):
     return ordered
 
 
-def writeDataToFile(keywords=[]):
+def writeDataToFile(keywords=None):
     '''
     This is a decorator that will save arguments sent to a function.
     It will write to the /tmp directory using the class name, method name
@@ -330,6 +332,8 @@ def writeDataToFile(keywords=[]):
 
     $ export ZPL_DUMP_DATA=1; python foo.py; unset ZPL_DUMP_DATA
     '''
+    if keywords is None:
+        keywords = []
     def wrap(f):
         def dumper(self, *args, **kwargs):
             import os

@@ -8,21 +8,12 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
 """
-    "usePowershell" datasource option ignored in zenpacklib created ZenPacks (ZEN-25315)
+    Ensure that zproperty types are respected
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 def get_zproperty_type(z_type):
     """
         For zproperties, the actual data type of a default value
@@ -61,14 +52,15 @@ zProperties:
 """
 
 
-class TestZenProperties(BaseTestCase):
+class TestZenProperties(ZPLTestBase):
     """
     Ensure that zproperty types are respected
     """
 
+    yaml_doc = YAML_DOC
+
     def test_zProperties(self):
-        z = ZPLTestHarness(YAML_DOC)
-        zprops = z.cfg.zProperties
+        zprops = self.z.cfg.zProperties
         self.is_valid(zprops.get('zStringProperty'), str, '')
         self.is_valid(zprops.get('zPasswordProperty'), str, '')
         self.is_valid(zprops.get('zBooleanProperty'), bool, False)

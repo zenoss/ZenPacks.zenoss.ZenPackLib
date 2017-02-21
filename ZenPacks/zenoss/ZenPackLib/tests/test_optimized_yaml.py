@@ -15,17 +15,8 @@ Tests YAML loading from multiple files
 
 """
 # zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib import zenpacklib
-import yaml
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import optimize_yaml, compare_zenpackspecs
-
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
 
 YAML_WHOLE = """
@@ -678,21 +669,21 @@ classes:
 """
 
 
-
-class TestOptimizedYAML(BaseTestCase):
+class TestOptimizedYAML(ZPLTestBase):
     """Test optimized YAML"""
+
+    yaml_doc = YAML_WHOLE
 
     def test_optimized_yaml(self):
         ''''''
-        # reference yaml (all in one
 
-        cfg = zenpacklib.load_yaml(YAML_WHOLE)
-        orig_yaml = yaml.dump(cfg.specparams, Dumper=Dumper)
+        orig_yaml = self.z.export_specparams_yaml()
+
         new_yaml = optimize_yaml(YAML_WHOLE)
 
         compare_equals = compare_zenpackspecs(orig_yaml, new_yaml)
 
-        self.assertTrue(compare_equals, 
+        self.assertTrue(compare_equals,
                         'YAML Optimization test failed')
 
 

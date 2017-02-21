@@ -14,34 +14,20 @@
 This module tests command line usage of zenpacklib.py.
 
 """
-import logging
 import os
 import re
 import shutil
-import Globals
-from Products.ZenUtils.Utils import unused, binPath
-
-unused(Globals)
-
-logging.basicConfig(level=logging.INFO)
-LOG = logging.getLogger('zen.zenpacklib.tests')
+from ZenPacks.zenoss.ZenPackLib.tests.test_install import TestInstall
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestCommand
 
 
-from ZenPacks.zenoss.ZenPackLib.tests.BaseTestCommand import BaseTestCommand
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-from ZenPacks.zenoss.ZenPackLib.tests.test_install import TestInstall, get_cmd_output
+class TestCommands(ZPLTestCommand):
+    """Test output of various zenpacklib commands"""
 
-YAML_DOC = '''
-name: ZenPacks.zenoss.DnsMonitor
-'''
+    yaml_doc = '''name: ZenPacks.zenoss.ApacheMonitor'''
 
-class TestCommands(BaseTestCommand):
-
-    zenpack_name = TestInstall.zenpack_name
     zenpack_path = TestInstall.zenpack_path
     yaml_path = os.path.join(zenpack_path, 'ZenPacks/zenoss/ZPLTest1/zenpack.yaml')
-
-    disableLogging = False
 
     def afterSetUp(self):
         try:
@@ -53,17 +39,16 @@ class TestCommands(BaseTestCommand):
             )
 
     def test_smoke_lint(self):
-        self._smoke_command("--lint", self.yaml_path)
+        self._zenpacklib_cmd("--lint", self.yaml_path)
 
     def test_smoke_dump_templates(self):
-        z = ZPLTestHarness(YAML_DOC)
-        if z.zenpack_installed():
-            self._smoke_command("--dump-templates", 'ZenPacks.zenoss.DnsMonitor')
+        if self.z.zenpack_installed():
+            self._zenpacklib_cmd("--dump-templates", self.z.cfg.name)
         else:
-            print '\nSkipping test_smoke_dump_templates since ZenPacks.zenoss.DnsMonitor not installed.'
+            self.log.warn('Skipping test_smoke_dump_templates since {} not installed.'.format(self.z.cfg.name))
 
     def test_smoke_class_diagram(self):
-        self._smoke_command("--diagram", self.yaml_path)
+        self._zenpacklib_cmd("--diagram", self.yaml_path)
 
     def test_create(self):
         zenpack_name = "ZenPacks.test.ZPLTestCreate"
@@ -71,7 +56,7 @@ class TestCommands(BaseTestCommand):
         # Cleanup from any failed previous tests.
         shutil.rmtree(zenpack_name, ignore_errors=True)
 
-        output = self._smoke_command("--create", zenpack_name)
+        output = self._zenpacklib_cmd("--create", zenpack_name)
 
         # Test that output describes what's being created.
         expected_terms = (
@@ -111,7 +96,7 @@ class TestCommands(BaseTestCommand):
         shutil.rmtree(zenpack_name, ignore_errors=True)
 
     def test_version(self):
-        output = self._smoke_command("--version").strip()
+        output = self._zenpacklib_cmd("--version").strip()
         version_pattern = r'^\d+\.\d+\.\d+(dev)?$'
         match = re.match(version_pattern, output)
         self.assertTrue(
@@ -119,24 +104,6 @@ class TestCommands(BaseTestCommand):
             "version output {!r} doesn't match /{}/"
             .format(output, version_pattern))
 
-    def test_a_install(self):
-        """install the zenpack for the first time"""
-        cmd = [binPath('zenpack'), "--link", "--install", self.zenpack_path]
-        out = self.run_cmd(cmd)
-
-    def test_z_remove(self):
-        " remove the installed zenpack"
-        out = self.run_cmd([binPath('zenpack'), "--list"])
-        if self.zenpack_name in out:
-            out = self.run_cmd([binPath('zenpack'), "--remove", self.zenpack_name])
-
-    def run_cmd(self, cmd, vars={}):
-        """execute a command and assert success"""
-        p, out, err = get_cmd_output(cmd, vars)
-        LOG.debug("out=%s, err=%s", out, err)
-        msg = 'Command "{}" failed with error:\n  {}'.format(cmd, err)
-        self.assertIs(p.returncode, 0, msg)
-        return out
 
 def test_suite():
     """Return test suite for this module."""

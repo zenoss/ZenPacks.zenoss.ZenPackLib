@@ -51,7 +51,7 @@ class EventClassMappingSpec(Spec):
         self.klass_string = 'EventClassInst'
         self.eventclass_spec = eventclass_spec
         self.name = name
-        self.eventClassKey = eventClassKey
+        self.eventClassKey = eventClassKey or name
         self.sequence = sequence
         self.transform = transform
         self.rule = rule

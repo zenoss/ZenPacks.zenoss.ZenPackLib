@@ -55,25 +55,48 @@ from Products.Zuul.interfaces.service import IServiceInfo
 from .info import HWComponentInfo
 from .interfaces import IHWComponentInfo
 
+from Products.Zuul.facades.devicefacade import DeviceFacade
+from Products.Zuul.facades.processfacade import ProcessFacade
+from Products.Zuul.facades.servicefacade import ServiceFacade
+
+from Products.Zuul.catalog.paths import (
+     DevicePathReporter,
+     ServicePathReporter,
+     InterfacePathReporter,
+     ProcessPathReporter,
+     ProductPathReporter
+     )
 
 schema_map = {
-     Device: {'interface': IDeviceInfo, 'info': DeviceInfo},
-     Component: {'interface': IComponentInfo, 'info': ComponentInfo},
-     HWComponent: {'interface': IHWComponentInfo, 'info': HWComponentInfo},
-     HardwareComponent: {'interface': IHWComponentInfo, 'info': HWComponentInfo},
-     CPU: {'interface': ICPUInfo, 'info': CPUInfo},
-     ExpansionCard: {'interface': IExpansionCardInfo, 'info': ExpansionCardInfo},
-     Fan: {'interface': IFanInfo, 'info': FanInfo},
-     HardDisk: {'interface': IHWComponentInfo, 'info': HWComponentInfo},
-     PowerSupply: {'interface': IPowerSupplyInfo, 'info': PowerSupplyInfo},
-     TemperatureSensor: {'interface': ITemperatureSensorInfo, 'info': TemperatureSensorInfo},
-     OSComponent: {'interface': IComponentInfo, 'info': ComponentInfo},
-     FileSystem: {'interface': IFileSystemInfo, 'info': FileSystemInfo},
-     IpInterface: {'interface': IIpInterfaceInfo, 'info': IpInterfaceInfo},
-     IpRouteEntry: {'interface': IIpRouteEntryInfo, 'info': IpRouteEntryInfo},
-     OSProcess: {'interface': IOSProcessInfo, 'info': OSProcessInfo},
-     Service: {'interface': IServiceInfo, 'info': ServiceInfo},
-     IpService: {'interface': IIpServiceInfo, 'info': IpServiceInfo},
-     WinService: {'interface': IWinServiceInfo, 'info': WinServiceInfo},
-     }
+    Device: {'interface': IDeviceInfo, 'info': DeviceInfo, 'reporter': DevicePathReporter, 'facade': DeviceFacade},
+    Component: {'interface': IComponentInfo, 'info': ComponentInfo, 'reporter': None, 'facade': None},
+    HWComponent: {'interface': IHWComponentInfo, 'info': HWComponentInfo, 'reporter': ProductPathReporter, 'facade': None},
+    HardwareComponent: {'interface': IHWComponentInfo, 'info': HWComponentInfo, 'reporter': ProductPathReporter, 'facade': None},
+    CPU: {'interface': ICPUInfo, 'info': CPUInfo, 'reporter': None, 'facade': None},
+    ExpansionCard: {'interface': IExpansionCardInfo, 'info': ExpansionCardInfo, 'reporter': None, 'facade': None},
+    Fan: {'interface': IFanInfo, 'info': FanInfo, 'reporter': None, 'facade': None},
+    HardDisk: {'interface': IHWComponentInfo, 'info': HWComponentInfo, 'reporter': ProductPathReporter, 'facade': None},
+    PowerSupply: {'interface': IPowerSupplyInfo, 'info': PowerSupplyInfo, 'reporter': None, 'facade': None},
+    TemperatureSensor: {'interface': ITemperatureSensorInfo, 'info': TemperatureSensorInfo, 'reporter': None, 'facade': None},
+    OSComponent: {'interface': IComponentInfo, 'info': ComponentInfo, 'reporter': None, 'facade': None},
+    FileSystem: {'interface': IFileSystemInfo, 'info': FileSystemInfo, 'reporter': None, 'facade': None},
+    IpInterface: {'interface': IIpInterfaceInfo, 'info': IpInterfaceInfo, 'reporter': InterfacePathReporter, 'facade': None},
+    IpRouteEntry: {'interface': IIpRouteEntryInfo, 'info': IpRouteEntryInfo, 'reporter': None, 'facade': None},
+    OSProcess: {'interface': IOSProcessInfo, 'info': OSProcessInfo, 'reporter': ProcessPathReporter, 'facade': ProcessFacade},
+    Service: {'interface': IServiceInfo, 'info': ServiceInfo, 'reporter': ServicePathReporter, 'facade': ServiceFacade},
+    IpService: {'interface': IIpServiceInfo, 'info': IpServiceInfo, 'reporter': ServicePathReporter, 'facade': ServiceFacade},
+    WinService: {'interface': IWinServiceInfo, 'info': WinServiceInfo, 'reporter': ServicePathReporter, 'facade': ServiceFacade},
+    }
 
+@property
+def get_instance_class(ob):
+    return ob._types
+
+DeviceFacade._types = ('Products.ZenModel.Device.Device',)
+DeviceFacade._instanceClass = get_instance_class
+
+ProcessFacade._types = ('Products.ZenModel.OSProcess.OSProcess',)
+ProcessFacade._instanceClass = get_instance_class
+
+ServiceFacade._types = ('Products.ZenModel.Service.Service',)
+ServiceFacade._instanceClass = get_instance_class
