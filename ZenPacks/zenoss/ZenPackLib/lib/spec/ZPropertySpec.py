@@ -20,8 +20,6 @@ class ZPropertySpec(Spec):
             type_='string',
             default=None,
             category=None,
-            label=None,
-            description='',
             _source_location=None,
             zplog=None
             ):
@@ -35,10 +33,6 @@ class ZPropertySpec(Spec):
             :type default: ZPropertyDefaultValue
             :param category: ZProperty Category.  This is used for display/sorting purposes.
             :type category: str
-            :param label: ZProperty Label.  This is used for display/sorting purposes.
-            :type label: str
-            :param description: ZProperty Label.  This is used for display/sorting purposes.
-            :type description: str
         """
         super(ZPropertySpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -48,8 +42,6 @@ class ZPropertySpec(Spec):
         self.name = name
         self.type_ = type_
         self.category = category
-        self.label = label or name
-        self.description = description
 
         if default is None:
             self.default = {
@@ -70,8 +62,3 @@ class ZPropertySpec(Spec):
     def packZProperties(self):
         """Return packZProperties tuple for this zProperty."""
         return (self.name, self.default, self.type_)
-
-    @property
-    def packZProperties_data(self):
-        """Return packZProperties_data dict for this zProperty."""
-        return {self.name: {'label': self.label, 'description': self.description, 'type': self.type_}}
