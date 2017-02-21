@@ -14,7 +14,7 @@ from ..spec.ClassSpec import ClassSpec
 
 
 class ClassSpecParams(SpecParams, ClassSpec):
-    def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, impact_triggers=None, monitoring_templates=[], **kwargs):
+    def __init__(self, zenpack_spec, name, base=None, properties=None, relationships=None, impact_triggers=None, monitoring_templates=None, **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
 
@@ -23,6 +23,8 @@ class ClassSpecParams(SpecParams, ClassSpec):
         else:
             self.base = (base,)
 
+        if monitoring_templates is None:
+            monitoring_templates = []
         if isinstance(monitoring_templates, (tuple, list, set)):
             self.monitoring_templates = list(monitoring_templates)
         else:
