@@ -555,13 +555,8 @@ class ZenPackSpec(Spec):
         packZProperties = [
             x.packZProperties for x in self.zProperties.itervalues()]
 
-        packZProperties_data = {}
-        for x in self.zProperties.itervalues():
-            packZProperties_data.update(x.packZProperties_data)
-
         attributes = {
             'packZProperties': packZProperties,
-            'packZProperties_data': packZProperties_data,
             }
 
         attributes['device_classes'] = self.device_classes
