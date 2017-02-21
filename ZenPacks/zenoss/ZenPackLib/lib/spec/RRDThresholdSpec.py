@@ -18,7 +18,7 @@ class RRDThresholdSpec(Spec):
             template_spec,
             name,
             type_='MinMaxThreshold',
-            dsnames=[],
+            dsnames=None,
             eventClass=None,
             severity=None,
             enabled=None,
@@ -50,6 +50,8 @@ class RRDThresholdSpec(Spec):
 
         self.name = name
         self.template_spec = template_spec
+        if dsnames is None:
+            dsnames = []
         self.dsnames = dsnames
         self.eventClass = eventClass
         Severity.LOG = self.LOG

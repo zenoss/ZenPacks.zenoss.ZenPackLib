@@ -105,8 +105,10 @@ class ZPLTestCommand(ZPLTestBase):
 
         return out
 
-    def get_cmd_success(self, cmd, vars={}):
+    def get_cmd_success(self, cmd, vars=None):
         """execute a command and assert success"""
+        if vars is None:
+            vars = {}
         p, out, err = self.get_cmd_output(cmd, vars)
         self.log.debug("out=%s, err=%s", out, err)
         msg = 'Command "{}" failed with error:\n  {}'.format(cmd, err)
@@ -114,8 +116,10 @@ class ZPLTestCommand(ZPLTestBase):
         return out
 
     @classmethod
-    def get_cmd_output(cls, cmd, vars={}):
+    def get_cmd_output(cls, cmd, vars=None):
         """execute a command and return the output"""
+        if vars is None:
+            vars = {}
         cls.log.info(" ".join(cmd))
         env = dict(os.environ)
         env.update(vars)
