@@ -12,17 +12,11 @@
 """
     Test Event Classes
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
 
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-
-unused(Globals)
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
-EVENT_CLASS_YAML = """
+YAML_DOC = """
 name: ZenPacks.zenoss.ZenPackLib
 event_classes:
   /Status/Test:
@@ -43,23 +37,21 @@ event_classes:
 """
 
 
-event_class_zp = ZPLTestHarness(EVENT_CLASS_YAML)
-
-
-class TestEventClass(BaseTestCase):
+class TestEventClass(ZPLTestBase):
     """Test Event Classes
     """
+    yaml_doc = YAML_DOC
 
     def test_event_classes(self):
-        self.assertEquals(len(event_class_zp.yaml['event_classes']), len(event_class_zp.cfg.event_classes))
-        self.assertEquals(event_class_zp.yaml['event_classes'].keys()[0], event_class_zp.cfg.event_classes.keys()[0])
-        self.assertTrue('/Status/Test' in event_class_zp.cfg.event_classes.keys())
-        self.assertFalse(event_class_zp.yaml['event_classes']['/Status/Test']['remove'])
-        self.assertFalse(event_class_zp.cfg.event_classes['/Status/Test'].remove)
-        self.assertEquals(len(event_class_zp.yaml['event_classes']['/Status/Test']['mappings']),
-                          len(event_class_zp.cfg.event_classes['/Status/Test'].mappings))
-        self.assertEquals(event_class_zp.yaml['event_classes']['/Status/Test']['mappings']['TestMapping']['sequence'],
-                          event_class_zp.cfg.event_classes['/Status/Test'].mappings['TestMapping'].sequence)
+        self.assertEquals(len(self.z.yaml['event_classes']), len(self.z.cfg.event_classes))
+        self.assertEquals(self.z.yaml['event_classes'].keys()[0], self.z.cfg.event_classes.keys()[0])
+        self.assertTrue('/Status/Test' in self.z.cfg.event_classes.keys())
+        self.assertFalse(self.z.yaml['event_classes']['/Status/Test']['remove'])
+        self.assertFalse(self.z.cfg.event_classes['/Status/Test'].remove)
+        self.assertEquals(len(self.z.yaml['event_classes']['/Status/Test']['mappings']),
+                          len(self.z.cfg.event_classes['/Status/Test'].mappings))
+        self.assertEquals(self.z.yaml['event_classes']['/Status/Test']['mappings']['TestMapping']['sequence'],
+                          self.z.cfg.event_classes['/Status/Test'].mappings['TestMapping'].sequence)
 
 
 def test_suite():

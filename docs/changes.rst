@@ -30,6 +30,7 @@ Release 2.0.2
 Fixes
 
 * Only create a monitoring template if it changes or does not exist (ZPS-570)
+* Ensure display of ZPL classes such as OSProcess in GUI elements (ZPS-572, ZPS-651)
 
 
 Release 2.0.1

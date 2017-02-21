@@ -11,15 +11,7 @@
 
 """ Test Catalog Scope (ZEN-18269)
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """
@@ -64,9 +56,10 @@ classes:
 """
 
 
-class TestCatalogScope(BaseTestCase):
+class TestCatalogScope(ZPLTestBase):
     """Test catalog creation for specs"""
-    Z = ZPLTestHarness(YAML_DOC)
+
+    yaml_doc = YAML_DOC
 
     def test_catalog_specs(self):
         ''''''
@@ -80,7 +73,7 @@ class TestCatalogScope(BaseTestCase):
             self.assertEqual(actual, expected, 'Expected catalog scope {}, got {} for {}'.format(expected, actual, name))
 
     def get_scope(self, name):
-        ob = self.Z.build_ob(name)
+        ob = self.z.build_ob(name)
         return ob._device_catalogs.get(name, {}).keys() + ob._global_catalogs.get(name, {}).keys()
 
 

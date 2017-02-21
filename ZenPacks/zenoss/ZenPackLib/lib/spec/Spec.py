@@ -329,7 +329,9 @@ class Spec(object):
 
         return params
 
-    def __eq__(self, other, ignore_params=[]):
+    def __eq__(self, other, ignore_params=None):
+        if ignore_params is None:
+            ignore_params = []
         if type(self) != type(other):
             return False
 

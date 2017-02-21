@@ -12,17 +12,8 @@
 """ Severity format validation YAML dump/load
 
 """
-# zenpacklib Imports
-import yaml
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.Loader import Loader
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
 YAML_DOC = """
 name: ZenPacks.zenoss.ZenPackLib
@@ -89,16 +80,15 @@ device_classes:
             oid: .1.3.6.1.4.1.232.6.2.6.8.1.4
 """
 
-class TestValidSeverity(BaseTestCase):
+
+class TestValidSeverity(ZPLTestBase):
     """Test severity input validation"""
 
-    def test_valid_severity(self):
-        ''''''
-        loaded = yaml.load(YAML_DOC, Loader=Loader)
-        dumped = yaml.dump(loaded, Dumper=Dumper)
+    yaml_doc = YAML_DOC
 
-        self.assertEquals(dumped, EXPECTED,
-                        'YAML severity validation test failed, got: \n{}'.format(dumped))
+    def test_valid_severity(self):
+        self.assertEquals(self.z.exported_yaml, EXPECTED,
+                        'YAML severity validation test failed, got: \n{}'.format(self.z.exported_yaml))
 
 def test_suite():
     """Return test suite for this module."""

@@ -62,3 +62,4 @@ Known Issues
 ************
 
 * When dumping existing event classes using the zenpacklib tool with *--dump-event-classes* option, some transforms and/or explanations may show as either unformatted text within double quotes or as formatted text within single quotes.  This is due to how the python yaml package handles strings.  Either of these two formats are acceptable when used in zenpack.yaml.
+* ZenPacks using earlier verisons of ZenPackLib logged template changes to the console during installation.  These messages might have disturbed some users due to their wording and logging as "ERROR" status.  These have been revised and now log as informational, but the old format will be displayed when upgrading from a pre-ZenPacklib 2.0 ZenPack to one using the latest version.  Subsequent installs will use the newer format.

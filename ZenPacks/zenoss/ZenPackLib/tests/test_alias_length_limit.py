@@ -13,15 +13,7 @@
     Test fix for ZEN-17950
     Enforce alias length limit in ZenPackLib
 """
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
-
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
@@ -45,13 +37,14 @@ device_classes:
 """
 
 
-class Test17950(BaseTestCase):
+class TestDatapointAliasLength(ZPLTestBase):
     """Test fix for ZEN-17950"""
+
+    yaml_doc = YAML_DOC
 
     def test_datapoint_alias_length(self):
         ''''''
-        z = ZPLTestHarness(YAML_DOC)
-        ds_spec = z.cfg.device_classes.get('/Server').templates.get('TEST').datasources.get('dsname')
+        ds_spec = self.z.cfg.device_classes.get('/Server').templates.get('TEST').datasources.get('dsname')
         for dp_name, dp_spec in ds_spec.datapoints.items():
             for k in dp_spec.aliases.keys():
                 self.assertTrue(len(k) <= 31, 'Datapoint alias key too long: {} ({})'.format(k, len(k)))
@@ -61,7 +54,7 @@ def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(Test17950))
+    suite.addTest(makeSuite(TestDatapointAliasLength))
     return suite
 
 if __name__ == "__main__":

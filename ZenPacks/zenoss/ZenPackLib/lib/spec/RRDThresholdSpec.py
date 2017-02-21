@@ -50,6 +50,8 @@ class RRDThresholdSpec(Spec):
 
         self.name = name
         self.template_spec = template_spec
+        if dsnames is None:
+            dsnames = []
         self.dsnames = dsnames
         self.eventClass = eventClass
         Severity.LOG = self.LOG
@@ -62,7 +64,7 @@ class RRDThresholdSpec(Spec):
             self.extra_params = extra_params
 
     def create(self, templatespec, template):
-        if not self.dsnames:
+        if self.dsnames is None:
             raise ValueError("%s: threshold has no dsnames attribute", self)
 
         # Shorthand for datapoints that have the same name as their datasource.

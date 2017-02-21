@@ -176,4 +176,3 @@ class GraphPointSpec(Spec):
                     thresh_gp.legend = legend
                 if color:
                     thresh_gp.color = str(color)
-
