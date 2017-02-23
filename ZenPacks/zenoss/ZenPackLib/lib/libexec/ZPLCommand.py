@@ -27,9 +27,8 @@ from ..params.EventClassMappingSpecParams import EventClassMappingSpecParams
 from ..params.ProcessClassOrganizerSpecParams import ProcessClassOrganizerSpecParams
 from ..resources.templates import SETUP_PY
 from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
-from ..helpers.WarningLoader import WarningLoader
+from ..helpers.loaders import WarningLoader, ZenPackSpecLoader
 from ..helpers.Dumper import Dumper
-from ..helpers.Loader import Loader
 from ..helpers.utils import optimize_yaml, load_yaml_single
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 unused(Globals)
@@ -335,7 +334,7 @@ class ZPLCommand(ZenScriptBase):
     def class_diagram(self, diagram_type, filename):
         ''''''
         with open(filename, 'r') as stream:
-            CFG = yaml.load(stream, Loader=Loader)
+            CFG = yaml.load(stream, Loader=ZenPackSpecLoader)
 
         if diagram_type == 'yuml':
             print "# Classes"

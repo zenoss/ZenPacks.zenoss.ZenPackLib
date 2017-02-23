@@ -290,7 +290,8 @@ class ZenPack(ZenPackBase):
         proto_yaml = yaml.dump(specparam, Dumper=Dumper)
         return self.get_yaml_diff(object_yaml, proto_yaml)
 
-    def get_yaml_diff(self, yaml_existing, yaml_new):
+    @classmethod
+    def get_yaml_diff(cls, yaml_existing, yaml_new):
         """Return diff between YAML files"""
         if yaml_existing != yaml_new:
             lines_existing = [x + '\n' for x in yaml_existing.split('\n')]

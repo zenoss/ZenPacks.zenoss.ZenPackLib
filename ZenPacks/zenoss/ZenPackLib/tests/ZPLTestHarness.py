@@ -19,6 +19,7 @@ from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import load_yaml_single
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
+from ZenPacks.zenoss.ZenPackLib.lib.helpers.loaders import OrderedLoader
 
 
 def str_to_severity(value):
@@ -63,7 +64,7 @@ class ZPLTestHarness(ZenScriptBase):
         self.cfg = zenpacklib.load_yaml(filename, verbose=verbose, level=level)
         self.yaml = None
         if not os.path.isdir(filename):
-            self.yaml = load_yaml_single(filename, useLoader=False)
+            self.yaml = load_yaml_single(filename, loader=OrderedLoader)
         else:
             self.yaml = yaml.dump(self.cfg, Dumper=Dumper)
         self.zp = self.cfg.zenpack_module
@@ -73,7 +74,7 @@ class ZPLTestHarness(ZenScriptBase):
         self.build_relations()
         self.build_cfg_relations()
         self.exported_yaml = yaml.dump(self.cfg, Dumper=Dumper)
-        self.reloaded_yaml = load_yaml_single(self.exported_yaml, useLoader=False)
+        self.reloaded_yaml = load_yaml_single(self.exported_yaml, loader=OrderedLoader)
         self.exported_yaml_specparams = None
         if specparams:
             self.exported_yaml_specparams = self.export_specparams_yaml()
