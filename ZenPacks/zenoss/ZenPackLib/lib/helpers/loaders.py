@@ -18,7 +18,30 @@ from .ZenPackLibLog import ZPLOG, DEFAULTLOG
 from ..base.types import Severity
 
 
-class Loader(yaml.Loader):
+class OrderedLoader(yaml.Loader):
+    """Basic ordered mapping YAML loader.
+
+    This loader doesn't know about ZenPackSpec. It merely maintains the order
+    of mappings as they're read from the file.
+
+    """
+    def __init__(self, *args, **kwargs):
+        yaml.Loader.__init__(self, *args, **kwargs)
+
+        self.add_constructor(
+            u'tag:yaml.org,2002:map',
+            type(self).dict_constructor)
+
+        self.add_constructor(
+            u'tag:yaml.org,2002:omap',
+            type(self).dict_constructor)
+
+    def dict_constructor(self, node):
+        """constructor for OrderedDict"""
+        return OrderedDict(self.construct_pairs(node))
+
+
+class ZenPackSpecLoader(OrderedLoader):
     """
         These subclasses exist so that each copy of zenpacklib installed on a
         zenoss system provide their own loader (for add_constructor and yaml.load)
@@ -29,6 +52,17 @@ class Loader(yaml.Loader):
     LOG = DEFAULTLOG
     QUIET = False
     LEVEL = 0
+
+    def __init__(self, *args, **kwargs):
+        OrderedLoader.__init__(self, *args, **kwargs)
+
+        self.add_constructor(
+            u'tag:yaml.org,2002:seq',
+            type(self).construct_sequence)
+
+        self.add_constructor(
+            u'!ZenPackSpec',
+            type(self).construct_zenpackspec)
 
     def dict_constructor(self, node):
         """constructor for OrderedDict"""
@@ -460,7 +494,15 @@ class Loader(yaml.Loader):
         return None
 
 
-Loader.add_constructor(u'tag:yaml.org,2002:seq', Loader.construct_sequence)
-Loader.add_constructor(u'tag:yaml.org,2002:map', Loader.dict_constructor)
-Loader.add_constructor(u'!ZenPackSpec', Loader.construct_zenpackspec)
-yaml.add_path_resolver(u'!ZenPackSpec', [], Loader=Loader)
+class WarningLoader(ZenPackSpecLoader):
+    """
+        These subclasses exist so that each copy of zenpacklib installed on a
+        zenoss system provide their own loader (for add_constructor and yaml.load)
+        and its own dumper (for add_representer) so that the proper methods will
+        be used for this specific zenpacklib.
+    """
+    warnings = True
+    yaml_errored = False
+
+
+yaml.add_path_resolver(u'!ZenPackSpec', [], Loader=ZenPackSpecLoader)
