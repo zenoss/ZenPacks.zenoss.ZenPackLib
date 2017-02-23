@@ -22,6 +22,7 @@ from ZenPacks.zenoss.ZenPackLib import zenpacklib
 import yaml
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import compare_zenpackspecs
+from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 
 # Zenoss Imports
 import Globals  # noqa
@@ -730,9 +731,9 @@ class TestDirectoryLoad(BaseTestCase):
         dir_yaml = yaml.dump(cfg_dir.specparams, Dumper=Dumper)
 
         compare_equals = compare_zenpackspecs(whole_yaml, dir_yaml)
-
-        self.assertTrue(compare_equals, 
-                        'YAML Multiple file test failed')
+        diff = ZenPack.get_yaml_diff(whole_yaml, dir_yaml)
+        self.assertTrue(compare_equals,
+                        'YAML Multiple file test failed:\n{}'.format(diff))
 
 
 

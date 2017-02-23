@@ -12,7 +12,7 @@ import yaml
 import time
 from .ZenPackLibLog import DEFAULTLOG
 from .Dumper import Dumper
-from .Loader import Loader
+from .Loader import Loader, BasicLoader
 import inspect
 
 # adding these so that yaml.Loader can handle !ZenPackSpec tag
@@ -104,11 +104,11 @@ def load_yaml_single(yaml_doc, useLoader=True, loader=Loader):
     if os.path.isfile(yaml_doc):
         if useLoader:
             return yaml.load(file(yaml_doc, 'r'), Loader=loader)
-        return yaml.load(file(yaml_doc, 'r'))
+        return yaml.load(file(yaml_doc, 'r'), Loader=BasicLoader)
     else:
         if useLoader:
             return yaml.load(yaml_doc, Loader=loader)
-        return yaml.load(yaml_doc)
+        return yaml.load(yaml_doc, Loader=BasicLoader)
 
 
 def get_merged_docs(docs=None):
@@ -153,7 +153,7 @@ def optimize_yaml(yaml_doc):
     # load original yaml back as a Python dictionary
     data = load_yaml_single(orig_yaml, useLoader=False)
     # optimized output
-    optimized_yaml = get_optimized_yaml(data)
+    optimized_yaml = get_optimized_yaml(data, sorted=True)
     # new load
     valid = compare_zenpackspecs(orig_yaml, optimized_yaml)
     if not valid:
@@ -201,14 +201,17 @@ def dict_compare(d1, d2):
     DEFAULTLOG.warn('MODIFIED: {}'.format(modified))
 
 
-def get_optimized_yaml(data):
+def get_optimized_yaml(data, sorted=False):
     """
         return optimized YAML representing ZenPackSpec
     """
     # set DEFAULTS throughout
     descend_defaults(data)
     # sort
-    ordered = sort_yaml_data(data)
+    if sorted:
+        ordered = sort_yaml_data(data)
+    else:
+        ordered = data
     # optimized output
     return yaml.dump(ordered, default_flow_style=False, Dumper=Dumper).replace('!!map', '')
 
