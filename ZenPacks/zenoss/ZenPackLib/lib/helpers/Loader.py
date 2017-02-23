@@ -18,7 +18,23 @@ from .ZenPackLibLog import ZPLOG, DEFAULTLOG
 from ..base.types import Severity
 
 
-class Loader(yaml.Loader):
+class BasicLoader(yaml.Loader):
+    """ Basic YAML Loader with support for order preservation
+        Returns Python data
+    """
+
+    def dict_constructor(self, node):
+        """constructor for OrderedDict"""
+        return OrderedDict(self.construct_pairs(node))
+
+BasicLoader.add_constructor(u'tag:yaml.org,2002:seq', BasicLoader.construct_sequence)
+BasicLoader.add_constructor(u'tag:yaml.org,2002:map', BasicLoader.dict_constructor)
+# adding these so that BasicLoader can handle !ZenPackSpec tag
+BasicLoader.add_constructor(u'!ZenPackSpec', yaml.Loader.construct_yaml_map)
+BasicLoader.add_path_resolver(u'!ZenPackSpec', [])
+
+
+class Loader(BasicLoader):
     """
         These subclasses exist so that each copy of zenpacklib installed on a
         zenoss system provide their own loader (for add_constructor and yaml.load)
@@ -29,10 +45,6 @@ class Loader(yaml.Loader):
     LOG = DEFAULTLOG
     QUIET = False
     LEVEL = 0
-
-    def dict_constructor(self, node):
-        """constructor for OrderedDict"""
-        return OrderedDict(self.construct_pairs(node))
 
     def construct_severity(self, node):
         value = node.value
@@ -460,7 +472,5 @@ class Loader(yaml.Loader):
         return None
 
 
-Loader.add_constructor(u'tag:yaml.org,2002:seq', Loader.construct_sequence)
-Loader.add_constructor(u'tag:yaml.org,2002:map', Loader.dict_constructor)
 Loader.add_constructor(u'!ZenPackSpec', Loader.construct_zenpackspec)
 yaml.add_path_resolver(u'!ZenPackSpec', [], Loader=Loader)
