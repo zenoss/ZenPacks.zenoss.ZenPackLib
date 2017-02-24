@@ -14,24 +14,9 @@
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 
 
-def get_zproperty_type(z_type):
-    """
-        For zproperties, the actual data type of a default value
-        depends on the defined type of the zProperty.
-    """
-    map = {'boolean': 'bool',
-           'int': 'int',
-           'float': 'float',
-           'string': 'str',
-           'password': 'str',
-           'lines': 'list(str)'
-    }
-    return map.get(z_type, 'str')
-
 YAML_DOC = """
 name: ZenPacks.zenoss.ZenPackLib
 zProperties:
-
   zStringProperty:
     type: string
     default: ''
@@ -49,33 +34,69 @@ zProperties:
   zLinesProperty:
     type: lines
     default: ['this','that']
+  zLongProperty:
+    type: long
+    default: 0
+classes:
+  BasicDevice:
+    base: [zenpacklib.Device]
+    properties:
+      dateTimeProperty:
+        type: date
+        default: 1975/08/21 00:00:00 UTC
+      stringProperty:
+        type: string
+        default: ''
+      passwordProperty:
+        type: password
+      booleanProperty:
+        default: false
+        type: boolean
+      intProperty:
+        default: 1
+        type: int
+      floatProperty:
+        default: 1.0
+        type: float
+      longProperty:
+        default: 0
+        type: long
+      linesProperty:
+        type: lines
+        default: ['this','that']
 """
 
 
 class TestZenProperties(ZPLTestBase):
     """
-    Ensure that zproperty types are respected
+    Ensure that property/zproperty types are respected
     """
 
     yaml_doc = YAML_DOC
 
     def test_zProperties(self):
-        zprops = self.z.cfg.zProperties
-        self.is_valid(zprops.get('zStringProperty'), str, '')
-        self.is_valid(zprops.get('zPasswordProperty'), str, '')
-        self.is_valid(zprops.get('zBooleanProperty'), bool, False)
-        self.is_valid(zprops.get('zIntProperty'), int, 1)
-        self.is_valid(zprops.get('zFloatProperty'), float, 1.0)
-        self.is_valid(zprops.get('zLinesProperty'), list, ['this', 'that'])
+        for spec in self.z.cfg.zProperties.values():
+            prop = spec._property
+            prop_cls = prop.property_class
+            prop_val = prop.default
+            self.is_valid(prop, prop_cls, prop_val)
+
+    def test_properties(self):
+        spec = self.z.cfg.classes.get('BasicDevice')
+        for p_spec in spec.properties.values():
+            prop = p_spec._property
+            prop_cls = prop.property_class
+            prop_val = prop.default
+            self.is_valid(prop, prop_cls, prop_val)
 
     def is_valid(self, spec, target_type, target_value):
         ''''''
         self.assertTrue(isinstance(spec.default, target_type),
-                'zProperty ({}) should be {}, got {}'.format(spec.name,
-                                                                      target_type.__name__,
-                                                                      type(spec.default).__name__))
+                'Property ({}) should be {}, got {}'.format(spec.name,
+                                                            target_type.__name__,
+                                                            type(spec.default).__name__))
         self.assertEquals(spec.default, target_value,
-                'zProperty ({}) should be {}, got {}'.format(spec.name,
+                'Property ({}) should be {}, got {}'.format(spec.name,
                                                             target_value,
                                                             spec.default))
 

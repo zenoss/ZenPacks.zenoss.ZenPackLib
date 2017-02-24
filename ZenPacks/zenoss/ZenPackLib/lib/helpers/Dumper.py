@@ -11,21 +11,9 @@ import re
 from yaml.representer import SafeRepresenter
 from collections import OrderedDict
 from .ZenPackLibLog import DEFAULTLOG
-
-
-def get_zproperty_type(z_type):
-    """
-        For zproperties, the actual data type of a default value
-        depends on the defined type of the zProperty.
-    """
-    map = {'boolean': 'bool',
-           'int': 'int',
-           'float': 'float',
-           'string': 'str',
-           'password': 'str',
-           'lines': 'list(str)'
-    }
-    return map.get(z_type, 'str')
+from datetime import date, datetime
+from DateTime import DateTime
+from ..base.types import Property
 
 
 class Dumper(yaml.Dumper):
@@ -152,7 +140,7 @@ class Dumper(yaml.Dumper):
             if type_ == 'ZPropertyDefaultValue':
                 # For zproperties, the actual data type of a default value
                 # depends on the defined type of the zProperty.
-                type_ = get_zproperty_type(obj.type_)
+                type_ = Property.get_property_type(obj.type_)
 
             yaml_param = self.represent_str(p_data.get('yaml_param'))
             try:
@@ -196,6 +184,11 @@ class Dumper(yaml.Dumper):
             node_value = self.represent_data(item_value)
             value.append((node_key, node_value))
         return yaml.MappingNode(u'tag:yaml.org,2002:map', value)
+
+    def represent_DateTime(self, data):
+        """represent DateTime object"""
+        dt = data.asdatetime()
+        return self.represent_data(dt)
 
     def represent_severity(self, data):
         """represent Severity"""
@@ -305,6 +298,9 @@ Dumper.add_representer(ProcessClassOrganizerSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ProcessClassSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ImpactTriggerSpecParams, Dumper.represent_spec)
 Dumper.add_representer(LinkProviderSpecParams, Dumper.represent_spec)
+Dumper.add_representer(date, SafeRepresenter.represent_date)
+Dumper.add_representer(datetime, SafeRepresenter.represent_datetime)
+Dumper.add_representer(DateTime, Dumper.represent_DateTime)
 # representers for custom types
 from ..base.types import Color, Severity
 Dumper.add_representer(Color, SafeRepresenter.represent_str)
