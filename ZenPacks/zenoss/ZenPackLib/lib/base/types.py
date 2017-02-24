@@ -3,6 +3,36 @@ import string
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 
 
+class Property(object):
+    """Represent _properties entry"""
+    LOG = LOG
+
+    _property_map = {'boolean': 'bool',
+                     'int': 'int',
+                     'float': 'float',
+                     'long': 'long',
+                     'string': 'str',
+                     'password': 'str',
+                     'lines': 'list(str)',
+                     'text': 'list(str)',
+                     }
+
+    def __init__(self, name, type_='string', default=None):
+        self.name = name
+        self.type_ = type_
+        self.py_type = self._property_map.get(self.type_, 'str')
+        self.default = default
+        if default is  None:
+            self.default = self.get_default()
+
+    def get_default(self):
+        return {'string': '',
+                'password': '',
+                'lines': [],
+                'boolean': False,
+            }.get(self.type_, None)
+
+
 class Relationship(str):
     cls = None
     name = None

@@ -7,6 +7,7 @@
 #
 ##############################################################################
 from Products.ZenRelations.zPropertyCategory import setzPropertyCategory
+from ..base.types import Property
 from .Spec import Spec
 
 
@@ -45,21 +46,15 @@ class ZPropertySpec(Spec):
             self.LOG = zplog
 
         self.zenpack_spec = zenpack_spec
-        self.name = name
-        self.type_ = type_
+
+        self._property = Property(name, type_, default)
+        self.name = self._property.name
+        self.type_ = self._property.type_
+        self.default = self._property.default
+
         self.category = category
         self.label = label or name
         self.description = description
-
-        if default is None:
-            self.default = {
-                'string': '',
-                'password': '',
-                'lines': [],
-                'boolean': False,
-            }.get(self.type_, None)
-        else:
-            self.default = default
 
     def create(self):
         """Implement specification."""
