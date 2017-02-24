@@ -10,6 +10,7 @@ from Acquisition import aq_base
 
 # Zenoss Imports
 import Globals
+from Products.ZenModel.RRDDataPoint import RRDDataPoint
 from Products.ZenUtils.Utils import unused
 unused(Globals)
 
@@ -20,6 +21,7 @@ from ZenPacks.zenoss.ZenPackLib import zenpacklib
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import load_yaml_single
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.loaders import OrderedLoader
+from ZenPacks.zenoss.ZenPackLib.lib.spec.ZenPackSpec import ZenPackSpec
 
 
 def str_to_severity(value):
@@ -55,29 +57,53 @@ def _add(ob, obj):
 
 class ZPLTestHarness(ZenScriptBase):
     '''Class containing methods to build out dummy objects representing YAML class instances'''
-    templates = None
 
-    def __init__(self, filename, connect=False, verbose=False, level=20, specparams=False):
-        ''''''
-        ZenScriptBase.__init__(self)
-        self.filename = filename
-        self.cfg = zenpacklib.load_yaml(filename, verbose=verbose, level=level)
-        self.yaml = None
-        if not os.path.isdir(filename):
-            self.yaml = load_yaml_single(filename, loader=OrderedLoader)
+    templates = None
+    cfg = None
+    yaml = None
+    schema = None
+    exported_yaml = None
+    reloaded_yaml = None
+
+    def __init__(self, entry, connect=False, verbose=False, level=20, specparams=False):
+        """Create test harness using entry.
+
+        entry can be any of the following:
+
+        * Filename of single YAML file.
+        * String containing YAML.
+        * Already-built ZenPackSpec (CFG) object.
+
+        """
+        ZenScriptBase.__init__(self, connect=connect)
+        if isinstance(entry, ZenPackSpec):
+            self.cfg = entry
         else:
-            self.yaml = yaml.dump(self.cfg, Dumper=Dumper)
+            self.cfg = zenpacklib.load_yaml(
+                entry,
+                verbose=verbose,
+                level=level)
+
+            if not os.path.isdir(entry):
+                self.yaml = load_yaml_single(entry, loader=OrderedLoader)
+
+        if not self.yaml:
+            yaml.dump(self.cfg, Dumper=Dumper)
+
         self.zp = self.cfg.zenpack_module
         self.schema = self.zp.schema
         self.build_cfg_obs()
         # create relations between objects
         self.build_relations()
         self.build_cfg_relations()
+
         self.exported_yaml = yaml.dump(self.cfg, Dumper=Dumper)
-        self.reloaded_yaml = load_yaml_single(self.exported_yaml, loader=OrderedLoader)
-        self.exported_yaml_specparams = None
+        self.reloaded_yaml = load_yaml_single(
+            self.exported_yaml,
+            loader=OrderedLoader)
+
         if specparams:
-            self.exported_yaml_specparams = self.export_specparams_yaml()
+            self.export_specparams_yaml()
 
     def get_diff(self, expected, actual):
         """Return diff between YAML files"""
@@ -501,23 +527,40 @@ class ZPLTestHarness(ZenScriptBase):
     def check_ob_vs_yaml(self, ob, data):
         '''compare object values to YAML'''
         passed = True
+
+        if data is None:
+            # An object exists without data in the YAML. An example of this
+            # would be an SNMP datasource's datapoint. These datapoints get
+            # created automatically with default settings if not specified
+            # explicitly.
+            return passed
+
         ob_data = data.get('DEFAULTS', {})
         if not isinstance(data.get(ob.id, {}), dict):
             # this is the dataoint aliases
-            if self.classname(ob) == 'RRDDataPoint':
+            if issubclass(ob.__class__, RRDDataPoint):
                 return passed
+
         ob_data.update(data.get(ob.id, {}))
         for k, v in ob_data.items():
             if isinstance(v, dict):
                 continue
             if k == 'type':
                 continue
+
+            if not ob.aqBaseHasAttr(k):
+                # A key that exists in the data, but not on the object. An
+                # example of this would be GraphDefinitionSpec.comments.
+                continue
+
             expected = v
             actual = getattr(ob, k)
-            # this can be string or integer
+
             if k == 'severity':
+                # this can be string or integer
                 expected = self.test_severity(expected)
                 actual = self.test_severity(actual)
+
             if expected != actual:
                 if k in ['rrdmin', 'rrdmax']:
                     if str(expected) == str(actual):
