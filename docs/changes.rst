@@ -30,6 +30,7 @@ Release 2.0.3
 Fixes
 
 * Preserve ordering when loading multiple YAML files (ZPS-921)
+* Fix setting of zProperty values when loading multiple YAML files. (ZPS-925)
 
 
 Release 2.0.2
