@@ -10,10 +10,11 @@ import os
 from collections import OrderedDict, Mapping
 import yaml
 import time
+import inspect
 from .ZenPackLibLog import DEFAULTLOG
 from .Dumper import Dumper
 from .loaders import OrderedLoader, ZenPackSpecLoader
-import inspect
+from ..base.ZenPack import ZenPack
 
 
 # list of yaml sections with DEFAULTS capability
@@ -166,6 +167,9 @@ def compare_zenpackspecs(orig_yaml, new_yaml):
     orig_raw_yaml = load_yaml_single(orig_dump, loader=OrderedLoader)
     new_raw_yaml = load_yaml_single(new_dump, loader=OrderedLoader)
     # these should also be equivalent
+    diff = ZenPack.get_yaml_diff(orig_dump, new_dump)
+    if diff:
+        print 'compare_zenpackspecs\n{}'.format(diff)
     if orig_raw_yaml != new_raw_yaml:
         DEFAULTLOG.warn('YAML loaded Python dictionary mismatch between original and new')
         dict_compare(orig_raw_yaml, new_raw_yaml)
