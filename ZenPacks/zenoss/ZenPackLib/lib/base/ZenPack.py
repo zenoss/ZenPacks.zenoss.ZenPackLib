@@ -131,7 +131,7 @@ class ZenPack(ZenPackBase):
 
         # Load event classes
         for ecname, ecspec in self.event_classes.iteritems():
-            ecspec.instantiate(self.dmd)
+            ecspec.create(self.dmd)
 
         # Create Process Classes
         for psname, psspec in self.process_class_organizers.iteritems():

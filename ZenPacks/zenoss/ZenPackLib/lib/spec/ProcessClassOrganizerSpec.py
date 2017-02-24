@@ -37,7 +37,7 @@ class ProcessClassOrganizerSpec(Spec):
         self.process_classes = self.specs_from_param(
             ProcessClassSpec, 'process_classes', process_classes, zplog=self.LOG)
 
-    def create(self, dmd):
+    def create(self, dmd, addToZenPack=True):
         # get/create process class organizer
         bCreated = False
         try:
@@ -54,4 +54,7 @@ class ProcessClassOrganizerSpec(Spec):
         # exported to objects.xml  (contained objects will also be excluded)
         porg.zpl_managed = bCreated
         for process_class_id, process_class_spec in self.process_classes.items():
-            process_class_spec.create(dmd, porg)
+            process_class_spec.create(dmd, porg, addToZenPack)
+
+        # add this back after figuring out why zenpack uninstall always removes
+        return self.return_or_add_to_zenpack(porg, self.zenpack_spec.name, addToZenPack)

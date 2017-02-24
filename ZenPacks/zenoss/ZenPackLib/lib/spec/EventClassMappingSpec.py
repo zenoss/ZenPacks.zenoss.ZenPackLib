@@ -63,7 +63,7 @@ class EventClassMappingSpec(Spec):
         if zplog:
             self.LOG = zplog
 
-    def create(self, eventclass):
+    def create(self, eventclass, addToZenPack=True):
         mapping = eventclass.instances._getOb(eventclass.prepId(self.name), False)
         if not mapping:
             mapping = eventclass.createInstance(self.name)
@@ -74,3 +74,6 @@ class EventClassMappingSpec(Spec):
                 setattr(mapping, x, getattr(self, x, None))
 
         self.zpl_managed = True
+
+        # add this back after figuring out why zenpack uninstall always removes
+        return self.return_or_add_to_zenpack(mapping, self.eventclass_spec.zenpack_spec.name, addToZenPack)

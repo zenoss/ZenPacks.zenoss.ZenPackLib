@@ -44,7 +44,8 @@ class EventClassSpec(Spec):
         self.mappings = self.specs_from_param(
             EventClassMappingSpec, 'mappings', mappings, zplog=self.LOG)
 
-    def instantiate(self, dmd):
+    def create(self, dmd):
+
         bCreated = False
         try:
             ecObject = dmd.Events.getOrganizer(self.path)
@@ -53,6 +54,10 @@ class EventClassSpec(Spec):
             dmd.Events.createOrganizer(self.path)
             ecObject = dmd.Events.getOrganizer(self.path)
             bCreated = True
+        # ecObject, bCreated = self.get_or_create_organizer(dmd.Events, self.path)
+        # replaces above code
+        # need to determine why this causes event class to be removed always
+
         if self.description != '':
             if not ecObject.description == self.description:
                 self.LOG.debug('Description of Event Class {} has changed from'
@@ -72,3 +77,6 @@ class EventClassSpec(Spec):
         ecObject.zpl_managed = bCreated
         for mapping_id, mapping_spec in self.mappings.items():
             mapping_spec.create(ecObject)
+
+        # maybe because of this?
+        return self.return_or_add_to_zenpack(ecObject, self.zenpack_spec.name, addToZenPack)

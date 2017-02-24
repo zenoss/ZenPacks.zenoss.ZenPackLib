@@ -418,3 +418,23 @@ class Spec(object):
             return InterfaceClass
         else:
             return type
+
+    def get_or_create_organizer(self, dmd_root, path):
+        """return obtained organizer and whether it was created"""
+        created = False
+        try:
+            org = dmd_root.getOrganizer(path)
+            created = getattr(org, 'zpl_managed', False)
+        except KeyError:
+            dmd_root.createOrganizer(path)
+            org = dmd_root.getOrganizer(path)
+            created = True
+        return (org, created)
+
+    def return_or_add_to_zenpack(self, object, zenpack_name, addToZenPack=True):
+        """Add object to ZenPack or return it"""
+        # set to false to facilitate testing without ZP installation
+        if addToZenPack:
+            object.addToZenPack(pack=zenpack_name)
+        if not addToZenPack:
+            return object

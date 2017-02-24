@@ -15,7 +15,7 @@ from ..spec.ProcessClassSpec import ProcessClassSpec
 
 class ProcessClassSpecParams(SpecParams, ProcessClassSpec):
     def __init__(self,
-                 zenpack_spec,
+                 porg_spec,
                  name,
                  description='',
                  remove=False,
