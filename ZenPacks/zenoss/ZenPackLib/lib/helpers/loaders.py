@@ -36,6 +36,9 @@ class OrderedLoader(yaml.Loader):
             u'tag:yaml.org,2002:omap',
             type(self).dict_constructor)
 
+        self.add_constructor(u'!ZenPackSpec', type(self).dict_constructor)
+        self.add_path_resolver(u'!ZenPackSpec', [])
+
     def dict_constructor(self, node):
         """constructor for OrderedDict"""
         return OrderedDict(self.construct_pairs(node))

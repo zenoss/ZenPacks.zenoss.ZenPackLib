@@ -13,6 +13,7 @@ import time
 from .ZenPackLibLog import DEFAULTLOG
 from .Dumper import Dumper
 from .loaders import OrderedLoader, ZenPackSpecLoader
+from ..base.ZenPack import ZenPack
 import inspect
 
 
@@ -124,53 +125,73 @@ def get_merged_docs(docs=None):
     return new
 
 
-def optimize_yaml(yaml_doc):
+def optimize_yaml(orig_yaml):
     """optimize layout of YAML file"""
     # apply log verbosity settings
     ZenPackSpecLoader.QUIET = False
     ZenPackSpecLoader.LEVEL = 0
-    # original load
-    CFG = load_yaml(yaml_doc)
-    CFG.create()
-    # original yaml dump
-    orig_yaml = yaml.dump(CFG.specparams, Dumper=Dumper)
-    # load original yaml back as a Python dictionary
-    data = load_yaml_single(orig_yaml, loader=OrderedLoader)
-    # optimized output
-    optimized_yaml = get_optimized_yaml(data)
-    # new load
-    valid = compare_zenpackspecs(orig_yaml, optimized_yaml)
-    if not valid:
+    # Load as data values
+    orig_data = load_yaml_single(orig_yaml, loader=OrderedLoader)
+    # create optimized YAML based on original data
+    optimized_yaml = get_optimized_yaml(orig_data)
+    # Load optimized data values
+    optimized_data = load_yaml_single(optimized_yaml, loader=OrderedLoader)
+    if not compare_zenpackspecs(orig_yaml, optimized_yaml):
         DEFAULTLOG.warn('OPTIMIZATION FAILED VERIFICATION!  Please review optimized YAML prior to use ')
+        diff = compare_specparam_yaml_files(orig_yaml, optimized_yaml)
+        if diff:
+            print diff
     return optimized_yaml
 
+def get_specparam_yaml_pair(orig_yaml, new_yaml):
+    """return a pair of YAML files after loading"""
+    orig_cfg = load_yaml_single(orig_yaml)
+    orig_cfg.create()
+    new_cfg = load_yaml_single(new_yaml)
+    new_cfg.create()
+    orig_dump = yaml.dump(orig_cfg.specparams, Dumper=Dumper)
+    new_dump = yaml.dump(new_cfg.specparams, Dumper=Dumper)
+    return orig_dump, new_dump
+
+def compare_specparam_yaml_files(orig_yaml, new_yaml):
+    """return diff between ZenPackSpecParams-derived YAML files"""
+    orig_dump, new_dump = get_specparam_yaml_pair(orig_yaml, new_yaml)
+    return ZenPack.get_yaml_diff(orig_dump, new_dump)
+
+def compare_specparam_data(orig_yaml, new_yaml):
+    """return diff between ZenPackSpecParams-derived YAML files"""
+    orig_dump, new_dump = get_specparam_yaml_pair(orig_yaml, new_yaml)
+    orig_data = load_yaml_single(orig_dump, loader=OrderedLoader)
+    new_data = load_yaml_single(new_dump, loader=OrderedLoader)
+    return dict_modified(orig_data, new_data)
 
 def compare_zenpackspecs(orig_yaml, new_yaml):
     """report whether different YAML documents are identical"""
-    # now load both yaml files and create ZenPackSpec configs
     # apply log verbosity settings
     ZenPackSpecLoader.QUIET = False
     ZenPackSpecLoader.LEVEL = 0
-    orig = load_yaml_single(orig_yaml)
-    new = load_yaml_single(new_yaml)
-    orig.create()
-    new.create()
-    # SpecParams should be equal
-    if orig != new:
-        DEFAULTLOG.warn('ZenPackSpec mismatch between original and new')
-        dict_compare(orig.__dict__, new.__dict__)
-    # now dump new specs back out to yaml
-    orig_dump = yaml.dump(orig.specparams, Dumper=Dumper)
-    new_dump = yaml.dump(new.specparams, Dumper=Dumper)
-    # load raw yaml into Python dictionaries
-    orig_raw_yaml = load_yaml_single(orig_dump, loader=OrderedLoader)
-    new_raw_yaml = load_yaml_single(new_dump, loader=OrderedLoader)
-    # these should also be equivalent
-    if orig_raw_yaml != new_raw_yaml:
-        DEFAULTLOG.warn('YAML loaded Python dictionary mismatch between original and new')
-        dict_compare(orig_raw_yaml, new_raw_yaml)
+    # data should be unchanged
+    if compare_specparam_data(orig_yaml, new_yaml):
         return False
+    # dump back out to YAML for comparison
+    if compare_specparam_yaml_files(orig_yaml, new_yaml):
+        return False
+    # our tests have passed
     return True
+
+def dict_modified(d1, d2):
+    """return False if the dictionary has been modified"""
+    d1_keys = set(d1.keys())
+    d2_keys = set(d2.keys())
+    intersect_keys = d1_keys.intersection(d2_keys)
+    added = d1_keys - d2_keys
+    removed = d2_keys - d1_keys
+    modified = {o : (d1[o], d2[o]) for o in intersect_keys if d1[o] != d2[o]}
+    same = set(o for o in intersect_keys if d1[o] == d2[o])
+    if added or removed or modified:
+        return True
+    return False
+
 
 def dict_compare(d1, d2):
     d1_keys = set(d1.keys())
