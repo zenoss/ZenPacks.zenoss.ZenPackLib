@@ -7,7 +7,6 @@
 #
 ##############################################################################
 from Acquisition import aq_base
-from collections import OrderedDict
 from .SpecParams import SpecParams
 from ..spec.RRDThresholdSpec import RRDThresholdSpec
 
@@ -18,23 +17,15 @@ class RRDThresholdSpecParams(SpecParams, RRDThresholdSpec):
         self.name = name
 
     @classmethod
-    def fromObject(cls, threshold):
-        self = object.__new__(cls)
-        SpecParams.__init__(self)
-        threshold = aq_base(threshold)
-        sample_th = threshold.__class__(threshold.id)
+    def fromObject(cls, ob):
+        self = super(RRDThresholdSpecParams, cls).fromObject(ob)
+        ob = aq_base(ob)
 
-        for propname in ('dsnames', 'eventClass', 'severity', 'type_'):
-            if hasattr(sample_th, propname):
-                setattr(self, '_%s_defaultvalue' % propname, getattr(sample_th, propname))
-            if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
-                setattr(self, propname, getattr(threshold, propname, None))
-
-        self.extra_params = OrderedDict()
-        for propname in [x['id'] for x in threshold._properties]:
-            if propname not in self.init_params:
-                if getattr(threshold, propname, None) != getattr(sample_th, propname, None):
-                    self.extra_params[propname] = getattr(threshold, propname, None)
+        if hasattr(ob, 'isProjection'):
+            try:
+                delattr(ob, 'isProjection')
+            except:
+                pass
+        self.type_ = ob.__class__.__name__
 
         return self
-

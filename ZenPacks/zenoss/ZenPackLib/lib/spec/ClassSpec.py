@@ -669,6 +669,7 @@ class ClassSpec(Spec):
             'class_plural_label': self.plural_label,
             'class_short_label': self.short_label,
             'class_plural_short_label': self.plural_short_label,
+            'order': self.order,
             'dynamicview_views': self.dynamicview_views,
             'dynamicview_group': {
                 'name': self.dynamicview_group,

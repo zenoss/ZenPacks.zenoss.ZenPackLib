@@ -104,8 +104,8 @@ class ClassPropertySpec(Spec):
             self.LOG = zplog
         self.class_spec = class_spec
         self.name = name
-        self.default = default
         self.type_ = type_
+        self.default = default
         self.label = label or self.name
         self.short_label = short_label or self.label
         self.index_type = index_type
@@ -151,6 +151,21 @@ class ClassPropertySpec(Spec):
                 % (name, self.index_scope))
 
         self.order = order
+
+    @property
+    def default(self):
+        return self._default
+
+    @default.setter
+    def default(self, value):
+        '''assign default based on type if not provided'''
+        default_map = {'string': '',
+                       'password': '',
+                       'lines': [],
+                       'boolean': False,
+                       }
+        self._default = value or default_map.get(self._type, None)
+
 
     @property
     def scaled_order(self):

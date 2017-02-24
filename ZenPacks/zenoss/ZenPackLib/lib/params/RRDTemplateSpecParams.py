@@ -30,24 +30,14 @@ class RRDTemplateSpecParams(SpecParams, RRDTemplateSpec):
 
     @classmethod
     def fromObject(cls, template):
-        self = object.__new__(cls)
-        SpecParams.__init__(self)
+        self = super(RRDTemplateSpecParams, cls).fromObject(template)
+
         template = aq_base(template)
 
-        # Weed out any values that are the same as they would by by default.
-        # We do this by instantiating a "blank" template and comparing
-        # to it.
-        sample_template = template.__class__(template.id)
+        self.thresholds = RRDThresholdSpecParams.get_ordered_params(template.thresholds(), 'id', reorder=False)
 
-        for propname in ('targetPythonClass', 'description',):
-            if hasattr(sample_template, propname):
-                setattr(self, '_%s_defaultvalue' % propname, getattr(sample_template, propname))
-            if getattr(template, propname, None) != getattr(sample_template, propname, None):
-                setattr(self, propname, getattr(template, propname, None))
+        self.datasources = RRDDatasourceSpecParams.get_ordered_params(template.datasources(), 'id', reorder=False)
 
-        self.thresholds = {x.id: RRDThresholdSpecParams.fromObject(x) for x in template.thresholds()}
-        self.datasources = {x.id: RRDDatasourceSpecParams.fromObject(x) for x in template.datasources()}
-        self.graphs = {x.id: GraphDefinitionSpecParams.fromObject(x) for x in template.graphDefs()}
+        self.graphs = GraphDefinitionSpecParams.get_ordered_params(template.graphDefs(), keyattr='id', sortattr='sequence')
 
         return self
-
