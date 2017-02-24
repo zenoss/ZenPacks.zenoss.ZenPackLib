@@ -6,7 +6,6 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-from collections import OrderedDict
 from Acquisition import aq_base
 from Products.ZenModel.ManagedEntity import ManagedEntity
 from Products.ZenModel.Device import Device as BaseDevice

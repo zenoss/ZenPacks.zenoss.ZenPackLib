@@ -6,7 +6,6 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-from Acquisition import aq_base
 from Products.ZenRelations.zPropertyCategory import getzPropertyCategory
 from .SpecParams import SpecParams
 from ..spec.ZPropertySpec import ZPropertySpec

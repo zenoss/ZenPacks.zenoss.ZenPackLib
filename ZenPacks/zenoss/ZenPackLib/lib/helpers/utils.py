@@ -13,6 +13,7 @@ import time
 from .ZenPackLibLog import DEFAULTLOG
 from .Dumper import Dumper
 from .Loader import Loader
+from .loaders import OrderedLoader
 import inspect
 
 # adding these so that yaml.Loader can handle !ZenPackSpec tag
@@ -151,7 +152,8 @@ def optimize_yaml(yaml_doc):
     # original yaml dump
     orig_yaml = yaml.dump(CFG.specparams, Dumper=Dumper)
     # load original yaml back as a Python dictionary
-    data = load_yaml_single(orig_yaml, useLoader=False)
+    data = load_yaml_single(orig_yaml, loader=OrderedLoader)
+    import pdb ; pdb.set_trace()
     # optimized output
     optimized_yaml = get_optimized_yaml(data)
     # new load
@@ -208,9 +210,9 @@ def get_optimized_yaml(data):
     # set DEFAULTS throughout
     descend_defaults(data)
     # sort
-    ordered = sort_yaml_data(data)
+    # ordered = sort_yaml_data(data)
     # optimized output
-    return yaml.dump(ordered, default_flow_style=False, Dumper=Dumper).replace('!!map', '')
+    return yaml.dump(data, default_flow_style=False, Dumper=Dumper).replace('!!map', '')
 
 
 def descend_defaults(input):

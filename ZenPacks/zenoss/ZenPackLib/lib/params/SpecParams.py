@@ -12,7 +12,6 @@ from ..spec.Spec import Spec
 from ..helpers.ZenPackLibLog import DEFAULTLOG
 from ..base.ClassProperty import ClassProperty
 import copy
-import operator
 
 
 class SpecParams(object):

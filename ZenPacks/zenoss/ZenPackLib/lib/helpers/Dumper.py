@@ -11,35 +11,6 @@ import re
 from yaml.representer import SafeRepresenter
 from collections import OrderedDict
 from .ZenPackLibLog import DEFAULTLOG
-from ..base.types import Color, Severity
-
-from ..spec.ZenPackSpec import ZenPackSpec
-from ..spec.DeviceClassSpec import DeviceClassSpec
-from ..spec.ZPropertySpec import ZPropertySpec
-from ..spec.ClassSpec import ClassSpec
-from ..spec.ClassPropertySpec import ClassPropertySpec
-from ..spec.ClassRelationshipSpec import ClassRelationshipSpec
-from ..spec.RelationshipSchemaSpec import RelationshipSchemaSpec
-
-from ..params.ZenPackSpecParams import ZenPackSpecParams
-from ..params.DeviceClassSpecParams import DeviceClassSpecParams
-from ..params.EventClassSpecParams import EventClassSpecParams
-from ..params.EventClassMappingSpecParams import EventClassMappingSpec
-from ..params.ZPropertySpecParams import ZPropertySpecParams
-from ..params.ClassSpecParams import ClassSpecParams
-from ..params.ClassPropertySpecParams import ClassPropertySpecParams
-from ..params.ClassRelationshipSpecParams import ClassRelationshipSpecParams
-from ..params.RelationshipSchemaSpecParams import RelationshipSchemaSpecParams
-from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
-from ..params.RRDThresholdSpecParams import RRDThresholdSpecParams
-from ..params.RRDDatasourceSpecParams import RRDDatasourceSpecParams
-from ..params.RRDDatapointSpecParams import RRDDatapointSpecParams
-from ..params.GraphDefinitionSpecParams import GraphDefinitionSpecParams
-from ..params.GraphPointSpecParams import GraphPointSpecParams
-from ..params.ProcessClassSpecParams import ProcessClassSpecParams
-from ..params.ProcessClassOrganizerSpecParams import ProcessClassOrganizerSpecParams
-from ..params.ImpactTriggerSpecParams import ImpactTriggerSpecParams
-from ..params.LinkProviderSpecParams import LinkProviderSpecParams
 
 
 def get_zproperty_type(z_type):
@@ -66,47 +37,6 @@ class Dumper(yaml.Dumper):
     """
 
     LOG = DEFAULTLOG
-
-    def __init__(self, *args, **kwargs):
-        yaml.Dumper.__init__(self, *args, **kwargs)
-        # Spec subclasses
-        self.add_representer(ZenPackSpec, self.represent_zenpackspec)
-        self.add_representer(DeviceClassSpec, self.represent_spec)
-        self.add_representer(ZPropertySpec, self.represent_spec)
-        self.add_representer(ClassSpec, self.represent_spec)
-        self.add_representer(ClassPropertySpec, self.represent_spec)
-        self.add_representer(ClassRelationshipSpec, self.represent_spec)
-        self.add_representer(RelationshipSchemaSpec, self.represent_relschemaspec)
-        # SpecParams subclasses
-        self.add_representer(ZenPackSpecParams, self.represent_zenpackspec)
-        self.add_representer(DeviceClassSpecParams, self.represent_spec)
-        self.add_representer(ZPropertySpecParams, self.represent_spec)
-        self.add_representer(ClassSpecParams, self.represent_spec)
-        self.add_representer(ClassPropertySpecParams, self.represent_spec)
-        self.add_representer(ClassRelationshipSpecParams, self.represent_spec)
-        self.add_representer(RelationshipSchemaSpecParams, self.represent_relschemaspec)
-        self.add_representer(RRDTemplateSpecParams, self.represent_spec)
-        self.add_representer(RRDThresholdSpecParams, self.represent_spec)
-        self.add_representer(RRDDatasourceSpecParams, self.represent_spec)
-        self.add_representer(RRDDatapointSpecParams, self.represent_spec)
-        self.add_representer(GraphDefinitionSpecParams, self.represent_spec)
-        self.add_representer(GraphPointSpecParams, self.represent_spec)
-        # representers for python types
-        self.add_representer(OrderedDict, self.represent_ordereddict)
-        self.add_representer(unicode, SafeRepresenter.represent_unicode)
-        self.add_representer(float, SafeRepresenter.represent_float)
-        self.add_representer(int, SafeRepresenter.represent_int)
-        self.add_representer(str, SafeRepresenter.represent_str)
-        self.add_representer(bool, SafeRepresenter.represent_bool)
-        self.add_representer(EventClassSpecParams, self.represent_spec)
-        self.add_representer(EventClassMappingSpec, self.represent_spec)
-        self.add_representer(ProcessClassOrganizerSpecParams, self.represent_spec)
-        self.add_representer(ProcessClassSpecParams, self.represent_spec)
-        self.add_representer(ImpactTriggerSpecParams, self.represent_spec)
-        self.add_representer(LinkProviderSpecParams, self.represent_spec)
-        # representers for custom types
-        self.add_representer(Color, SafeRepresenter.represent_str)
-        self.add_representer(Severity, self.represent_severity)
 
     def dict_representer(self, data):
         return yaml.MappingNode(u'tag:yaml.org,2002:map', data.items())
@@ -312,3 +242,78 @@ class Dumper(yaml.Dumper):
 
     def class_to_str(self, class_):
         return class_.__module__ + "." + class_.__name__
+
+
+from ..spec.ZenPackSpec import ZenPackSpec
+from ..spec.DeviceClassSpec import DeviceClassSpec
+from ..spec.ZPropertySpec import ZPropertySpec
+from ..spec.ClassSpec import ClassSpec
+from ..spec.ClassPropertySpec import ClassPropertySpec
+from ..spec.ClassRelationshipSpec import ClassRelationshipSpec
+from ..spec.RelationshipSchemaSpec import RelationshipSchemaSpec
+
+from ..params.ZenPackSpecParams import ZenPackSpecParams
+from ..params.DeviceClassSpecParams import DeviceClassSpecParams
+from ..params.EventClassSpecParams import EventClassSpecParams
+from ..params.EventClassMappingSpecParams import EventClassMappingSpec
+from ..params.ZPropertySpecParams import ZPropertySpecParams
+from ..params.ClassSpecParams import ClassSpecParams
+from ..params.ClassPropertySpecParams import ClassPropertySpecParams
+from ..params.ClassRelationshipSpecParams import ClassRelationshipSpecParams
+from ..params.RelationshipSchemaSpecParams import RelationshipSchemaSpecParams
+from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
+from ..params.RRDThresholdSpecParams import RRDThresholdSpecParams
+from ..params.RRDDatasourceSpecParams import RRDDatasourceSpecParams
+from ..params.RRDDatapointSpecParams import RRDDatapointSpecParams
+from ..params.GraphDefinitionSpecParams import GraphDefinitionSpecParams
+from ..params.GraphPointSpecParams import GraphPointSpecParams
+from ..params.ProcessClassSpecParams import ProcessClassSpecParams
+from ..params.ProcessClassOrganizerSpecParams import ProcessClassOrganizerSpecParams
+from ..params.ImpactTriggerSpecParams import ImpactTriggerSpecParams
+from ..params.LinkProviderSpecParams import LinkProviderSpecParams
+
+# Spec subclasses
+Dumper.add_representer(ZenPackSpec, Dumper.represent_zenpackspec)
+Dumper.add_representer(DeviceClassSpec, Dumper.represent_spec)
+Dumper.add_representer(ZPropertySpec, Dumper.represent_spec)
+Dumper.add_representer(ClassSpec, Dumper.represent_spec)
+Dumper.add_representer(ClassPropertySpec, Dumper.represent_spec)
+Dumper.add_representer(ClassRelationshipSpec, Dumper.represent_spec)
+Dumper.add_representer(RelationshipSchemaSpec, Dumper.represent_relschemaspec)
+# SpecParams subclasses
+Dumper.add_representer(ZenPackSpecParams, Dumper.represent_zenpackspec)
+Dumper.add_representer(DeviceClassSpecParams, Dumper.represent_spec)
+Dumper.add_representer(ZPropertySpecParams, Dumper.represent_spec)
+Dumper.add_representer(ClassSpecParams, Dumper.represent_spec)
+Dumper.add_representer(ClassPropertySpecParams, Dumper.represent_spec)
+Dumper.add_representer(ClassRelationshipSpecParams, Dumper.represent_spec)
+Dumper.add_representer(RelationshipSchemaSpecParams, Dumper.represent_relschemaspec)
+Dumper.add_representer(RRDTemplateSpecParams, Dumper.represent_spec)
+Dumper.add_representer(RRDThresholdSpecParams, Dumper.represent_spec)
+Dumper.add_representer(RRDDatasourceSpecParams, Dumper.represent_spec)
+Dumper.add_representer(RRDDatapointSpecParams, Dumper.represent_spec)
+Dumper.add_representer(GraphDefinitionSpecParams, Dumper.represent_spec)
+Dumper.add_representer(GraphPointSpecParams, Dumper.represent_spec)
+# representers for python types
+Dumper.add_representer(dict, Dumper.represent_ordereddict)
+Dumper.add_representer(OrderedDict, Dumper.represent_ordereddict)
+Dumper.add_representer(unicode, SafeRepresenter.represent_unicode)
+Dumper.add_representer(float, SafeRepresenter.represent_float)
+Dumper.add_representer(int, SafeRepresenter.represent_int)
+Dumper.add_representer(str, SafeRepresenter.represent_str)
+Dumper.add_representer(bool, SafeRepresenter.represent_bool)
+
+from datetime import date, datetime
+Dumper.add_representer(date, SafeRepresenter.represent_date)
+Dumper.add_representer(datetime, SafeRepresenter.represent_datetime)
+
+Dumper.add_representer(EventClassSpecParams, Dumper.represent_spec)
+Dumper.add_representer(EventClassMappingSpec, Dumper.represent_spec)
+Dumper.add_representer(ProcessClassOrganizerSpecParams, Dumper.represent_spec)
+Dumper.add_representer(ProcessClassSpecParams, Dumper.represent_spec)
+Dumper.add_representer(ImpactTriggerSpecParams, Dumper.represent_spec)
+Dumper.add_representer(LinkProviderSpecParams, Dumper.represent_spec)
+# representers for custom types
+from ..base.types import Color, Severity
+Dumper.add_representer(Color, SafeRepresenter.represent_str)
+Dumper.add_representer(Severity, Dumper.represent_severity)

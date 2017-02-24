@@ -9,8 +9,6 @@
 from Acquisition import aq_base
 from .SpecParams import SpecParams
 from .RRDTemplateSpecParams import RRDTemplateSpecParams
-from .ZPropertySpecParams import ZPropertySpecParams
-
 from ..spec.DeviceClassSpec import DeviceClassSpec
 
 

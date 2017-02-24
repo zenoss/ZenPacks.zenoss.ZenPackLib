@@ -7,8 +7,6 @@
 #
 ##############################################################################
 from Acquisition import aq_base
-from collections import OrderedDict
-from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
 from ..spec.GraphPointSpec import GraphPointSpec
 from .SpecParams import SpecParams
 

@@ -105,7 +105,10 @@ class ClassPropertySpec(Spec):
         self.class_spec = class_spec
         self.name = name
         self.type_ = type_
-        self.default = default
+        if default is None:
+            self.default = self.get_default()
+        else:
+            self.default = default
         self.label = label or self.name
         self.short_label = short_label or self.label
         self.index_type = index_type
@@ -159,13 +162,14 @@ class ClassPropertySpec(Spec):
     @default.setter
     def default(self, value):
         '''assign default based on type if not provided'''
-        default_map = {'string': '',
-                       'password': '',
-                       'lines': [],
-                       'boolean': False,
-                       }
-        self._default = value or default_map.get(self._type, None)
+        self._default = value or self.get_default()
 
+    def get_default(self):
+        return {'string': '',
+                'password': '',
+                'lines': [],
+                'boolean': False,
+            }.get(self.type_, None)
 
     @property
     def scaled_order(self):

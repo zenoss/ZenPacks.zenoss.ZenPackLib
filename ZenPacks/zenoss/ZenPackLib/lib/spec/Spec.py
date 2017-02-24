@@ -289,9 +289,9 @@ class Spec(object):
 
         argspec = inspect.getargspec(cls.__init__)
         if argspec.defaults:
-            defaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
+            defaults = OrderedDict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
         else:
-            defaults = {}
+            defaults = OrderedDict()
 
         params = OrderedDict()
         for op, param, value in re.findall(
@@ -418,3 +418,9 @@ class Spec(object):
             return InterfaceClass
         else:
             return type
+    @classmethod
+    def get_sorted_objects(cls, objects, attribute, is_method=False):
+        """return list of objects sorted by an attribute"""
+        if is_method:
+            return [x for x in sorted(objects, key=operator.methodcaller(attribute))]
+        return [x for x in sorted(objects, key=operator.attrgetter(attribute))]
