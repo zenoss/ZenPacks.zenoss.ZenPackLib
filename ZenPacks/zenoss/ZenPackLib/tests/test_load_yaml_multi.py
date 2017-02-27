@@ -19,6 +19,7 @@ from ZenPacks.zenoss.ZenPackLib import zenpacklib
 import yaml
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import compare_zenpackspecs
+from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 
 # Zenoss Imports
 import Globals  # noqa
@@ -60,6 +61,12 @@ device_classes:
     templates:
       BasicDevice:
         datasources:
+          B:
+            type: SNMP
+            severity: 5
+            datapoints:
+              B: {}
+            oid: .1.3.6.1.4.1.232.6.2.6.8.1.5
           A:
             type: SNMP
             severity: 5
@@ -73,6 +80,8 @@ device_classes:
         graphs:
           Basic Device:
             graphpoints:
+              B:
+                dpName: B_B
               A:
                 dpName: A_A
                 includeThresholds: true
@@ -171,6 +180,12 @@ device_classes:
     templates:
       BasicDevice:
         datasources:
+          B:
+            type: SNMP
+            severity: 5
+            datapoints:
+              B: {}
+            oid: .1.3.6.1.4.1.232.6.2.6.8.1.5
           A:
             type: SNMP
             severity: 5
@@ -184,6 +199,8 @@ device_classes:
         graphs:
           Basic Device:
             graphpoints:
+              B:
+                dpName: B_B
               A:
                 dpName: A_A
                 includeThresholds: true
@@ -278,7 +295,9 @@ class TestMultiYAML(BaseTestCase):
 
         compare_equals = compare_zenpackspecs(whole_yaml, multi_yaml)
 
-        self.assertTrue(compare_equals, 'YAML Multiple file test failed')
+        diff = ZenPack.get_yaml_diff(whole_yaml, multi_yaml)
+        self.assertTrue(compare_equals,
+                        'YAML merged dictionary test failed:\n{}'.format(diff))
 
 
 def test_suite():

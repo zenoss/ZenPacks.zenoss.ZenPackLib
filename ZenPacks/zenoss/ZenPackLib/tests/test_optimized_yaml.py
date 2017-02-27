@@ -17,6 +17,7 @@ Tests YAML loading from multiple files
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import optimize_yaml, compare_zenpackspecs
+from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 
 
 YAML_WHOLE = """
@@ -683,8 +684,9 @@ class TestOptimizedYAML(ZPLTestBase):
 
         compare_equals = compare_zenpackspecs(orig_yaml, new_yaml)
 
+        diff = ZenPack.get_yaml_diff(orig_yaml, new_yaml)
         self.assertTrue(compare_equals,
-                        'YAML Optimization test failed')
+                        'YAML optimization test failed:\n{}'.format(diff))
 
 
 def test_suite():
