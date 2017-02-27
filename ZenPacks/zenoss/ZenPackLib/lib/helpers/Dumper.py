@@ -11,6 +11,8 @@ import re
 from yaml.representer import SafeRepresenter
 from collections import OrderedDict
 from .ZenPackLibLog import DEFAULTLOG
+from datetime import date, datetime
+from DateTime import DateTime
 
 
 def get_zproperty_type(z_type):
@@ -197,6 +199,11 @@ class Dumper(yaml.Dumper):
             value.append((node_key, node_value))
         return yaml.MappingNode(u'tag:yaml.org,2002:map', value)
 
+    def represent_DateTime(self, data):
+        """represent DateTime object"""
+        dt = data.asdatetime()
+        return self.represent_data(dt)
+
     def represent_severity(self, data):
         """represent Severity"""
         orig = getattr(data, 'orig')
@@ -305,6 +312,9 @@ Dumper.add_representer(ProcessClassOrganizerSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ProcessClassSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ImpactTriggerSpecParams, Dumper.represent_spec)
 Dumper.add_representer(LinkProviderSpecParams, Dumper.represent_spec)
+Dumper.add_representer(date, SafeRepresenter.represent_date)
+Dumper.add_representer(datetime, SafeRepresenter.represent_datetime)
+Dumper.add_representer(DateTime, Dumper.represent_DateTime)
 # representers for custom types
 from ..base.types import Color, Severity
 Dumper.add_representer(Color, SafeRepresenter.represent_str)

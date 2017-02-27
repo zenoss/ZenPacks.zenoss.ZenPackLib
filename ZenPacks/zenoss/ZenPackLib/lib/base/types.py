@@ -1,5 +1,6 @@
 from ..helpers.ZenPackLibLog import DEFAULTLOG as LOG
 import string
+from DateTime import DateTime
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 
 
@@ -15,6 +16,7 @@ class Property(object):
                      'password': 'str',
                      'lines': 'list(str)',
                      'text': 'list(str)',
+                     'date': 'date',
                      }
 
     def __init__(self, name, type_='string', default=None):
@@ -30,6 +32,7 @@ class Property(object):
                 'password': '',
                 'lines': [],
                 'boolean': False,
+                'date': DateTime('1970/01/01 00:00:00 UTC'),
             }.get(self.type_, None)
 
 
