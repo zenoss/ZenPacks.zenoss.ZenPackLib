@@ -46,14 +46,14 @@ class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
             if entry.get('mode', '') == 'w':
                 self.editable = True
 
+            # compare default to our defined class defaults
             value = getattr(ob, id, None)
-            default = cls.get_prop_default(self.type_)
-            self.default = value
-            if value == default:
-                self.default = None
+            type_default = cls.get_prop_default(self.type_)
+            self._default = self.default = value
+
+            if value == type_default:
+                self._default = None
             else:
-                self.default = value
-            if proto.__class__.__name__ == 'BasicComponent':
-                print "{}: {} ({}), {} ({})".format(id, value, type(value), default, type(default))
+                self._default = self.default = value
 
         return self

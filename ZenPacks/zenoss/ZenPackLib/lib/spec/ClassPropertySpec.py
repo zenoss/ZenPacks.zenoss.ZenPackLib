@@ -9,6 +9,7 @@
 from Products.Zuul.form import schema
 from Products.Zuul.utils import ZuulMessageFactory as _t
 from Products.Zuul.infos import ProxyProperty
+from DateTime import DateTime
 from ..helpers.OrderAndValue import OrderAndValue
 from .Spec import Spec, MethodInfoProperty, EnumInfoProperty
 
@@ -169,6 +170,7 @@ class ClassPropertySpec(Spec):
                 'password': '',
                 'lines': [],
                 'boolean': False,
+                'date': None,
             }.get(self.type_, None)
 
     @property

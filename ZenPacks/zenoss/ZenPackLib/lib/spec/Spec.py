@@ -318,6 +318,8 @@ class Spec(object):
                         params[param]['default'] = {}
                     elif params[param]['type'].startswith("list"):
                         params[param]['default'] = []
+                    elif params[param]['type'].startswith("date"):
+                        params[param]['default'] = None
                     elif params[param]['type'].startswith("SpecsParameter("):
                         params[param]['default'] = {}
             elif op == 'yaml_param':

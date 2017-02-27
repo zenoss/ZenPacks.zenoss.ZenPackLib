@@ -13,6 +13,7 @@ import sys
 import importlib
 import keyword
 from collections import OrderedDict
+from DateTime import DateTime
 from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
 from ..base.types import Severity
@@ -33,6 +34,10 @@ class Loader(yaml.Loader):
     def dict_constructor(self, node):
         """constructor for OrderedDict"""
         return OrderedDict(self.construct_pairs(node))
+
+    def construct_DateTime(self, node):
+        import pdb ; pdb.set_trace()
+        return DateTime(node.value)
 
     def construct_severity(self, node):
         value = node.value
@@ -166,6 +171,8 @@ class Loader(yaml.Loader):
                     yaml_value = self.construct_python_str(value_node)
                 elif expected_type == 'float' and not isinstance(yaml_value, float):
                     yaml_value = self.construct_yaml_float(value_node)
+                elif expected_type == 'date' and not isinstance(yaml_value, DateTime):
+                    yaml_value = self.construct_DateTime(value_node)
                 elif expected_type.startswith("dict(SpecsParameter("):
                     m = re.match('^dict\(SpecsParameter\((.*)\)\)$', expected_type)
                     if m:
@@ -462,5 +469,6 @@ class Loader(yaml.Loader):
 
 Loader.add_constructor(u'tag:yaml.org,2002:seq', Loader.construct_sequence)
 Loader.add_constructor(u'tag:yaml.org,2002:map', Loader.dict_constructor)
+Loader.add_constructor(u'tag:yaml.org,2002:timestamp', Loader.construct_DateTime)
 Loader.add_constructor(u'!ZenPackSpec', Loader.construct_zenpackspec)
 yaml.add_path_resolver(u'!ZenPackSpec', [], Loader=Loader)
