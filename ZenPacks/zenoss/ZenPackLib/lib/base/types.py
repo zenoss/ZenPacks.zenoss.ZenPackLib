@@ -7,33 +7,63 @@ from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
 class Property(object):
     """Represent _properties entry"""
     LOG = LOG
-
-    _property_map = {'boolean': 'bool',
-                     'int': 'int',
-                     'float': 'float',
-                     'long': 'long',
-                     'string': 'str',
-                     'password': 'str',
-                     'lines': 'list(str)',
-                     'text': 'list(str)',
-                     'date': 'date',
-                     }
+    _property_map = {'string': {'default': '', 'class': str, 'type': 'str'},
+                     'password': {'default': '', 'class': str, 'type': 'str'},
+                     'boolean': {'default': False, 'class': bool, 'type': 'bool'},
+                     'int': {'default': None, 'class': int, 'type': 'int'},
+                     'float': {'default': None, 'class': float, 'type': 'float'},
+                     'long': {'default': None, 'class': long, 'type': 'long'},
+                     'date': {'default': DateTime('1970/01/01 00:00:00 UTC'), 'class': DateTime, 'type': 'date'},
+                     'lines': {'default': [], 'class': list, 'type': 'list(str)'},
+                     'text': {'default': None, 'class': str, 'type': 'str'},
+                    }
 
     def __init__(self, name, type_='string', default=None):
         self.name = name
         self.type_ = type_
-        self.py_type = self._property_map.get(self.type_, 'str')
         self.default = default
-        if default is  None:
-            self.default = self.get_default()
 
-    def get_default(self):
-        return {'string': '',
-                'password': '',
-                'lines': [],
-                'boolean': False,
-                'date': DateTime('1970/01/01 00:00:00 UTC'),
-            }.get(self.type_, None)
+    @property
+    def default(self):
+        return self._default
+
+    @default.setter
+    def default(self, value):
+        if value is not None:
+            try:
+                self._default = self.property_class(value)
+            except Exception as e:
+                # This appears to be occurring for int properties since they seem to acquire '' for a default
+                # probably from the Spec or SpecParam init_params
+                if self.type_ != 'int':
+                    LOG.warn('Error setting "{}" default ({}): {}'.format(self.name, value, e))
+                self._default = self.default_value
+        else:
+            self._default = self.default_value
+
+    @classmethod
+    def get_default_value(cls, type_):
+        return cls._property_map.get(type_, {}).get('default', None)
+
+    @property
+    def default_value(self):
+        return self.get_default_value(self.type_)
+
+    @classmethod
+    def get_property_type(cls, type_):
+        return cls._property_map.get(type_, {}).get('type', 'str')
+
+    @property
+    def property_type(self):
+        return self.get_property_type(self.type_)
+
+    @classmethod
+    def get_property_class(cls, type_):
+        return cls._property_map.get(type_, {}).get('class', str)
+
+    @property
+    def property_class(self):
+        return self.get_property_class(self.type_)
 
 
 class Relationship(str):

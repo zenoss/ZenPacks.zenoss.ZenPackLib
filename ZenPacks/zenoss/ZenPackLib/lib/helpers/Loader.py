@@ -13,6 +13,7 @@ import sys
 import importlib
 import keyword
 from collections import OrderedDict
+from DateTime import DateTime
 from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
 from ..base.types import Severity

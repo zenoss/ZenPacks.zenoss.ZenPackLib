@@ -13,21 +13,7 @@ from collections import OrderedDict
 from .ZenPackLibLog import DEFAULTLOG
 from datetime import date, datetime
 from DateTime import DateTime
-
-
-def get_zproperty_type(z_type):
-    """
-        For zproperties, the actual data type of a default value
-        depends on the defined type of the zProperty.
-    """
-    map = {'boolean': 'bool',
-           'int': 'int',
-           'float': 'float',
-           'string': 'str',
-           'password': 'str',
-           'lines': 'list(str)'
-    }
-    return map.get(z_type, 'str')
+from ..base.types import Property
 
 
 class Dumper(yaml.Dumper):
@@ -154,7 +140,7 @@ class Dumper(yaml.Dumper):
             if type_ == 'ZPropertyDefaultValue':
                 # For zproperties, the actual data type of a default value
                 # depends on the defined type of the zProperty.
-                type_ = get_zproperty_type(obj.type_)
+                type_ = Property.get_property_type(obj.type_)
 
             yaml_param = self.represent_str(p_data.get('yaml_param'))
             try:
