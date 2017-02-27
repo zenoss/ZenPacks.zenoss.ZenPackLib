@@ -19,22 +19,25 @@ class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
         self.name = name
 
     @classmethod
+    def get_prop_default(self, type_):
+        return {'string': '',
+                'password': '',
+                'lines': [],
+                'boolean': False,
+            }.get(type_, None)
+
+    @classmethod
     def fromObject(cls, ob, id):
         """Generate SpecParams from example object and list of properties"""
-        # self = super(ClassPropertySpecParams, cls).fromObject(ob)
         self = object.__new__(cls)
         SpecParams.__init__(self)
 
         ob = aq_base(ob)
+        proto = self.get_prototype(ob)
 
         self.name = id
 
-        proto = self.get_prototype(ob)
-
-        self.default = getattr(proto, id, self.get_default())
-
         entry = next((p for p in proto._properties if p['id'] == id), {})
-
         if entry:
             self.type_ = entry.get('type', 'string')
             self.label = entry.get('label')
@@ -42,5 +45,15 @@ class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
                 self.label = None
             if entry.get('mode', '') == 'w':
                 self.editable = True
+
+            value = getattr(ob, id, None)
+            default = cls.get_prop_default(self.type_)
+            self.default = value
+            if value == default:
+                self.default = None
+            else:
+                self.default = value
+            if proto.__class__.__name__ == 'BasicComponent':
+                print "{}: {} ({}), {} ({})".format(id, value, type(value), default, type(default))
 
         return self
