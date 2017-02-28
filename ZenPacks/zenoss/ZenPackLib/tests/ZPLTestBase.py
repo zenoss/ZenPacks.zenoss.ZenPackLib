@@ -27,7 +27,7 @@ unused(Globals)
 
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.WarningLoader import WarningLoader
+from ZenPacks.zenoss.ZenPackLib.lib.helpers.loaders import WarningLoader
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.ZenPackLibLog import ZPLOG
 
 

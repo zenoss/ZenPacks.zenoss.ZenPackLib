@@ -13,6 +13,7 @@ import difflib
 import time
 import sys
 
+from Acquisition import aq_base
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
 from ..helpers.ZenPackLibLog import ZenPackLibLog, new_log
@@ -59,30 +60,7 @@ class ZenPack(ZenPackBase):
 
     def install(self, app):
         self.createZProperties(app)
-
-        # create device classes and set zProperties on them
-        for dcname, dcspec in self.device_classes.iteritems():
-            if dcspec.create:
-                dcObject = self.create_device_class(app, dcspec)
-            else:
-                try:
-                    dcObject = self.dmd.Devices.getOrganizer(dcspec.path)
-                except KeyError:
-                    self.LOG.warn('Device Class ({}) not found'.format(dcspec.path))
-                    dcObject = None
-            # if device class has description and protocol, register a devtype
-
-            if dcObject and dcspec.description and dcspec.protocol:
-                try:
-                    if (dcspec.description, dcspec.protocol) not in dcObject.devtypes:
-                        self.LOG.info('Registering devtype for {}: {} ({})'.format(dcObject,
-                                                                                   dcspec.protocol,
-                                                                                   dcspec.description))
-                        dcObject.register_devtype(dcspec.description, dcspec.protocol)
-                except Exception as e:
-                    self.LOG.warn('Error registering devtype for {}: {} ({})'.format(dcObject,
-                                                                                     dcspec.protocol,
-                                                                                     e))
+        self.create_device_classes(app)
 
         # Load objects.xml now
         super(ZenPack, self).install(app)
@@ -290,7 +268,8 @@ class ZenPack(ZenPackBase):
         proto_yaml = yaml.dump(specparam, Dumper=Dumper)
         return self.get_yaml_diff(object_yaml, proto_yaml)
 
-    def get_yaml_diff(self, yaml_existing, yaml_new):
+    @classmethod
+    def get_yaml_diff(cls, yaml_existing, yaml_new):
         """Return diff between YAML files"""
         if yaml_existing != yaml_new:
             lines_existing = [x + '\n' for x in yaml_existing.split('\n')]
@@ -298,27 +277,81 @@ class ZenPack(ZenPackBase):
             return ''.join(difflib.unified_diff(lines_existing, lines_new))
         return None
 
+    def create_device_classes(self, app):
+        """Create device classes. Set their zProperties and devtypes."""
+        for dcname in sorted(self.device_classes):
+            # Device classes must be created in alphanumeric order to
+            # prevent children from implicitly creating their parents. When
+            # children implicitly create their parents, zProperty values
+            # won't get set on the parents.
+            dcspec = self.device_classes[dcname]
+
+            if dcspec.create:
+                self.create_device_class(app, dcspec)
+            else:
+                try:
+                    self.dmd.Devices.getOrganizer(dcspec.path)
+                except KeyError:
+                    self.LOG.warn(
+                        "Device Class (%s) not found",
+                        dcspec.path)
+
     def create_device_class(self, app, dcspec):
-        """Create and return a DeviceClass"""
-        exists = False
+        """Create and return a DeviceClass. Set zProperties and devtypes.
+
+        zProperties and devtypes will only be set if the device class
+        doesn't already exist. This is done to prevent overwriting of user
+        customizations on upgrade.
+
+        """
         try:
             dcObject = app.dmd.Devices.getOrganizer(dcspec.path)
-            exists = True
         except KeyError:
-            self.LOG.info('Creating DeviceClass {}'.format(dcspec.path))
+            self.LOG.debug("Creating %s device class", dcspec.path)
             dcObject = app.dmd.Devices.createOrganizer(dcspec.path)
+        else:
+            self.LOG.debug(
+                "Existing %s device class - not overwriting properties",
+                dcspec.path)
 
+            return dcObject
+
+        # Set zProperties.
         for zprop, value in dcspec.zProperties.iteritems():
-            # Avoid setting zProperties on an existing device class
-            if exists:
-                if value != getattr(dcObject, zprop, None):
-                    self.LOG.debug('Not setting "{}" to "{}" on existing device class ({})'.format(zprop, value, dcspec.path))
-                continue
             if dcObject.getPropertyType(zprop) is None:
-                self.LOG.error("Unable to set zProperty {} on {} (undefined zProperty)".format(zprop, dcspec.path))
+                self.LOG.error(
+                    "Unable to set zProperty %s on %s (undefined zProperty)",
+                    zprop, dcspec.path)
             else:
-                self.LOG.info('Setting zProperty {} on {}'.format(zprop, dcspec.path))
-                dcObject.setZenProperty(zprop, value)
+                self.LOG.debug(
+                    "Setting zProperty %s to %r on %s",
+                    zprop, value, dcspec.path)
+
+                # We want to explicitly set the value even if it's the same as
+                # what's being acquired. This is why aq_base is required.
+                aq_base(dcObject).setZenProperty(zprop, value)
+
+        # Register devtype.
+        if dcObject and dcspec.description and dcspec.protocol:
+            self.LOG.debug(
+                "Registering devtype for %s: %s (%s)",
+                dcspec.path,
+                dcspec.protocol,
+                dcspec.description)
+
+            try:
+                # We want to explicitly set the value even if it's the same as
+                # what's being acquired. This is why aq_base is required.
+                aq_base(dcObject).register_devtype(
+                    dcspec.description,
+                    dcspec.protocol)
+            except Exception as e:
+                self.LOG.warn(
+                    "Error registering devtype for %s: %s (%s)",
+                    dcspec.path,
+                    dcspec.protocol,
+                    e)
+
         return dcObject
 
     def remove_device_class(self, app, dcspec):
