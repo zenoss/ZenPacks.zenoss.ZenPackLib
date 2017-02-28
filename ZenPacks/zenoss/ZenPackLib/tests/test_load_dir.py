@@ -20,6 +20,7 @@ import os
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 import yaml
+from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import compare_zenpackspecs
 
@@ -731,8 +732,9 @@ class TestDirectoryLoad(BaseTestCase):
 
         compare_equals = compare_zenpackspecs(whole_yaml, dir_yaml)
 
-        self.assertTrue(compare_equals, 
-                        'YAML Multiple file test failed')
+        diff = ZenPack.get_yaml_diff(whole_yaml, dir_yaml)
+        self.assertTrue(compare_equals,
+                        'YAML Multiple file test failed:\n{}'.format(diff))
 
 
 

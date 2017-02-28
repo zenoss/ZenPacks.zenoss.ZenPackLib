@@ -10,6 +10,7 @@
 ##############################################################################
 """Test this version of ZenPackLib against relevant installed ZenPacks"""
 
+import importlib
 import os
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
@@ -19,19 +20,15 @@ class TestInstalledZenPacks(ZPLTestBase):
     """Test this version of ZenPackLib against relevant installed ZenPacks"""
 
     use_dmd = True
-    files = []
-
-    def afterSetUp(self):
-        super(TestInstalledZenPacks, self).afterSetUp()
-        for z in self.z.dmd.ZenPackManager.packs():
-            if not isinstance(z, ZenPack):
-                continue
-            self.files.append(z.path())
 
     def test_installed_zenpacks(self):
-        for file in self.files:
-            self.z = ZPLTestHarness(file, verbose=False)
-            self.check_zenpack(self.z)
+        for zenpack in self.z.dmd.ZenPackManager.packs():
+            if not isinstance(zenpack, ZenPack):
+                continue
+
+            zenpack_module = importlib.import_module(zenpack.id)
+            cfg = getattr(zenpack_module, "CFG", None)
+            self.check_zenpack(ZPLTestHarness(cfg, verbose=False))
 
     def check_zenpack(self, z):
         self.assertTrue(z.check_properties(), "Property testing failed for {}".format(z.cfg.name))

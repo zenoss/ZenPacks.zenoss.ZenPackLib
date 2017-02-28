@@ -12,25 +12,14 @@ import yaml
 import time
 from .ZenPackLibLog import DEFAULTLOG
 from .Dumper import Dumper
-from .Loader import Loader
+from .loaders import OrderedLoader, ZenPackSpecLoader
+from ..base.ZenPack import ZenPack
 import inspect
-
-# adding these so that yaml.Loader can handle !ZenPackSpec tag
-yaml.Loader.add_constructor(u'!ZenPackSpec', yaml.Loader.construct_yaml_map)
-yaml.Loader.add_path_resolver(u'!ZenPackSpec', [])
 
 
 # list of yaml sections with DEFAULTS capability
 YAML_HAS_DEFAULTS = ['classes', 'properties', 'thresholds', 'datasources',
                      'datapoints', 'graphs', 'relationships', 'graphpoints', 'zProperties']
-
-# preferred section ordering for YAML sections
-YAML_PREFERRED_ORDER = ['zProperties', 'class_relationships', 'classes',
-                        'device_classes', 'DEFAULTS', 'base',
-                        'label', 'order', 'properties',
-                        'monitoring_templates', 'dynamicview_views',
-                        'dynamicview_relations', 'impacts', 'impacted_by',
-                        'relationships']
 
 
 def get_calling_dir():
@@ -47,8 +36,8 @@ def get_calling_dir():
 
 def load_yaml(yaml_doc=None, verbose=False, level=0):
     ''''''
-    Loader.QUIET = not verbose
-    Loader.LEVEL = level
+    ZenPackSpecLoader.QUIET = not verbose
+    ZenPackSpecLoader.LEVEL = level
 
     # determine caller directory and attempt to load from it
     if not yaml_doc:
@@ -98,17 +87,13 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
     return CFG
 
 
-def load_yaml_single(yaml_doc, useLoader=True, loader=Loader):
-    ''''''
+def load_yaml_single(yaml_doc, loader=ZenPackSpecLoader):
+    '''return YAML loaded from string or file with given loader.'''
     # if it's a string
     if os.path.isfile(yaml_doc):
-        if useLoader:
-            return yaml.load(file(yaml_doc, 'r'), Loader=loader)
-        return yaml.load(file(yaml_doc, 'r'))
+        return yaml.load(file(yaml_doc, 'r'), Loader=loader)
     else:
-        if useLoader:
-            return yaml.load(yaml_doc, Loader=loader)
-        return yaml.load(yaml_doc)
+        return yaml.load(yaml_doc, Loader=loader)
 
 
 def get_merged_docs(docs=None):
@@ -128,7 +113,7 @@ def get_merged_docs(docs=None):
     new = {}
     for doc in docs:
         zp_id = new.get('name')
-        cfg = load_yaml_single(doc, useLoader=False)
+        cfg = load_yaml_single(doc, loader=OrderedLoader)
         # check for conflicting zenpack ids
         if zp_id:
             name = cfg.get('name')
@@ -140,53 +125,73 @@ def get_merged_docs(docs=None):
     return new
 
 
-def optimize_yaml(yaml_doc):
+def optimize_yaml(orig_yaml):
     """optimize layout of YAML file"""
     # apply log verbosity settings
-    Loader.QUIET = False
-    Loader.LEVEL = 0
-    # original load
-    CFG = load_yaml(yaml_doc)
-    CFG.create()
-    # original yaml dump
-    orig_yaml = yaml.dump(CFG.specparams, Dumper=Dumper)
-    # load original yaml back as a Python dictionary
-    data = load_yaml_single(orig_yaml, useLoader=False)
-    # optimized output
-    optimized_yaml = get_optimized_yaml(data)
-    # new load
-    valid = compare_zenpackspecs(orig_yaml, optimized_yaml)
-    if not valid:
+    ZenPackSpecLoader.QUIET = False
+    ZenPackSpecLoader.LEVEL = 0
+    # Load as data values
+    orig_data = load_yaml_single(orig_yaml, loader=OrderedLoader)
+    # create optimized YAML based on original data
+    optimized_yaml = get_optimized_yaml(orig_data)
+    # Load optimized data values
+    optimized_data = load_yaml_single(optimized_yaml, loader=OrderedLoader)
+    if not compare_zenpackspecs(orig_yaml, optimized_yaml):
         DEFAULTLOG.warn('OPTIMIZATION FAILED VERIFICATION!  Please review optimized YAML prior to use ')
+        diff = compare_specparam_yaml_files(orig_yaml, optimized_yaml)
+        if diff:
+            print diff
     return optimized_yaml
 
+def get_specparam_yaml_pair(orig_yaml, new_yaml):
+    """return a pair of YAML files after loading"""
+    orig_cfg = load_yaml_single(orig_yaml)
+    orig_cfg.create()
+    new_cfg = load_yaml_single(new_yaml)
+    new_cfg.create()
+    orig_dump = yaml.dump(orig_cfg.specparams, Dumper=Dumper)
+    new_dump = yaml.dump(new_cfg.specparams, Dumper=Dumper)
+    return orig_dump, new_dump
+
+def compare_specparam_yaml_files(orig_yaml, new_yaml):
+    """return diff between ZenPackSpecParams-derived YAML files"""
+    orig_dump, new_dump = get_specparam_yaml_pair(orig_yaml, new_yaml)
+    return ZenPack.get_yaml_diff(orig_dump, new_dump)
+
+def compare_specparam_data(orig_yaml, new_yaml):
+    """return diff between ZenPackSpecParams-derived YAML files"""
+    orig_dump, new_dump = get_specparam_yaml_pair(orig_yaml, new_yaml)
+    orig_data = load_yaml_single(orig_dump, loader=OrderedLoader)
+    new_data = load_yaml_single(new_dump, loader=OrderedLoader)
+    return dict_modified(orig_data, new_data)
 
 def compare_zenpackspecs(orig_yaml, new_yaml):
     """report whether different YAML documents are identical"""
-    # now load both yaml files and create ZenPackSpec configs
     # apply log verbosity settings
-    Loader.QUIET = False
-    Loader.LEVEL = 0
-    orig = load_yaml_single(orig_yaml)
-    new = load_yaml_single(new_yaml)
-    orig.create()
-    new.create()
-    # SpecParams should be equal
-    if orig != new:
-        DEFAULTLOG.warn('ZenPackSpec mismatch between original and new')
-        dict_compare(orig.__dict__, new.__dict__)
-    # now dump new specs back out to yaml
-    orig_dump = yaml.dump(orig.specparams, Dumper=Dumper)
-    new_dump = yaml.dump(new.specparams, Dumper=Dumper)
-    # load raw yaml into Python dictionaries
-    orig_raw_yaml = load_yaml_single(orig_dump, useLoader=False)
-    new_raw_yaml = load_yaml_single(new_dump, useLoader=False)
-    # these should also be equivalent
-    if orig_raw_yaml != new_raw_yaml:
-        DEFAULTLOG.warn('YAML loaded Python dictionary mismatch between original and new')
-        dict_compare(orig_raw_yaml, new_raw_yaml)
+    ZenPackSpecLoader.QUIET = False
+    ZenPackSpecLoader.LEVEL = 0
+    # data should be unchanged
+    if compare_specparam_data(orig_yaml, new_yaml):
         return False
+    # dump back out to YAML for comparison
+    if compare_specparam_yaml_files(orig_yaml, new_yaml):
+        return False
+    # our tests have passed
     return True
+
+def dict_modified(d1, d2):
+    """return False if the dictionary has been modified"""
+    d1_keys = set(d1.keys())
+    d2_keys = set(d2.keys())
+    intersect_keys = d1_keys.intersection(d2_keys)
+    added = d1_keys - d2_keys
+    removed = d2_keys - d1_keys
+    modified = {o : (d1[o], d2[o]) for o in intersect_keys if d1[o] != d2[o]}
+    same = set(o for o in intersect_keys if d1[o] == d2[o])
+    if added or removed or modified:
+        return True
+    return False
+
 
 def dict_compare(d1, d2):
     d1_keys = set(d1.keys())
@@ -207,10 +212,8 @@ def get_optimized_yaml(data):
     """
     # set DEFAULTS throughout
     descend_defaults(data)
-    # sort
-    ordered = sort_yaml_data(data)
     # optimized output
-    return yaml.dump(ordered, default_flow_style=False, Dumper=Dumper).replace('!!map', '')
+    return yaml.dump(data, default_flow_style=False, Dumper=Dumper).replace('!!map', '')
 
 
 def descend_defaults(input):
@@ -265,34 +268,6 @@ def set_defaults(input):
         input['DEFAULTS'].update(defaults)
     else:
         input['DEFAULTS'] = defaults
-
-
-def sort_yaml_data(data):
-    """
-        Sort YAML data before outputting
-    """
-    if not isinstance(data, dict):
-        return data
-    ordered = OrderedDict()
-    if 'name' in data.keys():
-        ordered['name'] = data.get('name')
-    for k in data.keys():
-        if k.startswith('z'):
-            ordered[k] = data.get(k)
-    # this is the desired order
-    for x in YAML_PREFERRED_ORDER:
-        if x in data.keys():
-            data_ = data.get(x)
-            ordered[x] = sort_yaml_data(data_)
-            # do further sorting
-            if x == 'device_classes':
-                # preferred ordering for device classes
-                for k, v in data_.items():
-                    ordered[x][k] = sort_yaml_data(v)
-    # catch anything we missed
-    for k in [x for x in data.keys() if x not in YAML_PREFERRED_ORDER]:
-        ordered[k] = sort_yaml_data(data.get(k))
-    return ordered
 
 
 def writeDataToFile(keywords=None):
