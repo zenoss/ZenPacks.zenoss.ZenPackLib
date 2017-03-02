@@ -29,6 +29,8 @@ Release 2.0.4
 
 Fixes
 
+* Fix for missing Dynamic View on some components (ZPS-703)
+
 
 Release 2.0.3
 -------------
