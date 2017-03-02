@@ -91,7 +91,7 @@ class_relationships:
 
 EXPECTED_SUBCOMPONENT_VIEW = """
 Zenoss.nav.appendTo('Component', [{
-    id: 'subcomponent_view',
+    id: 'ZenPacks_zenpacklib_TestLinuxStorage_subcomponent_view',
     text: _t('Dynamic View'),
     xtype: 'dynamicview',
     relationshipFilter: 'impacted_by',
