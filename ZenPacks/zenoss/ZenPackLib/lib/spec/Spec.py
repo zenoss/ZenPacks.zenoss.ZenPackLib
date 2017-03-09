@@ -418,3 +418,11 @@ class Spec(object):
             return InterfaceClass
         else:
             return type
+
+    @classmethod
+    def get_subclasses(cls):
+        """Generate recursive subclasses of this class."""
+        for subclass in cls.__subclasses__():
+            yield subclass
+            for subsubclass in subclass.get_subclasses():
+                yield subsubclass
