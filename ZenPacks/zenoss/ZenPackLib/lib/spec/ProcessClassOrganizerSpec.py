@@ -7,11 +7,11 @@
 #
 ##############################################################################
 
-from .Spec import Spec
+from .OrganizerSpec import OrganizerSpec
 from .ProcessClassSpec import ProcessClassSpec
 
 
-class ProcessClassOrganizerSpec(Spec):
+class ProcessClassOrganizerSpec(OrganizerSpec):
     """Initialize a Process Set via Python at install time."""
     def __init__(
             self,
@@ -30,28 +30,31 @@ class ProcessClassOrganizerSpec(Spec):
           :param remove: Remove Organizer on ZenPack removal
           :type remove: boolean
         """
-        self.zenpack_spec = zenpack_spec
-        self.path = path.lstrip('/')
+        super(ProcessClassOrganizerSpec, self).__init__(
+            zenpack_spec,
+            path,
+            _source_location=_source_location)
+
+        if zplog:
+            self.LOG = zplog
+
         self.description = description
         self.remove = remove
         self.process_classes = self.specs_from_param(
             ProcessClassSpec, 'process_classes', process_classes, zplog=self.LOG)
 
     def create(self, dmd):
-        # get/create process class organizer
-        bCreated = False
-        try:
-            porg = dmd.Processes.getOrganizer(self.path)
-            bCreated = getattr(porg, 'zpl_managed', False)
-        except KeyError:
-            dmd.Processes.createOrganizer(self.path)
-            porg = dmd.Processes.getOrganizer(self.path)
-            bCreated = True
+        porg = self.get_organizer(dmd)
+        if not porg:
+            porg = dmd.Processes.createOrganizer(self.path)
+            porg.zpl_managed = True
 
         if porg.description != self.description:
             porg.description = self.description
-        # Flag this as a ZPL managed object, that is, one that should not be
-        # exported to objects.xml  (contained objects will also be excluded)
-        porg.zpl_managed = bCreated
+
         for process_class_id, process_class_spec in self.process_classes.items():
             process_class_spec.create(dmd, porg)
+
+    def get_root(self, dmd):
+        """Return the root object for this organizer."""
+        return dmd.Processes

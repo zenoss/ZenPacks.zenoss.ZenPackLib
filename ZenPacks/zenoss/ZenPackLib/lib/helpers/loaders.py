@@ -84,7 +84,7 @@ class ZenPackSpecLoader(OrderedLoader):
     def construct_specsparameters(self, node, spectype):
         """constructor for SpecsParameters"""
         from ..spec.Spec import Spec
-        spec_class = {x.__name__: x for x in Spec.__subclasses__()}.get(spectype, None)
+        spec_class = {x.__name__: x for x in Spec.get_subclasses()}.get(spectype, None)
 
         if not spec_class:
             self.yaml_error(yaml.constructor.ConstructorError(

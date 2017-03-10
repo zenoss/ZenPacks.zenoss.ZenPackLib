@@ -37,7 +37,7 @@ class TestDeviceClassRemoval(ZPLTestBase):
 
     def test_device_class(self):
         # instantiate the ZenPack class
-        zenpack = ZenPack(self.dmd)
+        zenpack = ZenPack(self.app)
 
         # create the device class
         for dcname, dcspec in self.z.cfg.device_classes.items():

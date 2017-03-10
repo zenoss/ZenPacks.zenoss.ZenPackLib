@@ -71,7 +71,7 @@ class ZenPack(ZenPackBase):
         # load monitoring templates
         for dcname, dcspec in self.device_classes.iteritems():
             dcspecparam = self._v_specparams.device_classes.get(dcname)
-            deviceclass = self.dmd.Devices.getOrganizer(dcname)
+            deviceclass = dcspec.get_organizer(self.dmd)
 
             for mtname, mtspec in dcspec.templates.iteritems():
                 create_template = False
@@ -129,9 +129,8 @@ class ZenPack(ZenPackBase):
             # objects, but we do not have access to that relationship
             # at this point in the process.
             for dcname, dcspec in self._v_specparams.device_classes.iteritems():
-                try:
-                    deviceclass = self.dmd.Devices.getOrganizer(dcname)
-                except KeyError:
+                deviceclass = dcspec.get_organizer(app.zport.dmd)
+                if not deviceclass:
                     self.LOG.warning(
                         "DeviceClass {} has been removed at some point "
                         "after the {} ZenPack was installed.  It will be "
@@ -289,9 +288,8 @@ class ZenPack(ZenPackBase):
             if dcspec.create:
                 self.create_device_class(app, dcspec)
             else:
-                try:
-                    self.dmd.Devices.getOrganizer(dcspec.path)
-                except KeyError:
+                device_class = dcspec.get_organizer(app.zport.dmd)
+                if not device_class:
                     self.LOG.warn(
                         "Device Class (%s) not found",
                         dcspec.path)
@@ -304,17 +302,16 @@ class ZenPack(ZenPackBase):
         customizations on upgrade.
 
         """
-        try:
-            dcObject = app.dmd.Devices.getOrganizer(dcspec.path)
-        except KeyError:
-            self.LOG.debug("Creating %s device class", dcspec.path)
-            dcObject = app.dmd.Devices.createOrganizer(dcspec.path)
-        else:
+        dcObject = dcspec.get_organizer(app.dmd)
+        if dcObject:
             self.LOG.debug(
                 "Existing %s device class - not overwriting properties",
                 dcspec.path)
 
             return dcObject
+
+        self.LOG.debug("Creating %s device class", dcspec.path)
+        dcObject = app.dmd.Devices.createOrganizer(dcspec.path)
 
         # Set zProperties.
         for zprop, value in dcspec.zProperties.iteritems():
