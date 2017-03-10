@@ -78,7 +78,7 @@ class_relationships:
 """
 
 
-EXPECTED_SUBCOMPONENT_VIEW = "Zenoss.nav.appendTo('Component', [{\n    id: 'subcomponent_view',\n    text: _t('Dynamic View'),\n    xtype: 'dynamicview',\n    relationshipFilter: 'impacted_by',\n    viewName: 'service_view',\n    filterNav: function(navpanel) {\n        switch (navpanel.refOwner.componentType) {\n            case 'Application': return true;\n            case 'Linux': return true;\n            default: return false;\n        }\n    }\n}]);"
+EXPECTED_SUBCOMPONENT_VIEW = "Zenoss.nav.appendTo('Component', [{\n    id: 'ZenPacks_zenpacklib_TestLinuxStorage_subcomponent_view',\n    text: _t('Dynamic View'),\n    xtype: 'dynamicview',\n    relationshipFilter: 'impacted_by',\n    viewName: 'service_view',\n    filterNav: function(navpanel) {\n        switch (navpanel.refOwner.componentType) {\n            case 'Application': return true;\n            case 'Linux': return true;\n            default: return false;\n        }\n    }\n}]);"
 
 
 class TestDynamicViewComponentNav(ZPLTestBase):

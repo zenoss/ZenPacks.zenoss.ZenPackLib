@@ -161,10 +161,10 @@ class RRDTemplateSpec(Spec):
             return template
 
     def remove(self, dmd, id=None):
-        try:
-            device_class = dmd.Devices.getOrganizer(self.deviceclass_spec.path)
-        except KeyError:
+        device_class = self.deviceclass_spec.get_organizer(dmd)
+        if not device_class:
             return
+
         # override object id if provided
         t_id = id or self.name
         existing_template = device_class.rrdTemplates._getOb(t_id, None)

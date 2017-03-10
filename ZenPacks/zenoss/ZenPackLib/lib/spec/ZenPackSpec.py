@@ -517,7 +517,7 @@ class ZenPackSpec(Spec):
         if service_view_metatypes:
             return (
                 "Zenoss.nav.appendTo('Component', [{{\n"
-                "    id: 'subcomponent_view',\n"
+                "    id: '{zenpack_id_prefix}_subcomponent_view',\n"
                 "    text: _t('Dynamic View'),\n"
                 "    xtype: 'dynamicview',\n"
                 "    relationshipFilter: 'impacted_by',\n"
@@ -530,6 +530,7 @@ class ZenPackSpec(Spec):
                 "    }}\n"
                 "}}]);\n"
                 ).format(
+                    zenpack_id_prefix=self.id_prefix,
                     cases='\n            '.join(
                         "case '{}': return true;".format(x)
                         for x in service_view_metatypes))
