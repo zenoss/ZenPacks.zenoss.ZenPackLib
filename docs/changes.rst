@@ -30,6 +30,7 @@ Release 2.0.4
 Fixes
 
 * Fix for missing Dynamic View on some components (ZPS-703)
+* Fix for failure to create device classes in uncommon case (ZPS-1012)
 
 
 Release 2.0.3

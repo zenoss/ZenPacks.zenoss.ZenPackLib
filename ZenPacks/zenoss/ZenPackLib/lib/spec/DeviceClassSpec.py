@@ -6,11 +6,11 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-from .Spec import Spec
+from .OrganizerSpec import OrganizerSpec
 from .RRDTemplateSpec import RRDTemplateSpec
 
 
-class DeviceClassSpec(Spec):
+class DeviceClassSpec(OrganizerSpec):
     """Initialize a DeviceClass via Python at install time."""
 
     def __init__(
@@ -41,11 +41,14 @@ class DeviceClassSpec(Spec):
             :param protocol: Protocol to use for registered devtype
             :type protocol: str
         """
-        super(DeviceClassSpec, self).__init__(_source_location=_source_location)
+        super(DeviceClassSpec, self).__init__(
+            zenpack_spec,
+            path,
+            _source_location=_source_location)
+
         if zplog:
             self.LOG = zplog
-        self.zenpack_spec = zenpack_spec
-        self.path = path.lstrip('/')
+
         self.create = bool(create)
         self.remove = bool(remove)
         self.description = description
@@ -58,3 +61,7 @@ class DeviceClassSpec(Spec):
 
         self.templates = self.specs_from_param(
             RRDTemplateSpec, 'templates', templates, zplog=self.LOG)
+
+    def get_root(self, dmd):
+        """Return the root object for this organizer."""
+        return dmd.Devices

@@ -7,11 +7,11 @@
 #
 ##############################################################################
 
-from .Spec import Spec
+from .OrganizerSpec import OrganizerSpec
 from .EventClassMappingSpec import EventClassMappingSpec
 
 
-class EventClassSpec(Spec):
+class EventClassSpec(OrganizerSpec):
     """Initialize a EventClass via Python at install time."""
     def __init__(
             self,
@@ -33,26 +33,26 @@ class EventClassSpec(Spec):
           :param mappings: TODO
           :type mappings: SpecsParameter(EventClassMappingSpec)
         """
-        super(EventClassSpec, self).__init__(_source_location=_source_location)
-        self.zenpack_spec = zenpack_spec
-        self.path = path.lstrip('/')
+        super(EventClassSpec, self).__init__(
+            zenpack_spec,
+            path,
+            _source_location=_source_location)
+
+        if zplog:
+            self.LOG = zplog
+
         self.description = description
         self.transform = transform
         self.remove = bool(remove)
-        if zplog:
-            self.LOG = zplog
         self.mappings = self.specs_from_param(
             EventClassMappingSpec, 'mappings', mappings, zplog=self.LOG)
 
     def instantiate(self, dmd):
-        bCreated = False
-        try:
-            ecObject = dmd.Events.getOrganizer(self.path)
-            bCreated = getattr(ecObject, 'zpl_managed', False)
-        except KeyError:
-            dmd.Events.createOrganizer(self.path)
-            ecObject = dmd.Events.getOrganizer(self.path)
-            bCreated = True
+        ecObject = self.get_organizer(dmd)
+        if not ecObject:
+            ecObject = dmd.Events.createOrganizer(self.path)
+            ecObject.zpl_managed = True
+
         if self.description != '':
             if not ecObject.description == self.description:
                 self.LOG.debug('Description of Event Class {} has changed from'
@@ -67,8 +67,10 @@ class EventClassSpec(Spec):
                                                        ecObject.transform,
                                                        self.transform))
                 ecObject.transform = self.transform
-        # Flag this as a ZPL managed object, that is, one that should not be
-        # exported to objects.xml  (contained objects will also be excluded)
-        ecObject.zpl_managed = bCreated
+
         for mapping_id, mapping_spec in self.mappings.items():
             mapping_spec.create(ecObject)
+
+    def get_root(self, dmd):
+        """Return the root object for this organizer."""
+        return dmd.Events
