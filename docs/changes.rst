@@ -31,6 +31,7 @@ Fixes
 
 * Fix for missing Dynamic View on some components (ZPS-703)
 * Fix for failure to create device classes in uncommon case (ZPS-1012)
+* Fix event class mappings with mismatched id and eventClassKey (ZPS-1016)
 
 
 Release 2.0.3

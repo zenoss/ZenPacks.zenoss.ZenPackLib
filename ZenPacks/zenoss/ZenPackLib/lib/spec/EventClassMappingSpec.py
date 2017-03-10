@@ -73,4 +73,5 @@ class EventClassMappingSpec(Spec):
             if getattr(mapping, x) != getattr(self, x):
                 setattr(mapping, x, getattr(self, x, None))
 
-        self.zpl_managed = True
+        mapping.zpl_managed = True
+        mapping.index_object()
