@@ -47,18 +47,40 @@ class TestDurationThresholdInteger(ZPLTestBase):
     disableLogging = False
 
     def test_integer_threshold(self):
-        if self.z.zenpack_installed():
-            self.assertTrue(self.z.check_templates_vs_yaml(), "Template objects do not match YAML")
-            self.assertTrue(self.z.check_templates_vs_specs(), "Template objects do not match Spec")
-            # check properties on dummy template
-            dcs = self.z.cfg.device_classes.get('/Devices')
-            tcs = dcs.templates.get('TESTTEMPLATE')
-            t = tcs.create(self.dmd, False)
-            for th in t.thresholds():
-                self.assertTrue(isinstance(th.violationPercentage, int),
-                    'DurationThreshold property (violationPercentage) should be int, got {}'.format(type(th.violationPercentage)))
-        else:
+        try:
+            from ZenPacks.zenoss.DurationThreshold import ZenPack
+        except ImportError:
             self.log.warn('Skipping test_integer_threshold since ZenPacks.zenoss.DurationThreshold not installed.')
+            return
+
+        install_zenpack(self.dmd, "ZenPacks.zenoss.DurationThreshold", ZenPack)
+
+        self.assertTrue(self.z.check_templates_vs_yaml(), "Template objects do not match YAML")
+        self.assertTrue(self.z.check_templates_vs_specs(), "Template objects do not match Spec")
+        # check properties on dummy template
+        dcs = self.z.cfg.device_classes.get('/Devices')
+        tcs = dcs.templates.get('TESTTEMPLATE')
+        t = tcs.create(self.dmd, False)
+        for th in t.thresholds():
+            self.assertTrue(isinstance(th.violationPercentage, int),
+                'DurationThreshold property (violationPercentage) should be int, got {}'.format(type(th.violationPercentage)))
+
+
+def install_zenpack(dmd, name, klass=None):
+    """Install ZenPack given name and optional class.
+
+    This is far from a full installation. The ZenPack object is
+    instantiated and added to ZenPackManager. This is mainly useful to
+    make modeler plugins and datasource types available for loading.
+
+    """
+    if klass is None:
+        from Products.ZenModel.ZenPack import ZenPack as DefaultZenPack
+        klass = DefaultZenPack
+
+    zenpack = klass(name)
+    zenpack.eggPack = True
+    dmd.ZenPackManager.packs._setObject(zenpack.id, zenpack)
 
 
 def test_suite():
