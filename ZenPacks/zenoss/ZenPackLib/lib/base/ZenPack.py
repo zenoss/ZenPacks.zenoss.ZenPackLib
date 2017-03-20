@@ -90,7 +90,8 @@ class ZenPack(ZenPackBase):
                     # preserve the backup if different
                     if diff:
                         create_template = True
-                        backup_name = "{}-preupgrade-{}".format(mtname, int(time.time()))
+                        time_str = time.strftime("%Y%m%d%H%M", time.localtime())
+                        backup_name = "{}-preupgrade-{}".format(mtname, time_str)
                         deviceclass.rrdTemplates.manage_renameObject(template.id, backup_name)
                         LOG.info(
                             "Existing monitoring template {}/{} differs from "

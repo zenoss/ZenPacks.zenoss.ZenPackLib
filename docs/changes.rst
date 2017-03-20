@@ -29,6 +29,7 @@ Release 2.0.5
 
 Fixes
 
+* Template backups use YYYYMMDDHHMM format instead of unix timestamp.
 
 Release 2.0.4
 -------------
