@@ -31,6 +31,8 @@ Fixes
 
 * Template backups use YYYYMMDDHHMM format instead of unix timestamp.
 
+* Fix failure to backup customized tempaltes during upgrade (ZPS-1176)
+
 Release 2.0.4
 -------------
 
