@@ -7,15 +7,14 @@
 #
 ##############################################################################
 
-from .SpecParams import SpecParams
+from .OrganizerSpecParams import OrganizerSpecParams
 from .EventClassMappingSpecParams import EventClassMappingSpecParams
 from ..spec.EventClassSpec import EventClassSpec
 
 
-class EventClassSpecParams(SpecParams, EventClassSpec):
+class EventClassSpecParams(OrganizerSpecParams, EventClassSpec):
     def __init__(self, zenpack_spec, path, description='', transform='', mappings=None, **kwargs):
-        SpecParams.__init__(self, **kwargs)
-        self.path = path
+        OrganizerSpecParams.__init__(self, zenpack_spec, path, **kwargs)
         self.description = description
         self.transform = transform
         self.mappings = self.specs_from_param(

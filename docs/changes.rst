@@ -30,6 +30,8 @@ Release 2.0.5
 Fixes
 
 
+* Fix failure to backup customized tempaltes during upgrade (ZPS-1176)
+
 Release 2.0.4
 -------------
 
