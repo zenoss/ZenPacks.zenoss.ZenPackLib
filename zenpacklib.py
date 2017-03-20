@@ -5018,7 +5018,8 @@ if YAML_INSTALLED:
         elif key in ZENOSS_KEYWORDS.union(JS_WORDS):
             # should be ok to use a zenoss word to define these
             # some items, like sysUpTime are pretty common datapoints
-            if cls not in [RRDDatasourceSpec,
+            if cls not in [ClassPropertySpec,
+                           RRDDatasourceSpec,
                            RRDDatapointSpec,
                            RRDTemplateSpec,
                            GraphDefinitionSpec,
