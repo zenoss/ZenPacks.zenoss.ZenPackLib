@@ -30,8 +30,8 @@ Release 2.0.5
 Fixes
 
 * Template backups use YYYYMMDDHHMM format instead of unix timestamp.
-
-* Fix failure to backup customized tempaltes during upgrade (ZPS-1176)
+* Fix failure to back up customized templates during upgrade from pre-2.0 ZenPacks (ZPS-1195)
+* Fix failure to back up customized templates during upgrade (ZPS-1176)
 
 Release 2.0.4
 -------------

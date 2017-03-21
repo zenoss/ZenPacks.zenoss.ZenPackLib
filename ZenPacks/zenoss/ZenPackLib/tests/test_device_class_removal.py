@@ -41,14 +41,14 @@ class TestDeviceClassRemoval(ZPLTestBase):
 
         # create the device class
         for dcname, dcspec in self.z.cfg.device_classes.items():
-            zenpack.create_device_class(self, dcspec)
+            zenpack.create_device_class(self.app, dcspec)
             # verify that it was created
             self.assertTrue(self.device_class_exists(dcspec.path),
                             'Device class {} was not created'.format(dcspec.path))
 
         for dcname, dcspec in self.z.cfg.device_classes.iteritems():
             if dcspec.remove:
-                zenpack.remove_device_class(self, dcspec)
+                zenpack.remove_device_class(self.app, dcspec)
                 # verify that it was removed
                 self.assertFalse(self.device_class_exists(dcspec.path),
                                 'Device class {} was not removed'.format(dcspec.path))
