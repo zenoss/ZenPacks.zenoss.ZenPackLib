@@ -47,9 +47,9 @@ class ZenPack(ZenPackBase):
     def __init__(self, *args, **kwargs):
         super(ZenPack, self).__init__(*args, **kwargs)
 
-    def _buildDeviceRelations(self, batch=10):
+    def _buildDeviceRelations(self, app, batch=10):
         count = 0
-        for d in self.dmd.Devices.getSubDevicesGen():
+        for d in app.zport.dmd.Devices.getSubDevicesGen():
             d.buildRelations()
             count += 1
             if count % batch == 0:
@@ -66,55 +66,24 @@ class ZenPack(ZenPackBase):
         super(ZenPack, self).install(app)
         if self.NEW_COMPONENT_TYPES:
             self.LOG.info('Adding {} relationships to existing devices'.format(self.id))
-            self._buildDeviceRelations()
+            self._buildDeviceRelations(app)
 
         # load monitoring templates
         for dcname, dcspec in self.device_classes.iteritems():
             dcspecparam = self._v_specparams.device_classes.get(dcname)
-            deviceclass = dcspec.get_organizer(self.dmd)
+            deviceclass = dcspec.get_organizer(app.zport.dmd)
 
             for mtname, mtspec in dcspec.templates.iteritems():
-                create_template = False
                 mtspecparam = dcspecparam.templates.get(mtname)
-
-                # there will be a backup of this template if this is an upgrade from
-                # previous ZPL 2.0 install
-                try:
-                    template = deviceclass.rrdTemplates._getOb("{}-backup".format(mtname))
-                except AttributeError:
-                    create_template = True
-                    template = None
-
-                if template:
-                    diff = self.object_changed(app, template, mtspec, mtspecparam)
-                    # preserve the backup if different
-                    if diff:
-                        create_template = True
-                        time_str = time.strftime("%Y%m%d%H%M", time.localtime())
-                        backup_name = "{}-preupgrade-{}".format(mtname, time_str)
-                        deviceclass.rrdTemplates.manage_renameObject(template.id, backup_name)
-                        LOG.info(
-                            "Existing monitoring template {}/{} differs from "
-                            "the newer version included with the {} ZenPack.  "
-                            "The existing template will be "
-                            "backed up to '{}'.  Please review and reconcile any "
-                            "local changes before deleting the backup:\n{}".format(
-                            dcname, mtname, self.id, backup_name, diff))
-                    else:
-                        # if unchanged, restore original name
-                        deviceclass.rrdTemplates.manage_renameObject(template.id, mtname)
-
-                if create_template:
-                    # create the template
-                    mtspec.create(self.dmd)
+                self.update_object(app, deviceclass, 'rrdTemplates', mtname, mtspec, mtspecparam)
 
         # Load event classes
         for ecname, ecspec in self.event_classes.iteritems():
-            ecspec.instantiate(self.dmd)
+            ecspec.instantiate(app.zport.dmd)
 
         # Create Process Classes
         for psname, psspec in self.process_class_organizers.iteritems():
-            psspec.create(self.dmd)
+            psspec.create(app.zport.dmd)
 
     def remove(self, app, leaveObjects=False):
         if self._v_specparams is None:
@@ -140,28 +109,18 @@ class ZenPack(ZenPackBase):
                     continue
 
                 for orig_mtname, orig_mtspec in dcspec.templates.iteritems():
-                    try:
-                        template = deviceclass.rrdTemplates._getOb(orig_mtname)
-                    except AttributeError:
+                    # attempt to find an existing template
+                    template = self.get_object(deviceclass, 'rrdTemplates', orig_mtname)
+                    # back it up if it exists
+                    if template:
+                        self.get_or_create_backup(deviceclass, 'rrdTemplates', orig_mtname)
+                    else:
                         self.LOG.warning(
                             "Monitoring template {}/{} has been removed at some point "
                             "after the {} ZenPack was installed.  It will be "
                             "reinstated if this ZenPack is upgraded or reinstalled".format(
                             dcname, orig_mtname, self.id))
-                        continue
 
-                    # back up the template
-                    backup_name = "{}-backup".format(orig_mtname)
-                    # delete the template if it already exists
-                    # this could occur if zenpack installation fails and is reattempted
-                    try:
-                        backup_template = deviceclass.rrdTemplates._getOb(backup_name)
-                        if backup_template:
-                            backup_template.getPrimaryParent()._delObject(backup_template.id)
-                    except AttributeError:
-                        pass
-
-                    deviceclass.rrdTemplates.manage_renameObject(template.id, backup_name)
         else:
             dc = app.Devices
             for catalog in self.GLOBAL_CATALOGS:
@@ -190,24 +149,114 @@ class ZenPack(ZenPackBase):
                                                if x[0] not in self.NEW_RELATIONS[device_module_id]])
 
                 self.LOG.info('Removing {} relationships from existing devices.'.format(self.id))
-                self._buildDeviceRelations()
+                self._buildDeviceRelations(app)
 
             for dcname, dcspec in self.device_classes.iteritems():
                 if dcspec.remove:
                     self.remove_device_class(app, dcspec)
 
             # Remove EventClasses with remove flag set
-            self.remove_organizer_or_subs(app.dmd.Events,
+            self.remove_organizer_or_subs(app.zport.dmd.Events,
                                           self.event_classes,
                                           'mappings',
                                           'removeInstances')
             # Remove Process Classes/Organizers with remove flag set
-            self.remove_organizer_or_subs(app.dmd.Processes,
+            self.remove_organizer_or_subs(app.zport.dmd.Processes,
                                           self.process_class_organizers,
                                           'process_classes',
                                           'removeOSProcessClasses')
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
+
+    def update_object(self, app, parent, relname, object_id, spec, specparam):
+        """Compare object to be installed to existing objects, optionally creating the new object"""
+        # this backup should exist if previous installed version of this zenpack uses ZPL 2.0
+        backup_target = self.get_object(parent, relname, "{}-backup".format(object_id))
+        # otherwise this is the existing object pre-zpl 2.0
+        existing_target = self.get_object(parent, relname, object_id)
+        # we'll use whichever we get
+        candidate_target = backup_target or existing_target
+
+        if not candidate_target:
+            # if no candidate target is found, then this is new to this zenpack
+            spec.create(app.zport.dmd)
+        else:
+            # check the difference between our candidate and the new spec
+            # and back up the candidate if there is a difference
+            diff = self.check_diff(app, parent, relname, candidate_target, spec, specparam)
+            # if there was a difference, keep the backup and create the new template
+            if diff:
+                spec.create(app.zport.dmd)
+            else:
+                # otherwise just return the backup template to its original location
+                if backup_target:
+                    self.move_object(parent, relname, backup_target.id, object_id)
+                # or in the case of the existing object, leave it alone
+                else:
+                    pass
+
+    def check_diff(self, app, parent, relname, object, spec, specparam):
+        """Return True if object has changed creating preupgrade backup if needed"""
+        diff = self.object_changed(app, object, spec, specparam)
+        if not diff:
+            return False
+        # preserve the existing object if different
+        time_str = time.strftime("%Y%m%d%H%M", time.localtime())
+        preupgrade_id = "{}-preupgrade-{}".format(object.id, time_str)
+        self.move_object(parent, relname, object.id, preupgrade_id)
+        LOG.info("Existing object {}/{} differs from "
+                 "the newer version included with the {} ZenPack.  "
+                 "The existing object will be "
+                 "backed up to '{}'.  Please review and reconcile any "
+                 "local changes before deleting the backup:\n{}".format(
+                    parent.getDmdKey(), object.id, self.id, preupgrade_id, diff))
+        return True
+
+    def get_object(self, parent, relname, object_id):
+        """Attempt to retrieve an object given its id, parent instance, and relation name"""
+        rel = getattr(parent, relname, None)
+        if rel:
+            try:
+                return rel._getOb(object_id)
+            except AttributeError:
+                pass
+        return None
+
+    def get_or_create_backup(self, parent, relname, object_id):
+        """Create and return a backup of object"""
+        backup_id = "{}-backup".format(object_id)
+        backup_target = self.get_object(parent, relname, backup_id)
+        # return or delete the template if it already exists
+        # which could occur if zenpack installation fails and is re-attempted
+        if backup_target:
+            backup_target.getPrimaryParent()._delObject(backup_target.id)
+        # move the object to its backup
+        self.rename_object(parent, relname, object_id, backup_id)
+        return self.get_object(parent, relname, backup_id)
+
+    def rename_object(self, parent, relname, source_id, dest_id):
+        """execute manage_renameObject and log exceptions"""
+        rel = getattr(parent, relname, None)
+        if rel:
+            try:
+                rel.manage_renameObject(source_id, dest_id)
+            except Exception as e:
+                LOG.warn("Could not move template {}/{} to {}/{} ({})".format(parent.getDmdKey(), source_id,
+                                                                              parent.getDmdKey(), dest_id,
+                                                                              e))
+        else:
+            LOG.warn("Cannot rename {} on nonexistent relation {}".format(source_id, relname))
+
+    def move_object(self, parent, relname, source_id, dest_id):
+        """Move object and overwrite if destination exists"""
+        # check if destination object exists already
+        dest_object = self.get_object(parent, relname, dest_id)
+        if dest_object:
+            dest_object.getPrimaryParent()._delObject(dest_object.id)
+
+        source_object = self.get_object(parent, relname, source_id)
+        if source_object:
+            self.rename_object(parent, relname, source_id, dest_id)
 
     def remove_organizer_or_subs(self, dmd_root, classes, sub_class, remove_name):
         '''Remove the organizer or subclasses within an organizer
@@ -251,10 +300,10 @@ class ZenPack(ZenPackBase):
 
         # get YAML representation of prototype
         proto_id = '{}-new'.format(spec.name)
-        proto_object = spec.create(app.dmd, False, proto_id)
+        proto_object = spec.create(app.zport.dmd, False, proto_id)
         proto_object_param = specparam.fromObject(proto_object)
         proto_object_yaml = yaml.dump(proto_object_param, Dumper=Dumper)
-        spec.remove(app.dmd, proto_id)
+        spec.remove(app.zport.dmd, proto_id)
 
         return self.get_yaml_diff(object_yaml, proto_object_yaml)
 
@@ -303,7 +352,7 @@ class ZenPack(ZenPackBase):
         customizations on upgrade.
 
         """
-        dcObject = dcspec.get_organizer(app.dmd)
+        dcObject = dcspec.get_organizer(app.zport.dmd)
         if dcObject:
             self.LOG.debug(
                 "Existing %s device class - not overwriting properties",
@@ -312,7 +361,7 @@ class ZenPack(ZenPackBase):
             return dcObject
 
         self.LOG.debug("Creating %s device class", dcspec.path)
-        dcObject = app.dmd.Devices.createOrganizer(dcspec.path)
+        dcObject = app.zport.dmd.Devices.createOrganizer(dcspec.path)
 
         # Set zProperties.
         for zprop, value in dcspec.zProperties.iteritems():
@@ -357,9 +406,9 @@ class ZenPack(ZenPackBase):
         path = [p for p in dcspec.path.lstrip('/').split('/') if p != 'Devices']
         organizerPath = '/{}'.format('/'.join(['Devices'] + path))
         try:
-            app.dmd.Devices.getOrganizer(organizerPath)
+            app.zport.dmd.Devices.getOrganizer(organizerPath)
             try:
-                app.dmd.Devices.manage_deleteOrganizer(organizerPath)
+                app.zport.dmd.Devices.manage_deleteOrganizer(organizerPath)
             except Exception as e:
                 self.LOG.error('Unable to remove DeviceClass {} ({})'.format(dcspec.path, e))
         except KeyError:
@@ -378,11 +427,11 @@ class ZenPack(ZenPackBase):
             REQUEST=REQUEST)
 
         for filename in findFiles(self, 'objects', lambda f: f.endswith('.xml')):
-            self.filter_xml(filename)
+            self.filter_xml(app, filename)
 
         return result
 
-    def filter_xml(self, filename):
+    def filter_xml(self, app, filename):
         pruned = 0
         try:
             tree = etree.parse(filename)
@@ -397,7 +446,7 @@ class ZenPack(ZenPackBase):
                     elif action == 'end':
                         obj_path = '/'.join(path)
                         try:
-                            obj = self.dmd.getObjByPath(obj_path)
+                            obj = app.zport.dmd.getObjByPath(obj_path)
                             if getattr(obj, 'zpl_managed', False):
                                 self.LOG.debug("Removing {} from {}".format(obj_path, filename))
                                 pruned += 1
