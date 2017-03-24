@@ -129,6 +129,84 @@ class ZPLTestCommand(ZPLTestBase):
         p.wait()
         return (p, out, err)
 
+
+class ZPLTestMockZenPack(BaseTestCase):
+    """BaseTestCase class with ZPLTestHarness support"""
+    log = logging.getLogger("ZenPackLib.test")
+    yaml_doc = '''name: ZenPacks.zenoss.ZenPackLib'''
+    use_dmd = False
+    disableLogging = True
+    datsources = []
+    thresholds = []
+
+    def afterSetUp(self):
+        super(ZPLTestMockZenPack, self).afterSetUp()
+
+        zenpack = MockZenPack(self.dmd, "ZenPacks.zenoss.CustomThreshold", datasources=self.datasources, thresholds=self.thresholds)
+        # for a list of docs, iterate through
+        if isinstance(self.yaml_doc, list):
+            counter = 0
+            for y_d in self.yaml_doc:
+                if counter == 0:
+                    try:
+                        self.z = ZPLTestHarness(y_d)
+                    except Exception:
+                        self.fail(traceback.format_exc(limit=0))
+                else:
+                    try:
+                        setattr(self, 'z_{}'.format(counter), ZPLTestHarness(y_d))
+                    except Exception:
+                        self.fail(traceback.format_exc(limit=0))
+                counter += 1
+        else:
+            try:
+                self.z = ZPLTestHarness(self.yaml_doc)
+            except Exception:
+                self.fail(traceback.format_exc(limit=0))
+
+
+    def tearDown(self):
+        if isinstance(self.yaml_doc, list):
+            counter = 1
+            for y_d in self.yaml_doc:
+                z = getattr(self, 'z_{}'.format(counter), None)
+                counter += 1
+
+
+
+class MockZenPack(object):
+    ''''''
+    def __init__(self, dmd, name, datasources=[], thresholds=[]):
+        self.dmd = dmd
+        self.name = name
+        self.datasources = datasources
+        self.thresholds = thresholds
+        self.install_zenpack()
+
+    def install_zenpack(self):
+        """Install ZenPack given name and optional class.
+    
+        This is far from a full installation. The ZenPack object is
+        instantiated and added to ZenPackManager. This is mainly useful to
+        make modeler plugins and datasource types available for loading.
+    
+        """
+        from Products.ZenModel.ZenPack import ZenPack as DefaultZenPack
+        klass = DefaultZenPack
+        zenpack = klass(self.name)
+        zenpack.eggPack = True
+        self.dmd.ZenPackManager.packs._setObject(zenpack.id, zenpack)
+
+        def getThresholdClasses():
+            return self.thresholds
+
+        def getDataSourceClasses():
+            return self.datasources
+
+        zenpack.getThresholdClasses = getThresholdClasses
+        zenpack.getDataSourceClasses = getDataSourceClasses
+
+
 # Using this ZenPackSpec name for logging-type tests
 LOG = ZPLOG.add_log('ZenPacks.zenoss.TestLogging')
 LOG.propagate = False
