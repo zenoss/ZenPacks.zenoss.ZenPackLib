@@ -65,7 +65,7 @@ class ZPLTestHarness(ZenScriptBase):
     exported_yaml = None
     reloaded_yaml = None
 
-    def __init__(self, entry, connect=False, verbose=False, level=20, specparams=False):
+    def __init__(self, entry, verbose=False, level=20, specparams=False):
         """Create test harness using entry.
 
         entry can be any of the following:
@@ -75,7 +75,6 @@ class ZPLTestHarness(ZenScriptBase):
         * Already-built ZenPackSpec (CFG) object.
 
         """
-        ZenScriptBase.__init__(self, connect=connect)
         if isinstance(entry, ZenPackSpec):
             self.cfg = entry
         else:
@@ -114,22 +113,6 @@ class ZPLTestHarness(ZenScriptBase):
     def export_specparams_yaml(self):
         """Dump ZenPackSpecparams to YAML instead of ZenPackSpec"""
         return yaml.dump(self.cfg.specparams, Dumper=Dumper)
-
-    def disconnect(self):
-        """remove connection to Zope if it exists"""
-        if getattr(self, 'db', None):
-            self.closeAll()
-
-    def zenpack_installed(self):
-        '''Return True if ZenPack is installed'''
-        self.connect()
-        try:
-            zenpack = self.dmd.ZenPackManager.packs._getOb(self.cfg.name)
-        except AttributeError:
-            zenpack = None
-        if zenpack:
-            return True
-        return False
 
     def build_ob(self, cls_name, inst=0):
         '''build an instance object from schema class'''
@@ -401,57 +384,6 @@ class ZPLTestHarness(ZenScriptBase):
                 passed = False
         return passed
 
-    def get_templates(self):
-        """Build list of templates for testing"""
-        self.templates = {}
-        self.connect()
-        for dcid, dcs in self.cfg.device_classes.items():
-            self.templates[dcid] = {}
-            for tid, tcs in dcs.templates.items():
-                # create a dummy template object
-                self.templates[dcid][tid] = None
-                try:
-                    self.templates[dcid][tid] = tcs.create(self.dmd, False)
-                except Exception as e:
-                    log.warn("Could not create {}/{}: {}".format(dcid, tid, e))
-                    continue
-
-    def check_templates_vs_specs(self):
-        '''check that template objects match the specs'''
-        if not self.templates:
-            self.get_templates()
-        passed = True
-        for dcid, dcs in self.cfg.device_classes.items():
-            for tid, tcs in dcs.templates.items():
-                t = self.templates.get(dcid, {}).get(tid, {})
-                if not t:
-                    continue
-                for th in t.thresholds():
-                    thcs = tcs.thresholds.get(th.id)
-                    test, msg = self.compare_template_ob_to_spec(th, thcs)
-                    if not test:
-                        log.warn('{} threshold {} failed ({})'.format(t.id, th.id, msg))
-                        passed = False
-                for gd in t.graphDefs():
-                    gdcs = tcs.graphs.get(gd.id)
-                    test, msg = self.compare_template_ob_to_spec(gd, gdcs)
-                    if not test:
-                        log.warn('{} graph {} failed ({})'.format(t.id, gd.id, msg))
-                        passed = False
-                for ds in t.datasources():
-                    dscs = tcs.datasources.get(ds.id)
-                    test, msg = self.compare_template_ob_to_spec(ds, dscs)
-                    if not test:
-                        log.warn('{} datasource {} failed ({})'.format(t.id, ds.id, msg))
-                        passed = False
-                    for dp in ds.datapoints():
-                        dpcs = dscs.datapoints.get(dp.id)
-                        test, msg = self.compare_template_ob_to_spec(dp, dpcs)
-                        if not test:
-                            log.warn('{} {} datapoint {} failed ({})'.format(t.id, ds.id, dp.id, msg))
-                            passed = False
-        return passed
-
     def compare_template_to_spec(self, template, spec):
         '''compare template to spec'''
         if template.id != spec.name:
@@ -720,3 +652,89 @@ class ZPLTestHarness(ZenScriptBase):
         print "\nClass Summary\n-------------\n"
         for source_class in sorted(class_summary.keys()):
             print "{} is reachable from {}".format(source_class, ", ".join(sorted(class_summary[source_class])))
+
+
+class ZPLTestHarnessScriptBase(ZPLTestHarness, ZenScriptBase):
+    ''' Additional functionality with dmd connectivity
+        Do not use for unit tests
+    '''
+
+    def __init__(self, entry, connect=False, verbose=False, level=20, specparams=False):
+        """Create test harness using entry.
+
+        entry can be any of the following:
+
+        * Filename of single YAML file.
+        * String containing YAML.
+        * Already-built ZenPackSpec (CFG) object.
+
+        """
+        ZenScriptBase.__init__(self, connect=connect)
+        ZPLTestHarness.__init__(self, entry=entry, verbose=verbose, level=level, specparams=specparams,)
+
+    def disconnect(self):
+        """remove connection to Zope if it exists"""
+        if getattr(self, 'db', None):
+            self.closeAll()
+
+    def zenpack_installed(self):
+        '''Return True if ZenPack is installed'''
+        self.connect()
+        try:
+            zenpack = self.dmd.ZenPackManager.packs._getOb(self.cfg.name)
+        except AttributeError:
+            zenpack = None
+        if zenpack:
+            return True
+        return False
+
+    def get_templates(self):
+        """Build list of templates for testing"""
+        self.templates = {}
+        self.connect()
+        for dcid, dcs in self.cfg.device_classes.items():
+            self.templates[dcid] = {}
+            for tid, tcs in dcs.templates.items():
+                # create a dummy template object
+                self.templates[dcid][tid] = None
+                try:
+                    self.templates[dcid][tid] = tcs.create(self.dmd, False)
+                except Exception as e:
+                    log.warn("Could not create {}/{}: {}".format(dcid, tid, e))
+                    continue
+
+    def check_templates_vs_specs(self):
+        '''check that template objects match the specs'''
+        if not self.templates:
+            self.get_templates()
+        passed = True
+        for dcid, dcs in self.cfg.device_classes.items():
+            for tid, tcs in dcs.templates.items():
+                t = self.templates.get(dcid, {}).get(tid, {})
+                if not t:
+                    continue
+                for th in t.thresholds():
+                    thcs = tcs.thresholds.get(th.id)
+                    test, msg = self.compare_template_ob_to_spec(th, thcs)
+                    if not test:
+                        log.warn('{} threshold {} failed ({})'.format(t.id, th.id, msg))
+                        passed = False
+                for gd in t.graphDefs():
+                    gdcs = tcs.graphs.get(gd.id)
+                    test, msg = self.compare_template_ob_to_spec(gd, gdcs)
+                    if not test:
+                        log.warn('{} graph {} failed ({})'.format(t.id, gd.id, msg))
+                        passed = False
+                for ds in t.datasources():
+                    dscs = tcs.datasources.get(ds.id)
+                    test, msg = self.compare_template_ob_to_spec(ds, dscs)
+                    if not test:
+                        log.warn('{} datasource {} failed ({})'.format(t.id, ds.id, msg))
+                        passed = False
+                    for dp in ds.datapoints():
+                        dpcs = dscs.datapoints.get(dp.id)
+                        test, msg = self.compare_template_ob_to_spec(dp, dpcs)
+                        if not test:
+                            log.warn('{} {} datapoint {} failed ({})'.format(t.id, ds.id, dp.id, msg))
+                            passed = False
+        return passed
