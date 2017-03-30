@@ -24,6 +24,16 @@ Backwards Incompatible Changes
 
 * zProperties will not be updated automatically on existing device classes.  These should be handled on a case basis by using migrate scripts.
 
+Release 2.0.5
+-------------
+
+Fixes
+
+* Fix version reported by "zenpacklib --version". (ZPS-1145)
+* Template backups use YYYYMMDDHHMM format instead of unix timestamp.
+* Fix failure to back up customized templates during upgrade from pre-2.0 ZenPacks. (ZPS-1195)
+* Fix failure to back up customized templates during upgrade. (ZPS-1176)
+
 Release 2.0.4
 -------------
 
