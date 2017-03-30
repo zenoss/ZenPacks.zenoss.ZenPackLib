@@ -35,15 +35,18 @@ class ZPLTestBase(BaseTestCase):
     """BaseTestCase class with ZPLTestHarness support"""
     log = logging.getLogger("ZenPackLib.test")
     yaml_doc = '''name: ZenPacks.zenoss.ZenPackLib'''
-    use_dmd = False
     disableLogging = True
 
     def afterSetUp(self):
         super(ZPLTestBase, self).afterSetUp()
+        self.load_yaml(self.yaml_doc)
+
+    def load_yaml(self, yaml_doc):
+        """"""
         # for a list of docs, iterate through
-        if isinstance(self.yaml_doc, list):
+        if isinstance(yaml_doc, list):
             counter = 0
-            for y_d in self.yaml_doc:
+            for y_d in yaml_doc:
                 if counter == 0:
                     try:
                         self.z = ZPLTestHarness(y_d)
@@ -57,22 +60,15 @@ class ZPLTestBase(BaseTestCase):
                 counter += 1
         else:
             try:
-                self.z = ZPLTestHarness(self.yaml_doc)
+                self.z = ZPLTestHarness(yaml_doc)
             except Exception:
                 self.fail(traceback.format_exc(limit=0))
-            if self.use_dmd:
-                self.z.connect()
 
-    def tearDown(self):
-        if isinstance(self.yaml_doc, list):
-            counter = 1
-            for y_d in self.yaml_doc:
-                z = getattr(self, 'z_{}'.format(counter), None)
-                if z:
-                    z.disconnect()
-                counter += 1
-
-        self.z.disconnect()
+    def install_zpl_zenpack(self, z):
+        """install loaded YAML-based zenpack"""
+        zenpack = z.cfg.zenpack_class(z.cfg.name)
+        zenpack.eggPack = True
+        self.dmd.ZenPackManager.packs._setObject(zenpack.id, zenpack)
 
 
 class ZPLTestCommand(ZPLTestBase):
@@ -134,7 +130,6 @@ class ZPLTestMockZenPack(BaseTestCase):
     """BaseTestCase class with ZPLTestHarness support"""
     log = logging.getLogger("ZenPackLib.test")
     yaml_doc = '''name: ZenPacks.zenoss.ZenPackLib'''
-    use_dmd = False
     disableLogging = True
     datsources = []
     thresholds = []
@@ -142,7 +137,7 @@ class ZPLTestMockZenPack(BaseTestCase):
     def afterSetUp(self):
         super(ZPLTestMockZenPack, self).afterSetUp()
 
-        zenpack = MockZenPack(self.dmd, "ZenPacks.zenoss.CustomThreshold", datasources=self.datasources, thresholds=self.thresholds)
+        zenpack = MockZenPack(self.dmd, "ZenPacks.zenoss.MockZenPack", datasources=self.datasources, thresholds=self.thresholds)
         # for a list of docs, iterate through
         if isinstance(self.yaml_doc, list):
             counter = 0
@@ -165,15 +160,6 @@ class ZPLTestMockZenPack(BaseTestCase):
                 self.fail(traceback.format_exc(limit=0))
 
 
-    def tearDown(self):
-        if isinstance(self.yaml_doc, list):
-            counter = 1
-            for y_d in self.yaml_doc:
-                z = getattr(self, 'z_{}'.format(counter), None)
-                counter += 1
-
-
-
 class MockZenPack(object):
     ''''''
     def __init__(self, dmd, name, datasources=[], thresholds=[]):
@@ -183,7 +169,7 @@ class MockZenPack(object):
         self.thresholds = thresholds
         self.install_zenpack()
 
-    def install_zenpack(self):
+    def install_zenpack(self, override_classes=False):
         """Install ZenPack given name and optional class.
     
         This is far from a full installation. The ZenPack object is
@@ -196,7 +182,11 @@ class MockZenPack(object):
         zenpack = klass(self.name)
         zenpack.eggPack = True
         self.dmd.ZenPackManager.packs._setObject(zenpack.id, zenpack)
+        if override_classes:
+            self.override_get_classes(zenpack)
 
+    def override_get_classes(self, zenpack):
+        """"""
         def getThresholdClasses():
             return self.thresholds
 

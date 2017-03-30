@@ -16,10 +16,11 @@ from ZenPacks.zenoss.ZenPackLib import zenpacklib
 class TestInstalledZenPackLibVersion(ZPLTestBase):
     """Test this version of ZenPackLib against relevant installed ZenPacks"""
 
-    use_dmd = True
+    # use_dmd = True
 
-    def test_installed_zenpacks(self):
-        packs = self.z.dmd.ZenPackManager.packs.findObjectsById('ZenPacks.zenoss.ZenPackLib')
+    # rewrite this to do actual file parsing
+    def test_zenpacklib_version(self):
+        packs = self.dmd.ZenPackManager.packs.findObjectsById('ZenPacks.zenoss.ZenPackLib')
         if packs:
             pack = packs[0]
             expected = pack.version

@@ -42,9 +42,9 @@ class TestCommands(ZPLTestCommand):
         self._zenpacklib_cmd("--lint", self.yaml_path)
 
     def test_smoke_dump_templates(self):
-        if self.z.zenpack_installed():
+        try:
             self._zenpacklib_cmd("--dump-templates", self.z.cfg.name)
-        else:
+        except:
             self.log.warn('Skipping test_smoke_dump_templates since {} not installed.'.format(self.z.cfg.name))
 
     def test_smoke_class_diagram(self):
