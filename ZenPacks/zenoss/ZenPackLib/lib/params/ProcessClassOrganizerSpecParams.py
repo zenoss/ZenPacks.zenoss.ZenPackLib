@@ -7,15 +7,14 @@
 #
 ##############################################################################
 
-from .SpecParams import SpecParams
+from .OrganizerSpecParams import OrganizerSpecParams
 from .ProcessClassSpecParams import ProcessClassSpecParams
 from ..spec.ProcessClassOrganizerSpec import ProcessClassOrganizerSpec
 
 
-class ProcessClassOrganizerSpecParams(SpecParams, ProcessClassOrganizerSpec):
+class ProcessClassOrganizerSpecParams(OrganizerSpecParams, ProcessClassOrganizerSpec):
     def __init__(self, zenpack_spec, path, description='', process_classes=None, remove=False, **kwargs):
-        SpecParams.__init__(self, **kwargs)
-        self.path = path
+        OrganizerSpecParams.__init__(self, zenpack_spec, path, **kwargs)
         self.description = description
         self.remove = remove
         self.process_classes = self.specs_from_param(
