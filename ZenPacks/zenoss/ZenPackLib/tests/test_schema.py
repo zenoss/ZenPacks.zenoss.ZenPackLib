@@ -36,16 +36,14 @@ from Products.Zuul.infos.component import ComponentInfo
 from Products.Zuul.infos.device import DeviceInfo
 from Products.Zuul.interfaces import IInfo
 
-# stdlib Imports
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 from ZenPacks.zenoss.ZenPackLib.lib.spec.ZenPackSpec import GSM
+from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
-# Required before zenpacklib.TestCase can be used.
-YAML_DOC="""
+
+YAML_DOC = """
 name: ZenPacks.zenoss.ZPLTest1
 zProperties:
   DEFAULTS:
@@ -522,27 +520,8 @@ classes:
 
 """
 
-Z = ZPLTestHarness(YAML_DOC)
-CFG = zenpacklib.load_yaml(YAML_DOC)
 
-CFG.create_device_js_snippet()
-CFG.create_global_js_snippet()
-
-apic1 = CFG.zenpack_module.APIC.APIC('apic1')
-request = TestRequest()
-view = BrowserView(apic1, request)
-
-manager_name = 'jssnippets'
-manager = GSM.queryMultiAdapter((apic1, request, view), IMainSnippetManager, name=manager_name)
-manager.update()
-
-def find_viewlet(name):
-    for v in manager.viewlets:
-        if str(v.__name__) == name:
-            return v
-    return None
-
-class TestSchema(BaseTestCase):
+class TestSchema(ZPLTestBase, ZenScriptBase):
 
     """Test suite for ZenPack's schema.
 
@@ -550,8 +529,21 @@ class TestSchema(BaseTestCase):
     example of each zenpacklib functionality used.
 
     """
-    zenpack_module_name = Z.zp.__name__
+
     disableLogging = False
+    yaml_doc = YAML_DOC
+    manager = None
+
+    def afterSetUp(self):
+        super(TestSchema, self).afterSetUp()
+        ZenScriptBase.__init__(self, app=self.app, connect=False)
+        self.cfg = self.z.cfg
+
+    def find_viewlet(self, name):
+        for v in self.manager.viewlets:
+            if str(v.__name__) == name:
+                return v
+        return None
 
     def assert_superclasses(self, obj, expected_superclasses):
         """Assert that obj is a subclass of all expected_superclasses."""
@@ -603,13 +595,13 @@ class TestSchema(BaseTestCase):
     def test_schemaclass(self):
         """Assert that a dynamic schema class was created properly."""
         self.assertTrue(
-            'zenpacklib' not in Z.schema.APIC.__module__,
+            'zenpacklib' not in self.z.schema.APIC.__module__,
             "{schema.APIC.__module__!r} contains 'zenpacklib'"
-            .format(schema=Z.schema))
- 
+            .format(schema=self.z.schema))
+
     def test_stubclass(self):
         """Assert that a dynamic stub class was created properly."""
-        stub = Z.get_cls('APIC')
+        stub = self.z.get_cls('APIC')
         self.assertTrue(
             'zenpacklib' not in stub.__module__,
             "{APIC.__module__!r} contains 'zenpacklib'"
@@ -618,11 +610,11 @@ class TestSchema(BaseTestCase):
     def test_ZenPack(self):
         """Assert that ZenPack class has been properly created."""
 
-        zenpack = Z.zp.ZenPack(self.zenpack_module_name)
+        zenpack = self.z.zp.ZenPack(self.z.zp.__name__)
 
         self.assert_superclasses(zenpack, (
-            Z.zp.ZenPack,
-            Z.schema.ZenPack,
+            self.z.zp.ZenPack,
+            self.z.schema.ZenPack,
             ZenPackBase
             ))
 
@@ -678,8 +670,8 @@ class TestSchema(BaseTestCase):
         Tests an example of creating a Device type with a stub
         implementation.
         """
-        stub = Z.get_cls('APIC')
-        schema = Z.schema
+        stub = self.z.get_cls('APIC')
+        schema = self.z.schema
 
         apic1 = stub('apic1')
 
@@ -699,15 +691,15 @@ class TestSchema(BaseTestCase):
             ('fabricPods', ToManyContRelationship),
             ('fvTenants', ToManyContRelationship),
             ))
- 
+
     def test_Info(self):
         """Assert that API Info are functioning."""
-        z = ZPLTestHarness(YAML_DOC)
+        # z = ZPLTestHarness(YAML_DOC)
 
-        APIC = z.zp.APIC.APIC
-        APICInfo = z.zp.APIC.APICInfo
-        FabricNode = z.zp.FabricNode.FabricNode
-        FabricNodeInfo = z.zp.FabricNode.FabricNodeInfo
+        APIC = self.z.zp.APIC.APIC
+        APICInfo = self.z.zp.APIC.APICInfo
+        FabricNode = self.z.zp.FabricNode.FabricNode
+        FabricNodeInfo = self.z.zp.FabricNode.FabricNodeInfo
 
         apic1 = APIC('apic1')
         apic1_info = IInfo(apic1)
@@ -741,16 +733,36 @@ class TestSchema(BaseTestCase):
                 attribute='role',
                 value='controller'))
 
-    def test_registerNames(self):
-        """Assert that JavaScript registerNames is registered."""
+    def register_viewlets(self):
+        self.cfg.create_device_js_snippet()
+        self.cfg.create_global_js_snippet()
+
+        apic1 = self.z.build_ob('APIC')
+        request = TestRequest()
+        view = BrowserView(apic1, request)
+
+        self.manager_name = 'jssnippets'
+        self.manager = GSM.queryMultiAdapter((apic1, request, view), IMainSnippetManager, name=self.manager_name)
+        if self.manager:
+            self.manager.update()
+
+    def test_0_Registered(self):
+        """Test GSM registration"""
+        self.register_viewlets()
         self.assertTrue(
-            manager is not None,
+            self.manager is not None,
             "{manager_name!r} viewlet manager not registered"
             .format(
-                manager_name=manager_name))
+                manager_name=self.manager_name))
+
+        self.check_global()
+        self.check_device()
+
+    def check_global(self):
+        """Assert that JavaScript registerNames is registered."""
 
         viewlet_name = 'js-snippet-ZenPacks.zenoss.ZPLTest1-global'
-        viewlet = find_viewlet(viewlet_name)
+        viewlet = self.find_viewlet(viewlet_name)
 
         self.assertTrue(
             viewlet is not None,
@@ -766,15 +778,15 @@ class TestSchema(BaseTestCase):
             .format(
                 viewlet_substr=viewlet_substr))
 
-    def test_ComponentGridPanels(self):
+    def check_device(self):
         """Assert that ComponentGridPanelSnippet is registered."""
         self.assertTrue(
-            manager is not None,
+            self.manager is not None,
             "{manager_name!r} viewlet manager not registered"
-            .format(manager_name=manager_name))
+            .format(manager_name=self.manager_name))
 
         viewlet_name = 'js-snippet-ZenPacks.zenoss.ZPLTest1-device'
-        viewlet = find_viewlet(viewlet_name)
+        viewlet = self.find_viewlet(viewlet_name)
 
         self.assertTrue(
             viewlet is not None,
@@ -795,16 +807,16 @@ class TestSchema(BaseTestCase):
         Tests an example of creating a DeviceComponent type with a stub
         implementation.
         """
-        pod1 = Z.get_cls('FabricPod')('pod1')
+        pod1 = self.z.build_ob('FabricPod')
 
         self.assertEquals(pod1.meta_type, 'ZPLTest1FabricPod')
 
         self.assert_superclasses(pod1, (
             DeviceComponent,
             ManagedEntity,
-            Z.get_cls('ManagedObject'),
+            self.z.get_cls('ManagedObject'),
             zenpacklib.Component,
-            Z.schema.FabricPod,
+            self.z.schema.FabricPod,
             ))
 
         self.assert_properties(
@@ -824,22 +836,20 @@ class TestSchema(BaseTestCase):
         user implementation.
 
         """
-        node1 = Z.get_cls('FabricNode')('node1')
+        node1 = self.z.build_ob('FabricNode')
         self.assertEquals(node1.meta_type, 'ZPLTest1FabricNode')
 
         self.assert_superclasses(node1, (
             DeviceComponent,
             ManagedEntity,
-            Z.get_cls('ManagedObject'),
+            self.z.get_cls('ManagedObject'),
             zenpacklib.Component,
-            Z.schema.FabricNode,
+            self.z.schema.FabricNode,
             ))
 
         self.assert_properties(node1, ('snmpindex', 'monitor', 'role'))
 
-        self.assert_relationships(node1, (
-            ('fabricPod', ToOneRelationship),
-            ))
+        self.assert_relationships(node1, (('fabricPod', ToOneRelationship),))
 
 
 def test_suite():
