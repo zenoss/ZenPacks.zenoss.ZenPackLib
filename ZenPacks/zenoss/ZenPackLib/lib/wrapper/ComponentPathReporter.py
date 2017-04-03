@@ -9,23 +9,59 @@
 from zope.component import adapts
 from zope.interface import implements
 from Products.Zuul.catalog.interfaces import IPathReporter
-from Products.Zuul.catalog.paths import DefaultPathReporter, relPath
+from Products.Zuul.catalog.paths import (
+     DefaultPathReporter,
+     DevicePathReporter,
+     ServicePathReporter as ServicePathReporterBase,
+     InterfacePathReporter as InterfacePathReporterBase,
+     ProcessPathReporter as ProcessPathReporterBase,
+     ProductPathReporter as ProductPathReporterBase,
+     relPath
+     )
+
 from ..base.ComponentBase import ComponentBase
+from ..base.Component import (
+     HWComponent,
+     IpInterface,
+     OSProcess,
+     Service,
+)
 
 
-class ComponentPathReporter(DefaultPathReporter):
-
-    """Global catalog path reporter adapter factory for components."""
-
+class ComponentPathMixIn(DefaultPathReporter):
+    """Global catalog path reporter override"""
     implements(IPathReporter)
-    adapts(ComponentBase)
 
     def getPaths(self):
-        paths = super(ComponentPathReporter, self).getPaths()
+        paths = super(ComponentPathMixIn, self).getPaths()
 
         for facet in self.context.get_facets():
             rp = relPath(facet, facet.containing_relname)
             paths.extend(rp)
 
         return paths
+
+
+class ComponentPathReporter(ComponentPathMixIn):
+    """Global catalog path reporter adapter factory for basic components."""
+    adapts(ComponentBase)
+
+
+class ProductPathReporter(ComponentPathMixIn, ProductPathReporterBase):
+    """"""
+    adapts(HWComponent)
+
+
+class InterfacePathReporter(ComponentPathMixIn, InterfacePathReporterBase):
+    """"""
+    adapts(IpInterface)
+
+
+class ProcessPathReporter(ComponentPathMixIn, ProcessPathReporterBase):
+    """"""
+    adapts(OSProcess)
+
+class ServicePathReporter(ComponentPathMixIn, ServicePathReporterBase):
+    """"""
+    adapts(Service)
 

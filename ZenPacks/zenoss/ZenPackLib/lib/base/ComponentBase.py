@@ -231,6 +231,13 @@ class ComponentBase(ModelBase):
         """Return name of containing relationship."""
         for relname, relschema in self._relations:
             if issubclass(relschema.remoteType, ToManyCont):
+                # skip if it's not the real containing rel
+                # for instance an inherited os.filesystems for sub-classed FileSystem
+                rel = getattr(self, relname, None)
+                if rel:
+                    if not rel.obj:
+                        continue
+
                 return relname
         raise ZenSchemaError("%s (%s) has no containing relationship" % (self.__class__.__name__, self))
 
