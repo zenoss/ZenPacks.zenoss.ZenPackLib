@@ -37,6 +37,7 @@ class ClassPropertySpecParams(SpecParams, ClassPropertySpec):
 
         self.name = id
 
+        # check for property in bases and skip if it doesn't need to be redefined
         entry = next((p for p in proto._properties if p['id'] == id), {})
         if entry:
             self.type_ = entry.get('type', 'string')

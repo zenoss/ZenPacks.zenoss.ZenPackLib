@@ -27,13 +27,14 @@ class RelationshipSchemaSpecParams(SpecParams, RelationshipSchemaSpec):
 
     @classmethod
     def get_module_class(cls, modname):
-        try:
-            module = importlib.import_module(modname)
-        except ImportError:
-            # this might be patched to an existing class with full module & classpath
-            modname = '.'.join(modname.split('.')[:-1])
-            return cls.get_module_class(modname)
         classname = modname.split('.')[-1]
+        def load_module(modname):
+            try:
+                return importlib.import_module(modname)
+            except ImportError:
+                # this might be patched to an existing class with full module & classpath
+                return load_module('.'.join(modname.split('.')[:-1]))
+        module = load_module(modname)
         return getattr(module, classname, None)
 
     @classmethod
@@ -53,6 +54,8 @@ class RelationshipSchemaSpecParams(SpecParams, RelationshipSchemaSpec):
         remote_schema = cls.find_schema_on_class(remote_class, remote_name)
 
         local_class = cls.get_module_class(remote_schema.remoteClass)
+        if not local_class:
+            import pdb ; pdb.set_trace()
         local_classname = local_class.__name__
         local_modname = local_class.__module__
         local_name = relname

@@ -36,7 +36,6 @@ class Loader(yaml.Loader):
         return OrderedDict(self.construct_pairs(node))
 
     def construct_DateTime(self, node):
-        import pdb ; pdb.set_trace()
         return DateTime(node.value)
 
     def construct_severity(self, node):
