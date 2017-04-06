@@ -96,7 +96,7 @@ as well, in order to interact with serviced containers.
 
 .. code-block:: bash
 
-    usermod -a -G wheel serviced
+    usermod -a -G serviced zenoss
 
 .. _helper-aliases-and-functions:
 
