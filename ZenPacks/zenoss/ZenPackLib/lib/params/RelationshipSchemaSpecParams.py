@@ -49,6 +49,8 @@ class RelationshipSchemaSpecParams(SpecParams, RelationshipSchemaSpec):
 
         remote_modname = local_schema.remoteClass
         remote_class = cls.get_module_class(remote_modname)
+        if not remote_class:
+            import pdb ; pdb.set_trace()
         remote_classname = remote_class.__name__
         remote_name = local_schema.remoteName
         remote_schema = cls.find_schema_on_class(remote_class, remote_name)
