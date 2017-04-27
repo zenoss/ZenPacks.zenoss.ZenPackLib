@@ -2596,7 +2596,7 @@ class ClassSpec(Spec):
                     else:
                         r = self.getRRDValue(datapoint)
 
-                    if r is not None:
+                    if r:
                         if not math.isnan(float(r)):
                             return r
                     return default
@@ -4682,9 +4682,9 @@ class RRDDatapointSpecParams(SpecParams, RRDDatapointSpec):
             if getattr(datapoint, propname, None) != getattr(sample_dp, propname, None):
                 setattr(self, propname, getattr(datapoint, propname, None))
 
-        if self.rrdmin is not None:
+        if self.rrdmin:
             self.rrdmin = int(self.rrdmin)
-        if self.rrdmax is not None:
+        if self.rrdmax:
             self.rrdmax = int(self.rrdmax)
 
         self.aliases = {x.id: x.formula for x in datapoint.aliases()}

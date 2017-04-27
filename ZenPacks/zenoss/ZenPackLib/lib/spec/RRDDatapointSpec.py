@@ -150,7 +150,7 @@ class RRDDatapointSpec(Spec):
 
     @rrdmin.setter
     def rrdmin(self, value):
-        if value is not None:
+        if value:
             try:
                 value = int(value)
             except Exception as e:
@@ -163,7 +163,7 @@ class RRDDatapointSpec(Spec):
 
     @rrdmax.setter
     def rrdmax(self, value):
-        if value is not None:
+        if value:
             try:
                 value = int(value)
             except Exception as e:

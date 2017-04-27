@@ -98,7 +98,7 @@ class RRDDatasourceSpec(Spec):
             datasource.eventClass = self.eventClass
         if self.eventKey is not None:
             datasource.eventKey = self.eventKey
-        if self.severity is not None:
+        if self.severity:
             datasource.severity = int(self.severity)
         if self.commandTemplate is not None:
             datasource.commandTemplate = self.commandTemplate

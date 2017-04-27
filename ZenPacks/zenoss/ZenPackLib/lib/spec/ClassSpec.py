@@ -711,7 +711,7 @@ class ClassSpec(Spec):
                         else:
                             r = self.getRRDValue(datapoint, start=time.time() - 1800)
 
-                    if r is not None:
+                    if r:
                         if not math.isnan(float(r)):
                             return r
                     return default
