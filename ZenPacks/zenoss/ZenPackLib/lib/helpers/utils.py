@@ -61,7 +61,7 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
         if os.path.isdir(yaml_doc):
             files = []
             for f in os.listdir(yaml_doc):
-                if '.yaml' not in f:
+                if not f.endswith('.yaml'):
                     continue
                 files.append('{}/{}'.format(yaml_doc, f))
             # resubmit multiple files
