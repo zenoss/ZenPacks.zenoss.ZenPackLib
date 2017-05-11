@@ -48,6 +48,14 @@ device_classes:
           E:
             type: MinMaxThreshold
             dsnames: [A_A]
+          F:
+            type: MinMaxThreshold
+            dsnames: [A_A]
+            severity: 0
+          G:
+            type: MinMaxThreshold
+            dsnames: [A_A]
+            severity: Clear
 """
 
 
@@ -71,6 +79,12 @@ device_classes:
             severity: NotSure
           E:
             dsnames: [A_A]
+          F:
+            dsnames: [A_A]
+            severity: 0
+          G:
+            dsnames: [A_A]
+            severity: Clear
         datasources:
           A:
             type: SNMP

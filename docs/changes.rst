@@ -29,6 +29,9 @@ Release 2.0.6
 
 Fixes
 
+* Fix mishandling of 0/clear severity (ZPS-1454)
+* Fix attempts to load non-YAML files (ZPS-1483)
+
 Release 2.0.5
 -------------
 
