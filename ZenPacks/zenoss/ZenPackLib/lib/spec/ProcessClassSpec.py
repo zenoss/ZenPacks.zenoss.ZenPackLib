@@ -142,7 +142,7 @@ class ProcessClassSpec(Spec):
         if self.alert_on_restart is not None:
             process_class.setZenProperty('zAlertOnRestart', self.alert_on_restart)
 
-        if self.fail_severity is not None:
+        if self.fail_severity:
             process_class.setZenProperty('zFailSeverity', int(self.fail_severity))
 
         if self.modeler_lock is not None:

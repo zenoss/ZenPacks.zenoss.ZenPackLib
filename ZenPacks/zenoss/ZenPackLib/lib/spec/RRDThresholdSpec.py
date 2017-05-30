@@ -85,7 +85,7 @@ class RRDThresholdSpec(Spec):
             threshold.dsnames = self.dsnames
         if self.eventClass is not None:
             threshold.eventClass = self.eventClass
-        if self.severity is not None:
+        if self.severity:
             threshold.severity = int(self.severity)
         if self.enabled is not None:
             threshold.enabled = self.enabled
