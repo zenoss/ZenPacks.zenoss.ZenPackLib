@@ -427,11 +427,11 @@ class ZenPack(ZenPackBase):
             REQUEST=REQUEST)
 
         for filename in findFiles(self, 'objects', lambda f: f.endswith('.xml')):
-            self.filter_xml(app, filename)
+            self.filter_xml(filename)
 
         return result
 
-    def filter_xml(self, app, filename):
+    def filter_xml(self, filename):
         pruned = 0
         try:
             tree = etree.parse(filename)
@@ -446,7 +446,7 @@ class ZenPack(ZenPackBase):
                     elif action == 'end':
                         obj_path = '/'.join(path)
                         try:
-                            obj = app.zport.dmd.getObjByPath(obj_path)
+                            obj = self.dmd.getObjByPath(obj_path)
                             if getattr(obj, 'zpl_managed', False):
                                 self.LOG.debug("Removing {} from {}".format(obj_path, filename))
                                 pruned += 1
