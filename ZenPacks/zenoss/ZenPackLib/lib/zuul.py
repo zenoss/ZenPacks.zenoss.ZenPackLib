@@ -59,13 +59,13 @@ from Products.Zuul.facades.devicefacade import DeviceFacade
 from Products.Zuul.facades.processfacade import ProcessFacade
 from Products.Zuul.facades.servicefacade import ServiceFacade
 
-from Products.Zuul.catalog.paths import (
-     DevicePathReporter,
+from Products.Zuul.catalog.paths import DevicePathReporter
+from .wrapper.ComponentPathReporter import (
      ServicePathReporter,
      InterfacePathReporter,
      ProcessPathReporter,
-     ProductPathReporter
-     )
+     ProductPathReporter,
+)
 
 schema_map = {
     Device: {'interface': IDeviceInfo, 'info': DeviceInfo, 'reporter': DevicePathReporter, 'facade': DeviceFacade},
