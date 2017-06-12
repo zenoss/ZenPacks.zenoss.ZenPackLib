@@ -30,7 +30,7 @@ device_classes:
                 rrdtype: COUNTER
               dp_gauge_map_alias:
                 rrdtype: GAUGE
-                aliases: {dp_gauge_map: null}
+                aliases: {dp_gauge_map_alias: null}
               dp_gauge_map_descr:
                 rrdtype: GAUGE
                 description: Some kind of thing
@@ -38,8 +38,16 @@ device_classes:
                 rrdtype: GAUGE
                 extra_property: true
               dp_unknown: UNKNOWNTYPE
+              dp_aliased: DERIVE_MIN_0_ALIAS
+              dp_aliased_2: 
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {dp_aliased_2: null}
+              dp_aliased_3: 
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {dp_aliased_alt: null}
             oid: 1.3.6.1.4.1.2021.10.1.5.2
-            
 """
 
 EXPECTED = """name: ZenPacks.zenoss.ZenPackLib
@@ -53,9 +61,7 @@ device_classes:
             datapoints:
               dp_gauge: GAUGE
               dp_counter_map: COUNTER
-              dp_gauge_map_alias:
-                rrdtype: GAUGE
-                aliases: {dp_gauge_map: null}
+              dp_gauge_map_alias: GAUGE_ALIAS
               dp_gauge_map_descr:
                 rrdtype: GAUGE
                 description: Some kind of thing
@@ -63,6 +69,12 @@ device_classes:
                 rrdtype: GAUGE
                 extra_property: true
               dp_unknown: GAUGE
+              dp_aliased: DERIVE_MIN_0_ALIAS
+              dp_aliased_2: DERIVE_MIN_0_ALIAS
+              dp_aliased_3:
+                rrdtype: DERIVE
+                rrdmin: 0
+                aliases: {dp_aliased_alt: null}
             oid: 1.3.6.1.4.1.2021.10.1.5.2
 """
 
@@ -73,9 +85,10 @@ class TestDatapointShorthand(ZPLTestBase):
 
     def test_datapoint_shorthand(self):
         ''''''
-        self.assertEqual(self.z.exported_yaml, EXPECTED,
-                         'Datapoint shorthand expected {} got {}'.format(EXPECTED,
-                                                                         self.z.exported_yaml))
+        diff = self.z.get_diff(EXPECTED, self.z.exported_yaml)
+        self.assertEqual(self.z.exported_yaml,
+                         EXPECTED,
+                         'Datapoint shorthand unexpected difference between expected and actual:\n{}'.format(diff))
 
 
 def test_suite():

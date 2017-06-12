@@ -71,34 +71,6 @@ class RRDDatapointSpec(Spec):
         self.aliases = aliases
 
         self.shorthand = shorthand
-        # update local variables from shorthand
-        if self.shorthand:
-            try:
-                rrd_type = shorthand.upper().split('_')[0]
-                self.rrdtype = rrd_type
-                # this can happen if shorthand contains an invalid rrdtype
-                if rrd_type not in self.rrdtype:
-                    self.shorthand = shorthand.replace(rrd_type, self.rrdtype)
-            except Exception as e:
-                self.LOG.warning('No rrdtype was derived from shorthand: {} ({})'.format(self.shorthand, e))
-
-            min_match = re.search(r'MIN_(\d+)', shorthand, re.IGNORECASE)
-            if min_match:
-                rrdmin = min_match.group(1)
-                self.rrdmin = rrdmin
-
-            max_match = re.search(r'MAX_(\d+)', shorthand, re.IGNORECASE)
-            if max_match:
-                rrdmax = max_match.group(1)
-                self.rrdmax = rrdmax
-        # otherwise build the shorthand if no other properties are found
-        else:
-            if self.use_shorthand():
-                self.shorthand = self.rrdtype
-                if self.rrdmin is not None:
-                    self.shorthand += '_MIN_{}'.format(str(self.rrdmin))
-                if self.rrdmax is not None:
-                    self.shorthand += '_MAX_{}'.format(self.rrdmax)
 
     def __eq__(self, other):
         if self.shorthand:
@@ -108,20 +80,69 @@ class RRDDatapointSpec(Spec):
             return super(RRDDatapointSpec, self).__eq__(other)
 
     @property
+    def shorthand(self):
+        return self._shorthand
+
+    @shorthand.setter
+    def shorthand(self, value):
+        """Either set local values from shorthand or shorthand from values"""
+        self._shorthand = value
+        # update local variables from shorthand
+        if value:
+            # set the rrdtype from shorthand
+            try:
+                rrd_type = value.upper().split('_')[0]
+                self.rrdtype = rrd_type
+                # this can happen if shorthand contains an invalid rrdtype
+                if rrd_type not in self.rrdtype:
+                    self._shorthand = value.replace(rrd_type, self.rrdtype)
+            except Exception as e:
+                self.LOG.warning('No rrdtype was derived from shorthand: {} ({})'.format(self._shorthand, e))
+
+            # set rrdmin if provided
+            min_match = re.search(r'MIN_(\d+)', value, re.IGNORECASE)
+            if min_match:
+                rrdmin = min_match.group(1)
+                self.rrdmin = rrdmin
+
+            # set rrdmax if provided
+            max_match = re.search(r'MAX_(\d+)', value, re.IGNORECASE)
+            if max_match:
+                rrdmax = max_match.group(1)
+                self.rrdmax = rrdmax
+
+            # set the alias tag if used
+            if value.upper().split('_')[-1] == 'ALIAS':
+                self.aliases = self.name
+
+        # otherwise build the shorthand if no other properties are found
+        else:
+            if self.use_shorthand():
+                self._shorthand = self.rrdtype
+                if self.rrdmin is not None:
+                    self._shorthand += '_MIN_{}'.format(str(self.rrdmin))
+                if self.rrdmax is not None:
+                    self._shorthand += '_MAX_{}'.format(self.rrdmax)
+                if self.aliases:
+                    self._shorthand += '_ALIAS'
+
+    @property
     def aliases(self):
         return self._aliases
 
     @aliases.setter
     def aliases(self, value):
-        if value is None:
+        if not hasattr(self, '_aliases'):
             self._aliases = {}
-        elif isinstance(value, dict):
-            self._aliases = value
-        elif isinstance(value, str):
-            self.LOG.debug('setting default alias for {}'.format(value))
-            self._aliases = {value: None}
-        else:
-            raise ValueError("aliases must be specified as a dict or string (got {})".format(value))
+        if value is not None:
+            if isinstance(value, dict):
+                # if we receive a dict, then it overrides since it could have come from
+                self._aliases.update(value)
+            elif isinstance(value, str):
+                self.LOG.debug('setting default alias for {}'.format(value))
+                self._aliases[value] = None
+            else:
+                raise ValueError("aliases must be specified as a dict or string (got {})".format(value))
         # ensure that alias keys do not exceed 31 characters in length
         aliases = {}
         for k, v, in self._aliases.items():
@@ -170,11 +191,23 @@ class RRDDatapointSpec(Spec):
                 self.LOG.warning('Invalid rrdmax: {} ({})'.format(value, e))
         self._rrdmax = value
 
+    def using_default_alias(self):
+        """Return True if one alias exists with default datapoint name"""
+        # default is for alias name to match datapoint name and
+        # for it to be the only entry
+        if self.name in self.aliases and len(self.aliases) == 1:
+            return True
+        return False
+
     def use_shorthand(self):
         """return True if shorthand should be used"""
-        for x in ['description', 'createCmd', 'isrow', 'description', 'aliases', 'extra_params']:
-            if getattr(self, x):
-                return False
+        # only use shorthand if none of these properties are set
+        disqualifiers = ['description', 'createCmd', 'isrow', 'description', 'extra_params']
+        if [x for x in disqualifiers if hasattr(self, x) and getattr(self, x, None)]:
+            return False
+        # do not use shorthand if multiple, non-default aliases are in use
+        if self.aliases and not self.using_default_alias():
+            return False
         return True
 
     def create(self, datasource_spec, datasource):
