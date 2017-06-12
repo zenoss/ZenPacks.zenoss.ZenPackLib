@@ -24,6 +24,17 @@ Backwards Incompatible Changes
 
 * zProperties will not be updated automatically on existing device classes.  These should be handled on a case basis by using migrate scripts.
 
+Release 2.0.6
+-------------
+
+Fixes
+
+* Fix mishandling of 0/clear severity (ZPS-1454)
+* Fix attempts to load non-YAML files (ZPS-1483)
+* Use appropriate sequence for graph points (ZPS-1361)
+* Fix GUI ZenPack export of objects.xml (ZPS-1589)
+* Fix datapoint alias shorthand export handling (ZPS-1589)
+
 Release 2.0.5
 -------------
 
