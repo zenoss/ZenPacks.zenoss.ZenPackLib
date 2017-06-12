@@ -200,13 +200,13 @@ class Dumper(yaml.Dumper):
     def represent_severity(self, data):
         """represent Severity"""
         orig = getattr(data, 'orig')
-        if orig:
+        if orig is None:
+            raise ValueError("'{}' is not a valid value for severity.".format(orig))
+        else:
             if isinstance(orig, str):
                 return self.represent_str(orig)
             elif isinstance(orig, int):
                 return self.represent_int(orig)
-        if orig is None:
-            raise ValueError("'{}' is not a valid value for severity.".format(orig))
 
     def relschemaspec_to_str(self, spec):
         # Omit relation names that are their defaults.

@@ -112,7 +112,7 @@ class Severity(int):
                'clear': 0}
 
     def __new__(cls, value):
-        if not value:
+        if not value and not isinstance(value, int):
             return value
         return int.__new__(cls, cls.validate(value))
 

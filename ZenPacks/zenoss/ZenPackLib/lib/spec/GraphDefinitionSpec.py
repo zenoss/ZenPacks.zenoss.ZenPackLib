@@ -104,15 +104,18 @@ class GraphDefinitionSpec(Spec):
         if self.hasSummary is not None:
             graph.hasSummary = self.hasSummary
 
+        graphpoint_sequence = 0
         if self.comments:
             self.speclog.debug("adding {} comments".format(len(self.comments)))
-            for i, comment_text in enumerate(self.comments):
+            for comment_text in self.comments:
+                graphpoint_sequence += 1
                 comment = graph.createGraphPoint(
                     CommentGraphPoint,
-                    'comment-{}'.format(i))
+                    'comment-{}'.format(graphpoint_sequence))
 
                 comment.text = comment_text
 
         self.speclog.debug("adding {} graphpoints".format(len(self.graphpoints)))
-        for i, (graphpoint_id, graphpoint_spec) in enumerate(self.graphpoints.items()):
-            graphpoint_spec.create(self, graph, sequence=i)
+        for graphpoint_id, graphpoint_spec in self.graphpoints.items():
+            graphpoint_sequence += 1
+            graphpoint_spec.create(self, graph, sequence=graphpoint_sequence)
