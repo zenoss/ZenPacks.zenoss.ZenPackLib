@@ -548,6 +548,12 @@ escalateCount:
   :Type: int
   :Default Value: None
 
+optional:
+  :Description: The threshold will not be created if the threshold type is not available and *optional* is set to true. Installation will fail if the type is not available and *optional* is set to false.
+  :Required: No
+  :Type: boolean
+  :Default Value: False
+
 Thresholds also allow other ad-hoc options to be added not referenced in the
 above list. This is because thresholds are an extensible type in Zenoss, and
 depending on the value of the threshold's *type*, other fields may be valid.
@@ -747,4 +753,3 @@ thresholdLegends
   :Type: map
   :Default Value: None
   :Example: thresholdLegends: {threshold_id: {legend: Legend, color: OO1122}}
-  

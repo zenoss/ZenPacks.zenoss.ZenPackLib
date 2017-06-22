@@ -4,6 +4,16 @@
 Changes
 #######
 
+Version 2.1
+===========
+
+Release 2.1.0
+-------------
+
+Features
+
+* Add "optional" field for thresholds (ZPS-1666)
+
 Version 2.0
 ===========
 
