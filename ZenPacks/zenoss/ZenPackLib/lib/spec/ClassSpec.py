@@ -782,12 +782,18 @@ class ClassSpec(Spec):
             attributes['_v_path_pattern_streams'] = self.path_pattern_streams
 
         attributes['LOG'] = self.LOG
-        return self.create_schema_class(
+
+        model_schema_class = self.create_schema_class(
             self.schema_name,
             self.name,
             self.resolved_bases,
             attributes)
 
+        # Perform per-property initialization that requires our schema class.
+        for property_spec in self.properties.itervalues():
+            property_spec.initialize_with_model_schema_class(model_schema_class)
+
+        return model_schema_class
 
     @property
     def model_class(self):

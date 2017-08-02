@@ -72,3 +72,12 @@ def has_metricfacade():
         return True
     return False
 
+
+def has_modelindex():
+    '''Return True if modelindex can be imported'''
+    try:
+        import zenoss.modelindex
+    except ImportError:
+        return False
+    else:
+        return True

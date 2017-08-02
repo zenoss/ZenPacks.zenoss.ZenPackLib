@@ -10,7 +10,14 @@ from Products.Zuul.form import schema
 from Products.Zuul.utils import ZuulMessageFactory as _t
 from Products.Zuul.infos import ProxyProperty
 from ..helpers.OrderAndValue import OrderAndValue
+from ..utils import has_modelindex
 from .Spec import Spec, MethodInfoProperty, EnumInfoProperty
+
+
+HAS_MODELINDEX = has_modelindex()
+if HAS_MODELINDEX:
+    import zenoss.modelindex.api as miapi
+    import zenoss.modelindex.field_types as mift
 
 
 class ClassPropertySpec(Spec):
@@ -275,3 +282,44 @@ class ClassPropertySpec(Spec):
                 value='{{{}}}'.format(',\n                       '.join(column_fields))),
             ]
 
+    def initialize_with_model_schema_class(self, model_schema_class):
+        """Perform initialization that depends on the model schema class."""
+        self._register_indexed_attribute(model_schema_class)
+
+    def _register_indexed_attribute(self, model_schema_class):
+        """Register property as an indexed attribute if necessary."""
+        if not HAS_MODELINDEX:
+            return
+
+        for index_name, index_spec in self.catalog_indexes.iteritems():
+            index_scope = index_spec.get('scope', 'device')
+            if index_scope not in ('both', 'global'):
+                continue
+
+            modelindex_field_type = get_modelindex_field_type(
+                property_type=self.type_,
+                index_type=index_spec.get('type', 'field'))
+
+            if not modelindex_field_type:
+                continue
+
+            miapi.register_indexed_attribute(
+                model_schema_class,
+                index_name,
+                modelindex_field_type(stored=True))
+
+
+def get_modelindex_field_type(property_type, index_type):
+    """Return the modelindex field type given a property and index type."""
+    if index_type == "keyword":
+        return mift.StringFieldType
+
+    return {
+        'boolean': mift.BooleanFieldType,
+        'int': mift.IntFieldType,
+        'float': mift.FloatFieldType,
+        'lines': mift.ListOfStringsFieldType,
+        'string': mift.UntokenizedStringFieldType,
+        'password': None,  # don't want to store these in the index
+        'entity': None,  # not implemented
+    }.get(property_type, None)

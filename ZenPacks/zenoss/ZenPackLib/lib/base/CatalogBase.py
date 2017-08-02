@@ -1,14 +1,22 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2016-2017, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
+
 from Products.ZenUtils.Search import makeFieldIndex, makeKeywordIndex
+from Products.ZenUtils.Utils import prepId
+
 from ..functions import catalog_search
 from ..helpers.ZenPackLibLog import DEFAULTLOG
+from ..utils import has_modelindex
+
+
+HAS_MODELINDEX = has_modelindex()
+
 
 class CatalogBase(object):
     """Abstract base class that implements cataloging properties."""
@@ -103,16 +111,43 @@ class CatalogBase(object):
 
     @classmethod
     def create_global_catalog(cls, dmd, name):
+        context = dmd.Devices
+
+        catalog_name = "{zenpack_name}_{name}Search".format(
+            zenpack_name=cls.zenpack_name.replace('.', '_'),
+            name=name)
+
+        catalog = getattr(context, catalog_name, None)
+        if catalog is not None:
+            return catalog
+
         indexes = cls._global_catalogs.get(name)
-        if indexes:
-            # Create id and device indexes in all global catalogs.
-            expanded_indexes = {'id': 'field', 'device_id': 'field'}
-            expanded_indexes.update(indexes)
+        if not indexes:
+            return
+
+        # Create id and device indexes in all global catalogs.
+        expanded_indexes = {'id': 'field', 'device_id': 'field'}
+        expanded_indexes.update(indexes)
+
+        classname = "{0}.{1}.{1}".format(cls.zenpack_name, name)
+
+        if HAS_MODELINDEX:
+            setattr(
+                context,
+                catalog_name,
+                LegacyCatalogAdapter(
+                    context=dmd,
+                    zcatalog_name=catalog_name,
+                    objectImplements=[classname],
+                    fields=expanded_indexes.keys()))
+
+            return context._getOb(catalog_name)
+        else:
             return cls.create_catalog(
-                context=dmd.Devices,
-                name='{}_{}Search'.format(cls.zenpack_name.replace('.', '_'), name),
+                context=context,
+                name=catalog_name,
                 indexes=expanded_indexes,
-                classname='{0}.{1}.{1}'.format(cls.zenpack_name, name))
+                classname=classname)
 
     @staticmethod
     def create_catalog(context, name, indexes, classname):
@@ -191,3 +226,52 @@ class CatalogBase(object):
             return device.id
         except Exception:
             return ''
+
+
+if HAS_MODELINDEX:
+    from Products.Zuul.catalog.interfaces import IModelCatalogTool
+    from Products.Zuul.catalog.legacy import (
+        LegacyCatalogAdapter as BaseLegacyCatalogAdapter,
+        LegacyFieldsTranslator,
+        LegacyFieldTranslation,
+    )
+
+    from Products.Zuul.catalog.model_catalog_tool_helper import (
+        ModelCatalogToolGenericHelper,
+    )
+
+    class LegacyCatalogAdapter(BaseLegacyCatalogAdapter):
+        def __init__(
+                self,
+                context,
+                zcatalog_name=None,
+                objectImplements=None,
+                fields=None):
+            """Initialize LegacyCatalogAdapter."""
+            super(LegacyCatalogAdapter, self).__init__(
+                context,
+                zcatalog_name=zcatalog_name)
+
+            self.id = prepId(zcatalog_name)
+            self.objectImplements = objectImplements
+            self.fields = fields
+
+        def _get_model_catalog(self):
+            return ModelCatalogToolGenericHelper(
+                IModelCatalogTool(self.context),
+                objectImplements=[self.objectImplements],
+                fields=self.fields)
+
+        def _get_translator(self):
+            translator = LegacyFieldsTranslator()
+            translator.add_translations([
+                LegacyFieldTranslation(old=x, new=x)
+                for x in self.fields])
+
+            return translator
+
+        def catalog_object(self, *args, **kwargs):
+            return
+
+        def uncatalog_object(self, *args, **kwargs):
+            return
