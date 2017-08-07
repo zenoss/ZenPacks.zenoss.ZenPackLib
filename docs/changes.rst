@@ -24,6 +24,13 @@ Backwards Incompatible Changes
 
 * zProperties will not be updated automatically on existing device classes.  These should be handled on a case basis by using migrate scripts.
 
+Release 2.0.7
+-------------
+
+Fixes
+
+* Implement template replacement and addition on device level. (ZPS-1704)
+
 Release 2.0.6
 -------------
 
