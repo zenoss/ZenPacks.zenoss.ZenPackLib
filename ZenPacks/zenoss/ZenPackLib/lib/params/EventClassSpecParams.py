@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2016-2017, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -23,7 +23,8 @@ class EventClassSpecParams(OrganizerSpecParams, EventClassSpec):
     @classmethod
     def new(cls, eventclass, description='', transform='', remove=False):
         self = object.__new__(cls)
-        SpecParams.__init__(self)
+        OrganizerSpecParams.__init__(self)
+
         self.path = eventclass
         self.description = description
         self.transform = transform
@@ -33,7 +34,7 @@ class EventClassSpecParams(OrganizerSpecParams, EventClassSpec):
     @classmethod
     def fromObject(cls, eventclass, remove=False):
         self = object.__new__(cls)
-        SpecParams.__init__(self)
+        OrganizerSpecParams.__init__(self)
 
         self.description = eventclass.description
         self.transform = eventclass.transform

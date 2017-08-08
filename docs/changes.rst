@@ -29,6 +29,7 @@ Release 2.0.7
 
 Fixes
 
+* Fix all the zenpacklib dump options. (ZPS-1601)
 * Implement template replacement and addition on device level. (ZPS-1704)
 
 Release 2.0.6
