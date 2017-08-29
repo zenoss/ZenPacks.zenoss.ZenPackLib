@@ -65,3 +65,41 @@ class DeviceBase(ModelBase):
             return None
 
         return int(result['total'])
+
+    def getRRDTemplates(self):
+        """Return list of templates to bind to this device.
+
+        Support user-defined *-replacement and *-addition monitoring
+        templates that can replace or augment the standard templates.
+
+        """
+        templates = []
+
+        for template in super(ModelBase, self).getRRDTemplates():
+            template_name = template.titleOrId()
+
+            if template_name.endswith('-replacement') or \
+                    template_name.endswith('-addition'):
+                continue
+
+            replacement = self.getRRDTemplateByName(
+                '{}-replacement'.format(template_name))
+
+            if replacement and replacement not in templates:
+                templates.append(replacement)
+                self.setZenProperty(
+                    'zDeviceTemplates',
+                    self.zDeviceTemplates + [replacement.titleOrId()])
+            else:
+                templates.append(template)
+
+            addition = self.getRRDTemplateByName(
+                '{}-addition'.format(template_name))
+
+            if addition and addition not in templates:
+                templates.append(addition)
+                self.setZenProperty(
+                    'zDeviceTemplates',
+                    self.zDeviceTemplates + [addition.titleOrId()])
+
+        return templates

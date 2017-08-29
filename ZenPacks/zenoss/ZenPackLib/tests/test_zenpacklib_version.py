@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2015-2017, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -11,6 +11,8 @@
 """Test that this version of ZenPackLib displays correct version"""
 
 import os
+import re
+
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
@@ -46,7 +48,12 @@ class TestInstalledZenPackLibVersion(ZPLTestBase):
                     try:
                         tag, value = line.split(':')
                         if tag == 'Version':
-                            return value.strip()
+                            # In cases, when the version contains a build info suffix,
+                            # we check whether the version starts with Major.Minor.Revision format
+                            # and return just the appropriate part.
+                            match = re.match(r'(?P<version>\d+\.\d+\.\d+)', value.strip())
+                            if match:
+                                return match.group('version')
                     except:
                         continue
         return None

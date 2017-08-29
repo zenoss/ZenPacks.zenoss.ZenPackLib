@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2016-2017, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -23,7 +23,7 @@ class ProcessClassOrganizerSpecParams(OrganizerSpecParams, ProcessClassOrganizer
     @classmethod
     def fromObject(cls, processclass, remove=False):
         self = object.__new__(cls)
-        SpecParams.__init__(self)
+        OrganizerSpecParams.__init__(self)
 
         self.description = processclass.description
         self.remove = remove
@@ -33,7 +33,8 @@ class ProcessClassOrganizerSpecParams(OrganizerSpecParams, ProcessClassOrganizer
     @classmethod
     def new(cls, processclass, description='', remove=False):
         self = object.__new__(cls)
-        SpecParams.__init__(self)
+        OrganizerSpecParams.__init__(self)
+
         self.path = processclass
         self.description = description
         self.remove = remove
