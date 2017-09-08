@@ -79,6 +79,7 @@ class TestCase(BaseTestCase):
 
         try:
             import ZenPacks.zenoss.Impact
+            zcml.load_config('meta.zcml', Products.Jobber)
             zcml.load_config('meta.zcml', ZenPacks.zenoss.Impact)
             zcml.load_config('configure.zcml', ZenPacks.zenoss.Impact)
         except ImportError:
