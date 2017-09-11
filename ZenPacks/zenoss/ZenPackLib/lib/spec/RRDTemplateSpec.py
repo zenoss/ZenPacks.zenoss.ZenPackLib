@@ -63,8 +63,6 @@ class RRDTemplateSpec(Spec):
 
         self.validate_references()
 
-        self.datapoints_to_fetch = self.get_dp_names()
-
     def validate_references(self):
         """
             validate 
@@ -85,13 +83,6 @@ class RRDTemplateSpec(Spec):
                                        'Graph Point',
                                        set([gp_spec.dpName]),
                                        ds_dp_names)
-
-    def get_dp_names(self):
-        """return list of datapoint names"""
-        dp_names = []
-        for ds_spec in self.datasources.values():
-            dp_names += [ id for id in ds_spec.datapoints.keys() ]
-        return list(set(dp_names))
 
     def get_ds_dp_names(self):
         """return set of dsname_dpname"""

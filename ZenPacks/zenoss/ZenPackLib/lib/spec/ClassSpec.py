@@ -1121,13 +1121,7 @@ class ClassSpec(Spec):
 
     def get_datapoints_to_fetch(self):
         """return list of datapoint names for templates associated with this class"""
-        dsnames = []
-        for dc_spec in self.zenpack.device_classes.values():
-            for t_name, t_spec in dc_spec.templates.items():
-                if t_name in self.monitoring_templates:
-                    dsnames += t_spec.datapoints_to_fetch
-        dsnames = list(set(dsnames))
-        return dsnames
+        return [spec.datapoint for spec in self.properties.values() if spec.datapoint and spec.grid_display]
 
     @property
     def containing_js_fields(self):
