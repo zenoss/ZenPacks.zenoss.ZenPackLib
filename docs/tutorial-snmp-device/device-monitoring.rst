@@ -21,7 +21,7 @@ NetBotz monitoring functionality we're going to build.
 .. code-block:: bash
 
     cd /z
-    zenpacklib create ZenPacks.training.NetBotz
+    zenpacklib --create ZenPacks.training.NetBotz
     zenpack --link --install ZenPacks.training.NetBotz
 
 We should also restart at least *Zope* after installing the ZenPack so that we
