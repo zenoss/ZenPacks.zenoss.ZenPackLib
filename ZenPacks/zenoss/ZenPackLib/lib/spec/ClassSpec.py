@@ -22,6 +22,7 @@ from Products.Zuul.interfaces import IInfo
 from Products.Zuul.catalog.interfaces import IPathReporter
 
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
+from ..wrapper.ComponentPathReporter import ComponentPathReporter
 from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
 
 from ..gsm import get_gsm
@@ -1025,8 +1026,9 @@ class ClassSpec(Spec):
 
     def register_path_adapters(self):
         """Register additional path adapters if needed"""
-        reporter = self.get_path_reporter()
-        if reporter:
+        mixin = self.get_path_reporter()
+        if mixin and not self.is_device:
+            reporter = type('{}PathReporter'.format(self.name), (ComponentPathReporter, mixin,), {})
             GSM.registerAdapter(reporter, (self.model_class,), IPathReporter)
 
     @property
