@@ -170,3 +170,18 @@ protocol
   :Required: No
   :Type: string
   :Default Value: None
+
+reset
+  :Description: If true, any zProperties defined here will override those of the target device class, if it exists
+  :Required: No
+  :Type: boolean
+  :Default Value: false
+
+.. note::
+
+  The *reset* option is not the preferred way to handle migration or changes to zProperty values between ZenPack versions.  It is likely to cause heartache
+  in cases where the target Device Class is not supplied exclusively by the ZenPack, for instance, since there is no way to control which version of the
+  desired zProperty values would be authoritative or what the expected value should be if a single device class is targeted by multiple ZenPacks.  Several other
+  bad scenarios exist, so use this option with extreme caution and preferably use migration scripts to handle these types of changes.
+
+  
