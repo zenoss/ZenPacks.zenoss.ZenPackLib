@@ -326,6 +326,22 @@ class ZenPack(ZenPackBase):
             return ''.join(difflib.unified_diff(lines_existing, lines_new))
         return None
 
+    def set_zproperties(self, app, dc, dcspec):
+        """Set zProperties given by spec"""
+        for zprop, value in dcspec.zProperties.iteritems():
+            if dc.getPropertyType(zprop) is None:
+                self.LOG.error(
+                    "Unable to set zProperty %s on %s (undefined zProperty)",
+                    zprop, dcspec.path)
+            else:
+                self.LOG.debug(
+                    "Setting zProperty %s to %r on %s (was %r)",
+                    zprop, value, dcspec.path, getattr(dc, zprop, ''))
+
+                # We want to explicitly set the value even if it's the same as
+                # what's being acquired. This is why aq_base is required.
+                aq_base(dc).setZenProperty(zprop, value)
+
     def create_device_classes(self, app):
         """Create device classes. Set their zProperties and devtypes."""
         for dcname in sorted(self.device_classes):
@@ -343,6 +359,12 @@ class ZenPack(ZenPackBase):
                     self.LOG.warn(
                         "Device Class (%s) not found",
                         dcspec.path)
+                    continue
+
+                # Optionally set zProperties if reset is True
+                if dcspec.reset:
+                    self.LOG.info('Resetting zProperties on {}'.format(device_class.getDmdKey()))
+                    self.set_zproperties(app, device_class, dcspec)
 
     def create_device_class(self, app, dcspec):
         """Create and return a DeviceClass. Set zProperties and devtypes.
@@ -364,19 +386,7 @@ class ZenPack(ZenPackBase):
         dcObject = app.zport.dmd.Devices.createOrganizer(dcspec.path)
 
         # Set zProperties.
-        for zprop, value in dcspec.zProperties.iteritems():
-            if dcObject.getPropertyType(zprop) is None:
-                self.LOG.error(
-                    "Unable to set zProperty %s on %s (undefined zProperty)",
-                    zprop, dcspec.path)
-            else:
-                self.LOG.debug(
-                    "Setting zProperty %s to %r on %s",
-                    zprop, value, dcspec.path)
-
-                # We want to explicitly set the value even if it's the same as
-                # what's being acquired. This is why aq_base is required.
-                aq_base(dcObject).setZenProperty(zprop, value)
+        self.set_zproperties(app, dcObject, dcspec)
 
         # Register devtype.
         if dcObject and dcspec.description and dcspec.protocol:

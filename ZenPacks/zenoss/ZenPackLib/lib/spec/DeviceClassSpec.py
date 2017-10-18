@@ -23,6 +23,7 @@ class DeviceClassSpec(OrganizerSpec):
             templates=None,
             description=None,
             protocol=None,
+            reset=False,
             _source_location=None,
             zplog=None):
         """
@@ -40,6 +41,8 @@ class DeviceClassSpec(OrganizerSpec):
             :type description: str
             :param protocol: Protocol to use for registered devtype
             :type protocol: str
+            :param reset:  If True, reset any zProperties that differ from given
+            :type reset: bool
         """
         super(DeviceClassSpec, self).__init__(
             zenpack_spec,
@@ -53,6 +56,7 @@ class DeviceClassSpec(OrganizerSpec):
         self.remove = bool(remove)
         self.description = description
         self.protocol = protocol
+        self.reset = reset
 
         if zProperties is None:
             self.zProperties = {}
