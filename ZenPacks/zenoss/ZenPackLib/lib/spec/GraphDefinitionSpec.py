@@ -18,6 +18,7 @@ class GraphDefinitionSpec(Spec):
             self,
             template_spec,
             name,
+            sequence=None,
             height=None,
             width=None,
             units=None,
@@ -34,7 +35,8 @@ class GraphDefinitionSpec(Spec):
             ):
         """
         Create a GraphDefinition Specification
-
+        :param sequence Order that this graph is rendered
+        :type sequence: int
         :param height TODO
         :type height: int
         :param width TODO
@@ -63,7 +65,7 @@ class GraphDefinitionSpec(Spec):
             self.LOG = zplog
         self.template_spec = template_spec
         self.name = name
-
+        self.sequence = sequence
         self.height = height
         self.width = width
         self.units = units
@@ -83,8 +85,8 @@ class GraphDefinitionSpec(Spec):
         graph = template.manage_addGraphDefinition(self.name)
         self.speclog.debug("adding graph")
 
-        if sequence:
-            graph.sequence = sequence
+        if sequence or self.sequence:
+            graph.sequence = self.sequence or sequence
         if self.height is not None:
             graph.height = self.height
         if self.width is not None:
