@@ -208,6 +208,13 @@ class Dumper(yaml.Dumper):
             elif isinstance(orig, int):
                 return self.represent_int(orig)
 
+    def represent_multiline(self, data):
+        """Represent multi-line text"""
+        for c in u"\u000a\u000d\u001c\u001d\u001e\u0085\u2028\u2029":
+            if c in unicode(data):
+                return self.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+        return self.represent_str(data)
+
     def relschemaspec_to_str(self, spec):
         # Omit relation names that are their defaults.
         left_optrelname = "" if spec.left_relname == spec.default_left_relname else "({})".format(spec.left_relname)
@@ -306,6 +313,9 @@ Dumper.add_representer(ProcessClassSpecParams, Dumper.represent_spec)
 Dumper.add_representer(ImpactTriggerSpecParams, Dumper.represent_spec)
 Dumper.add_representer(LinkProviderSpecParams, Dumper.represent_spec)
 # representers for custom types
-from ..base.types import Color, Severity
+from ..base.types import Color, Severity, multiline
 Dumper.add_representer(Color, SafeRepresenter.represent_str)
 Dumper.add_representer(Severity, Dumper.represent_severity)
+Dumper.add_representer(multiline, Dumper.represent_multiline)
+
+

@@ -6,9 +6,8 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
+from ..base.types import multiline
 from Acquisition import aq_base
-
 from .SpecParams import SpecParams
 from ..spec.EventClassMappingSpec import EventClassMappingSpec
 
@@ -33,10 +32,10 @@ class EventClassMappingSpecParams(SpecParams, EventClassMappingSpec):
         self.sequence = sequence
         self.rule = rule
         self.regex = regex
-        self.example = example
-        self.explanation = explanation
-        self.resolution = resolution
-        self.transform = transform
+        self.example = multiline(example)
+        self.explanation = multiline(explanation)
+        self.resolution = multiline(resolution)
+        self.transform = multiline(transform)
         self.remove = remove
 
     @classmethod
@@ -45,10 +44,12 @@ class EventClassMappingSpecParams(SpecParams, EventClassMappingSpec):
         SpecParams.__init__(self)
         mapping = aq_base(mapping)
 
-        _properties = ['eventClassKey', 'sequence', 'rule', 'regex',
-                       'example', 'explanation', 'resolution', 'transform']
-        for x in _properties:
+        for x in ['eventClassKey', 'sequence', 'rule', 'regex']:
             setattr(self, x, getattr(mapping, x, None))
 
+        self.example = multiline(mapping.example)
+        self.explanation = multiline(mapping.explanation)
+        self.resolution = multiline(mapping.resolution)
+        self.transform = multiline(mapping.transform)
         self.remove = remove
         return self
