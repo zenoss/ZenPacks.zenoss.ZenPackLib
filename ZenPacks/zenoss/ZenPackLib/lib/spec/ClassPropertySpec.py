@@ -39,6 +39,7 @@ class ClassPropertySpec(Spec):
             datapoint=None,
             datapoint_default=None,
             datapoint_cached=True,
+            add_dialog_display=True,
             index_scope='device',
             _source_location=None,
             zplog=None,
@@ -95,6 +96,8 @@ class ClassPropertySpec(Spec):
             :type datapoint_default: str
             :param datapoint_cached: TODO
             :type datapoint_cached: bool
+            :param add_dialog_display: Whether it must be provided in add dialog
+            :type add_dialog_display: bool
             :param index_scope: TODO (enum)
             :type index_scope: str
 
@@ -149,6 +152,8 @@ class ClassPropertySpec(Spec):
             raise TypeError(
                 "Property '%s': index_scope must be 'device', 'global', or 'both', not '%s'"
                 % (name, self.index_scope))
+
+        self.add_dialog_display = add_dialog_display
 
         self.order = order
 
@@ -275,3 +280,24 @@ class ClassPropertySpec(Spec):
                 value='{{{}}}'.format(',\n                       '.join(column_fields))),
             ]
 
+    @property
+    def xtype(self):
+        xtype_map = {'string': 'textfield',
+                     'int': 'textfield',
+                     'float': 'textfield',
+                     'boolean': 'checkbox',
+                     'lines': 'textarea',
+                     'password': 'password',
+                     'entity': 'field',
+                    }
+        return xtype_map.get(self.type_, 'textfield')
+
+    @property
+    def js_add_fields(self):
+        return {'xtype' : self.xtype,
+                'name' : self.name,
+                'fieldLabel' : self.short_label,  # _t('{}').format(self.short_label),
+                'id' : '{}_field'.format(self.name),
+                'width' : 260,
+                'allowBlank' : str(self.add_dialog_display).lower()
+                }

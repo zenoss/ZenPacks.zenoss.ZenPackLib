@@ -23,7 +23,7 @@ from Products.ZenModel.interfaces import IExpandedLinkProvider
 from Products.ZenUI3.utils.javascript import JavaScriptSnippet
 from ..utils import dynamicview_installed
 from ..functions import get_symbol_name, get_zenpack_path
-from ..resources.templates import JS_LINK_FROM_GRID
+from ..resources.templates import JS_LINK_FROM_GRID, CONFIG_ZCML
 from ..gsm import get_gsm
 from ..base.Device import Device
 from ..base.ZenPack import ZenPack
@@ -152,6 +152,7 @@ class ZenPackSpec(Spec):
         # update properties from ancestor classes
         self.plumb_properties()
 
+        self.imported_classes = {}
         # Class Relationship Schema
         self.class_relationships = []
         if class_relationships:
@@ -243,6 +244,8 @@ class ZenPackSpec(Spec):
         self.create_ordered_component_tree()
         self.create_global_js_snippet()
         self.create_device_js_snippet()
+        self.create_add_js_snippet()
+        self.register_user_resources()
         self.register_browser_resources()
         self.apply_platform_patches()
         self.register_link_providers()
@@ -309,6 +312,18 @@ class ZenPackSpec(Spec):
             return sorted(result, key=lambda x: order.get(x['id'], 100.0))
 
         monkeypatch(DeviceRouter)(getComponentTree)
+
+    def register_user_resources(self):
+        """Register browser resources for any user-created components"""
+        directives = []
+        for spec in self.ordered_classes:
+            if not spec.allow_user_creation:
+                continue
+            zcml.load_string(CONFIG_ZCML.format(router_name=spec.router_name,
+                                                zenpack_name=self.name,
+                                                class_name=spec.name,
+                                                router_class=spec.router_class.__name__,
+                                                ))
 
     def register_browser_resources(self):
         """Register browser resources if they exist."""
@@ -421,6 +436,10 @@ class ZenPackSpec(Spec):
         except Exception:
             target_name = 'global'
 
+        # for user-added component
+        if 'add' in name:
+            target_name = name
+
         for klass in classes:
             GSM.registerAdapter(
                 snippet_class,
@@ -467,6 +486,32 @@ class ZenPackSpec(Spec):
 
         return self.create_js_snippet(
             'device', snippet, classes=device_classes)
+
+    def create_add_js_snippet(self):
+        """Register component add JavaScript snippet."""
+        device_classes = [
+            x.model_class
+            for x in self.classes.itervalues()
+            if Device in x.resolved_bases]
+
+        # Add imported device objects
+        for kls in self.imported_classes.itervalues():
+            if 'deviceClass' in [x[0] for x in kls._relations]:
+                device_classes.append(kls)
+
+        for spec in self.ordered_classes:
+            if not spec.allow_user_creation:
+                continue
+            d_classes = []
+            # for each device class, only use if it can be found in the spec relations
+            for name, schema in spec.model_class._relations:
+                for d in device_classes:
+                    if schema.remoteClass == d.__module__:
+                        d_classes.append(d)
+
+            self.create_js_snippet('{}-add'.format(spec.name),
+                                   spec.add_component_js,
+                                   classes=d_classes)
 
     @property
     def device_js_snippet(self):
@@ -602,3 +647,4 @@ class ZenPackSpec(Spec):
 
         self.create_global_js_snippet()
         self.create_device_js_snippet()
+        self.create_add_js_snippet()

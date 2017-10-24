@@ -18,7 +18,9 @@ from Products.ZenRelations.RelSchema import ToMany, ToManyCont
 from Products.Zuul.form import schema
 from Products.Zuul.form.interfaces import IFormBuilder
 from Products.Zuul.infos import InfoBase, ProxyProperty
-from Products.Zuul.interfaces import IInfo
+from Products.Zuul.interfaces import IInfo, IFacade
+from Products.Zuul.facades import ZuulFacade
+from Products.ZenUtils.Ext import DirectRouter, DirectResponse
 from Products.Zuul.catalog.interfaces import IPathReporter
 
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
@@ -31,6 +33,9 @@ from ..functions import pluralize, get_symbol_name, relname_from_classname, \
 from ..base.Component import Component, HWComponent, Service
 from ..base.Device import Device
 from ..zuul import schema_map
+
+from ..resources.templates import CREATE_METHOD, FACADE_ADD_METHOD, IFACADE_ADD_METHOD, \
+ROUTER_GETFACADE, ROUTER_ADD_METHOD, ADD_COMPONENT_JS
 
 from .Spec import Spec, DeviceInfoStatusProperty, \
     RelationshipInfoProperty, RelationshipGetter, RelationshipSetter
@@ -107,6 +112,9 @@ class ClassSpec(Spec):
     _info_schema_class = None
     _info_class = None
     _formbuilder_class = None
+    _facade_class = None
+    _ifacade_class = None
+    _router_class = None
     _icon_url = None
     _datapoints_to_fetch = None
     _plumbed = False
@@ -142,6 +150,7 @@ class ClassSpec(Spec):
             dynamicview_weight=None,
             dynamicview_relations=None,
             extra_paths=None,
+            allow_user_creation=False,
             _source_location=None,
             zplog=None
             ):
@@ -211,7 +220,8 @@ class ClassSpec(Spec):
             :type dynamicview_relations: dict
             :param extra_paths: TODO
             :type extra_paths: list(ExtraPath)
-
+            :param allow_user_creation: Whether or not this component can be added manually via GUI
+            :type allow_user_creation: bool
         """
         super(ClassSpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -358,6 +368,9 @@ class ClassSpec(Spec):
                 self.path_pattern_streams.append(pattern_stream)
         else:
             self.extra_paths = []
+
+        # permit user-created components via menu
+        self.allow_user_creation = allow_user_creation
 
     @property
     def scaled_order(self):
@@ -965,14 +978,156 @@ class ClassSpec(Spec):
 
         return formbuilder
 
+    @property
+    def facade_class(self):
+        """Return Facade class."""
+        if not self._facade_class:
+            self._facade_class = self.create_facade_class()
+        return self._facade_class
+
+    def create_facade_class(self):
+        """Create and return Facade class."""
+        bases = (ZuulFacade,)
+        attributes = {}
+        facade_method_name = 'add{}'.format(self.name)
+        facade_method_text = FACADE_ADD_METHOD.format(method_name=facade_method_name,
+                                class_name=self.name,
+                                class_label=self.label)
+
+        attributes[facade_method_name] = self.object_from_string(facade_method_name, facade_method_text)
+        facade = self.create_class(
+            get_symbol_name(self.zenpack.name, self.name),
+            get_symbol_name(self.zenpack.name, 'schema'),
+            '{}Facade'.format(self.name),
+            tuple(bases),
+            attributes)
+        classImplements(facade, self.ifacade_class)
+        return facade
+
+    @property
+    def ifacade_class(self):
+        """Return Facade class."""
+        if not self._ifacade_class:
+            self._ifacade_class = self.create_ifacade_class()
+        return self._ifacade_class
+
+    def create_ifacade_class(self):
+        """Create and return I<Info>Info class."""
+        bases = (IFacade,)
+        attributes = {}
+        facade_method_name = 'add{}'.format(self.name)
+        facade_method_text = IFACADE_ADD_METHOD.format(method_name=facade_method_name)
+        attributes[facade_method_name] = self.object_from_string(facade_method_name, facade_method_text)
+
+        return self.create_class(
+            get_symbol_name(self.zenpack.name, self.name),
+            get_symbol_name(self.zenpack.name, 'schema'),
+            'I{}Facade'.format(self.name),
+            tuple(bases),
+            attributes)
+
+    @property
+    def router_class(self):
+        """Return Router class."""
+        if not self._router_class:
+            self._router_class = self.create_router_class()
+        return self._router_class
+
+    def create_router_class(self):
+        """Create and return Router class."""
+        bases = (DirectRouter,)
+
+        attributes = {}
+
+        adapter_name = '{}adapter'.format(self.name)
+        router_get_text = ROUTER_GETFACADE.format(adapter_name=adapter_name)
+        attributes['_getFacade'] = self.object_from_string('_getFacade', router_get_text)
+
+        router_method_name = 'add{}Router'.format(self.name)
+        facade_method_name = 'add{}'.format(self.name)
+        router_method_text = ROUTER_ADD_METHOD.format(method_name=router_method_name,
+                                                  facade_method_name=facade_method_name)
+
+        attributes[router_method_name] = self.object_from_string(router_method_name, router_method_text)
+
+        router = self.create_class(
+            get_symbol_name(self.zenpack.name, self.name),
+            get_symbol_name(self.zenpack.name, 'schema'),
+            '{}Router'.format(self.name),
+            tuple(bases),
+            attributes)
+        # classImplements(router, IFacade)
+        return router
+
     def create_registered(self):
         GSM.registerAdapter(self.info_class, (self.model_class,), self.iinfo_class)
         if self.is_a_component:
             GSM.registerAdapter(self.formbuilder_class, (self.info_class,), IFormBuilder)
+            self.register_user_addable()
         self.register_facade_types()
         self.register_path_adapters()
         self.register_dynamicview_adapters()
         self.register_impact_adapters()
+
+    def register_user_addable(self):
+        """Register create methods and associated adapter for 
+            manually added components
+        """
+        if not self.allow_user_creation:
+            return
+        relname, parent_class = self.get_parent_class_and_relname()
+        if not parent_class:
+            return
+        create_method_name = 'manage_add{}'.format(self.name)
+        create_method_text = CREATE_METHOD.format(method_name=create_method_name,
+                                                  zenpack_name=self.zenpack.name,
+                                                  class_name=self.name,
+                                                  relation=relname)
+        # print create_method_text
+        setattr(parent_class, create_method_name,
+                self.object_from_string(create_method_name, create_method_text))
+        GSM.registerAdapter(self.facade_class, (parent_class,), self.ifacade_class, self.adapter_name)
+
+    @property
+    def adapter_name(self):
+        """Return adapter name for user-added component"""
+        return '{}adapter'.format(self.name)
+
+    @property
+    def router_name(self):
+        """Return router name for user-added component"""
+        return '{}_router'.format(self.name)
+
+    @property
+    def add_component_js(self):
+        """Return dynamic Javascript for user-added component"""
+        return ADD_COMPONENT_JS.format(label=self.label,
+                                       class_name=self.name,
+                                       properties=self.js_add_fields,
+                                       zenpack_name=self.zenpack.name,
+                                       router_class=self.router_class.__name__,
+                                       router_method='add{}Router'.format(self.name))
+
+    def get_editable(self):
+        """Return a list of editable properties for user-added component"""
+        editables = []
+        for name, prop in self.properties.items():
+            if not prop.editable:
+                continue
+            editables.append(prop)
+        editables.sort(key=lambda x: x.order)
+        return editables
+
+    @property
+    def js_add_fields(self):
+        """Return Javascript fields for user-added component"""
+        text = """[{items}{formatting}],"""
+        fields = []
+        for prop in self.get_editable():
+            fields.append(prop.js_add_fields)
+        format_str = ',\n{}'.format(' ' * 36)
+        return text.format(formatting=format_str,
+                           items=format_str.join([str(f) for f in fields]))
 
     def register_dynamicview_adapters(self):
         if not DYNAMICVIEW_INSTALLED:
@@ -1101,6 +1256,23 @@ class ClassSpec(Spec):
                             faceting_specs.append(class_spec)
 
         return faceting_specs
+
+    def get_parent_class_and_relname(self):
+        """Return parent class and relname for user-added components"""
+        for relname, relspec in self.relationships.items():
+            if not relspec.schema:
+                continue
+            if not issubclass(relspec.schema.remoteType, ToManyCont):
+                continue
+            # see if parent is another spec
+            if relspec.remote_class_spec and relspec.remote_class_spec.is_device:
+                return (relspec.schema.remoteName, relspec.remote_class_spec.model_class)
+            # if not check imported classes
+            else:
+                remote_class = self.zenpack.imported_classes.get(relspec.schema.remoteClass)
+                if remote_class and issubclass(remote_class, Device):
+                    return (relspec.schema.remoteName, remote_class)
+        return (None, None)
 
     @property
     def filterable_by(self):

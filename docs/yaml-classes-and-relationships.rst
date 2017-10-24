@@ -260,10 +260,6 @@ should contain the following lines:
       CFG = zenpacklib.load_yaml()
       schema = CFG.zenpack_module.schema
 
-.. note::
-
-  For better performance, specify the explicit path(s) to your yaml file.  e.g. *CFG = zenpacklib.load_yaml([os.path.join(os.path.dirname(__file__), "zenpack.yaml")])*
-
 Next, we create the file:
 
 .. code-block:: bash
@@ -646,6 +642,12 @@ extra_paths
 .. todo:: Add section on Impact & DynamicView.
 
 .. todo:: Add more detailed explanation of extra_paths, based on comments in zenpacklib.py
+  
+allow_user_creation
+  :Description: Can components of this type be added via the "Add Components" menu?
+  :Required: No
+  :Type: boolean
+  :Default Value: false
 
 .. _class-property-fields:
 
@@ -726,6 +728,12 @@ editable
   :Required: No
   :Type: boolean
   :Default Value: false
+  
+add_dialog_display
+  :Description: If component allow_user_creation is true, and this property's editable is true, should this field be included in the add form?
+  :Required: No
+  :Type: boolean
+  :Default Value: true
   
 renderer
   :Description: JavaScript renderer for property value.
