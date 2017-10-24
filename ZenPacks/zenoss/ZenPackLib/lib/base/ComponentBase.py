@@ -49,6 +49,17 @@ class ComponentBase(ModelBase):
 
     def __setattr__(self, name, value):
         '''enforce type checking when setting _properties attributes'''
+        if self._p_setattr(name, value):
+            # See documentation on overriding the attribute protocol for
+            # persistent objects. The self object here may be a ghost which
+            # would result in the call to self._properties below raising a
+            # POSKeyError. By first calling self._p_setattr, we can have the
+            # various _p_* properties handled correctly, and having the object
+            # activated (unghosted) when necessary.
+            #
+            # http://persistent.readthedocs.io/en/latest/using.html
+            return
+
         def lines(val):
             """handle 'lines' type"""
             if not isinstance(val, list):
@@ -77,7 +88,7 @@ class ComponentBase(ModelBase):
                                                                                         target_class.__name__,
                                                                                         value,
                                                                                         e))
-        super(ModelBase, self).__setattr__(name, value)
+        return super(ModelBase, self).__setattr__(name, value)
 
     def device(self):
         """Return device under which this component/device is contained."""
