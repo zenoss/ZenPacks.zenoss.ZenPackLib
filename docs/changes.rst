@@ -29,6 +29,7 @@ Release 2.0.8
 
 Fixes
 
+* Improve component grid loading performance. (ZPS-2033)
 * Fix potential POSKeyError when modeling devices. (ZPS-2371)
 
 Release 2.0.7
