@@ -47,6 +47,21 @@ device_classes:
                 rrdtype: DERIVE
                 rrdmin: 0
                 aliases: {dp_aliased_alt: null}
+              dp_aliased_4: 
+                rrdtype: COUNTER
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {dp_aliased_4: null}
+              dp_aliased_5: 
+                rrdtype: RAW
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {dp_aliased_5: null}
+              dp_aliased_6: 
+                rrdtype: ABSOLUTE
+                rrdmin: 0
+                rrdmax: 100
+                aliases: {dp_aliased_6: null}
             oid: 1.3.6.1.4.1.2021.10.1.5.2
 """
 
@@ -75,6 +90,9 @@ device_classes:
                 rrdtype: DERIVE
                 rrdmin: 0
                 aliases: {dp_aliased_alt: null}
+              dp_aliased_4: COUNTER_MIN_0_MAX_100_ALIAS
+              dp_aliased_5: RAW_MIN_0_MAX_100_ALIAS
+              dp_aliased_6: ABSOLUTE_MIN_0_MAX_100_ALIAS
             oid: 1.3.6.1.4.1.2021.10.1.5.2
 """
 
