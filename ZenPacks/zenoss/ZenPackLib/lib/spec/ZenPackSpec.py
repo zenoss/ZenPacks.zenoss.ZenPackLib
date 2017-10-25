@@ -21,6 +21,7 @@ from zope.browser.interfaces import IBrowserView
 from Products.ZenUI3.browser.interfaces import IMainSnippetManager
 from Products.ZenModel.interfaces import IExpandedLinkProvider
 from Products.ZenUI3.utils.javascript import JavaScriptSnippet
+from Products.ZenModel.Device import Device as BaseDevice
 from ..utils import dynamicview_installed
 from ..functions import get_symbol_name, get_zenpack_path
 from ..resources.templates import JS_LINK_FROM_GRID, CONFIG_ZCML
@@ -468,45 +469,38 @@ class ZenPackSpec(Spec):
 
         return self.create_js_snippet('global', snippet)
 
+    def get_device_classes(self):
+        """Return relevant Device classes or subclasses"""
+        device_classes = [
+            x.model_class
+            for x in self.classes.itervalues()
+            if Device in x.resolved_bases]
+        for kls in self.imported_classes.itervalues():
+            if 'deviceClass' in [x[0] for x in kls._relations]:
+                device_classes.append(kls)
+        return device_classes
+
     def create_device_js_snippet(self):
         """Register device JavaScript snippet."""
         snippet = self.device_js_snippet
         if not snippet:
             return
-
-        device_classes = [
-            x.model_class
-            for x in self.classes.itervalues()
-            if Device in x.resolved_bases]
-
-        # Add imported device objects
-        for kls in self.imported_classes.itervalues():
-            if 'deviceClass' in [x[0] for x in kls._relations]:
-                device_classes.append(kls)
-
         return self.create_js_snippet(
-            'device', snippet, classes=device_classes)
+            'device', snippet, classes=self.get_device_classes())
 
     def create_add_js_snippet(self):
         """Register component add JavaScript snippet."""
-        device_classes = [
-            x.model_class
-            for x in self.classes.itervalues()
-            if Device in x.resolved_bases]
-
-        # Add imported device objects
-        for kls in self.imported_classes.itervalues():
-            if 'deviceClass' in [x[0] for x in kls._relations]:
-                device_classes.append(kls)
+        device_classes = self.get_device_classes()
 
         for spec in self.ordered_classes:
             if not spec.allow_user_creation:
                 continue
-            d_classes = []
+
             # for each device class, only use if it can be found in the spec relations
+            d_classes = []
             for name, schema in spec.model_class._relations:
                 for d in device_classes:
-                    if schema.remoteClass == d.__module__:
+                    if d.__module__ in schema.remoteClass:
                         d_classes.append(d)
 
             self.create_js_snippet('{}-add'.format(spec.name),

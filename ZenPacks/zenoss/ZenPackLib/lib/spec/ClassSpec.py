@@ -22,6 +22,7 @@ from Products.Zuul.interfaces import IInfo, IFacade
 from Products.Zuul.facades import ZuulFacade
 from Products.ZenUtils.Ext import DirectRouter, DirectResponse
 from Products.Zuul.catalog.interfaces import IPathReporter
+from Products.ZenModel.Device import Device as BaseDevice
 
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
 from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
@@ -1270,7 +1271,7 @@ class ClassSpec(Spec):
             # if not check imported classes
             else:
                 remote_class = self.zenpack.imported_classes.get(relspec.schema.remoteClass)
-                if remote_class and issubclass(remote_class, Device):
+                if remote_class and issubclass(remote_class, BaseDevice):
                     return (relspec.schema.remoteName, remote_class)
         return (None, None)
 
@@ -1358,7 +1359,7 @@ class ClassSpec(Spec):
                 "sortable: true"
             ]
 
-            columns.append('{{{}}}'.format(',\n                       '.join(column_fields)))
+            columns.append('{{{}}}'.format(','.join(column_fields)))
 
         return columns
 
@@ -1388,36 +1389,36 @@ class ClassSpec(Spec):
 
         default_left_columns = [(
             "{"
-            "id: 'severity',\n"
-            "                       dataIndex: 'severity',\n"
-            "                       header: _t('Events'),\n"
-            "                       renderer: Zenoss.render.severity,\n"
-            "                       width: 50"
+            "id: 'severity',"
+            "dataIndex: 'severity',"
+            "header: _t('Events'),"
+            "renderer: Zenoss.render.severity,"
+            "width: 50"
             "}"
         ), (
             "{"
-            "id: 'name',\n"
-            "                       dataIndex: 'name',\n"
-            "                       header: _t('Name'),\n"
-            "                       renderer: Zenoss.render.zenpacklib_" + self.zenpack.id_prefix + "_entityLinkFromGrid"
+            "id: 'name',"
+            "dataIndex: 'name',"
+            "header: _t('Name'),"
+            "renderer: Zenoss.render.zenpacklib_" + self.zenpack.id_prefix + "_entityLinkFromGrid"
             "}"
         )]
 
         default_right_columns = [(
             "{"
-            "id: 'monitored',\n"
-            "                       dataIndex: 'monitored',\n"
-            "                       header: _t('Monitored'),\n"
-            "                       renderer: Zenoss.render.checkbox,\n"
-            "                       width: 70"
+            "id: 'monitored',"
+            "dataIndex: 'monitored',"
+            "header: _t('Monitored'),"
+            "renderer: Zenoss.render.checkbox,"
+            "width: 70"
             "}"
         ), (
             "{"
-            "id: 'locking',\n"
-            "                       dataIndex: 'locking',\n"
-            "                       header: _t('Locking'),\n"
-            "                       renderer: Zenoss.render.locking_icons,\n"
-            "                       width: 65"
+            "id: 'locking',"
+            "dataIndex: 'locking',"
+            "header: _t('Locking'),"
+            "renderer: Zenoss.render.locking_icons,"
+            "width: 65"
             "}"
         )]
 
@@ -1450,7 +1451,10 @@ class ClassSpec(Spec):
             "        config = Ext.applyIf(config||{{}}, {{\n"
             "            componentType: '{meta_type}',\n"
             "            autoExpandColumn: '{auto_expand_column}',\n"
-            "            sortInfo: {{field: '{initial_sort_column}', direction: 'ASC'}},\n"
+            "            sortInfo: {{\n"
+            "                        field: '{initial_sort_column}',\n"
+            "                        direction: 'ASC'\n"
+            "                       }}\n,"
             "            fields: [{fields}],\n"
             "            columns: [{columns}]\n"
             "        }});\n"
@@ -1464,11 +1468,11 @@ class ClassSpec(Spec):
                 zenpack_id_prefix=self.zenpack.id_prefix,
                 auto_expand_column=self.auto_expand_column,
                 initial_sort_column=self.initial_sort_column,
-                fields=',\n                     '.join(
+                fields=','.join(
                     default_fields +
                     self.containing_js_fields +
                     fields),
-                columns=',\n                      '.join(
+                columns=','.join(
                     default_left_columns +
                     self.containing_js_columns +
                     ordered_values(ordered_columns) +
