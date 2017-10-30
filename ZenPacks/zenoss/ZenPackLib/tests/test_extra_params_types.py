@@ -88,11 +88,9 @@ class TestExtraParamsTypeHandling(ZPLTestMockZenPack):
     """
     yaml_doc = YAML_DOC
     disableLogging = False
-    thresholds = [CustomThreshold]
-    datasources = [CustomDatasource]
 
     def afterSetUp(self):
-        super(TestExtraParamsTypeHandling, self).afterSetUp()
+        super(TestExtraParamsTypeHandling, self).afterSetUp([CustomDatasource], [CustomThreshold])
         self.template = self.z.cfg.device_classes.get('/Devices').templates.get('TESTTEMPLATE').create(self.dmd, False)
 
     def test_inherited_defaults(self):

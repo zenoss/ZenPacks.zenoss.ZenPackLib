@@ -14,14 +14,9 @@ import Globals  # noqa
 from Products.ZenUtils.Utils import unused
 unused(Globals)
 
-from zope.component import getGlobalSiteManager
-from Products.ZenModel.Device import Device
 from Products.ZenUtils.guid.interfaces import IGlobalIdentifier
-from Products.ZenUtils.guid.interfaces import IGloballyIdentifiable
-# from zenoss.protocols.protobufs import model_pb2 as MODELCONSTANTS
 from Products.ZenMessaging.queuemessaging.publisher import ModelChangePublisher
 from zenoss.protocols.protobufutil import ProtobufEnum
-
 from ZenPacks.zenoss.ZenPackLib.lib.utils import impact_installed
 
 class ImpactTestCase(object):
@@ -29,23 +24,19 @@ class ImpactTestCase(object):
 
 IMPACT_INSTALLED = impact_installed()
 if IMPACT_INSTALLED:
-    from ZenPacks.zenoss.Impact.DynamicServiceOrganizer import DynamicServiceOrganizer
-    from ZenPacks.zenoss.Impact.impactd import Trigger
-    from ZenPacks.zenoss.Impact.protocols.impact_pb2 import GraphChangeList, GraphChangeEvent
+    from ZenPacks.zenoss.Impact.protocols.impact_pb2 import GraphChangeList
     from ZenPacks.zenoss.Impact.impactd.graphchanges import GraphChangeFactory
-    from ZenPacks.zenoss.Impact.impactd.interfaces import IRelationshipNode, INodeMetadataProvider
-    from ZenPacks.zenoss.Impact.impactd.relations import RelationshipNode
-    from ZenPacks.zenoss.Impact.impactd.metadata import BasicMetadataProvider
     from ZenPacks.zenoss.Impact.protocols.policy_pb2 import Trigger as TriggerPb
     from ZenPacks.zenoss.Impact.protocols.states_pb2 import State
     from ZenPacks.zenoss.Impact.tests.ImpactTestCase import ImpactTestCase
+    from ZenPacks.zenoss.Impact.DynamicServiceOrganizer import DynamicServiceOrganizer, manage_addRootDynamicServicesOrganizer
 
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-from ZenPacks.zenoss.ZenPackLib.lib.base.BaseTriggers import BaseTriggers, guid
-from ZenPacks.zenoss.ZenPackLib.lib.base.BaseTriggers import *
+from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestMockZenPack
+from ZenPacks.zenoss.ZenPackLib.lib.base.BaseTriggers import BaseTriggers
+
 
 YAML_DOC = """
-name: ZenPacks.zenoss.BasicZenPack
+name: ZenPacks.zenoss.MockZenPack
 
 class_relationships:
 - BasicDevice 1:MC BasicComponent
@@ -77,23 +68,28 @@ classes:
     base: [SubComponent]
     monitoring_templates: [AuxComponent]
     impacted_by: [basicDevice, subComponents]
+device_classes:
+  /Server/Basic:
+    remove: true
+    zProperties:
+      zPythonClass: ZenPacks.zenoss.MockZenPack.BasicDevice
+
 """
 
 
-class TestImpactTriggers(ImpactTestCase):
+class TestImpactTriggers(ZPLTestMockZenPack):
     """Test Impact Triggers"""
+
+    yaml_doc = YAML_DOC
+    zenpack_name = 'ZenPacks.zenoss.MockZenPack'
 
     def afterSetUp(self):
         super(TestImpactTriggers, self).afterSetUp()
-        self.z = ZPLTestHarness(YAML_DOC)
-        self.z.connect()
         self.modelChangePublisher = ModelChangePublisher()
-        self.org = self.z.dmd.DynamicServices
+        self.dynamicServicesRoot = manage_addRootDynamicServicesOrganizer(self.dmd)
+        self.org = self.dynamicServicesRoot
         self.graphChangeList = GraphChangeList()
-        self.factory = GraphChangeFactory(self.z.dmd, self.graphChangeList)
-
-    def tearDown(self):
-         self.z.closeAll()
+        self.factory = GraphChangeFactory(self.dmd, self.graphChangeList)
 
     def get_guid(self, ob):
         """hackish way to do this"""
@@ -117,7 +113,6 @@ class TestImpactTriggers(ImpactTestCase):
         ob = self.z.obs[1]
         self.get_guid(ob)
         impact_fact = BaseTriggers(ob)
-
         for trigger in impact_fact.get_triggers():
             t_spec = self.find_trigger_spec(trigger, spec)
             args = t_spec.get_trigger()

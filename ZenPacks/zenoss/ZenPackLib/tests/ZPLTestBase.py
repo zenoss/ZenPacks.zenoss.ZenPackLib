@@ -132,13 +132,14 @@ class ZPLTestMockZenPack(BaseTestCase):
     yaml_doc = '''name: ZenPacks.zenoss.ZenPackLib'''
     zenpack_name = 'ZenPacks.zenoss.MockZenPack'
     disableLogging = True
-    datsources = []
-    thresholds = []
 
-    def afterSetUp(self):
+    def afterSetUp(self, datasources=None, thresholds=None):
         super(ZPLTestMockZenPack, self).afterSetUp()
-
-        self.zenpack = MockZenPack(self.dmd, self.zenpack_name, datasources=self.datasources, thresholds=self.thresholds)
+        if datasources is None:
+            datasources = []
+        if thresholds is None:
+            thresholds = []
+        self.zenpack = MockZenPack(self.dmd, self.zenpack_name, datasources=datasources, thresholds=thresholds)
         # for a list of docs, iterate through
         if isinstance(self.yaml_doc, list):
             counter = 0
@@ -163,9 +164,13 @@ class ZPLTestMockZenPack(BaseTestCase):
 
 class MockZenPack(object):
     ''''''
-    def __init__(self, dmd, name, datasources=[], thresholds=[]):
+    def __init__(self, dmd, name, datasources=None, thresholds=None):
         self.dmd = dmd
         self.name = name
+        if datasources is None:
+            datasources = []
+        if thresholds is None:
+            thresholds = []
         self.datasources = datasources
         self.thresholds = thresholds
         self.install_zenpack()
