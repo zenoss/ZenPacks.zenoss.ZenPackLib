@@ -110,14 +110,12 @@ type
       Type of property. Valid types:
 
       * `boolean`
-      * `date`
       * `float`
       * `int`
       * `lines`
       * `long`
       * `password`
       * `string`
-      * `selection`
 
   :Required: No
   :Type: string
