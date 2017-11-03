@@ -31,6 +31,8 @@ Fixes
 
 * Improve component grid loading performance. (ZPS-2033)
 * Fix potential POSKeyError when modeling devices. (ZPS-2371)
+* Improved support for multi-line text in YAML (ZPS-444)
+* Improved component path reporters for mixin platform proxy classes (ZPS-1262)
 
 Release 2.0.7
 -------------
