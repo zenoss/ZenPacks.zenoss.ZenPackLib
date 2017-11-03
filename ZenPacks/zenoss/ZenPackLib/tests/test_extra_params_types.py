@@ -15,7 +15,6 @@
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestMockZenPack
 from Products.ZenModel.MinMaxThreshold import MinMaxThreshold
 from Products.ZenModel.RRDDataSource import RRDDataSource
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
 
 
 class CustomThreshold(MinMaxThreshold):

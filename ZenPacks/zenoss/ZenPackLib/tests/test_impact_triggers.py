@@ -19,17 +19,13 @@ from Products.ZenMessaging.queuemessaging.publisher import ModelChangePublisher
 from zenoss.protocols.protobufutil import ProtobufEnum
 from ZenPacks.zenoss.ZenPackLib.lib.utils import impact_installed
 
-class ImpactTestCase(object):
-    ''''''
-
 IMPACT_INSTALLED = impact_installed()
 if IMPACT_INSTALLED:
     from ZenPacks.zenoss.Impact.protocols.impact_pb2 import GraphChangeList
     from ZenPacks.zenoss.Impact.impactd.graphchanges import GraphChangeFactory
     from ZenPacks.zenoss.Impact.protocols.policy_pb2 import Trigger as TriggerPb
     from ZenPacks.zenoss.Impact.protocols.states_pb2 import State
-    from ZenPacks.zenoss.Impact.tests.ImpactTestCase import ImpactTestCase
-    from ZenPacks.zenoss.Impact.DynamicServiceOrganizer import DynamicServiceOrganizer, manage_addRootDynamicServicesOrganizer
+    from ZenPacks.zenoss.Impact.DynamicServiceOrganizer import manage_addRootDynamicServicesOrganizer
 
 from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestMockZenPack
 from ZenPacks.zenoss.ZenPackLib.lib.base.BaseTriggers import BaseTriggers
