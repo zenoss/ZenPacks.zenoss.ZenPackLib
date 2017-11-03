@@ -6,7 +6,7 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
+from ..base.types import multiline
 from .OrganizerSpec import OrganizerSpec
 from .EventClassMappingSpec import EventClassMappingSpec
 
@@ -29,7 +29,7 @@ class EventClassSpec(OrganizerSpec):
           :param description: Description of the EventClass
           :type description: str
           :param transform: EventClass Transformation
-          :type transform: str
+          :type transform: multiline
           :param mappings: TODO
           :type mappings: SpecsParameter(EventClassMappingSpec)
         """
@@ -42,7 +42,7 @@ class EventClassSpec(OrganizerSpec):
             self.LOG = zplog
 
         self.description = description
-        self.transform = transform
+        self.transform = multiline(transform)
         self.remove = bool(remove)
         self.mappings = self.specs_from_param(
             EventClassMappingSpec, 'mappings', mappings, zplog=self.LOG)

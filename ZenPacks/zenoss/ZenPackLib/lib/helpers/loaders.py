@@ -15,7 +15,7 @@ import keyword
 from collections import OrderedDict
 from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
-from ..base.types import Severity
+from ..base.types import Severity, multiline
 
 
 class OrderedLoader(yaml.Loader):
@@ -262,6 +262,9 @@ class ZenPackSpecLoader(OrderedLoader):
 
                 elif expected_type == 'Severity':
                     yaml_value = self.construct_severity(value_node)
+
+                elif expected_type == 'multiline':
+                    yaml_value = self.construct_python_str(value_node)
 
                 elif re.match('^SpecsParameter\((.*)\)$', expected_type):
                     m = re.match('^SpecsParameter\((.*)\)$', expected_type)
