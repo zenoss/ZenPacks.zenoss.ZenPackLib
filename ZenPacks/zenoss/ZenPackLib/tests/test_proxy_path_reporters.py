@@ -33,7 +33,7 @@ classes:
   SubClass3:
     base: [BaseClass2]
   SubClass4:
-    base: [zenpacklib.HWComponent]
+    base: [zenpacklib.IpService]
 
 class_relationships:
   - MyDev 1:MC SubClass1
@@ -55,18 +55,19 @@ class TestPathReporters(ZPLTestBase):
 
     def afterSetUp(self):
         super(TestPathReporters, self).afterSetUp()
-        self.product = self.dmd.Manufacturers.createHardwareProduct('test')
         self.location = self.dmd.Locations.createOrganizer('SomePlace')
+        self.service = self.dmd.Services.createServiceClass('test')
 
     def test_path_reporters(self):
-        ''''''
-
+        """Test that path reporters return paths from 
+            both ZPL and proxied platform classes
+        """
         from ZenPacks.zenoss.ZenPackLib.lib.gsm import GSM
         from Products.Zuul.catalog.interfaces import IPathReporter
         from ZenPacks.zenoss.ZenPackLib.lib.wrapper.ComponentPathReporter import ComponentPathReporter
 
         target_path = ('mydev-0', 'subClass2s', 'subclass2-0')
-        product_path = ('', 'zport', 'dmd', 'Manufacturers', 'Unknown', 'products', 'test', 'instances', 'subclass4-0')
+        service_path = ('', 'zport', 'dmd', 'Services', 'serviceclasses', 'test', 'instances', 'subclass4-0')
         location_path = ('', 'zport', 'dmd', 'Locations', 'SomePlace', 'devices', 'mydev-0')
 
         for ob in self.z.obs:
@@ -75,13 +76,12 @@ class TestPathReporters(ZPLTestBase):
                 continue
 
             if cls_name == 'MyDev':
-                ob.location.addRelation(self.location)
+                ob.location._add(self.location)
 
             if cls_name == 'SubClass4':
-                ob.productClass.addRelation(self.product)
+                ob.serviceclass._add(self.service)
 
             spec = self.z.cfg.classes.get(cls_name)
-
             # registering ourself but ZPL would normally do this implicitly for basic classes
             GSM.registerAdapter(ComponentPathReporter, (ComponentBase,), IPathReporter)
 
@@ -94,10 +94,10 @@ class TestPathReporters(ZPLTestBase):
             if cls_name in ['SubClass3', 'SubClass4']:
                 # test that the product mixin class reports paths correctly
                 if cls_name == 'SubClass4':
-                    self.assertTrue(product_path in paths,
-                                    'Path reporter testing failed for {} ({})'.format(
-                                                            ob.__class__.__name__,
-                                                            paths))
+                    self.assertTrue(service_path in paths,
+                                'Path reporter testing failed for {} ({})'.format(
+                                                        ob.__class__.__name__,
+                                                        paths))
                 # test that the ZPL paths also get reported correctly
                 self.assertTrue(target_path in paths,
                                 'Path reporter testing failed for {} ({})'.format(
