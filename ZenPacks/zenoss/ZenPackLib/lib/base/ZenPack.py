@@ -300,9 +300,14 @@ class ZenPack(ZenPackBase):
 
         # get YAML representation of prototype
         proto_id = '{}-new'.format(spec.name)
-        proto_object = spec.create(app.zport.dmd, False, proto_id)
-        proto_object_param = specparam.fromObject(proto_object)
-        proto_object_yaml = yaml.dump(proto_object_param, Dumper=Dumper)
+        try:
+            proto_object = spec.create(app.zport.dmd, False, proto_id)
+            proto_object_param = specparam.fromObject(proto_object)
+            proto_object_yaml = yaml.dump(proto_object_param, Dumper=Dumper)
+        except ValueError as err:
+            self.LOG.error( "Unable to create prototype object: %s", err.message)
+            return None
+
         spec.remove(app.zport.dmd, proto_id)
 
         return self.get_yaml_diff(object_yaml, proto_object_yaml)
