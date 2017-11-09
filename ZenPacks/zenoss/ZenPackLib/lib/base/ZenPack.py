@@ -208,8 +208,8 @@ class ZenPack(ZenPackBase):
                  "the newer version included with the {} ZenPack.  "
                  "The existing object will be "
                  "backed up to '{}'.  Please review and reconcile any "
-                 "local changes before deleting the backup".format(
-                    parent.getDmdKey(), spec.name, self.id, preupgrade_id))
+                 "local changes before deleting the backup: \n{}".format(
+                    parent.getDmdKey(), spec.name, self.id, preupgrade_id, diff))
         return True
 
     def get_object(self, parent, relname, object_id):
