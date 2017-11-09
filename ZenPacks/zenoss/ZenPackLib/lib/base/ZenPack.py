@@ -70,12 +70,10 @@ class ZenPack(ZenPackBase):
 
         # load monitoring templates
         for dcname, dcspec in self.device_classes.iteritems():
-            dcspecparam = self._v_specparams.device_classes.get(dcname)
             deviceclass = dcspec.get_organizer(app.zport.dmd)
 
             for mtname, mtspec in dcspec.templates.iteritems():
-                mtspecparam = dcspecparam.templates.get(mtname)
-                self.update_object(app, deviceclass, 'rrdTemplates', mtname, mtspec, mtspecparam)
+                mtspec.create(app.zport.dmd)
 
         # Load event classes
         for ecname, ecspec in self.event_classes.iteritems():
@@ -93,12 +91,9 @@ class ZenPack(ZenPackBase):
         if leaveObjects:
             # Check whether the ZPL-managed monitoring templates have
             # been modified by the user.  If so, those changes will
-            # be lost during the upgrade.
-            #
-            # Ideally, I would inspect self.packables() to find these
-            # objects, but we do not have access to that relationship
-            # at this point in the process.
-            for dcname, dcspec in self._v_specparams.device_classes.iteritems():
+            # be backed up now.
+            for dcname, dcspec in self.device_classes.iteritems():
+                dcspecparam = self._v_specparams.device_classes.get(dcname)
                 deviceclass = dcspec.get_organizer(app.zport.dmd)
                 if not deviceclass:
                     self.LOG.warning(
@@ -109,15 +104,16 @@ class ZenPack(ZenPackBase):
                     continue
 
                 for orig_mtname, orig_mtspec in dcspec.templates.iteritems():
-                    # attempt to find an existing template
+                    orig_mtspecparam = dcspecparam.templates.get(orig_mtname)
+                    # attempt to find an existing template in zope
                     template = self.get_object(deviceclass, 'rrdTemplates', orig_mtname)
-                    # back it up if it exists
                     if template:
-                        self.get_or_create_backup(deviceclass, 'rrdTemplates', orig_mtname)
+                        self.backup_user_changes(app, deviceclass, 'rrdTemplates',
+                                                 orig_mtname, orig_mtspec, orig_mtspecparam)
                     else:
                         self.LOG.warning(
-                            "Monitoring template {}/{} has been removed at some point "
-                            "after the {} ZenPack was installed.  It will be "
+                            "Monitoring template {}/{} has been removed after installation "
+                            "of the {} ZenPack.  It will be "
                             "reinstated if this ZenPack is upgraded or reinstalled".format(
                             dcname, orig_mtname, self.id))
 
@@ -168,49 +164,39 @@ class ZenPack(ZenPackBase):
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
-    def update_object(self, app, parent, relname, object_id, spec, specparam):
-        """Compare object to be installed to existing objects, optionally creating the new object"""
-        # this backup should exist if previous installed version of this zenpack uses ZPL 2.0
-        backup_target = self.get_object(parent, relname, "{}-backup".format(object_id))
-        # otherwise this is the existing object pre-zpl 2.0
-        existing_target = self.get_object(parent, relname, object_id)
-        # we'll use whichever we get
-        candidate_target = backup_target or existing_target
-
-        if not candidate_target:
-            # if no candidate target is found, then this is new to this zenpack
-            spec.create(app.zport.dmd)
-        else:
-            # check the difference between our candidate and the new spec
-            # and back up the candidate if there is a difference
-            diff = self.check_diff(app, parent, relname, candidate_target, spec, specparam)
-            # if there was a difference, keep the backup and create the new template
-            if diff:
-                spec.create(app.zport.dmd)
-            else:
-                # otherwise just return the backup template to its original location
-                if backup_target:
-                    self.move_object(parent, relname, backup_target.id, object_id)
-                # or in the case of the existing object, leave it alone
-                else:
-                    pass
-
-    def check_diff(self, app, parent, relname, object, spec, specparam):
-        """Return True if object has changed creating preupgrade backup if needed"""
+    def backup_user_changes(self, app, parent, relname, object_id, spec, specparam):
+        """
+        Compare existing object to the reference spec generated object.  Report and 
+        create a backup if they differ.
+        """
+        # check the difference between our candidate and the new spec
+        # and back up the candidate if there is a difference
+        object = self.get_object(parent, relname, object_id)
         diff = self.object_changed(app, object, spec, specparam)
-        if not diff:
-            return False
-        # preserve the existing object if different
-        time_str = time.strftime("%Y%m%d%H%M", time.localtime())
-        preupgrade_id = "{}-preupgrade-{}".format(object.id, time_str)
-        self.move_object(parent, relname, object.id, preupgrade_id)
-        LOG.info("Existing object {}/{} differs from "
-                 "the newer version included with the {} ZenPack.  "
-                 "The existing object will be "
-                 "backed up to '{}'.  Please review and reconcile any "
-                 "local changes before deleting the backup: \n{}".format(
-                    parent.getDmdKey(), spec.name, self.id, preupgrade_id, diff))
-        return True
+        # if they differ, create a backup
+        if diff:
+            backup = self.get_or_create_backup(parent, relname, object_id)
+            LOG.info("Existing object {}/{} differs from "
+                     "the version provided by the {} ZenPack.  "
+                     "The existing object will be "
+                     "backed up to '{}'.  Please review and reconcile any "
+                     "local changes before deleting the backup: \n{}".format(
+                     parent.getDmdKey(), spec.name, self.id, backup.id, diff))
+
+    def get_or_create_backup(self, parent, relname, object_id):
+        """
+        Create and return a backup of object given a parent zope object,    
+        a relation name, and a target object id
+        """
+        backup_id = "{}-backup".format(object_id)
+        backup_target = self.get_object(parent, relname, backup_id)
+        # return or delete the template if it already exists
+        # which could occur if zenpack installation fails and is re-attempted
+        if backup_target:
+            backup_target.getPrimaryParent()._delObject(backup_target.id)
+        # move the object to its backup
+        self.rename_object(parent, relname, object_id, backup_id)
+        return self.get_object(parent, relname, backup_id)
 
     def get_object(self, parent, relname, object_id):
         """Attempt to retrieve an object given its id, parent instance, and relation name"""
@@ -221,18 +207,6 @@ class ZenPack(ZenPackBase):
             except AttributeError:
                 pass
         return None
-
-    def get_or_create_backup(self, parent, relname, object_id):
-        """Create and return a backup of object"""
-        backup_id = "{}-backup".format(object_id)
-        backup_target = self.get_object(parent, relname, backup_id)
-        # return or delete the template if it already exists
-        # which could occur if zenpack installation fails and is re-attempted
-        if backup_target:
-            backup_target.getPrimaryParent()._delObject(backup_target.id)
-        # move the object to its backup
-        self.rename_object(parent, relname, object_id, backup_id)
-        return self.get_object(parent, relname, backup_id)
 
     def rename_object(self, parent, relname, source_id, dest_id):
         """execute manage_renameObject and log exceptions"""
@@ -297,25 +271,13 @@ class ZenPack(ZenPackBase):
         """Compare new and old objects with prototype creation"""
         # get YAML representation of object
         object_yaml = yaml.dump(specparam.fromObject(object), Dumper=Dumper)
-
         # get YAML representation of prototype
         proto_id = '{}-new'.format(spec.name)
         proto_object = spec.create(app.zport.dmd, False, proto_id)
         proto_object_param = specparam.fromObject(proto_object)
         proto_object_yaml = yaml.dump(proto_object_param, Dumper=Dumper)
         spec.remove(app.zport.dmd, proto_id)
-
         return self.get_yaml_diff(object_yaml, proto_object_yaml)
-
-    def object_changed_safe(self, object, specparam):
-        """Compare new and old objects without prototype creation 
-        or risk to existing Zope objects
-        """
-        # get YAML representation of object
-        object_yaml = yaml.dump(specparam.fromObject(object), Dumper=Dumper)
-        # get YAML representation from SpecPararm
-        proto_yaml = yaml.dump(specparam, Dumper=Dumper)
-        return self.get_yaml_diff(object_yaml, proto_yaml)
 
     @classmethod
     def get_yaml_diff(cls, yaml_existing, yaml_new):
