@@ -6,7 +6,7 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
+from ..base.types import multiline
 from .Spec import Spec
 
 
@@ -37,13 +37,13 @@ class EventClassMappingSpec(Spec):
           :param regex: a regular expression to match an event
           :type regex: str
           :param transform: a python expression for transformation
-          :type transform: str
+          :type transform: multiline
           :param example: debugging string to use in the regular expression ui testing.
-          :type example: str
+          :type example: multiline
           :param explanation: Enter a textual description for matches for this event class mapping. Use in conjunction with the Resolution field.
-          :type explanation: str
+          :type explanation: multiline
           :param resolution: Use the Resolution field to enter resolution instructions for clearing the event.
-          :type resolution: str
+          :type resolution: multiline
           :param remove: Remove the Mapping when the ZenPack is removed
           :type remove: bool
         """
@@ -53,12 +53,12 @@ class EventClassMappingSpec(Spec):
         self.name = name
         self.eventClassKey = eventClassKey or name
         self.sequence = sequence
-        self.transform = transform
+        self.transform = multiline(transform)
         self.rule = rule
         self.regex = regex
-        self.example = example
-        self.explanation = explanation
-        self.resolution = resolution
+        self.example = multiline(example)
+        self.explanation = multiline(explanation)
+        self.resolution = multiline(resolution)
         self.remove = remove
         if zplog:
             self.LOG = zplog
