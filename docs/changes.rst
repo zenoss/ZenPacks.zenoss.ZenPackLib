@@ -33,6 +33,7 @@ Fixes
 * Fix potential POSKeyError when modeling devices. (ZPS-2371)
 * Improved support for multi-line text in YAML (ZPS-444)
 * Improved component path reporters for mixin platform proxy classes (ZPS-1262)
+* Fix zenpacklib.TestCase when Impact >= 5.2.2 is installed (ZPS-2011)
 
 Release 2.0.7
 -------------
