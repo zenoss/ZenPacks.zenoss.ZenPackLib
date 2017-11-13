@@ -36,6 +36,7 @@ class ZPLTestBase(BaseTestCase):
     log = logging.getLogger("ZenPackLib.test")
     yaml_doc = '''name: ZenPacks.zenoss.ZenPackLib'''
     disableLogging = True
+    z = None
 
     def afterSetUp(self):
         super(ZPLTestBase, self).afterSetUp()
@@ -43,6 +44,7 @@ class ZPLTestBase(BaseTestCase):
 
     def load_yaml(self, yaml_doc):
         """"""
+        self.z = None
         # for a list of docs, iterate through
         if isinstance(yaml_doc, list):
             counter = 0
@@ -126,46 +128,33 @@ class ZPLTestCommand(ZPLTestBase):
         return (p, out, err)
 
 
-class ZPLTestMockZenPack(BaseTestCase):
+class ZPLTestMockZenPack(ZPLTestBase):
     """BaseTestCase class with ZPLTestHarness support"""
     log = logging.getLogger("ZenPackLib.test")
     yaml_doc = '''name: ZenPacks.zenoss.ZenPackLib'''
     zenpack_name = 'ZenPacks.zenoss.MockZenPack'
     disableLogging = True
-    datsources = []
-    thresholds = []
 
-    def afterSetUp(self):
+    def afterSetUp(self, datasources=None, thresholds=None):
         super(ZPLTestMockZenPack, self).afterSetUp()
-
-        self.zenpack = MockZenPack(self.dmd, self.zenpack_name, datasources=self.datasources, thresholds=self.thresholds)
-        # for a list of docs, iterate through
-        if isinstance(self.yaml_doc, list):
-            counter = 0
-            for y_d in self.yaml_doc:
-                if counter == 0:
-                    try:
-                        self.z = ZPLTestHarness(y_d)
-                    except Exception:
-                        self.fail(traceback.format_exc(limit=0))
-                else:
-                    try:
-                        setattr(self, 'z_{}'.format(counter), ZPLTestHarness(y_d))
-                    except Exception:
-                        self.fail(traceback.format_exc(limit=0))
-                counter += 1
-        else:
-            try:
-                self.z = ZPLTestHarness(self.yaml_doc)
-            except Exception:
-                self.fail(traceback.format_exc(limit=0))
+        if self.z:
+            self.zenpack_name = self.z.zp.__name__
+        if datasources is None:
+            datasources = []
+        if thresholds is None:
+            thresholds = []
+        self.zenpack = MockZenPack(self.dmd, self.zenpack_name, datasources=datasources, thresholds=thresholds)
 
 
 class MockZenPack(object):
     ''''''
-    def __init__(self, dmd, name, datasources=[], thresholds=[]):
+    def __init__(self, dmd, name, datasources=None, thresholds=None):
         self.dmd = dmd
         self.name = name
+        if datasources is None:
+            datasources = []
+        if thresholds is None:
+            thresholds = []
         self.datasources = datasources
         self.thresholds = thresholds
         self.install_zenpack()

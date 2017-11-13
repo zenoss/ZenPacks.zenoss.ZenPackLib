@@ -22,6 +22,7 @@ from Products.Zuul.interfaces import IInfo
 from Products.Zuul.catalog.interfaces import IPathReporter
 
 from ..wrapper.ComponentFormBuilder import ComponentFormBuilder
+from ..wrapper.ComponentPathReporter import ComponentPathReporter
 from ..utils import impact_installed, dynamicview_installed, has_metricfacade, FACET_BLACKLIST
 
 from ..gsm import get_gsm
@@ -1026,8 +1027,9 @@ class ClassSpec(Spec):
 
     def register_path_adapters(self):
         """Register additional path adapters if needed"""
-        reporter = self.get_path_reporter()
-        if reporter:
+        mixin = self.get_path_reporter()
+        if mixin and not self.is_device:
+            reporter = type('{}PathReporter'.format(self.name), (ComponentPathReporter, mixin,), {})
             GSM.registerAdapter(reporter, (self.model_class,), IPathReporter)
 
     @property
@@ -1122,13 +1124,7 @@ class ClassSpec(Spec):
 
     def get_datapoints_to_fetch(self):
         """return list of datapoint names for templates associated with this class"""
-        dsnames = []
-        for dc_spec in self.zenpack.device_classes.values():
-            for t_name, t_spec in dc_spec.templates.items():
-                if t_name in self.monitoring_templates:
-                    dsnames += t_spec.datapoints_to_fetch
-        dsnames = list(set(dsnames))
-        return dsnames
+        return [spec.datapoint for spec in self.properties.values() if spec.datapoint and spec.grid_display]
 
     @property
     def containing_js_fields(self):

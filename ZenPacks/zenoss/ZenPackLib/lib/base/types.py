@@ -143,3 +143,5 @@ class Severity(int):
         self.orig = value
         self.text = self.to_text.get(self)
 
+class multiline(str):
+    """Subclass representing multi-line text"""

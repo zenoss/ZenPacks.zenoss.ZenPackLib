@@ -58,13 +58,6 @@ def _add(ob, obj):
 class ZPLTestHarness(ZenScriptBase):
     '''Class containing methods to build out dummy objects representing YAML class instances'''
 
-    templates = None
-    cfg = None
-    yaml = None
-    schema = None
-    exported_yaml = None
-    reloaded_yaml = None
-
     def __init__(self, entry, verbose=False, level=20, specparams=False):
         """Create test harness using entry.
 
@@ -75,6 +68,13 @@ class ZPLTestHarness(ZenScriptBase):
         * Already-built ZenPackSpec (CFG) object.
 
         """
+        self.templates = None
+        self.cfg = None
+        self.yaml = None
+        self.schema = None
+        self.exported_yaml = None
+        self.reloaded_yaml = None
+
         if isinstance(entry, ZenPackSpec):
             self.cfg = entry
         else:

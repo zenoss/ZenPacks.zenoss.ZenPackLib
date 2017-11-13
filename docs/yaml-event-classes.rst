@@ -8,6 +8,13 @@ Event Classes are used to group together specific types of events.  This can be 
 
 To define a class, supply the path to the class or classes.  Then, for each event class, supply the appropriate properties for the class.  These include the option to remove the event class during ZenPack installation/uninstallation, description, and a transform.  You can also define mappings to apply to events based on a key and supply an explanation and/or resolution to an issue.
 
+
+.. note::
+
+     When you define an event class and/or mapping which already exists, any settings defined in your ZenPack 
+     will overwrite existing settings.
+
+
 The following example shows an example of a `zenpack.yaml` file with an example of a definition of an event class.
 
 .. code-block:: yaml
@@ -23,12 +30,22 @@ The following example shows an example of a `zenpack.yaml` file with an example 
             eventClassKey: WidgetEvent
             sequence:  10
             remove: true
-            transform: "if evt.message.find('Error reading value for') >= 0:\n\
-              \   evt._action = 'drop'"
+            transform: |-
+              if evt.message.find('Error reading value for') >= 0:
+                  evt._action = 'drop'
 
 .. note::
 
-  When you define an event class and/or mapping which already exists, any settings defined in your ZenPack will overwrite existing settings.
+     When assigning values to multi-line fields such as **transform** or **example**, the best way to preserve whitespace 
+     and readability is to use the 
+     
+     **transform: \|-**
+       **if evt.message.find('Error reading value for') >= 0:**
+           **evt._action = 'drop'**
+     
+     style convention demonstrated.  As this example demonstrates, the indented line following
+     the **"\|-"** style character becomes the first line of the transform, with subsequent whitespace preserved.
+
 
 .. _event-class-fields:
 
@@ -59,7 +76,7 @@ remove
 transform
   :Description: A python expression for transformation.
   :Required: No
-  :Type: string
+  :Type: string (multiline)
   :Default Value: None
 
 mappings
@@ -92,13 +109,13 @@ explanation
   :Description:
     Textual description for matches of this event class mapping. Use in conjunction with the Resolution field.
   :Required: No
-  :Type: string
+  :Type: string (multiline)
   :Default Value: None
 
 resolution
   :Description: Use the Resolution field to enter resolution instructions for clearing the event.
   :Required: No
-  :Type: string
+  :Type: string (multiline)
   :Default Value: None
 
 sequence
@@ -122,13 +139,13 @@ regex
 transform
   :Description: A python expression for transformation.
   :Required: No
-  :Type: string
+  :Type: string (multiline)
   :Default Value: None
 
 example
   :Description: Debugging string to use in the regular expression ui testing.
   :Required: No
-  :Type: string
+  :Type: string (multiline)
   :Default Value: None
 
 remove
