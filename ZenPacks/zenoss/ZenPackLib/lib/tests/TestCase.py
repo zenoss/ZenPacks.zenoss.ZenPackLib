@@ -78,8 +78,13 @@ class TestCase(BaseTestCase):
             pass
 
         try:
-            import ZenPacks.zenoss.Impact
+            import Products.Jobber
             zcml.load_config('meta.zcml', Products.Jobber)
+        except ImportError:
+            pass
+
+        try:
+            import ZenPacks.zenoss.Impact
             zcml.load_config('meta.zcml', ZenPacks.zenoss.Impact)
             zcml.load_config('configure.zcml', ZenPacks.zenoss.Impact)
         except ImportError:
