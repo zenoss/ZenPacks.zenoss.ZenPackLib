@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "2.0.7"
+__version__ = "2.0.8"
 
 # Must defer definition of TestCase. Otherwise it imports
 # BaseTestCase which puts Zope into testing mode.
@@ -127,6 +127,12 @@ def enableTesting():
             try:
                 import ZenPacks.zenoss.DynamicView
                 zcml.load_config('configure.zcml', ZenPacks.zenoss.DynamicView)
+            except ImportError:
+                pass
+
+            try:
+                import Products.Jobber
+                zcml.load_config('meta.zcml', Products.Jobber)
             except ImportError:
                 pass
 

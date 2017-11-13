@@ -21,7 +21,7 @@ NetBotz monitoring functionality we're going to build.
 .. code-block:: bash
 
     cd /z
-    zenpacklib create ZenPacks.training.NetBotz
+    zenpacklib --create ZenPacks.training.NetBotz
     zenpack --link --install ZenPacks.training.NetBotz
 
 We should also restart at least *Zope* after installing the ZenPack so that we
@@ -115,7 +115,7 @@ templates.
 
 
 Add a NetBotz Device
-------------------------------------------------------------------------------
+--------------------
 
 This would be a great time to add a NetBotz device to our new */NetBotz* device
 class. We haven't done anything in the way of customer monitoring. It can often
