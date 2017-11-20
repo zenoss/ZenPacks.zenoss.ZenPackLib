@@ -138,7 +138,10 @@ class RRDTemplateSpec(Spec):
 
         self.speclog.debug("adding {} thresholds".format(len(self.thresholds)))
         for threshold_id, threshold_spec in self.thresholds.items():
-            threshold_spec.create(self, template)
+            try:
+                threshold_spec.create(self, template)
+            except ValueError as err:
+                self.LOG.error("threshold creation error: %s", err.message)
 
         self.speclog.debug("adding {} datasources".format(len(self.datasources)))
         for datasource_id, datasource_spec in self.datasources.items():
