@@ -47,16 +47,11 @@ class EventClassSpec(OrganizerSpec):
         self.mappings = self.specs_from_param(
             EventClassMappingSpec, 'mappings', mappings, zplog=self.LOG)
 
-    def instantiate(self, dmd, addToZenPack=True):
+    def instantiate(self, dmd):
         ecObject = self.get_organizer(dmd)
         if not ecObject:
             ecObject = dmd.Events.createOrganizer(self.path)
             ecObject.zpl_managed = True
-
-        # Set to false to facilitate testing without ZP installation.
-        if addToZenPack:
-            # Add this EventClass to the zenpack.
-            ecObject.addToZenPack(pack=self.zenpack_spec.name)
 
         if self.description != '':
             if not ecObject.description == self.description:
