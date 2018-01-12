@@ -225,6 +225,11 @@ mappings already loaded into your Zenoss instance and associated with a ZenPack.
 will export them to the YAML format required for `zenpack.yaml`. It is up to you to merge
 that YAML with your existing `zenpack.yaml`. file.
 
+Only event classes sourced from the ZenPack's XML will be exported. Any
+event classes sourced from the ZenPack's YAML will not be exported. If the
+YAML for these event classes is desired, it should be copied from the
+ZenPack's existing YAML.
+
 Example usage:
 
 .. code-block:: bash
@@ -250,6 +255,11 @@ The *---dump-process-classes* switch is designed to export process class organiz
 classes already loaded into your Zenoss instance and associated with a ZenPack. It 
 will export them to the YAML format required for `zenpack.yaml`. It is up to you to merge
 that YAML with your existing `zenpack.yaml`. file.
+
+Only process class organizers sourced from the ZenPack's XML will be
+exported. Any process class organizers sourced from the ZenPack's YAML will
+not be exported. If the YAML for these process class organizers is desired,
+it should be copied from the ZenPack's existing YAML.
 
 Example usage:
 

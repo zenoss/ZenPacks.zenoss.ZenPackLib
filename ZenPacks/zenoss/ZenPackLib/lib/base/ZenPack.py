@@ -272,6 +272,14 @@ class ZenPack(ZenPackBase):
             except KeyError:
                 self.LOG.warning('Unable to find {} {}'.format(dmd_root.__class__.__name__, cspec.path))
                 continue
+
+            # Anything left in packables will be removed the platform.
+            try:
+                self.packables.removeRelation(organizer)
+            except Exception:
+                # The organizer wasn't in packables.
+                pass
+
             if cspec.remove and hasattr(organizer, 'zpl_managed') and organizer.zpl_managed:
                 # make sure the organizer is zpl_managed before we try and delete it
                 # also double-check that we do not remove anything important like /Status or Processes

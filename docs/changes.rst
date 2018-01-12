@@ -24,6 +24,14 @@ Backwards Incompatible Changes
 
 * zProperties will not be updated automatically on existing device classes.  These should be handled on a case basis by using migrate scripts.
 
+Release 2.0.9
+-------------
+
+Fixes
+
+* Fix incorrect removal of organizers such as /Status event class (ZPS-2660)
+
+
 Release 2.0.8
 -------------
 
@@ -35,6 +43,7 @@ Fixes
 * Improved component path reporters for mixin platform proxy classes (ZPS-1262)
 * Fix zenpacklib.TestCase when Impact >= 5.2.2 is installed (ZPS-2011)
 
+
 Release 2.0.7
 -------------
 
@@ -42,6 +51,7 @@ Fixes
 
 * Fix all the zenpacklib dump options. (ZPS-1601)
 * Implement template replacement and addition on device level. (ZPS-1704)
+
 
 Release 2.0.6
 -------------
@@ -54,6 +64,7 @@ Fixes
 * Fix GUI ZenPack export of objects.xml (ZPS-1589)
 * Fix datapoint alias shorthand export handling (ZPS-1589)
 
+
 Release 2.0.5
 -------------
 
@@ -63,6 +74,7 @@ Fixes
 * Template backups use YYYYMMDDHHMM format instead of unix timestamp.
 * Fix failure to back up customized templates during upgrade from pre-2.0 ZenPacks. (ZPS-1195)
 * Fix failure to back up customized templates during upgrade. (ZPS-1176)
+
 
 Release 2.0.4
 -------------
