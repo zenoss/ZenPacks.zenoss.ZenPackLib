@@ -43,16 +43,11 @@ class ProcessClassOrganizerSpec(OrganizerSpec):
         self.process_classes = self.specs_from_param(
             ProcessClassSpec, 'process_classes', process_classes, zplog=self.LOG)
 
-    def create(self, dmd, addToZenPack=True):
+    def create(self, dmd):
         porg = self.get_organizer(dmd)
         if not porg:
             porg = dmd.Processes.createOrganizer(self.path)
             porg.zpl_managed = True
-
-        # Set to false to facilitate testing without ZP installation.
-        if addToZenPack:
-             # Add this OSProcessOrganizer to the zenpack.
-            porg.addToZenPack(pack=self.zenpack_spec.name)
 
         if porg.description != self.description:
             porg.description = self.description
