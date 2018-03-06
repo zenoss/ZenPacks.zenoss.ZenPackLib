@@ -92,22 +92,40 @@ class ComponentBase(ModelBase):
 
     def device(self):
         """Return device under which this component/device is contained."""
+        print '-' * 80
+        # print self.__class__.__name__
         obj = self
 
         for i in xrange(200):
             if isinstance(obj, Device):
+                print 'returning {}: {}'.format(self.__class__.__name__, obj)
                 return obj
+#            try:
+            method = getattr(obj, 'get_parent_by_rel', None)
+            if method:
+                # print 'REL', obj.id
+                obj = method()
+            else:
+                # print 'PRIMARY', obj.id
+                try:
+                    obj = obj.getPrimaryParent()
+                except AttributeError:
+                    print "RETURNING NONE"
+                    return None
+#                try:
+#                    obj = obj.get_parent_by_primary()
+#                except AttributeError:
+#                    return None
 
-            try:
-                obj = obj.getPrimaryParent()
-            except AttributeError:
-                # While it is generally not normal to have devicecomponents
-                # that are not part of a device, it CAN occur in certain
-                # non-error situations, such as when it is in the process of
-                # being deleted.  In that case, the DeviceComponentProtobuf
-                # (Products.ZenMessaging.queuemessaging.adapters) implementation
-                # expects device() to return None, not to throw an exception.
-                return None
+    def get_parent_by_rel(self):
+        # print 'checking rels: {}'.format([x[0] for x in self._relations])
+        for name, schema in self._relations:
+            if name in ['os', 'hw']:
+                # print "FOUND", name
+                return self.getPrimaryParent()
+            if schema.remoteType.__name__ == 'ToManyCont':
+                return getattr(self, name)()
+
 
     def getStatus(self, statClass='/Status'):
         """Return the status number for this component.
