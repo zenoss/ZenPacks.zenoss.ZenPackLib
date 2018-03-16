@@ -361,18 +361,18 @@ class ZenPack(ZenPackBase):
 
             if dcspec.create:
                 self.create_device_class(app, dcspec)
-            else:
-                device_class = dcspec.get_organizer(app.zport.dmd)
-                if not device_class:
-                    self.LOG.warn(
-                        "Device Class (%s) not found",
-                        dcspec.path)
-                    continue
 
-                # Optionally set zProperties if reset is True
-                if dcspec.reset:
-                    self.LOG.info('Resetting zProperties on {}'.format(device_class.getDmdKey()))
-                    self.set_zproperties(app, device_class, dcspec)
+            device_class = dcspec.get_organizer(app.zport.dmd)
+            if not device_class:
+                self.LOG.warn(
+                    "Device Class (%s) not found",
+                    dcspec.path)
+                continue
+
+            # Optionally set zProperties if reset is True
+            if dcspec.reset:
+                self.LOG.info('Resetting zProperties on {}'.format(device_class.getDmdKey()))
+                self.set_zproperties(app, device_class, dcspec)
 
     def create_device_class(self, app, dcspec):
         """Create and return a DeviceClass. Set zProperties and devtypes.
