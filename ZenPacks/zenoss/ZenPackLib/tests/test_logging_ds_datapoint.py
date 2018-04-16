@@ -2,17 +2,17 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
 """
     Check DataPoint consistency (ZEN-19461)
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase, LogCapture
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
+
 
 # should be OK
 GOOD_YAML = """
@@ -89,9 +89,9 @@ device_classes:
 """
 
 
-class TestLoggingDatasourceDatapoint(ZPLTestBase):
+class TestLoggingDatasourceDatapoint(ZPLBaseTestCase):
+    """"""
     disableLogging = False
-    capture = LogCapture()
 
     def test_good_yaml(self):
         actual = self.capture.test_yaml(GOOD_YAML)
