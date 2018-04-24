@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -14,11 +14,11 @@
     zenpacklib.Device subclass wipes out other relations added to 
     Products.ZenModel.Device (ZEN-24108)
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.RelationOverrides
 
 class_relationships:
 - Products.ZenModel.Device.Device 1:MC RabbitMQAPI_Node
@@ -53,17 +53,18 @@ classes:
     label: API Queue
 """
 
-EXPECTED = ["{id: 'RabbitMQAPI_Node',\n                       dataIndex: 'rabbitMQAPI_Node',\n                       header: _t('Node'),\n                       width: 100,\n                       renderer: Zenoss.render.zenpacklib_ZenPacks_zenoss_ZenPackLib_entityLinkFromGrid,\n                       sortable: true}"]
+EXPECTED = ["{id: 'RabbitMQAPI_Node',\n                       dataIndex: 'rabbitMQAPI_Node',\n                       header: _t('Node'),\n                       width: 100,\n                       renderer: Zenoss.render.zenpacklib_ZenPacks_zenoss_RelationOverrides_entityLinkFromGrid,\n                       sortable: true}"]
 
 
-class TestInheritedRelationOverrides(ZPLTestBase):
+class TestInheritedRelationOverrides(ZPLBaseTestCase):
     """Test fix for ZEN-21966
        ZenPackLib ignores label/short_label on relationship overrides for 1 to 1 contained relationships
     """
     yaml_doc = YAML_DOC
 
     def test_inherited_relation_overrides(self):
-        cls = self.z.cfg.classes.get('RabbitMQAPI_VHost')
+        cfg = self.configs.get('ZenPacks.zenoss.RelationOverrides').get('cfg')
+        cls = cfg.classes.get('RabbitMQAPI_VHost')
         actual = cls.containing_js_columns
         self.assertEquals(EXPECTED, actual, 'containing_js_columns expected:\n{}\ngot:\n{}\n'.format(EXPECTED, actual))
 

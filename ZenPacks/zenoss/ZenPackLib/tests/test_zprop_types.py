@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -11,25 +11,11 @@
 """
     Ensure that zproperty types are respected
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
-
-def get_zproperty_type(z_type):
-    """
-        For zproperties, the actual data type of a default value
-        depends on the defined type of the zProperty.
-    """
-    map = {'boolean': 'bool',
-           'int': 'int',
-           'float': 'float',
-           'string': 'str',
-           'password': 'str',
-           'lines': 'list(str)'
-    }
-    return map.get(z_type, 'str')
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.ZPropertyTest
 zProperties:
 
   zStringProperty:
@@ -52,15 +38,16 @@ zProperties:
 """
 
 
-class TestZenProperties(ZPLTestBase):
+class TestZenProperties(ZPLBaseTestCase):
     """
     Ensure that zproperty types are respected
     """
-
     yaml_doc = YAML_DOC
 
     def test_zProperties(self):
-        zprops = self.z.cfg.zProperties
+        config = self.configs.get('ZenPacks.zenoss.ZPropertyTest')
+        cfg = config.get('cfg')
+        zprops = cfg.zProperties
         self.is_valid(zprops.get('zStringProperty'), str, '')
         self.is_valid(zprops.get('zPasswordProperty'), str, '')
         self.is_valid(zprops.get('zBooleanProperty'), bool, False)

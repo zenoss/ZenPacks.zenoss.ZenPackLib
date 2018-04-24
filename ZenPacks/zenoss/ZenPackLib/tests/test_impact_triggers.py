@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2010, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -27,8 +27,8 @@ if IMPACT_INSTALLED:
     from ZenPacks.zenoss.Impact.protocols.states_pb2 import State
     from ZenPacks.zenoss.Impact.DynamicServiceOrganizer import manage_addRootDynamicServicesOrganizer
 
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestMockZenPack
 from ZenPacks.zenoss.ZenPackLib.lib.base.BaseTriggers import BaseTriggers
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
 YAML_DOC = """
@@ -73,11 +73,10 @@ device_classes:
 """
 
 
-class TestImpactTriggers(ZPLTestMockZenPack):
+class TestImpactTriggers(ZPLBaseTestCase):
     """Test Impact Triggers"""
-
     yaml_doc = YAML_DOC
-    zenpack_name = 'ZenPacks.zenoss.MockZenPack'
+    build = True
 
     def afterSetUp(self):
         super(TestImpactTriggers, self).afterSetUp()
@@ -86,6 +85,9 @@ class TestImpactTriggers(ZPLTestMockZenPack):
         self.org = self.dynamicServicesRoot
         self.graphChangeList = GraphChangeList()
         self.factory = GraphChangeFactory(self.dmd, self.graphChangeList)
+        self.config = self.configs.get('ZenPacks.zenoss.MockZenPack')
+        self.cfg = self.config.get('cfg')
+        self.objects = self.config.get('class_objects')
 
     def get_guid(self, ob):
         """hackish way to do this"""
@@ -105,8 +107,8 @@ class TestImpactTriggers(ZPLTestMockZenPack):
 
     def testFillTriggerProtoBuf(self):
         triggerPb = TriggerPb()
-        spec = self.z.cfg.classes.get('BasicComponent')
-        ob = self.z.obs[1]
+        spec = self.cfg.classes.get('BasicComponent')
+        ob = self.objects[1]
         self.get_guid(ob)
         impact_fact = BaseTriggers(ob)
         for trigger in impact_fact.get_triggers():

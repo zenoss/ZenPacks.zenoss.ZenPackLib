@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -14,7 +14,7 @@
     zenpacklib.Device subclass wipes out other relations added to 
     Products.ZenModel.Device (ZEN-24108)
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
 YAML_DOC = """
@@ -64,7 +64,7 @@ classes:
 """
 
 
-class TestInheritedRelationProperties(ZPLTestBase):
+class TestInheritedRelationProperties(ZPLBaseTestCase):
     """Test fix for ZEN-23763
 
        specifying properties (display, label, etc) on an inherited relationship
@@ -72,9 +72,10 @@ class TestInheritedRelationProperties(ZPLTestBase):
     yaml_doc = YAML_DOC
 
     def test_inherited_relation_display(self):
-        comp = self.z.cfg.classes.get('OpenstackComponent')
-        org = self.z.cfg.classes.get('OrgComponent')
-        az = self.z.cfg.classes.get('AvailabilityZone')
+        cfg = self.configs.get('ZenPacks.zenoss.OpenStackInfrastructure').get('cfg')
+        comp = cfg.classes.get('OpenstackComponent')
+        org = cfg.classes.get('OrgComponent')
+        az = cfg.classes.get('AvailabilityZone')
 
         self.property_value(comp, 'endpoint', 'grid_display', True)
         self.property_value(comp, 'endpoint', 'label', 'Endpoint')
