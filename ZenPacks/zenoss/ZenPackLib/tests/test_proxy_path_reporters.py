@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -11,14 +11,11 @@
 """
     Ensure that path reporters work correctly for ZPL proxy classes
 """
-
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
-from Products.DataCollector.plugins.DataMaps import MultiArgs
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 from ZenPacks.zenoss.ZenPackLib.lib.base.ComponentBase import ComponentBase
 
-
 YAML_DOC = '''
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.TestPathReporters
 classes:
   MyDev:
     base: [zenpacklib.Device]
@@ -46,17 +43,21 @@ class_relationships:
 '''
 
 
-class TestPathReporters(ZPLTestBase):
+class TestPathReporters(ZPLBaseTestCase):
     """
     Ensure that path reporters work correctly for ZPL proxy classes
     """
 
     yaml_doc = YAML_DOC
+    build = True
 
     def afterSetUp(self):
         super(TestPathReporters, self).afterSetUp()
         self.location = self.dmd.Locations.createOrganizer('SomePlace')
         self.service = self.dmd.Services.createServiceClass('test')
+        self.config = self.configs.get('ZenPacks.zenoss.TestPathReporters')
+        self.cfg = self.config.get('cfg')
+        self.objects = self.config.get('objects').class_objects
 
     def test_path_reporters(self):
         """Test that path reporters return paths from 
@@ -70,8 +71,9 @@ class TestPathReporters(ZPLTestBase):
         service_path = ('', 'zport', 'dmd', 'Services', 'serviceclasses', 'test', 'instances', 'subclass4-0')
         location_path = ('', 'zport', 'dmd', 'Locations', 'SomePlace', 'devices', 'mydev-0')
 
-        for ob in self.z.obs:
-            cls_name = ob.__class__.__name__
+        for cls_name, cls_data in self.objects.iteritems():
+            ob = cls_data.get('ob')
+
             if cls_name not in ['MyDev', 'SubClass3', 'SubClass4']:
                 continue
 
@@ -81,7 +83,7 @@ class TestPathReporters(ZPLTestBase):
             if cls_name == 'SubClass4':
                 ob.serviceclass._add(self.service)
 
-            spec = self.z.cfg.classes.get(cls_name)
+            spec = self.cfg.classes.get(cls_name)
             # registering ourself but ZPL would normally do this implicitly for basic classes
             GSM.registerAdapter(ComponentPathReporter, (ComponentBase,), IPathReporter)
 
@@ -110,12 +112,14 @@ class TestPathReporters(ZPLTestBase):
                                                             ob.__class__.__name__,
                                                             paths))
 
+
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
     suite.addTest(makeSuite(TestPathReporters))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner

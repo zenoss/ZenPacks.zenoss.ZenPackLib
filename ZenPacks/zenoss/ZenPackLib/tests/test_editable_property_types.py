@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -13,11 +13,10 @@
     This is designed to test whether or not ZenPack lib 
     sets editable class properties as strings regardless of type (ZEN-22057)
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
-
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.EditableProperties
 classes:
   SomeComponent:
     base: [zenpacklib.Component]
@@ -41,13 +40,16 @@ classes:
 """
 
 
-class TestEditableProperties(ZPLTestBase):
+class TestEditableProperties(ZPLBaseTestCase):
     """Test fix for ZEN-22057
     """
     yaml_doc = YAML_DOC
+    build = True
 
     def test_editable_properties(self):
-        ob = self.z.build_ob('SomeComponent')
+        config = self.configs.get('ZenPacks.zenoss.EditableProperties')
+        objects = config.get('objects').class_objects
+        ob = objects.get('SomeComponent').get('ob')
         for x in ['1', True, 1.0, 1]:
             # check integer
             ob.property_int = x
@@ -72,12 +74,14 @@ class TestEditableProperties(ZPLTestBase):
                                                                        actual,
                                                                        type(actual).__name__))
 
+
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
     suite.addTest(makeSuite(TestEditableProperties))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner

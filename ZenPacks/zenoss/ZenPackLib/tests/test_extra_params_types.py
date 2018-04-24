@@ -2,17 +2,19 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
 """
     Ensure proper type handling for extra_params attribute overloading (ZEN-24079, ZEN-25315, ZEN-24083
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestMockZenPack
+from ZenPacks.zenoss.ZenPackLib.tests import (
+    ZPLLayeredTestCase, 
+    get_layer_subclass
+)
 from Products.ZenModel.MinMaxThreshold import MinMaxThreshold
 from Products.ZenModel.RRDDataSource import RRDDataSource
 
@@ -82,19 +84,23 @@ device_classes:
 """
 
 
-class TestExtraParamsTypeHandling(ZPLTestMockZenPack):
-    """
-    """
-    yaml_doc = YAML_DOC
-    disableLogging = False
+class TestExtraParamsTypeHandling(ZPLLayeredTestCase):
+    """ Test that custom datasource/threshold class attributes are handled correctly"""
 
-    def afterSetUp(self):
-        super(TestExtraParamsTypeHandling, self).afterSetUp([CustomDatasource], [CustomThreshold])
-        self.template = self.z.cfg.device_classes.get('/Devices').templates.get('TESTTEMPLATE').create(self.dmd, False)
+    layer = get_layer_subclass('TemplateExtraParamsLayer', 
+        yaml_doc=YAML_DOC, tc_attributes={
+        'build': True,
+        'datasources': [CustomDatasource], 
+        'thresholds': [CustomThreshold]})
+
+    def _get_template(self):
+        return self.tc.get_device_class_templates(
+            'ZenPacks.zenoss.ZenPackLib', '/Devices').get('TESTTEMPLATE')
 
     def test_inherited_defaults(self):
         """Test that inherited extra_params properties function correctly (ZEN-24083)"""
-        for th in self.template.datasources():
+        template = self._get_template()
+        for th in template.datasources():
             if th.id != "inheritedReading":
                 continue
             self.assertEquals(th.description, 'Default Description', 'Datasource attribute '\
@@ -113,7 +119,8 @@ class TestExtraParamsTypeHandling(ZPLTestMockZenPack):
     def test_extra_params_datasources(self):
         """Test that datasource extra_params properties function correctly (ZEN-25315)"""
         # check properties on dummy template
-        for th in self.template.datasources():
+        template = self._get_template()
+        for th in template.datasources():
             self.assertTrue(isinstance(th.description, str),
                  '{} property ({}) should be str, got {}'.format(th.__class__.__name__,
                                                                  th.id,
@@ -133,7 +140,8 @@ class TestExtraParamsTypeHandling(ZPLTestMockZenPack):
 
     def test_extra_params_thresholds(self):
         """Test that threshold extra_params properties function correctly (ZEN-24079)"""
-        for th in self.template.thresholds():
+        template = self._get_template()
+        for th in template.thresholds():
             self.assertTrue(isinstance(th.description, str),
                  '{} property ({}) should be str, got {}'.format(th.__class__.__name__,
                                                                  th.id,

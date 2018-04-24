@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,10 +12,10 @@
 """
     Verify that "escalateCount" property works correctly (ZEN-22840)
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
-YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
+YAML_DOC = """name: ZenPacks.zenoss.EscalateCount
 device_classes:
   /Devices:
     templates:
@@ -40,18 +40,19 @@ device_classes:
 """
 
 
-class TestEscalateCount(ZPLTestBase):
+class TestEscalateCount(ZPLBaseTestCase):
     """Test for ZEN-22840
        Verify that "escalateCount" property works correctly
     """
 
     yaml_doc = YAML_DOC
+    build = True
 
     def test_escalate_count(self):
-        deviceclass = self.z.cfg.device_classes.get('/Devices')
-        template = deviceclass.templates.get('Device')
-        t = template.create(self.dmd, False)
-        th = t.thresholds.findObjectsById('CPU Utilization')[0]
+        templates = self.get_device_class_templates(
+            'ZenPacks.zenoss.EscalateCount', '/Devices')
+        template = templates.get('Device')
+        th = template.thresholds.findObjectsById('CPU Utilization')[0]
         self.assertEquals(th.escalateCount, 5,
                           'Escalate Count expected {} ({}), got {} ({})'.format(5, 'int',
                                                                                 th.escalateCount,

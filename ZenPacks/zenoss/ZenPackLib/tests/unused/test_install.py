@@ -15,11 +15,11 @@ This module tests ZenPack install, upgrade and remove.
 
 """
 import os
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 from Products.ZenUtils.Utils import binPath
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestCommand
 
 
-class TestInstall(ZPLTestCommand):
+class TestInstall(ZPLBaseTestCase):
     """Test installation, upgrade, and removal of Example ZenPack"""
     zenpack_name = 'ZenPacks.zenoss.ZPLTest1'
     zenpack_path = os.path.join(os.path.dirname(__file__),

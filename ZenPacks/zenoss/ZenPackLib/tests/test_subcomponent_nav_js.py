@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -15,10 +15,10 @@
         ZPL creating doubled number of subpanels for same-named relations
 
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
-YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
+YAML_DOC = """name: ZenPacks.zenoss.SubComponentNav
 class_relationships:
   - ComputeResource(resourcePools) 1:M (owner)ResourcePool
   - Endpoint 1:MC Datacenter
@@ -106,23 +106,28 @@ expected_va = "Zenoss.nav.appendTo('Component', [{\n    id: 'component_vvirtuala
 
 
 
-class TestSubComponentNavJS(ZPLTestBase):
+class TestSubComponentNavJS(ZPLBaseTestCase):
     """Test catalog creation for specs"""
 
     yaml_doc = YAML_DOC
-
+    build = True
+    def afterSetUp(self):
+        super(TestSubComponentNavJS, self).afterSetUp()
+        config = self.configs.get('ZenPacks.zenoss.SubComponentNav')
+        self.objects = config.get('objects').class_objects
+        
     def test_nav_js(self):
         ''''''
         self.get_test_result('ResourcePool', expected_rp)
         self.get_test_result('VirtualApp', expected_va)
 
-    def get_test_result(self, id, expected_js):
-        cls = self.z.cfg.classes.get(id)
+    def get_test_result(self, name, expected_js):
+        cls = self.objects.get(name).get('spec')
         actual_js = cls.subcomponent_nav_js_snippet
         self.assertEquals(actual_js,
                           expected_js,
                           'Unexpected subcomponent_nav_js_snippet for {}, got: {}'.format(id,
-                                                                  self.z.get_diff(expected_js, actual_js)))
+                                                                  self.get_diff(expected_js, actual_js)))
 
 
 def test_suite():
