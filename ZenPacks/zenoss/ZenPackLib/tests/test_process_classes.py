@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -14,8 +14,7 @@
     process_classes:
 
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
-
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 YAML_DOC = """name: ZenPacks.zenoss.Processes
 process_class_organizers:
@@ -42,22 +41,24 @@ process_class_organizers:
 """
 
 
-class TestProcessClass(ZPLTestBase):
+class TestProcessClass(ZPLBaseTestCase):
     """Test Process Classes
     """
     yaml_doc = YAML_DOC
 
     def test_process_classes(self):
-        self.assertEquals(len(self.z.yaml['process_class_organizers']), 1)
-        self.assertEquals(len(self.z.yaml['process_class_organizers']), len(self.z.cfg.process_class_organizers))
-        self.assertEquals(self.z.yaml['process_class_organizers'].keys()[0], self.z.cfg.process_class_organizers.keys()[0])
-        self.assertTrue('Test' in self.z.cfg.process_class_organizers.keys())
-        self.assertEquals(self.z.cfg.process_class_organizers['Test'].description, "Description of the Process Class Organizer")
+        config = self.configs.get('ZenPacks.zenoss.Processes')
+        exported = config.get('yaml_map')
+        organizers = config.get('cfg').process_class_organizers
+        self.assertEquals(len(exported['process_class_organizers']), 1)
+        self.assertEquals(len(exported['process_class_organizers']), len(organizers))
+        self.assertEquals(exported['process_class_organizers'].keys()[0], organizers.keys()[0])
+        self.assertTrue('Test' in organizers.keys())
+        self.assertEquals(organizers['Test'].description, "Description of the Process Class Organizer")
 
-        cfg_process_classes = self.z.cfg.process_class_organizers['Test'].process_classes
+        cfg_process_classes = organizers['Test'].process_classes
 
         self.assertIsNotNone(cfg_process_classes)
-
         self.assertEquals(len(cfg_process_classes), 2)
         self.assertEquals(cfg_process_classes['foo'].includeRegex, 'sbin\/foo')
         self.assertEquals(cfg_process_classes['foo'].excludeRegex, '\\b(vim|tail|grep|tar|cat|bash)\\b')

@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -10,7 +10,7 @@
 ##############################################################################
 
 """Test removal of undefined relations"""
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase, LogCapture
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
 YAML_DOC = """
@@ -52,9 +52,8 @@ EXPECTED = """[ERROR] Removing invalid display config for relationship auxCompon
 [ERROR] Removing invalid display config for relationship dependents from  ZenPacks.zenoss.TestLogging.AuxComponent
 """
 
-class TestLoggingRelationsRemoval(ZPLTestBase):
+class TestLoggingRelationsRemoval(ZPLBaseTestCase):
     disableLogging = False
-    capture = LogCapture()
 
     def test_undefined_relation_removal(self):
         actual = self.capture.test_yaml(YAML_DOC)

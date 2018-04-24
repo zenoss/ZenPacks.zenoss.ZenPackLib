@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,10 +12,10 @@
 """ 
     Test Threshold GraphPoint legend and coloring (ZEN-24904)
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.GraphPointLegends
 device_classes:
   /Devices:
     templates:
@@ -59,14 +59,16 @@ EXPECTED = {'A': {'color': '', 'legend': '${graphPoint/id}'},
             'c': {'color': 'AAAAAA', 'legend': '${graphPoint/id}'}}
 
 
-class TestThresholdGraphPointLegends(ZPLTestBase):
+class TestThresholdGraphPointLegends(ZPLBaseTestCase):
     """Test Threshold GraphPoint legend and coloring"""
 
     yaml_doc = YAML_DOC
 
     def test_threshold_graphpoint(self):
         ''''''
-        tspec = self.z.cfg.device_classes.get('/Devices').templates.get('TEST')
+        config = self.configs.get('ZenPacks.zenoss.GraphPointLegends')
+        cfg = config.get('cfg')
+        tspec = cfg.device_classes.get('/Devices').templates.get('TEST')
         # template based on original spec
         template = tspec.create(self.dmd, False)
         g = template.graphDefs()[0]

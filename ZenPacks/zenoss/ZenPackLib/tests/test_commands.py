@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -17,38 +17,23 @@ This module tests command line usage of zenpacklib.py.
 import os
 import re
 import shutil
-from ZenPacks.zenoss.ZenPackLib.tests.test_install import TestInstall
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestCommand
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
-class TestCommands(ZPLTestCommand):
+class TestCommands(ZPLBaseTestCase):
     """Test output of various zenpacklib commands"""
 
-    yaml_doc = '''name: ZenPacks.zenoss.ApacheMonitor'''
-
-    zenpack_path = TestInstall.zenpack_path
-    yaml_path = os.path.join(zenpack_path, 'ZenPacks/zenoss/ZPLTest1/zenpack.yaml')
-
-    def afterSetUp(self):
-        try:
-            super(TestCommands, self).afterSetUp()
-        except ImportError, e:
-            self.assertFalse(
-                e.message == 'No module named ZPLTest1',
-                "ZPLTest1 zenpack is not installed.  You must install it before running this test:\n   zenpack --link --install=%s" % self.zenpack_path
-            )
+    disableLogging = True
+    zenpack_path = os.path.join(os.path.dirname(__file__),
+        "data/zenpacks/ZenPacks.zenoss.ZPLTest1")
+    yaml_path = os.path.join(
+        zenpack_path, 'ZenPacks/zenoss/ZPLTest1/zenpack.yaml')
 
     def test_smoke_lint(self):
-        self._zenpacklib_cmd("--lint", self.yaml_path)
-
-    def test_smoke_dump_templates(self):
-        try:
-            self._zenpacklib_cmd("--dump-templates", self.z.cfg.name)
-        except:
-            self.log.warn('Skipping test_smoke_dump_templates since {} not installed.'.format(self.z.cfg.name))
+        self.get_zenpacklib_cmd("--lint", self.yaml_path)
 
     def test_smoke_class_diagram(self):
-        self._zenpacklib_cmd("--diagram", self.yaml_path)
+        self.get_zenpacklib_cmd("--diagram", self.yaml_path)
 
     def test_create(self):
         zenpack_name = "ZenPacks.test.ZPLTestCreate"
@@ -56,7 +41,7 @@ class TestCommands(ZPLTestCommand):
         # Cleanup from any failed previous tests.
         shutil.rmtree(zenpack_name, ignore_errors=True)
 
-        output = self._zenpacklib_cmd("--create", zenpack_name)
+        output = self.get_zenpacklib_cmd("--create", zenpack_name)
 
         # Test that output describes what's being created.
         expected_terms = (
@@ -96,7 +81,7 @@ class TestCommands(ZPLTestCommand):
         shutil.rmtree(zenpack_name, ignore_errors=True)
 
     def test_version(self):
-        output = self._zenpacklib_cmd("--version").strip()
+        output = self.get_zenpacklib_cmd("--version").strip()
         version_pattern = r'^\d+\.\d+\.\d+(dev)?$'
         match = re.match(version_pattern, output)
         self.assertTrue(
