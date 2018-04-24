@@ -2,20 +2,19 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
-
 """ Test Catalog Scope (ZEN-18269)
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.CatalogScope
 
 classes:
   DeviceIndexedComponent:
@@ -56,10 +55,16 @@ classes:
 """
 
 
-class TestCatalogScope(ZPLTestBase):
+class TestCatalogScope(ZPLBaseTestCase):
     """Test catalog creation for specs"""
 
     yaml_doc = YAML_DOC
+    build = True
+    
+    def afterSetUp(self):
+        super(TestCatalogScope, self).afterSetUp()
+        config = self.configs.get('ZenPacks.zenoss.CatalogScope')
+        self.class_objects = config.get('objects').class_objects
 
     def test_catalog_specs(self):
         ''''''
@@ -69,11 +74,10 @@ class TestCatalogScope(ZPLTestBase):
                 }
         for name, expected in data.items():
             actual = self.get_scope(name)
-
             self.assertEqual(actual, expected, 'Expected catalog scope {}, got {} for {}'.format(expected, actual, name))
 
     def get_scope(self, name):
-        ob = self.z.build_ob(name)
+        ob = self.class_objects.get(name).get('ob')
         return ob._device_catalogs.get(name, {}).keys() + ob._global_catalogs.get(name, {}).keys()
 
 
