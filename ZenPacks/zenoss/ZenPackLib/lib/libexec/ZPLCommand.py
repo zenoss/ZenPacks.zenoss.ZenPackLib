@@ -20,22 +20,17 @@ from Products.ZenUtils.Utils import unused
 from Acquisition import aq_base
 from Products.ZenUtils.ZenScriptBase import ZenScriptBase
 
-from ..params.ZenPackSpecParams import ZenPackSpecParams
-from ..params.RRDTemplateSpecParams import RRDTemplateSpecParams
-from ..params.EventClassSpecParams import EventClassSpecParams
-from ..params.EventClassMappingSpecParams import EventClassMappingSpecParams
-from ..params.ProcessClassOrganizerSpecParams import ProcessClassOrganizerSpecParams
 from ..resources.templates import SETUP_PY
 from ..helpers.ZenPackLibLog import ZenPackLibLog, DEFAULTLOG
 from ..helpers.loaders import WarningLoader, ZenPackSpecLoader
-from ..helpers.Dumper import Dumper
 from ..helpers.utils import optimize_yaml, load_yaml_single
+from ..helpers.YAMLExporter import YAMLExporter
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 unused(Globals)
 
 
 class ZPLCommand(ZenScriptBase):
-    '''ZPLCommand'''
+    """ZPLCommand"""
     LOG = DEFAULTLOG
     version = zenpacklib.__version__
 
@@ -44,7 +39,7 @@ class ZPLCommand(ZenScriptBase):
         ZenPackLibLog.enable_log_stderr(self.LOG)
 
     def buildOptions(self):
-        ''''''
+        """"""
         ZenScriptBase.buildOptions(self)
         # remove unneeded
         self.parser.remove_option('-C')
@@ -97,7 +92,7 @@ class ZPLCommand(ZenScriptBase):
         self.parser.add_option_group(group)
 
     def is_valid_file(self):
-        '''Determine if supplied file is valid'''
+        """Determine if supplied file is valid"""
         errorMessage = ''
         valid = False
         if not os.path.exists(self.options.filename):
@@ -118,7 +113,7 @@ class ZPLCommand(ZenScriptBase):
         return (valid, errorMessage)
 
     def is_valid_zenpack(self):
-        '''Determine if ZenPack is valid'''
+        """Determine if ZenPack is valid"""
         self.connect()
         self.app = self.dmd
         try:
@@ -207,7 +202,7 @@ class ZPLCommand(ZenScriptBase):
             self.dump_process_classes(self.options.zenpack)
 
     def optimize(self, filename):
-        '''return formatted YAML with DEFAULTS optimized'''
+        """return formatted YAML with DEFAULTS optimized"""
         try:
             new_yaml = optimize_yaml(filename)
             print new_yaml
@@ -216,7 +211,7 @@ class ZPLCommand(ZenScriptBase):
 
     @classmethod
     def lint(cls, filename):
-        '''parse YAML file and check syntax'''
+        """parse YAML file and check syntax"""
         handler = logging.StreamHandler(sys.stdout)
 
         DEFAULTLOG.addHandler(handler)
@@ -316,23 +311,8 @@ class ZPLCommand(ZenScriptBase):
         with open(yaml_fname, 'w') as yaml_f:
             yaml_f.write("name: {}\n".format(zenpack_name))
 
-    def dump_templates(self, zenpack_name):
-        ''''''
-        self.connect()
-
-        templates = self.zenpack_templatespecs(zenpack_name)
-        if templates:
-            zpsp = ZenPackSpecParams(
-                zenpack_name,
-                device_classes={x: {} for x in templates})
-
-            for dc_name in templates:
-                zpsp.device_classes[dc_name].templates = templates[dc_name]
-
-            print yaml.dump(zpsp, Dumper=Dumper)
-
     def class_diagram(self, diagram_type, filename):
-        ''''''
+        """"""
         with open(filename, 'r') as stream:
             CFG = yaml.load(stream, Loader=ZenPackSpecLoader)
 
@@ -374,7 +354,7 @@ class ZPLCommand(ZenScriptBase):
             DEFAULTLOG.error("Diagram type '{}' is not supported.".format(diagram_type))
 
     def list_paths(self):
-        ''''''
+        """"""
         self.connect()
         device = self.dmd.Devices.findDevice(self.options.device)
         if device is None:
@@ -426,116 +406,15 @@ class ZPLCommand(ZenScriptBase):
         for source_class in sorted(class_summary.keys()):
             print "{} is reachable from {}".format(source_class, ", ".join(sorted(class_summary[source_class])))
 
-    def zenpack_templatespecs(self, zenpack_name):
-        """Return dictionary of RRDTemplateSpecParams by device_class.
-
-        Example return value:
-
-            {
-                '/Server/Linux': {
-                    'Device': RRDTemplateSpecParams(...),
-                },
-                '/Server/SSH/Linux': {
-                    'Device': RRDTemplateSpecParams(...),
-                    'IpInterface': RRDTemplateSpecParams(...),
-                },
-            }
-
-        """
+    def get_zenpack(self, zenpack_name):
         self.connect()
-        zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
-        if zenpack is None:
-            DEFAULTLOG.error("ZenPack '{}' not found.".format(zenpack_name))
-            return
+        return self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
 
-        # Find explicitly associated templates, and templates implicitly
-        # associated through an explicitly associated device class.
-        from Products.ZenModel.DeviceClass import DeviceClass
-        from Products.ZenModel.RRDTemplate import RRDTemplate
-
-        templates = []
-        for packable in zenpack.packables():
-            if isinstance(packable, DeviceClass):
-                templates.extend(packable.getAllRRDTemplates())
-            elif isinstance(packable, RRDTemplate):
-                templates.append(packable)
-
-        # Only create specs for templates that have an associated device
-        # class. This prevents locally-overridden templates from being
-        # included.
-        specs = collections.defaultdict(dict)
-        for template in templates:
-            deviceClass = template.deviceClass()
-            if deviceClass:
-                dc_name = deviceClass.getOrganizerName()
-                spec = RRDTemplateSpecParams.fromObject(template)
-                specs[dc_name][template.id] = spec
-
-        return specs
+    def dump_templates(self, zenpack_name):
+        print YAMLExporter.dump_templates(self.get_zenpack(zenpack_name))
 
     def dump_event_classes(self, zenpack_name):
-        self.connect()
-        eventclasses = self.zenpack_eventclassspecs(zenpack_name)
-        if eventclasses:
-            zpsp = ZenPackSpecParams(zenpack_name,
-                                     event_classes={x: {} for x in eventclasses})
-            for ec_name in eventclasses:
-                zpsp.event_classes[ec_name] = eventclasses[ec_name]
-                zpsp.event_classes[ec_name].mappings = eventclasses[ec_name].mappings
-
-            print yaml.dump(zpsp, Dumper=Dumper)
-
-    def zenpack_eventclassspecs(self, zenpack_name):
-        zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
-        if zenpack is None:
-            self.LOG.error("ZenPack '%s' not found." % zenpack_name)
-            return
-
-        eventclasses = collections.defaultdict(dict)
-        for eventclass in [x for x in zenpack.packables() if x.meta_type == 'EventClass']:
-            ec_name = eventclass.getDmdKey()
-            eventclasses[ec_name] = EventClassSpecParams.fromObject(eventclass, remove=True)
-            for subclass in eventclass.getSubEventClasses():
-                # Remove = false because the removing the parent will remove the child # This is a performance optimization
-                eventclasses[ec_name] = EventClassSpecParams.fromObject(subclass, remove=False)
-
-        # get list of instances associated with event classes not already seen
-        instances = [x for x in zenpack.packables() if x.meta_type == 'EventClassInst' and x.eventClass().getDmdKey() not in eventclasses]
-        # list of unique event classes
-        inst_evs = list({x.eventClass() for x in instances})
-
-        for ev in inst_evs:
-            ec_name = ev.getDmdKey()
-            ev_spec = EventClassSpecParams.new(ec_name, remove=False)
-            ev_instances = [x for x in ev.instances() if x in zenpack.packables()]
-            ev_spec.mappings = { x.id: EventClassMappingSpecParams.fromObject(x, remove=True) for x in ev_instances }
-            eventclasses[ec_name] = ev_spec
-
-        return eventclasses
+        print YAMLExporter.dump_event_classes(self.get_zenpack(zenpack_name))
 
     def dump_process_classes(self, zenpack_name):
-        self.connect()
-        processclasses = self.zenpack_processclassspecs(zenpack_name)
-        if processclasses:
-            zpsp = ZenPackSpecParams(zenpack_name,
-                                     process_class_organizers={x: {} for x in processclasses})
-            for pc_name in processclasses:
-                zpsp.process_class_organizers[pc_name].process_classes = processclasses[pc_name].process_classes
-
-            print yaml.dump(zpsp, Dumper=Dumper)
-
-    def zenpack_processclassspecs(self, zenpack_name):
-        zenpack = self.dmd.ZenPackManager.packs._getOb(zenpack_name, None)
-        if zenpack is None:
-            self.LOG.error("ZenPack '%s' not found.", zenpack_name)
-            return
-
-        processclasses = collections.defaultdict(dict)
-        for processclassorg in [x for x in zenpack.packables() if x.meta_type == 'OSProcessOrganizer']:
-            pc_name = processclassorg.getDmdKey()
-            processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(processclassorg)
-            for subclass in processclassorg.getSubOrganizers():
-                pc_name = subclass.getDmdKey()
-                processclasses[pc_name] = ProcessClassOrganizerSpecParams.fromObject(subclass)
-
-        return processclasses
+        print YAMLExporter.dump_process_classes(self.get_zenpack(zenpack_name))

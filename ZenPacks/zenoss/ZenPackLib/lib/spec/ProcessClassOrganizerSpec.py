@@ -13,6 +13,7 @@ from .ProcessClassSpec import ProcessClassSpec
 
 class ProcessClassOrganizerSpec(OrganizerSpec):
     """Initialize a Process Set via Python at install time."""
+
     def __init__(
             self,
             zenpack_spec,
@@ -54,6 +55,7 @@ class ProcessClassOrganizerSpec(OrganizerSpec):
 
         for process_class_id, process_class_spec in self.process_classes.items():
             process_class_spec.create(dmd, porg)
+        return porg
 
     def get_root(self, dmd):
         """Return the root object for this organizer."""
