@@ -1,6 +1,75 @@
 from ..helpers.ZenPackLibLog import DEFAULTLOG as LOG
 import string
+from DateTime import DateTime
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont, ToOne
+
+
+class Property(object):
+    """Represent _properties entry"""
+    LOG = LOG
+    _property_map = {'string': {'default': '', 'class': str, 'type': 'str'},
+                     'password': {'default': '', 'class': str, 'type': 'str'},
+                     'boolean': {'default': False, 'class': bool, 'type': 'bool'},
+                     'int': {'default': None, 'class': int, 'type': 'int'},
+                     'float': {'default': None, 'class': float, 'type': 'float'},
+                     'long': {'default': None, 'class': long, 'type': 'long'},
+                     'date': {'default': DateTime('1970/01/01 00:00:00 UTC'), 'class': DateTime, 'type': 'date'},
+                     'lines': {'default': [], 'class': list, 'type': 'list(str)'},
+                     'text': {'default': None, 'class': str, 'type': 'str'},
+                    }
+
+    def __init__(self, name, type_='string', default=None):
+        self.name = name
+        self.type_ = type_
+        self.default = default
+
+    @property
+    def default(self):
+        return self._default
+
+    @default.setter
+    def default(self, value):
+        if value is not None:
+            try:
+                self._default = self.property_class(value)
+            except Exception as e:
+                # This can happen if the YAML file has an
+                # inappropriate value for the type,
+                # such as as string for an integer
+                if self.type_ != 'int':
+                    LOG.warn(
+                        'Error setting {} "{}" default: {} ({}): {}'.format(
+                        type(value).__name__, self.name, value, e))
+                self._default = self.default_value
+        else:
+            self._default = self.default_value
+
+    @property
+    def default_value(self):
+        """Default value for this Property"""
+        return self.get_default_value(self.type_)
+
+    @property
+    def property_class(self):
+        """Python class for this Property"""
+        return self.get_property_class(self.type_)
+
+    @property
+    def property_type(self):
+        """Text description of this Property"""
+        return self.get_property_type(self.type_)
+
+    @classmethod
+    def get_default_value(cls, type_):
+        return cls._property_map.get(type_, {}).get('default', None)
+
+    @classmethod
+    def get_property_type(cls, type_):
+        return cls._property_map.get(type_, {}).get('type', 'str')
+
+    @classmethod
+    def get_property_class(cls, type_):
+        return cls._property_map.get(type_, {}).get('class', str)
 
 
 class Relationship(str):
@@ -57,6 +126,7 @@ class Color(str):
         if not value:
             return value
         value = str(value)
+
         # truncate or pad with 0s
         def check_length(value):
             if len(value) > 6:
@@ -142,6 +212,7 @@ class Severity(int):
     def __init__(self, value):
         self.orig = value
         self.text = self.to_text.get(self)
+
 
 class multiline(str):
     """Subclass representing multi-line text"""

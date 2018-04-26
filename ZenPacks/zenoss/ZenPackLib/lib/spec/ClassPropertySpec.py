@@ -9,6 +9,7 @@
 from Products.Zuul.form import schema
 from Products.Zuul.utils import ZuulMessageFactory as _t
 from Products.Zuul.infos import ProxyProperty
+from ..base.types import Property
 from ..helpers.OrderAndValue import OrderAndValue
 from .Spec import Spec, MethodInfoProperty, EnumInfoProperty
 
@@ -103,9 +104,12 @@ class ClassPropertySpec(Spec):
         if zplog:
             self.LOG = zplog
         self.class_spec = class_spec
-        self.name = name
-        self.default = default
-        self.type_ = type_
+
+        self._property = Property(name, type_, default)
+        self.name = self._property.name
+        self.default = self._property.default
+        self.type_ = self._property.type_
+
         self.label = label or self.name
         self.short_label = short_label or self.label
         self.index_type = index_type
