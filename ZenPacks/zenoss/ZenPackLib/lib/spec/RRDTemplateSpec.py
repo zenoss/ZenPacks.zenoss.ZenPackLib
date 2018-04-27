@@ -6,10 +6,14 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
+from collections import OrderedDict
 from .Spec import Spec
 from .RRDThresholdSpec import RRDThresholdSpec
 from .RRDDatasourceSpec import RRDDatasourceSpec
 from .GraphDefinitionSpec import GraphDefinitionSpec
+from ..utils import capacity_installed
+
+CAPACITY_INSTALLED = capacity_installed()
 
 
 class RRDTemplateSpec(Spec):
@@ -51,6 +55,13 @@ class RRDTemplateSpec(Spec):
         self.name = name
         self.description = description
         self.targetPythonClass = targetPythonClass
+
+        # Capacity thresholds are special and should be installable before or after
+        # the particular ZenPack using them
+        if isinstance(thresholds, dict) and not CAPACITY_INSTALLED:
+            thresholds = OrderedDict(
+                [(k, v) for k, v in thresholds.items()
+                 if v.get('type_') != 'CapacityThreshold'])
 
         self.thresholds = self.specs_from_param(
             RRDThresholdSpec, 'thresholds', thresholds, zplog=self.LOG)
