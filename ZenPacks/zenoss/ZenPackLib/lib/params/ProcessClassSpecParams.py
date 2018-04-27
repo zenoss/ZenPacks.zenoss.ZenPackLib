@@ -49,7 +49,7 @@ class ProcessClassSpecParams(SpecParams, ProcessClassSpec):
         SpecParams.__init__(self)
         processclass = aq_base(processclass)
 
-        _properties = ['description', 'includeRegex', 'excludeRegex',
+        _properties = ['description', 'includeRegex', 'excludeRegex', 'replaceRegex',
                        'replacement', 'zMonitor', 'zAlertOnRestart',
                        'zFailSeverity', 'zModelerLock', 'zSendEventWhenBlockedFlag']
 

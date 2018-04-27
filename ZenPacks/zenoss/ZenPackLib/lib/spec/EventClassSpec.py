@@ -13,6 +13,7 @@ from .EventClassMappingSpec import EventClassMappingSpec
 
 class EventClassSpec(OrganizerSpec):
     """Initialize a EventClass via Python at install time."""
+
     def __init__(
             self,
             zenpack_spec,
@@ -70,6 +71,7 @@ class EventClassSpec(OrganizerSpec):
 
         for mapping_id, mapping_spec in self.mappings.items():
             mapping_spec.create(ecObject)
+        return ecObject
 
     def get_root(self, dmd):
         """Return the root object for this organizer."""
