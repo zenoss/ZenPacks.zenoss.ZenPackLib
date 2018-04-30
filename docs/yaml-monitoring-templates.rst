@@ -186,7 +186,7 @@ description
   :Description: Description of the templates purpose and function.
   :Required: No
   :Type: string
-  :Default Value: "" *(empty string)*
+  :Default Value: "" *(Inherited from Template description)*
 
 targetPythonClass
   :Description: Python module name (e.g. ZenPacks.acme.Widgeter.Widgeter) to which this template is intended to be bound.
