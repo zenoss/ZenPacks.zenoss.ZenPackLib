@@ -41,7 +41,8 @@ class TestZPropertyReset(ZPLBaseTestCase):
 
         # create the device class
         for dcname, dcspec in cfg.device_classes.items():
-            zenpack.create_device_class(self.app, dcspec)
+            dcspec.create_organizer(self.dmd)
+            # zenpack.create_device_class(self.app, dcspec)
             # verify that it was created
             dc = self.device_class_exists(dcspec.path)
             self.assertTrue(dc,
@@ -49,7 +50,7 @@ class TestZPropertyReset(ZPLBaseTestCase):
 
         for dcname, dcspec in cfg.device_classes.iteritems():
             if dcspec.reset:
-                zenpack.set_zproperties(self.app, dc, dcspec)
+                dcspec.set_zproperties(self.dmd)
             self.assertFalse(getattr(dc, 'zSnmpMonitorIgnore'),
                 'Device class {} zProperty was not set correctly'.format(dcspec.path))
 

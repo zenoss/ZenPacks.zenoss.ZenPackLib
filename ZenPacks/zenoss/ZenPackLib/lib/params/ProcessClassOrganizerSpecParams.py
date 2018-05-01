@@ -13,8 +13,9 @@ from ..spec.ProcessClassOrganizerSpec import ProcessClassOrganizerSpec
 
 
 class ProcessClassOrganizerSpecParams(OrganizerSpecParams, ProcessClassOrganizerSpec):
-    def __init__(self, zenpack_spec, path, description='', process_classes=None, remove=False, **kwargs):
-        OrganizerSpecParams.__init__(self, zenpack_spec, path, **kwargs)
+
+    def __init__(self, zenpack_spec, path, description='', zProperties=None, process_classes=None, remove=False, **kwargs):
+        OrganizerSpecParams.__init__(self, zenpack_spec, path, zProperties, **kwargs)
         self.description = description
         self.remove = remove
         self.process_classes = self.specs_from_param(

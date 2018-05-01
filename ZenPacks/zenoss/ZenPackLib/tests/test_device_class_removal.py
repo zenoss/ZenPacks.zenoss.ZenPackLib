@@ -14,7 +14,6 @@
 """
 from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
-
 YAML_DOC = """
 name: ZenPacks.zenoss.DeviceClasses
 
@@ -37,18 +36,17 @@ class TestDeviceClassRemoval(ZPLBaseTestCase):
     def test_device_class(self):
         config = self.configs.get('ZenPacks.zenoss.DeviceClasses')
         cfg = config.get('cfg')
-        zenpack = cfg._zenpack_class(self.app)
 
         # create the device class
         for dcname, dcspec in cfg.device_classes.items():
-            zenpack.create_device_class(self.app, dcspec)
+            dcspec.create_organizer(self.dmd)
             # verify that it was created
             self.assertTrue(self.device_class_exists(dcspec.path),
                             'Device class {} was not created'.format(dcspec.path))
 
         for dcname, dcspec in cfg.device_classes.iteritems():
             if dcspec.remove:
-                zenpack.remove_device_class(self.app, dcspec)
+                dcspec.remove_organizer(self.dmd)
                 # verify that it was removed
                 self.assertFalse(self.device_class_exists(dcspec.path),
                                 'Device class {} was not removed'.format(dcspec.path))
@@ -67,6 +65,7 @@ def test_suite():
     suite = TestSuite()
     suite.addTest(makeSuite(TestDeviceClassRemoval))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner
