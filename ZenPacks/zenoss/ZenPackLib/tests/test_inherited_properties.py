@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,7 +12,7 @@
 """
     Test the proper handling of inherited ClassSpec properties 
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
 YAML_DOC = """
@@ -47,17 +47,17 @@ classes:
 """
 
 
-class TestInheritedProperties(ZPLTestBase):
+class TestInheritedProperties(ZPLBaseTestCase):
     """
         Test the proper handling of inherited ClassSpec properties 
     """
     yaml_doc = YAML_DOC
 
     def test_inherited_properties_display(self):
-
-        base = self.z.cfg.classes.get('BasicComponent')
-        sub = self.z.cfg.classes.get('SubComponent')
-        aux = self.z.cfg.classes.get('AuxComponent')
+        cfg = self.configs.get('ZenPacks.zenoss.BasicZenPack').get('cfg')
+        base = cfg.classes.get('BasicComponent')
+        sub = cfg.classes.get('SubComponent')
+        aux = cfg.classes.get('AuxComponent')
 
         # make sure the expected properties exist
         self.properties_exist(base, ['hello_world'])

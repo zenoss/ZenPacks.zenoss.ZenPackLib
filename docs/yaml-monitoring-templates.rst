@@ -186,7 +186,7 @@ description
   :Description: Description of the templates purpose and function.
   :Required: No
   :Type: string
-  :Default Value: "" *(empty string)*
+  :Default Value: "" *(Inherited from Template description)*
 
 targetPythonClass
   :Description: Python module name (e.g. ZenPacks.acme.Widgeter.Widgeter) to which this template is intended to be bound.
@@ -493,7 +493,7 @@ above list. This is because datapoints are an extensible type in Zenoss, and
 depending on the value of the datasource's *type*, other fields may be valid.
 
 YAML datapoint specification also supports the use of an alternate "shorthand" notation for brevity.  Shorthand 
-notation follows a pattern of `RRDTYPE_MIN_X_MAX_X` where RRDTYPE is one of "GAUGE, DERIVE, COUNTER, RAW", 
+notation follows a pattern of `RRDTYPE_MIN_X_MAX_X` where RRDTYPE is one of "GAUGE, DERIVE, COUNTER, ABSOLUTE", 
 and the "MIN_X"/"MAX_X" parameters are optional.  
 
 For example, DERIVE, DERIVE_MIN_0, and DERIVE_MIN_0_MAX_100 are all valid shorthand notation.

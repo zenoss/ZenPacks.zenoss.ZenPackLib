@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,11 +12,11 @@
 """ Color format validation YAML dump/load
 
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.Color
 device_classes:
   /Server:
     templates:
@@ -49,7 +49,7 @@ device_classes:
                 dpName: test_c
 """
 
-EXPECTED = """name: ZenPacks.zenoss.ZenPackLib
+EXPECTED = """name: ZenPacks.zenoss.Color
 device_classes:
   /Server:
     templates:
@@ -83,14 +83,15 @@ device_classes:
 """
 
 
-class TestValidInput(ZPLTestBase):
+class TestValidInput(ZPLBaseTestCase):
     """Test color input validation"""
-
     yaml_doc = YAML_DOC
 
     def test_valid_color(self):
         ''''''
-        self.assertEquals(self.z.exported_yaml, EXPECTED,
+        config = self.configs.get('ZenPacks.zenoss.Color')
+        
+        self.assertEquals(config.get('yaml_dump'), EXPECTED,
                         'YAML Color validation test failed')
 
 

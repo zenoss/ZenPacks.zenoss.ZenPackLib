@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,10 +12,10 @@
 """
     Validate handling, normalization, and scaling of order parameter across Specs
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
-YAML_DOC = '''name: ZenPacks.zenoss.ZenPackLib
+YAML_DOC = '''name: ZenPacks.zenoss.NoOrder
 class_relationships:
 - BasicDevice 1:MC BasicComponent
 - SubComponent M:M AuxComponent
@@ -44,7 +44,7 @@ classes:
         b: {}
 '''
 
-YAML_DOC_INT = '''name: ZenPacks.zenoss.ZenPackLib
+YAML_DOC_INT = '''name: ZenPacks.zenoss.IntOrder
 class_relationships:
 - BasicDevice 1:MC BasicComponent
 - SubComponent M:M AuxComponent
@@ -85,7 +85,7 @@ classes:
             order: 1
 '''
 
-YAML_DOC_FLOAT = '''name: ZenPacks.zenoss.ZenPackLib
+YAML_DOC_FLOAT = '''name: ZenPacks.zenoss.FloatOrder
 class_relationships:
 - BasicDevice 1:MC BasicComponent
 - SubComponent M:M AuxComponent
@@ -133,31 +133,34 @@ EXPECTED_FLOAT = {'AuxComponent': {'relationships': {'basicDevice': {'scaled': 3
 EXPECTED_DEFAULT = {'AuxComponent': {'relationships': {'basicDevice': {'scaled': 3.02, 'order': 2}, 'auxComponents': {'scaled': 6.01, 'order': 1}, 'subComponents': {'scaled': 7.0, 'order': 100}}, 'scaled': 5.04, 'properties': {'a': {'scaled': 4.01, 'order': 1}, 'b': {'scaled': 4.02, 'order': 2}}, 'order': 4}, 'BasicComponent': {'relationships': {'basicDevice': {'scaled': 4.0, 'order': 100}}, 'scaled': 5.02, 'properties': {'a': {'scaled': 4.01, 'order': 1}, 'b': {'scaled': 4.02, 'order': 2}}, 'order': 2}, 'BasicDevice': {'relationships': {'basicComponents': {'scaled': 7.0, 'order': 100}}, 'scaled': 5.01, 'properties': {'a': {'scaled': 4.01, 'order': 1}, 'c': {'scaled': 4.03, 'order': 3}, 'b': {'scaled': 4.02, 'order': 2}}, 'order': 1}, 'SubComponent': {'relationships': {'basicDevice': {'scaled': 3.02, 'order': 2}, 'auxComponents': {'scaled': 6.01, 'order': 1}}, 'scaled': 5.03, 'properties': {'a': {'scaled': 4.01, 'order': 1}, 'b': {'scaled': 4.02, 'order': 2}}, 'order': 3}}
 
 
-class TestOrderHandlers(ZPLTestBase):
+class TestOrderHandlers(ZPLBaseTestCase):
     """
         Validate handling, normalization, and scaling of order parameter across Specs
     """
 
     yaml_doc = [YAML_DOC, YAML_DOC_INT, YAML_DOC_FLOAT]
-
+ 
     def test_order_as_default(self):
         """Test handling of default order assignment"""
-        self.assertEquals(EXPECTED_DEFAULT, self.get_order_data(self.z),
+        cfg = self.configs.get('ZenPacks.zenoss.NoOrder').get('cfg')
+        self.assertEquals(EXPECTED_DEFAULT, self.get_order_data(cfg),
                           'Order parameter handling (default) failed validation')
-
+ 
     def test_order_as_float(self):
         """Test handling of legacy float order assignment"""
-        self.assertEquals(EXPECTED_FLOAT, self.get_order_data(self.z_2),
+        cfg = self.configs.get('ZenPacks.zenoss.FloatOrder').get('cfg')
+        self.assertEquals(EXPECTED_FLOAT, self.get_order_data(cfg),
                           'Order parameter handling (float) failed validation')
 
     def test_order_as_integer(self):
         """test ZPl 2.0 normal order"""
-        self.assertEquals(EXPECTED_INT, self.get_order_data(self.z_1),
+        cfg = self.configs.get('ZenPacks.zenoss.IntOrder').get('cfg')
+        self.assertEquals(EXPECTED_INT, self.get_order_data(cfg),
                           'Order parameter handling (integer) failed validation')
 
-    def get_order_data(self, z):
+    def get_order_data(self, cfg):
         data = {}
-        for spec in z.cfg.classes.values():
+        for spec in cfg.classes.values():
             data[spec.name] = {'properties': {}, 'relationships': {}, 'order': spec.order, 'scaled': spec.scaled_order}
             for p_spec in spec.properties.values():
                 data[spec.name]['properties'][p_spec.name] = {'order': p_spec.order, 'scaled': p_spec.scaled_order}

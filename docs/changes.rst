@@ -14,6 +14,13 @@ Features
 
 * Add "optional" field for thresholds (ZPS-1666)
 
+Fixes
+
+* Refactor unit tests to avoid build issues (ZPS-3035)
+* Fix invalid RRD datapoint types (ZPS-1734)
+* Update documentation for datapoint description (ZPS-1971)
+
+
 Version 2.0
 ===========
 

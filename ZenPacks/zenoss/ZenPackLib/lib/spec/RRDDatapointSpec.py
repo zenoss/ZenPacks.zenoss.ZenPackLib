@@ -157,7 +157,7 @@ class RRDDatapointSpec(Spec):
 
     @rrdtype.setter
     def rrdtype(self, value):
-        valid_types = ['GAUGE', 'DERIVE', 'COUNTER', 'RAW']
+        valid_types = ['GAUGE', 'DERIVE', 'COUNTER', 'ABSOLUTE']
         if not value:
             value = 'GAUGE'
         if str(value).upper() not in valid_types:

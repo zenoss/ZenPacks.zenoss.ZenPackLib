@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,11 +12,10 @@
 """ Severity format validation YAML dump/load
 
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
-
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.SeverityTest
 device_classes:
   /Device:
     templates:
@@ -58,8 +57,7 @@ device_classes:
             severity: Clear
 """
 
-
-EXPECTED = """name: ZenPacks.zenoss.ZenPackLib
+EXPECTED = """name: ZenPacks.zenoss.SeverityTest
 device_classes:
   /Device:
     templates:
@@ -95,14 +93,17 @@ device_classes:
 """
 
 
-class TestValidSeverity(ZPLTestBase):
+class TestValidSeverity(ZPLBaseTestCase):
     """Test severity input validation"""
-
     yaml_doc = YAML_DOC
 
     def test_valid_severity(self):
-        self.assertEquals(self.z.exported_yaml, EXPECTED,
-                        'YAML severity validation test failed, got: \n{}'.format(self.z.exported_yaml))
+        yaml_dump = self.configs.get(
+            'ZenPacks.zenoss.SeverityTest', {}).get('yaml_dump', '')
+
+        self.assertEquals(yaml_dump, EXPECTED,
+            'YAML severity validation test failed, got: \n{}'.format(yaml_dump))
+
 
 def test_suite():
     """Return test suite for this module."""
@@ -110,6 +111,7 @@ def test_suite():
     suite = TestSuite()
     suite.addTest(makeSuite(TestValidSeverity))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner

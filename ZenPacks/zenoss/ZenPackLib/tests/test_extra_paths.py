@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -15,18 +15,10 @@ This module tests zenpacklib 'extra_paths' and path reporters.
 
 """
 
-# Zenoss Imports
-import Globals  # noqa
-from Products.ZenUtils.Utils import unused
-unused(Globals)
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 from Products.ZenRelations.RelationshipBase import RelationshipBase
 from Products.ZenRelations.ToManyContRelationship import ToManyContRelationship
-from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
-# zenpacklib Imports
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestHarness import ZPLTestHarness
-
 
 YAML_DOC = """
 name: ZenPacks.zenoss.SimplevSphere
@@ -77,13 +69,7 @@ classes:
 
 """
 
-simple_vsphere_zp = ZPLTestHarness(YAML_DOC)
-
-from ZenPacks.zenoss.SimplevSphere.Datacenter import Datacenter
-from ZenPacks.zenoss.SimplevSphere.Folder import Folder
-from ZenPacks.zenoss.SimplevSphere.Cluster import Cluster
-from ZenPacks.zenoss.SimplevSphere.ResourcePool import ResourcePool
-from ZenPacks.zenoss.SimplevSphere.VirtualMachine import VirtualMachine
+# simple_vsphere_zp = ZPLTestHarness(YAML_DOC)
 
 
 # When a manually-created python object is first added to its container, we
@@ -116,26 +102,35 @@ def addNonContained(object, relname, target):
     return target
 
 
-class TestExtraPaths(BaseTestCase):
-
+class TestExtraPaths(ZPLBaseTestCase):
     """Specs test suite."""
+    yaml_doc = YAML_DOC
+    build = True
 
     def afterSetUp(self):
         super(TestExtraPaths, self).afterSetUp()
 
         self.dmd.REQUEST = None
+        config = self.configs.get('ZenPacks.zenoss.SimplevSphere')
+        self.objects = config.get('objects').class_objects
 
         # Create standard objects the ZenPack relies on.
         self.dmd.Devices.createOrganizer('/SimplevSphere')
         self.dmd.Devices.SimplevSphere._setProperty('zPythonClass', 'ZenPacks.zenoss.SimplevSphere.Endpoint')
 
         # Load the YAML
-        self.CFG = simple_vsphere_zp.cfg
+        self.CFG = config.get('cfg')
 
         # And create the model.
         self._create_device()
 
     def _create_device(self):
+        from ZenPacks.zenoss.SimplevSphere.Datacenter import Datacenter
+        from ZenPacks.zenoss.SimplevSphere.Folder import Folder
+        from ZenPacks.zenoss.SimplevSphere.Cluster import Cluster
+        from ZenPacks.zenoss.SimplevSphere.ResourcePool import ResourcePool
+        from ZenPacks.zenoss.SimplevSphere.VirtualMachine import VirtualMachine
+
         # endpoint (device)
         ep = self.dmd.Devices.SimplevSphere.createInstance('testdevice')
 
