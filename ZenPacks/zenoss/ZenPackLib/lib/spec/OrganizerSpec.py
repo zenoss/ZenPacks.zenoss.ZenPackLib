@@ -166,3 +166,7 @@ class OrganizerSpec(Spec):
         org_removed = self.remove_organizer(dmd, zenpack)
         if not org_removed:
             self.remove_subs(dmd, map_name, remove_name)
+
+    def get_object(self, dmd):
+        """Return dmd object associated with this Spec"""
+        return self.get_organizer(dmd)

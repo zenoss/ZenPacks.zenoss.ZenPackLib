@@ -161,3 +161,19 @@ class RRDTemplateSpec(Spec):
         existing_template = device_class.rrdTemplates._getOb(t_id, None)
         if existing_template:
             device_class.rrdTemplates._delObject(t_id)
+
+    def validate_install(self, dmd):
+        installed = {'thresholds': {}, 'datasources': {}, 'graphs': {}}
+        installed.update(self.is_installed_dict(dmd))
+
+        for threshold_id, threshold_spec in self.thresholds.items():
+            installed['thresholds'][
+                threshold_id] = threshold_spec.is_installed_dict(dmd)
+
+        return installed
+
+    def get_object(self, dmd):
+        """Return dmd object associated with this Spec"""
+        dc_ob = self.deviceclass_spec.get_organizer(dmd)
+        return self.get_rel_object(dc_ob, 'rrdTemplates', self.name)
+

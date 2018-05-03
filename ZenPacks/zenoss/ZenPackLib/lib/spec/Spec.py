@@ -443,3 +443,30 @@ class Spec(object):
                 # We want to explicitly set the value even if it's the same as
                 # what's being acquired. This is why aq_base is required.
                 aq_base(ob).setZenProperty(zprop, value)
+
+    def get_rel_object(self, parent, relname, object_id):
+        """Attempt to retrieve an object given its id, parent instance, and relation name"""
+        rel = getattr(parent, relname, None)
+        if rel:
+            try:
+                return rel._getOb(object_id)
+            except AttributeError:
+                pass
+        return None
+
+    def get_object(self, dmd):
+        """Return dmd object associated with this Spec
+
+        Must be overridden by subclasses. 
+
+        """
+        raise NotImplementedError
+
+    def is_installed(self, dmd):
+        """Return True if Spec object exists"""
+        if self.get_object(dmd):
+            return True
+        return False
+
+    def is_installed_dict(self, dmd):
+        return {'installed': self.is_installed(dmd)}

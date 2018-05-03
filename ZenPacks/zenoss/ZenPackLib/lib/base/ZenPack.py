@@ -85,6 +85,57 @@ class ZenPack(ZenPackBase):
         for psname, psspec in self.process_class_organizers.iteritems():
             ps_org = psspec.create_organizer(app.zport.dmd)
 
+        self.post_install(app)
+
+    def validate_install(self, app):
+        """Return dictionary containing installation status of created objects"""
+
+        installed = {'device_classes': {}}
+        for dcname, dcspec in self.device_classes.iteritems():
+            installed['device_classes'][dcname] = {'templates': {}}
+            installed['device_classes'][dcname].update(
+                dcspec.is_installed_dict(app.zport.dmd))
+
+            for mtname, mtspec in dcspec.templates.iteritems():
+                installed['device_classes'][dcname]['templates'][
+                    mtname] = mtspec.validate_install(app.zport.dmd)
+
+        return installed
+
+    def post_install(self, app):
+        """
+        Check previously installed ZenPacks for objects that 
+        can now be installed if new depenencies are met
+        """
+        zpl_zenpacks = self.get_zpl_zenpacks(app)
+        for zp in zpl_zenpacks:
+            installed = zp.validate_install(app)
+            self.LOG.debug(
+                "Checking %s ZenPack for newly available capabilities",
+                zp.id)
+            for dc_name, dc_data in installed.get(
+                'device_classes', {}).items():
+                dc_spec = zp.device_classes.get(dc_name)
+                for mt_name, mt_data in dc_data.get(
+                    'templates', {}).items():
+                    mt_spec = dc_spec.templates.get(mt_name)
+                    mt = mt_spec.get_object(app.zport.dmd)
+                    if not mt:
+                        continue
+                    for th_name, th_data in mt_data.get(
+                        'thresholds').items():
+                        if th_data.get('installed'):
+                            continue
+                        th_spec = mt_spec.thresholds.get(th_name)
+                        self.LOG.debug(
+                            "Checking if threshold %s can be installed", th_name)
+                        th_spec.create(mt_spec, mt)
+
+    def get_zpl_zenpacks(self, app):
+        """Return a list of installed ZPL ZenPacks"""
+        return [p for p in app.zport.dmd.ZenPackManager.packs()
+                if hasattr(p, '_v_specparams') and p.id != self.id]
+
     def remove(self, app, leaveObjects=False):
         if self._v_specparams is None:
             return

@@ -66,6 +66,7 @@ class RRDThresholdSpec(Spec):
             self.extra_params = {}
         else:
             self.extra_params = extra_params
+        self.installed = False
 
     def create(self, templatespec, template):
         if self.dsnames is None:
@@ -83,8 +84,11 @@ class RRDThresholdSpec(Spec):
             if self.optional:
                 return
             else:
-                raise ValueError("'%s' is an invalid threshold type. Valid types: %s" %
-                                 (self.type_, ', '.join(threshold_types)))
+                self.LOG.debug(
+                    "Skipping install since '%s' is an "
+                    "invalid threshold type. Valid types: %s" %
+                    (self.type_, ', '.join(threshold_types)))
+                return
 
         threshold = template.manage_addRRDThreshold(self.name, self.type_)
         self.speclog.debug("adding threshold")
@@ -103,4 +107,9 @@ class RRDThresholdSpec(Spec):
                     setattr(threshold, param, value)
                 else:
                     raise ValueError("%s is not a valid property for threshold of type %s" % (param, type_))
+
+    def get_object(self, dmd):
+        """Return dmd object associated with this Spec"""
+        mt_ob = self.template_spec.get_object(dmd)
+        return self.get_rel_object(mt_ob, 'thresholds', self.name)
 
