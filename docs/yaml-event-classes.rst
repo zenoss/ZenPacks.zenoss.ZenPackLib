@@ -46,6 +46,12 @@ The following example shows an example of a `zenpack.yaml` file with an example 
      style convention demonstrated.  As this example demonstrates, the indented line following
      the **"\|-"** style character becomes the first line of the transform, with subsequent whitespace preserved.
 
+Since this is a YAML "mapping", the minmal specification (name only) would look like:
+
+.. code-block:: yaml
+
+    event_classes:
+      /Status/Acme: {}
 
 .. _event-class-fields:
 
@@ -67,11 +73,29 @@ description
   :Type: string
   :Default Value: None
 
-remove
-  :Description: Remove the event class during ZenPack removal?  This will only apply to a ZenPack that has created the event class.  Any existing event classes not created by the ZenPack will not be removed.  Any event classes created by the platform will also never be removed.
+create
+  :Description: Should the event class be created when the ZenPack is installed?
   :Required: No
   :Type: boolean
-  :Default Value: False
+  :Default Value: true
+
+remove
+  :Description: Should the event class be removed when the ZenPack is removed?  This will only apply to a ZenPack that has created the event class.  Any existing event classes not created by the ZenPack will not be removed.  Any event classes created by the platform will also never be removed.
+  :Required: No
+  :Type: boolean
+  :Default Value: false
+
+reset
+  :Description: If true, any zProperties defined here will override those of the target event class, if it exists
+  :Required: No
+  :Type: boolean
+  :Default Value: false
+
+zProperties
+  :Description: zProperty values to set on the event class.
+  :Required: No
+  :Type: map<name, value>
+  :Default Value: {} *(empty map)*
 
 transform
   :Description: A python expression for transformation.
