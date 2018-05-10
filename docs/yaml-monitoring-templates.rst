@@ -186,7 +186,7 @@ description
   :Description: Description of the templates purpose and function.
   :Required: No
   :Type: string
-  :Default Value: "" *(Inherited from Template description)*
+  :Default Value: "" *(empty string)*
 
 targetPythonClass
   :Description: Python module name (e.g. ZenPacks.acme.Widgeter.Widgeter) to which this template is intended to be bound.
@@ -460,7 +460,7 @@ description
   :Description: Description of the datapoint's purpose and function.
   :Required: No
   :Type: string
-  :Default Value: "" *(empty string)*
+  :Default Value: "" *(Inherited from Template description)*
 
 rrdtype
   :Description: Type of datapoint. Must be GAUGE or DERIVE.
