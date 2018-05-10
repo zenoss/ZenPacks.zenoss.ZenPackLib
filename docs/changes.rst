@@ -12,10 +12,14 @@ Release 2.1.0
 
 Features
 
+* EventClass, OSProcessOrganizer now support zProperties (ZPS-3189, ZPS-3190)
 * Add "optional" field for thresholds (ZPS-1666)
+* Add support for ZProperty "label" and "description" fields (ZPS-747)
 
 Fixes
 
+* Support ABSOLUTE RRD type (ZPS-1733)
+* All organizer classes respect the "create", "remove", and "reset" attributes (ZPS-810)
 * Refactor unit tests to avoid build issues (ZPS-3035)
 * Fix invalid RRD datapoint types (ZPS-1734)
 * Update documentation for datapoint description (ZPS-1971)

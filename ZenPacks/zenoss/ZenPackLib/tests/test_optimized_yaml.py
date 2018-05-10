@@ -17,7 +17,7 @@ Tests YAML loading from multiple files
 # zenpacklib Imports
 from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import optimize_yaml, compare_zenpackspecs
-
+from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 
 YAML_WHOLE = """
 name: ZenPacks.zenoss.Microsoft.Windows
@@ -54,7 +54,6 @@ zProperties:
 
 
 class_relationships:
-  - ZenPacks.zenoss.Microsoft.Windows.OperatingSystem.OperatingSystem(winrmservices) 1:MC (os)WinService
   - ZenPacks.zenoss.Microsoft.Windows.OperatingSystem.OperatingSystem(winrmiis) 1:MC (os)WinIIS
   - ZenPacks.zenoss.Microsoft.Windows.OperatingSystem.OperatingSystem(winsqlinstances) 1:MC (os)WinSQLInstance
   - ZenPacks.zenoss.Microsoft.Windows.OperatingSystem.OperatingSystem(clusterservices) 1:MC (os)ClusterService
@@ -673,6 +672,7 @@ class TestOptimizedYAML(ZPLBaseTestCase):
     """Test optimized YAML"""
 
     yaml_doc = YAML_WHOLE
+    build = True
 
     def test_optimized_yaml(self):
         """Test that optimized YAML is the same as the original"""
@@ -680,9 +680,7 @@ class TestOptimizedYAML(ZPLBaseTestCase):
         orig_yaml = config.get('yaml_from_specparams')
         new_yaml = optimize_yaml(YAML_WHOLE)
         compare_equals = compare_zenpackspecs(orig_yaml, new_yaml)
-
-        zp = config.get('zenpack')
-        diff = zp.get_yaml_diff(orig_yaml, new_yaml)
+        diff = ZenPack.get_yaml_diff(orig_yaml, new_yaml)
         self.assertTrue(compare_equals,
                         'YAML optimization test failed:\n{}'.format(diff))
 
@@ -693,6 +691,7 @@ def test_suite():
     suite = TestSuite()
     suite.addTest(makeSuite(TestOptimizedYAML))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner

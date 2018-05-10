@@ -84,6 +84,13 @@ following example shows how *DEFAULTS* can be used to replace the duplicated
      zWidgeterInterval:
        default: 300
 
+Since a zProperty is a YAML "mapping", the minmal specification of a zProperty (name only) would look like:
+
+.. code-block:: yaml
+
+   zProperties:
+     zWidgeterMinimal: {}
+
 Each zProperty listed in *zProperties* will be created when the ZenPack is
 installed, and removed when the ZenPack is removed.
 
@@ -142,6 +149,18 @@ category
   :Type: string
   :Default Value: "" (empty string)
 
+description
+  :Description: Notes regarding the purpose and function of this zProperty
+  :Required: No
+  :Type: string
+  :Default Value: "" (empty string)
+
+label
+  :Description: Brief description of zProperty
+  :Required: No
+  :Type: string
+  :Default Value: "" (empty string)
+
 
 ***************************
 Zenoss specific zProperties
@@ -151,9 +170,11 @@ When changing modeler bindings using the zDeviceTemplates property, this will ta
 
 .. note::
 
-   Beginning with ZenPackLib 2.0, this behavior has changed.  zProperties will no longer be overwritten if a target device class
+   Beginning with ZenPackLib 2.0, this behavior has changed by default.  zProperties will no longer be overwritten if a target device class
    already exists (i.e. during an upgrade or if the YAML affects a preexisting class such as /Devices/Server.  Instead, a warning
    will be displayed to the user during installation, and the target zProperty will be left alone.
+   
+   Setting "reset: true" for a specific device class in the YAML will override this behavior, causing the zProperties to be overritten with the YAML defaults
    
 
    
