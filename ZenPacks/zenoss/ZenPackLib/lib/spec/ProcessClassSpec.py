@@ -16,6 +16,7 @@ from ..base.types import Severity
 
 class ProcessClassSpec(Spec):
     """Initialize a Process Set via Python at install time."""
+
     def __init__(
             self,
             zenpack_spec,
@@ -55,7 +56,7 @@ class ProcessClassSpec(Spec):
           :param send_event_when_blocked: Send and event when action is blocked?
           :type send_event_when_blocked: bool
           :param remove: Remove Organizer on ZenPack removal
-          :type remove: boolean
+          :type remove: bool
         """
         super(ProcessClassSpec, self).__init__(_source_location=_source_location)
         self.klass_string = 'OSProcessClass'
