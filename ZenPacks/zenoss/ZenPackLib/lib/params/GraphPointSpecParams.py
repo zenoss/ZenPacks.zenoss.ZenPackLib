@@ -27,18 +27,37 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
         graphdefinition = aq_base(graphdefinition)
         sample_gp = graphpoint.__class__(graphpoint.id)
 
-        for propname in ('lineType', 'lineWidth', 'stacked', 'format',
-                         'legend', 'limit', 'rpn', 'cFunc', 'color', 'dpName'):
-            if hasattr(sample_gp, propname):
-                setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gp, propname))
-            if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
-                setattr(self, propname, getattr(graphpoint, propname, None))
-
         self.extra_params = OrderedDict()
-        for propname in [x['id'] for x in graphpoint._properties]:
-            if propname not in self.init_params:
-                if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
-                    self.extra_params[propname] = getattr(graphpoint, propname, None)
+
+        ordered = ('lineType', 'lineWidth', 'stacked', 'format',
+            'legend', 'limit', 'rpn', 'cFunc', 'color')
+
+        for propname in ordered:
+            default_value = getattr(graphpoint, propname, None)
+            ob_value = getattr(sample_gp, propname, None)
+
+            if propname in self.init_params:
+                # set the default value for this spec attribute
+                if hasattr(sample_gp, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, default_value)
+                # set the value locally if different from class default
+                if ob_value != default_value:
+                    setattr(self, propname, ob_value)
+
+            # property must belong in extra_params
+            else:
+                # set the value locally if different from class default
+                if ob_value != default_value:
+                    self.extra_params[propname] = ob_value
+
+        # now get other extra_params
+        for propname in [x['id'] for x in graphpoint._properties if x['id'] not in ordered]:
+            if propname in self.init_params:
+                continue
+            default_value = getattr(graphpoint, propname, None)
+            ob_value = getattr(sample_gp, propname, None)
+            if ob_value != default_value:
+                self.extra_params[propname] = ob_value
 
         threshold_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, ThresholdGraphPoint)]
 
