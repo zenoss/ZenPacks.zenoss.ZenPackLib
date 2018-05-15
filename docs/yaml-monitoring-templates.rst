@@ -588,6 +588,31 @@ ValueChangeThreshold
   :Availability: Zenoss Platform
   :Additional Fields: None
 
+CapacityThreshold
+  :Description:  Can be defined whether or not Capacity ZenPack is installed.  Please refer to ZenPack documentation for further details.
+  :Availability: Capacity ZenPack
+  :Additional Fields:
+    capacity_type
+      :Description: Must be one of cpu, memory, network, storage.
+      :Required: No
+      :Type: string 
+      :Default Value: None
+    total_expression
+      :Description: Python expression that must return the total capacity in native units.
+      :Required: No
+      :Type: string 
+      :Default Value: None
+    used_expression
+      :Description: Python expression that must return the currently used capacity in native units.
+      :Required: No
+      :Type: string 
+      :Default Value: None
+    pct_threshold
+      :Description: At what percentage (0-100) used of total is the threshold considered exceeded.
+      :Required: No
+      :Type: float 
+      :Default Value: None
+
 .. _graph-fields:
 
 Graph Fields

@@ -369,3 +369,38 @@ class ZenPack(ZenPackBase):
 
         except Exception, e:
             self.LOG.error("Unable to postprocess {}: {}".format(filename, e))
+
+    def capacity_get_threshold_configs(self):
+        """Describe Capacity thresholds for this ZenPack.
+        Described here so that they can be installed when Capacity is
+        installed before or after this ZenPack is installed, and so that
+        this ZenPack doesn't require the Capacity ZenPack to be installed.
+        Note that these thresholds are only installed if they don't already
+        exist. Any changes needed to these thresholds when upgrading from
+        one version of this ZenPack to another must be done with migrate
+        steps.
+        The Capacity ZenPack is responsible for calling this method at the
+        appropriate times. The Capacity ZenPack is also responsible for
+        removing these thresholds prior to the Capacity ZenPack being
+        uninstalled.
+        """
+        configs = []
+        for dc_name, dc_spec in self.device_classes.iteritems():
+            for t_name, t_spec in dc_spec.templates.iteritems():
+                for th_name, th_spec in t_spec.thresholds.iteritems():
+                    if th_spec.type_ != 'CapacityThreshold':
+                        continue
+
+                    th_config = {'deviceclass': dc_name,
+                                 'template': t_name,
+                                 'name': th_name,
+                                 'dsnames': getattr(th_spec, 'dsnames', [])}
+
+                    for x in ['eventClass', 'severity', 'enabled']:
+                        if getattr(th_spec, x) is not None:
+                            th_config[x] = getattr(th_spec, x)
+
+                    th_config.update(getattr(th_spec, 'extra_params', {}))
+
+                    configs.append(th_config)
+        return configs

@@ -8,7 +8,6 @@
 ##############################################################################
 from .helpers.ZenPackLibLog import DEFAULTLOG
 
-
 FACET_BLACKLIST = (
     'dependencies',
     'dependents',
@@ -16,7 +15,6 @@ FACET_BLACKLIST = (
     'pack',
     'productClass',
     )
-
 
 # ## functions to determine conditional imports elsewhere
 
@@ -67,6 +65,18 @@ def has_metricfacade():
         from Products.Zuul.facades import metricfacade
     except ImportError:
         DEFAULTLOG.debug('MetricFacade is not available and some functionality dependent on it will be disabled')
+        pass
+    else:
+        return True
+    return False
+
+
+def capacity_installed():
+    """Return True if Capacity ZenPack is installed"""
+    try:
+        from ZenPacks.zenoss.Capacity import CFG
+    except ImportError:
+        DEFAULTLOG.debug('Capacity ZenPack is not installed and some functionality dependent on it will be disabled')
         pass
     else:
         return True
