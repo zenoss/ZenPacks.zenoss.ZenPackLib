@@ -7,12 +7,15 @@
 #
 ##############################################################################
 from Acquisition import aq_base
+from collections import OrderedDict
 from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
 from ..spec.GraphPointSpec import GraphPointSpec
 from .SpecParams import SpecParams
+from ..base.types import Color
 
 
 class GraphPointSpecParams(SpecParams, GraphPointSpec):
+
     def __init__(self, template_spec, name, **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
@@ -25,12 +28,19 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
         graphdefinition = aq_base(graphdefinition)
         sample_gp = graphpoint.__class__(graphpoint.id)
 
-        for propname in ('lineType', 'lineWidth', 'stacked', 'format',
-                         'legend', 'limit', 'rpn', 'cFunc', 'color', 'dpName'):
+        for propname in ('sequence'):
             if hasattr(sample_gp, propname):
                 setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gp, propname))
             if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
                 setattr(self, propname, getattr(graphpoint, propname, None))
+
+        self.extra_params = OrderedDict()
+        for propname in [x['id'] for x in graphpoint._properties]:
+            if propname not in self.init_params:
+                if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
+                    self.extra_params[propname] = getattr(graphpoint, propname, None)
+                    # if propname == 'color':
+                    #    self.extra_params[propname] = Color(self.extra_params[propname])
 
         threshold_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, ThresholdGraphPoint)]
 

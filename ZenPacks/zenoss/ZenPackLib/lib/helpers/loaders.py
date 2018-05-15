@@ -25,6 +25,7 @@ class OrderedLoader(yaml.Loader):
     of mappings as they're read from the file.
 
     """
+
     def __init__(self, *args, **kwargs):
         yaml.Loader.__init__(self, *args, **kwargs)
 
@@ -145,7 +146,7 @@ class ZenPackSpecLoader(OrderedLoader):
 
         extra_params = None
         # map attribute keys to yaml parameters if they differ
-        param_name_map = {}
+        param_name_map = OrderedDict()
         for key, attributes in param_defs.items():
             yaml_key = attributes.get('yaml_param')
             param_name_map[yaml_key] = key
@@ -158,7 +159,7 @@ class ZenPackSpecLoader(OrderedLoader):
                         node.start_mark))
                 extra_params = key
                 # set this to an empty dict for now
-                params[extra_params] = {}
+                params[extra_params] = OrderedDict()
 
         for key_node, value_node in node.value:
             yaml_key = self.construct_object(key_node)

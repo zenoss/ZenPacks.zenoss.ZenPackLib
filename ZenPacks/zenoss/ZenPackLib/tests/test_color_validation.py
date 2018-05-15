@@ -14,7 +14,6 @@
 """
 from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
-
 YAML_DOC = """
 name: ZenPacks.zenoss.Color
 device_classes:
@@ -90,8 +89,13 @@ class TestValidInput(ZPLBaseTestCase):
     def test_valid_color(self):
         ''''''
         config = self.configs.get('ZenPacks.zenoss.Color')
-        
-        self.assertEquals(config.get('yaml_dump'), EXPECTED,
+        yaml_param = config.get('yaml_from_specparams')
+        yaml_spec = config.get('yaml_dump')
+        print yaml_param
+
+        print yaml_spec
+        import pdb ; pdb.set_trace()
+        self.assertEquals(yaml_param, EXPECTED,
                         'YAML Color validation test failed')
 
 
@@ -101,6 +105,7 @@ def test_suite():
     suite = TestSuite()
     suite.addTest(makeSuite(TestValidInput))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner

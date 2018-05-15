@@ -283,7 +283,6 @@ class TestTemplateModified(ZPLBaseTestCase):
     Test installed vs spec template changes
     """
     yaml_doc = [YAML_DOC]
-    # build = True
 
     def test_modified(self):
         cfg_orig = self.configs.get('ZenPacks.zenoss.ZenPackLib')

@@ -171,6 +171,7 @@ class Dumper(yaml.Dumper):
                         # add any values from an extraparams dict onto the spec's parameter list directly.
                         yaml_extra_param = self.represent_str(extra_param)
                         mapping[yaml_extra_param] = self.represent_data(value[extra_param])
+                        print 'MAPPED', yaml_extra_param, value[extra_param], value[extra_param].__class__
                 else:
                     mapping[yaml_param] = self.get_representation(value, type_)
 
@@ -317,5 +318,4 @@ from ..base.types import Color, Severity, multiline
 Dumper.add_representer(Color, SafeRepresenter.represent_str)
 Dumper.add_representer(Severity, Dumper.represent_severity)
 Dumper.add_representer(multiline, Dumper.represent_multiline)
-
 

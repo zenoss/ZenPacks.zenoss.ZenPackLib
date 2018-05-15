@@ -7,64 +7,48 @@
 #
 ##############################################################################
 from Products.ZenModel.GraphPoint import GraphPoint
+from collections import OrderedDict
 from Products.ZenModel.DataPointGraphPoint import DataPointGraphPoint
 from Products.ZenModel.ComplexGraphPoint import ComplexGraphPoint
+from Products.ZenModel.CommentGraphPoint import CommentGraphPoint
+from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
 from ..base.types import Color
 from .Spec import Spec
 
+GRAPHPOINT_TYPES = {'DataPointGraphPoint': DataPointGraphPoint,
+                    'CommentGraphPoint': CommentGraphPoint,
+                    'ThresholdGraphPoint': ThresholdGraphPoint, }
+
 
 class GraphPointSpec(Spec):
-    """TODO."""
+    """GraphPointSpec"""
 
     def __init__(
             self,
             template_spec,
-            name=None,
-            dpName=None,
-            lineType=None,
-            lineWidth=None,
-            stacked=None,
-            format=None,
-            legend=None,
-            limit=None,
-            rpn=None,
-            cFunc=None,
-            colorindex=None,
-            color=None,
+            name,
+            type_='DataPointGraphPoint',
+            sequence=0,
             includeThresholds=False,
             thresholdLegends=None,
+            extra_params=None,
             _source_location=None,
             zplog=None
             ):
         """
         Create a GraphPoint Specification
-
-            :param dpName: TODO
-            :type dpName: str
-            :param lineType: TODO
-            :type lineType: str
-            :param lineWidth: TODO
-            :type lineWidth: int
-            :param stacked: TODO
-            :type stacked: bool
-            :param format: TODO
-            :type format: str
-            :param legend: TODO
-            :type legend: str
-            :param limit: TODO
-            :type limit: int
-            :param rpn: TODO
-            :type rpn: str
-            :param cFunc: TODO
-            :type cFunc: str
-            :param color: TODO
-            :type color: str
-            :param colorindex: TODO
-            :type colorindex: int
+        
+            :param type_: TODO
+            :type type_: str
+            :yaml_param type_: type
+            :param sequence: Order of graph point in graph
+            :type sequence: int
             :param includeThresholds: TODO
             :type includeThresholds: bool
             :param thresholdLegends: map of {thresh_id: {legend: TEXT, color: HEXSTR}
             :type thresholdLegends: dict(str)
+            :param extra_params: Additional parameters that may be used by subclasses of GraphPoint
+            :type extra_params: ExtraParams
         """
         super(GraphPointSpec, self).__init__(_source_location=_source_location)
         if zplog:
@@ -73,48 +57,58 @@ class GraphPointSpec(Spec):
         self.template_spec = template_spec
         self.name = name
 
-        self.lineType = lineType
-        self.lineWidth = lineWidth
-        self.stacked = stacked
-        self.format = format
-        self.legend = legend
-        self.limit = limit
-        self.rpn = rpn
-        self.cFunc = cFunc
-        self.color = color
-        if color:
-            Color.LOG = self.LOG
-            self.color = Color(color)
+        self.type_ = type_
+
+        self.sequence = sequence
+
         self.includeThresholds = includeThresholds
         self.thresholdLegends = thresholdLegends
 
-        # Shorthand for datapoints that have the same name as their datasource.
-        if '_' not in dpName:
-            self.dpName = '{0}_{0}'.format(dpName)
+        if extra_params is None:
+            self.extra_params = OrderedDict()
         else:
-            self.dpName = dpName
+            self.extra_params = extra_params
+
+        # Shorthand for datapoints that have the same name as their datasource.
+        dpName = self.extra_params.get('dpName')
+        if dpName is not None and '_' not in dpName:
+            self.extra_params['dpName'] = '{0}_{0}'.format(dpName)
+
+        # perform validation for color attribute
+        color = self.extra_params.get('color')
+        if 'color' in self.extra_params:
+            Color.LOG = self.LOG
+            color = Color(self.extra_params.get('color'))
+            print 'SETTING COLOR', color
+        # if color is not None:
+            self.extra_params['color'] = Color(self.extra_params.get('color'))
 
         # Allow color to be specified by color_index instead of directly. This is
         # useful when you want to keep the normal progression of colors, but need
         # to add some DONTDRAW graphpoints for calculations.
-        self.colorindex = colorindex
-        if colorindex:
+        colorindex = self.extra_params.get('colorindex')
+        if colorindex is not None:
             try:
                 colorindex = int(colorindex) % len(GraphPoint.colors)
             except (TypeError, ValueError):
                 raise ValueError("graphpoint colorindex must be numeric.")
+            self.extra_params['color'] = GraphPoint.colors[colorindex].lstrip('#')
 
-            self.color = GraphPoint.colors[colorindex].lstrip('#')
-
+        lineType = self.extra_params.get('lineType')
         # Validate lineType.
         if lineType:
             valid_linetypes = [x[1] for x in ComplexGraphPoint.lineTypeOptions]
-
             if lineType.upper() in valid_linetypes:
-                self.lineType = lineType.upper()
+                self.extra_params['lineType'] = lineType.upper()
             else:
                 raise ValueError("'%s' is not a valid graphpoint lineType. Valid lineTypes: %s" % (
                                  lineType, ', '.join(valid_linetypes)))
+
+        # Consolidation function validation
+        cFunc = self.extra_params.get('cFunc')
+        if cFunc is not None:
+            if cFunc not in ['AVERAGE', 'MIN', 'MAX', 'LAST']:
+                self.extra_params['cFunc'] = 'AVERAGE'
 
     @property
     def thresholdLegends(self):
@@ -138,41 +132,38 @@ class GraphPointSpec(Spec):
             self._thresholdLegends[id]['color'] = data.get('color')
 
     def create(self, graph_spec, graph, sequence=None):
-        graphpoint = graph.createGraphPoint(DataPointGraphPoint, self.name)
+
+        type_ = GRAPHPOINT_TYPES.get(self.type_)
+
+        graphpoint = graph.createGraphPoint(type_, self.name)
         self.speclog.debug("adding graphpoint")
 
-        graphpoint.dpName = self.dpName
+        seq = self.sequence or sequence
+        if seq is not None:
+            graphpoint.sequence = seq
 
-        if sequence:
-            graphpoint.sequence = sequence
-        if self.lineType is not None:
-            graphpoint.lineType = self.lineType
-        if self.lineWidth is not None:
-            graphpoint.lineWidth = self.lineWidth
-        if self.stacked is not None:
-            graphpoint.stacked = self.stacked
-        if self.format is not None:
-            graphpoint.format = self.format
-        if self.legend is not None:
-            graphpoint.legend = self.legend
-        if self.limit is not None:
-            graphpoint.limit = self.limit
-        if self.rpn is not None:
-            graphpoint.rpn = self.rpn
-        if self.cFunc is not None:
-            graphpoint.cFunc = self.cFunc
-        if self.color is not None:
-            graphpoint.color = str(self.color)
+        if self.extra_params:
+            for param, value in self.extra_params.iteritems():
+                # skip colorindex since it gets translated to color
+                if param == 'colorindex':
+                    continue
+                if param in [x['id'] for x in graphpoint._properties]:
+                    setattr(graphpoint, param, value)
+                else:
+                    raise ValueError("%s is not a valid property for graphoint of type %s" % (param, type_))
 
         if self.includeThresholds:
-            thresh_gps = graph.addThresholdsForDataPoint(self.dpName)
-            for thresh_gp in thresh_gps:
-                entry = self.thresholdLegends.get(thresh_gp.id)
-                if not entry:
-                    continue
-                legend = entry.get('legend')
-                color = entry.get('color')
-                if legend:
-                    thresh_gp.legend = legend
-                if color:
-                    thresh_gp.color = str(color)
+            dpName = self.extra_params.get('dpName')
+            if dpName:
+                thresh_gps = graph.addThresholdsForDataPoint(dpName)
+                for thresh_gp in thresh_gps:
+                    entry = self.thresholdLegends.get(thresh_gp.id)
+                    if not entry:
+                        continue
+                    legend = entry.get('legend')
+                    color = entry.get('color')
+                    if legend:
+                        thresh_gp.legend = legend
+                        thresh_gp.threshId = legend
+                    if color:
+                        thresh_gp.color = str(color)

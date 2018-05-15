@@ -61,7 +61,7 @@ class RRDTemplateSpec(Spec):
         self.graphs = self.specs_from_param(
             GraphDefinitionSpec, 'graphs', graphs, zplog=self.LOG)
 
-        self.validate_references()
+        # self.validate_references()
 
     def validate_references(self):
         """
@@ -79,9 +79,11 @@ class RRDTemplateSpec(Spec):
         # check graph point references
         for g_name, g_spec in self.graphs.items():
             for gp_name, gp_spec in g_spec.graphpoints.items():
+                if 'dpName' not in gp_spec.extra_params:
+                    continue
                 self.check_ds_dp_names(gp_name,
                                        'Graph Point',
-                                       set([gp_spec.dpName]),
+                                       set([gp_spec.extra_params.get('dpName')]),
                                        ds_dp_names)
 
     def get_ds_dp_names(self):

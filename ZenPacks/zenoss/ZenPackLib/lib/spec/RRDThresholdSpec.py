@@ -42,9 +42,9 @@ class RRDThresholdSpec(Spec):
             :param enabled: TODO
             :type enabled: bool
             :param extra_params: Additional parameters that may be used by subclasses of RRDDatasource
-            :param optional: is this threshold optional?
-            :type optional: bool
             :type extra_params: ExtraParams
+            :type optional: bool
+            :param optional: is this threshold optional?
 
         """
         super(RRDThresholdSpec, self).__init__(_source_location=_source_location)
