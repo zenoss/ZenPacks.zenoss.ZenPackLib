@@ -93,6 +93,7 @@ class TestValidInput(ZPLBaseTestCase):
         yaml_spec = config.get('yaml_dump')
         print yaml_param
 
+        import pdb ; pdb.set_trace()
         print yaml_spec
         import pdb ; pdb.set_trace()
         self.assertEquals(yaml_param, EXPECTED,
