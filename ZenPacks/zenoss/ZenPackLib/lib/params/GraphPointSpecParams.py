@@ -19,6 +19,9 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
     def __init__(self, template_spec, name, **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.name = name
+        # self.validate_extra_params()
+        # import pdb
+        # print 'PARAMS', self.__dict__.items()
 
     @classmethod
     def fromObject(cls, graphpoint, graphdefinition):
@@ -28,19 +31,19 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
         graphdefinition = aq_base(graphdefinition)
         sample_gp = graphpoint.__class__(graphpoint.id)
 
-        for propname in ('sequence'):
-            if hasattr(sample_gp, propname):
-                setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gp, propname))
-            if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
-                setattr(self, propname, getattr(graphpoint, propname, None))
+        for propname in ('sequence', 'color'):
+            default_value = getattr(sample_gp, propname, None)
+            ob_value = getattr(graphpoint, propname, None)
+            if default_value is not None:
+                setattr(self, '_%s_defaultvalue' % propname, default_value)
+            if ob_value != default_value:
+                setattr(self, propname, ob_value)
 
         self.extra_params = OrderedDict()
         for propname in [x['id'] for x in graphpoint._properties]:
             if propname not in self.init_params:
                 if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
                     self.extra_params[propname] = getattr(graphpoint, propname, None)
-                    # if propname == 'color':
-                    #    self.extra_params[propname] = Color(self.extra_params[propname])
 
         threshold_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, ThresholdGraphPoint)]
 

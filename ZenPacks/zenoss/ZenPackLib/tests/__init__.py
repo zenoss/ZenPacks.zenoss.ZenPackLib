@@ -18,7 +18,7 @@ from zope.traversing.adapters import DefaultTraversable
 from transaction._transaction import Transaction
 
 # Zenoss Imports
-import Globals 
+import Globals
 import Products.ZenTestCase
 from Products.Five import zcml
 from Products.DataCollector.ApplyDataMap import ApplyDataMap
@@ -31,13 +31,13 @@ unused(Globals)
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.loaders import OrderedLoader
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.ZenPackLibLog import (
-    ZenPackLibLog, 
+    ZenPackLibLog,
     DEFAULTLOG
 )
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import load_yaml_single
 from ZenPacks.zenoss.ZenPackLib.tests.utils import (
-    LogCapture, 
-    CommandMixin, 
+    LogCapture,
+    CommandMixin,
     ClassObjectHelper
 )
 
@@ -49,7 +49,7 @@ def get_layer_subclass(name, yaml_doc=None, tc_attributes=None, reset=True):
     """ Returns a named subclass of ZPLTestCaseLayer 
         which can then be used to hold unique layered test environments
     """
-    return type(name, (object, ZPLTestCaseLayerBase,), 
+    return type(name, (object, ZPLTestCaseLayerBase,),
         {'yaml_doc': yaml_doc, 'reset': reset, 'tc_attributes': tc_attributes})
 
 
@@ -82,7 +82,7 @@ class ZPLBaseTestCase(BaseTestCase):
         # need to hide transaction.abort.
         self._transaction_abort = Transaction.abort
         Transaction.abort = lambda *x: None
-        
+
         self.update_tc_attributes()
         self.initialize(self.yaml_doc)
         # Not included with BaseTestCase. Needed to test that UI
@@ -171,7 +171,7 @@ class ZPLBaseTestCase(BaseTestCase):
 
         def getDataSourceClasses():
             return getattr(self, 'datasources', [])
-        
+
         zenpack.getThresholdClasses = getThresholdClasses
         zenpack.getDataSourceClasses = getDataSourceClasses
         return self.dmd.ZenPackManager.packs._getOb(zenpack.id)
@@ -180,7 +180,7 @@ class ZPLBaseTestCase(BaseTestCase):
         """Load a YAML document and return a dictionary describing it"""
         cfg = zenpacklib.load_yaml(yaml_doc)
         cfg.test_setup()
-        
+
         return {'cfg': cfg,
                 'schema': cfg.zenpack_module.schema,
                 'yaml_map': load_yaml_single(
@@ -214,11 +214,11 @@ class ZPLBaseTestCase(BaseTestCase):
         """Return device classes for a given ZenPack name"""
         ob_helper = self.configs.get(zp_name, {}).get('objects')
         return ob_helper.device_class_objects
-    
+
     def get_device_class_templates(self, zp_name, dc_name):
         """Return templates for a given ZenPack and device class name"""
         dc_objects = self.get_device_class_objects(zp_name)
-        return {t_name: t_ob for t_name, t_ob in 
+        return {t_name: t_ob for t_name, t_ob in
             dc_objects.get(
             dc_name, {}).get('templates', {}).items()}
 
@@ -233,6 +233,7 @@ class InitializerTestCase(ZPLBaseTestCase):
     """The environment created by this TestCase 
     is accessible via the 'tc' attribute of ZPLTestLayerBase
     """
+
     def test_nothing(self):
         pass
 
@@ -291,7 +292,7 @@ class ZPLTestCaseLayerBase(ZenossTestCaseLayer):
         zcml.load_config('testing-noevent.zcml', Products.ZenTestCase)
         # Silly trickery here.
         # We create a single TestCase, and share the environment that it creates
-        # across all our ZPLLayeredTestCase (which we have inheriting 
+        # across all our ZPLLayeredTestCase (which we have inheriting
         # from unittest.TestCase instead)
         if not cls.tc or cls.reset:
             cls.tc = InitializerTestCase("test_nothing")
@@ -342,4 +343,4 @@ class ZPLTestCaseLayerBase(ZenossTestCaseLayer):
     def tearDown(cls):
         if cls.device:
             cls.device.deleteDevice()
-  
+

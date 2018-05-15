@@ -29,6 +29,8 @@ class GraphPointSpec(Spec):
             name,
             type_='DataPointGraphPoint',
             sequence=0,
+            colorindex=None,
+            color=None,
             includeThresholds=False,
             thresholdLegends=None,
             extra_params=None,
@@ -43,6 +45,10 @@ class GraphPointSpec(Spec):
             :yaml_param type_: type
             :param sequence: Order of graph point in graph
             :type sequence: int
+            :param color: TODO    
+            :type color: str    
+            :param colorindex: TODO    
+            :type colorindex: int
             :param includeThresholds: TODO
             :type includeThresholds: bool
             :param thresholdLegends: map of {thresh_id: {legend: TEXT, color: HEXSTR}
@@ -61,6 +67,23 @@ class GraphPointSpec(Spec):
 
         self.sequence = sequence
 
+        self.color = color
+        if color:
+            Color.LOG = self.LOG
+            self.color = Color(color)
+
+        # Allow color to be specified by color_index instead of directly. This is
+        # useful when you want to keep the normal progression of colors, but need
+        # to add some DONTDRAW graphpoints for calculations.
+        self.colorindex = colorindex
+        if colorindex:
+            try:
+                colorindex = int(colorindex) % len(GraphPoint.colors)
+            except (TypeError, ValueError):
+                raise ValueError("graphpoint colorindex must be numeric.")
+
+            self.color = GraphPoint.colors[colorindex].lstrip('#')
+
         self.includeThresholds = includeThresholds
         self.thresholdLegends = thresholdLegends
 
@@ -68,31 +91,14 @@ class GraphPointSpec(Spec):
             self.extra_params = OrderedDict()
         else:
             self.extra_params = extra_params
+            self.validate_extra_params()
 
+    def validate_extra_params(self):
+        """Perform input validation for extra paramters"""
         # Shorthand for datapoints that have the same name as their datasource.
         dpName = self.extra_params.get('dpName')
         if dpName is not None and '_' not in dpName:
             self.extra_params['dpName'] = '{0}_{0}'.format(dpName)
-
-        # perform validation for color attribute
-        color = self.extra_params.get('color')
-        if 'color' in self.extra_params:
-            Color.LOG = self.LOG
-            color = Color(self.extra_params.get('color'))
-            print 'SETTING COLOR', color
-        # if color is not None:
-            self.extra_params['color'] = Color(self.extra_params.get('color'))
-
-        # Allow color to be specified by color_index instead of directly. This is
-        # useful when you want to keep the normal progression of colors, but need
-        # to add some DONTDRAW graphpoints for calculations.
-        colorindex = self.extra_params.get('colorindex')
-        if colorindex is not None:
-            try:
-                colorindex = int(colorindex) % len(GraphPoint.colors)
-            except (TypeError, ValueError):
-                raise ValueError("graphpoint colorindex must be numeric.")
-            self.extra_params['color'] = GraphPoint.colors[colorindex].lstrip('#')
 
         lineType = self.extra_params.get('lineType')
         # Validate lineType.
@@ -141,12 +147,11 @@ class GraphPointSpec(Spec):
         seq = self.sequence or sequence
         if seq is not None:
             graphpoint.sequence = seq
+        if self.color is not None:
+            graphpoint.color = self.color
 
         if self.extra_params:
             for param, value in self.extra_params.iteritems():
-                # skip colorindex since it gets translated to color
-                if param == 'colorindex':
-                    continue
                 if param in [x['id'] for x in graphpoint._properties]:
                     setattr(graphpoint, param, value)
                 else:
