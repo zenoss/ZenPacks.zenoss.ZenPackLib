@@ -6,6 +6,7 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
+from collections import OrderedDict
 from Acquisition import aq_base
 from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
 from ..spec.GraphPointSpec import GraphPointSpec
@@ -13,9 +14,10 @@ from .SpecParams import SpecParams
 
 
 class GraphPointSpecParams(SpecParams, GraphPointSpec):
+
     def __init__(self, template_spec, name, **kwargs):
         SpecParams.__init__(self, **kwargs)
-        self.name = name
+        GraphPointSpec.__init__(self, template_spec, name, **kwargs)
 
     @classmethod
     def fromObject(cls, graphpoint, graphdefinition):
@@ -31,6 +33,12 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
                 setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gp, propname))
             if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
                 setattr(self, propname, getattr(graphpoint, propname, None))
+
+        self.extra_params = OrderedDict()
+        for propname in [x['id'] for x in graphpoint._properties]:
+            if propname not in self.init_params:
+                if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
+                    self.extra_params[propname] = getattr(graphpoint, propname, None)
 
         threshold_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, ThresholdGraphPoint)]
 
