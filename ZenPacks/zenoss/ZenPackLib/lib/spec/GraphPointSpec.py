@@ -69,6 +69,7 @@ class GraphPointSpec(Spec):
 
         self.color = color
         if color:
+            print "GOT COLOR", self.name, color, Color(color)
             Color.LOG = self.LOG
             self.color = Color(color)
 

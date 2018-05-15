@@ -25,6 +25,7 @@ class OrderedLoader(yaml.Loader):
     of mappings as they're read from the file.
 
     """
+
     def __init__(self, *args, **kwargs):
         yaml.Loader.__init__(self, *args, **kwargs)
 
@@ -195,7 +196,8 @@ class ZenPackSpecLoader(OrderedLoader):
 
             # expected type should fall back to string if not given
             expected_type = param_defs.get(key, {}).get('type', 'str')
-
+            if yaml_key == 'color':
+                print expected_type, yaml_value
             # override yaml_value if needed
             try:
                 # handle badly formatted things like unquoted hex strings

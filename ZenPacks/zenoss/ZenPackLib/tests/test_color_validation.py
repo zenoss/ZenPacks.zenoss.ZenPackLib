@@ -33,6 +33,9 @@ device_classes:
               A:
                 dpName: test_a
                 color: 007700
+              A2:
+                dpName: test_a
+                color: '007700'
               B:
                 dpName: test_b
                 color: FF3300
@@ -64,6 +67,9 @@ device_classes:
           Graph:
             graphpoints:
               A:
+                dpName: test_a
+                color: '007700'
+              A2:
                 dpName: test_a
                 color: '007700'
               B:
