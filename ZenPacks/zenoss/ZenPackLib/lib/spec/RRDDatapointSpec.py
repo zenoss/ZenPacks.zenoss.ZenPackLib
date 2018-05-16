@@ -8,6 +8,7 @@
 ##############################################################################
 import re
 from .Spec import Spec
+from Products.ZenModel.RRDDataPoint import RRDDataPoint
 
 
 class RRDDatapointSpec(Spec):
@@ -17,6 +18,7 @@ class RRDDatapointSpec(Spec):
             self,
             datasource_spec,
             name,
+            type_=None,
             rrdtype=None,
             createCmd=None,
             isrow=None,
@@ -31,7 +33,10 @@ class RRDDatapointSpec(Spec):
             ):
         """
         Create an RRDDatapoint Specification
-
+        
+        :param type_: TODO
+        :type type_: str
+        :yaml_param type_: type
         :param rrdtype: TODO
         :type rrdtype: str
         :param createCmd: TODO
@@ -57,6 +62,7 @@ class RRDDatapointSpec(Spec):
         self.datasource_spec = datasource_spec
         self.name = name
 
+        self.type_ = type_
         self.rrdtype = rrdtype
         self.createCmd = createCmd
         self.isrow = isrow
@@ -210,8 +216,23 @@ class RRDDatapointSpec(Spec):
             return False
         return True
 
-    def create(self, datasource_spec, datasource):
-        datapoint = datasource.manage_addRRDDataPoint(self.name)
+    def get_datapoint_classes(self, dmd, datasource_spec):
+        """Return dictionary of datapoint classes"""
+        return dict([(dp.__name__, dp)
+            for dp in datasource_spec.template_spec.getDataPointClasses(dmd)])
+
+    def create(self, dmd, datasource_spec, datasource):
+        # let the datasource create the datapoint if it's not overridden here
+        if self.type_ is None:
+            datapoint = datasource.manage_addRRDDataPoint(self.name)
+        # otherwise we look for the subclass and use our own method instead
+        else:
+            dp_classes = self.get_datapoint_classes(dmd, datasource_spec)
+            dp_class = dp_classes.get(self.type_, RRDDataPoint)
+            datapoint = dp_class(self.name)
+            datasource.datapoints._setObject(datapoint.id, datapoint)
+            datapoint = datasource.datapoints._getOb(datapoint.id)
+
         type_ = datapoint.__class__.__name__
         self.speclog.debug("adding datapoint of type {}".format(type_))
 
