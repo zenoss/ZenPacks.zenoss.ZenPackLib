@@ -10,6 +10,7 @@ from .Spec import Spec
 from .RRDThresholdSpec import RRDThresholdSpec
 from .RRDDatasourceSpec import RRDDatasourceSpec
 from .GraphDefinitionSpec import GraphDefinitionSpec
+from Products.ZenModel.RRDDataPoint import RRDDataPoint
 
 
 class RRDTemplateSpec(Spec):
@@ -147,7 +148,7 @@ class RRDTemplateSpec(Spec):
 
         self.speclog.debug("adding {} datasources".format(len(self.datasources)))
         for datasource_id, datasource_spec in self.datasources.items():
-            datasource_spec.create(self, template)
+            datasource_spec.create(dmd, self, template)
 
         self.speclog.debug("adding {} graphs".format(len(self.graphs)))
         for i, (graph_id, graph_spec) in enumerate(self.graphs.items()):
@@ -166,3 +167,10 @@ class RRDTemplateSpec(Spec):
         existing_template = device_class.rrdTemplates._getOb(t_id, None)
         if existing_template:
             device_class.rrdTemplates._delObject(t_id)
+
+    def getDataPointClasses(self, dmd):
+        """Return a list of valid Datapoint classes"""
+        dpClasses = [RRDDataPoint]
+        for zp in dmd.ZenPackManager.packs():
+            dpClasses += zp._getClassesByPath('datapoints')
+        return dpClasses

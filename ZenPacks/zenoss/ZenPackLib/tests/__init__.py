@@ -18,7 +18,7 @@ from zope.traversing.adapters import DefaultTraversable
 from transaction._transaction import Transaction
 
 # Zenoss Imports
-import Globals 
+import Globals
 import Products.ZenTestCase
 from Products.Five import zcml
 from Products.DataCollector.ApplyDataMap import ApplyDataMap
@@ -172,8 +172,12 @@ class ZPLBaseTestCase(BaseTestCase):
         def getDataSourceClasses():
             return getattr(self, 'datasources', [])
         
+        def _getClassesByPath(type_):
+            return getattr(self, type_, [])
+
         zenpack.getThresholdClasses = getThresholdClasses
         zenpack.getDataSourceClasses = getDataSourceClasses
+        zenpack._getClassesByPath = _getClassesByPath
         return self.dmd.ZenPackManager.packs._getOb(zenpack.id)
 
     def get_config(self, yaml_doc):

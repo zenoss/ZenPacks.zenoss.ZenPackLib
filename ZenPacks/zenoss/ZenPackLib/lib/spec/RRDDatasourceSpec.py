@@ -10,6 +10,7 @@ from .Spec import Spec
 from .RRDDatapointSpec import RRDDatapointSpec
 from ..base.types import Severity
 
+
 class RRDDatasourceSpec(Spec):
     """RRDDatasourceSpec"""
 
@@ -75,7 +76,8 @@ class RRDDatasourceSpec(Spec):
         self.datapoints = self.specs_from_param(
             RRDDatapointSpec, 'datapoints', datapoints, zplog=self.LOG)
 
-    def create(self, templatespec, template):
+    def create(self, dmd, templatespec, template):
+
         datasource_types = dict(template.getDataSourceOptions())
 
         if not self.sourcetype:
@@ -117,4 +119,4 @@ class RRDDatasourceSpec(Spec):
 
         self.speclog.debug("adding {} datapoints".format(len(self.datapoints)))
         for datapoint_id, datapoint_spec in self.datapoints.items():
-            datapoint_spec.create(self, datasource)
+            datapoint_spec.create(dmd, self, datasource)

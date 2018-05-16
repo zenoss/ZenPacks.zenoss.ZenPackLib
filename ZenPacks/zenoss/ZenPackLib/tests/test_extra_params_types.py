@@ -12,11 +12,12 @@
     Ensure proper type handling for extra_params attribute overloading (ZEN-24079, ZEN-25315, ZEN-24083
 """
 from ZenPacks.zenoss.ZenPackLib.tests import (
-    ZPLLayeredTestCase, 
+    ZPLLayeredTestCase,
     get_layer_subclass
 )
 from Products.ZenModel.MinMaxThreshold import MinMaxThreshold
 from Products.ZenModel.RRDDataSource import RRDDataSource
+from Products.ZenModel.RRDDataPoint import RRDDataPoint
 
 
 class CustomThreshold(MinMaxThreshold):
@@ -33,6 +34,7 @@ class CustomThreshold(MinMaxThreshold):
         {'id': 'property_lines', 'type': 'lines', 'mode': 'rw'},
         )
 
+
 class CustomDatasource(RRDDataSource):
     """Mock Datasource for testing"""
     sourcetypes = ('CustomDatasource',)
@@ -45,6 +47,16 @@ class CustomDatasource(RRDDataSource):
         {'id': 'property_float', 'type': 'float', 'mode': 'rw'},
         {'id': 'property_lines', 'type': 'lines', 'mode': 'rw'},
         )
+
+
+class CustomDataPoint(RRDDataPoint):
+    """Mock RRDDataPoint for testing"""
+    rpn = ''
+
+    _properties = RRDDataPoint._properties + (
+        {'id': 'rpn', 'type': 'string', 'mode': 'w'},
+    )
+
 
 YAML_DOC = """
 name: ZenPacks.zenoss.ZenPackLib
@@ -64,6 +76,10 @@ device_classes:
           inheritedReading: 
             datapoints:
               inheritedReading: GAUGE
+              customReading:
+                type: CustomDataPoint
+                rrdtype: GAUGE
+                rpn: 1024,*
           currentReading:
             type: CustomDatasource
             datapoints:
@@ -87,11 +103,12 @@ device_classes:
 class TestExtraParamsTypeHandling(ZPLLayeredTestCase):
     """ Test that custom datasource/threshold class attributes are handled correctly"""
 
-    layer = get_layer_subclass('TemplateExtraParamsLayer', 
+    layer = get_layer_subclass('TemplateExtraParamsLayer',
         yaml_doc=YAML_DOC, tc_attributes={
         'build': True,
-        'datasources': [CustomDatasource], 
-        'thresholds': [CustomThreshold]})
+        'datasources': [CustomDatasource],
+        'thresholds': [CustomThreshold],
+        'datapoints': [CustomDataPoint]})
 
     def _get_template(self):
         return self.tc.get_device_class_templates(
@@ -159,6 +176,15 @@ class TestExtraParamsTypeHandling(ZPLLayeredTestCase):
                                                                  th.id,
                                                                  type(th.property_float)))
 
+    def test_extra_params_datapoint(self):
+        """Test that datapoint extra_params properties function correctly"""
+        # check properties on dummy template
+        template = self._get_template()
+        datasource = template.datasources.findObject('inheritedReading')
+        datapoint = datasource.datapoints.findObject('customReading')
+        self.assertEquals(datapoint.__class__.__name__, 'CustomDataPoint', 'Datapoint is wrong class')
+        self.assertEquals(datapoint.rpn, '1024,*', "Datapoint custom attribute is invalid")
+
 
 def test_suite():
     """Return test suite for this module."""
@@ -166,6 +192,7 @@ def test_suite():
     suite = TestSuite()
     suite.addTest(makeSuite(TestExtraParamsTypeHandling))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner
