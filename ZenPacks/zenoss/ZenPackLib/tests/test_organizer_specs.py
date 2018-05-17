@@ -114,8 +114,6 @@ class TestOrganizerSpecs(ZPLBaseTestCase):
     """
 
     yaml_doc = YAML_DOC
-    build = False
-    disableLogging = False
 
     def afterSetUp(self):
         super(TestOrganizerSpecs, self).afterSetUp()

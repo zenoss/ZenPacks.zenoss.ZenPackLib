@@ -13,7 +13,7 @@
 
 """
 from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
-
+from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 
 YAML_DOC = """
 name: ZenPacks.zenoss.Color
@@ -33,6 +33,9 @@ device_classes:
               A:
                 dpName: test_a
                 color: 007700
+              A2:
+                dpName: test_a
+                color: '007700'
               B:
                 dpName: test_b
                 color: FF3300
@@ -66,6 +69,9 @@ device_classes:
               A:
                 dpName: test_a
                 color: '007700'
+              A2:
+                dpName: test_a
+                color: '007700'
               B:
                 dpName: test_b
                 color: FF3300
@@ -90,9 +96,17 @@ class TestValidInput(ZPLBaseTestCase):
     def test_valid_color(self):
         ''''''
         config = self.configs.get('ZenPacks.zenoss.Color')
-        
-        self.assertEquals(config.get('yaml_dump'), EXPECTED,
-                        'YAML Color validation test failed')
+        yaml_param = config.get('yaml_from_specparams')
+        yaml_spec = config.get('yaml_dump')
+
+        diff = ZenPack.get_yaml_diff(EXPECTED, yaml_spec)
+        self.assertEquals(yaml_spec, EXPECTED,
+                        'YAML Color validation test failed:\n{}'.format(diff))
+
+        diff = ZenPack.get_yaml_diff(yaml_param, yaml_spec)
+
+        self.assertEquals(yaml_spec, yaml_param,
+                        'YAML Color validation test failed:\n{}'.format(diff))
 
 
 def test_suite():
@@ -101,6 +115,7 @@ def test_suite():
     suite = TestSuite()
     suite.addTest(makeSuite(TestValidInput))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner
