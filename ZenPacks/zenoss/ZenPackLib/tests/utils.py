@@ -23,7 +23,6 @@ from ZenPacks.zenoss.ZenPackLib.lib.helpers.loaders import WarningLoader
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.ZenPackLibLog import ZPLOG
 
 
-
 def _add(ob, obj):
     """ override of ToManyContRelationship _add method
     """
@@ -41,20 +40,44 @@ class ClassObjectHelper(object):
     cfg = None
     device_class_objects = None
     class_objects = None
-    
+
     def __init__(self, dmd, cfg, build=False):
         self.dmd = dmd
         self.cfg = cfg
         self.device_class_objects = {}
+        self.event_class_objects = {}
+        self.process_class_objects = {}
         self.class_objects = {}
         self.create(build)
 
     def create(self, build=False):
         if build:
             self.create_device_class_objects()
+            self.create_event_class_objects()
+            self.create_process_class_objects()
             self.create_class_objects()
             self.build_relations()
-        
+
+    def create_event_class_objects(self):
+        """Create DMD objects for event classes and templates"""
+        self.event_class_objects = {}
+        for ec_name, ec_spec in self.cfg.event_classes.iteritems():
+            ec_org = ec_spec.create_organizer(self.dmd)
+            self.event_class_objects[ec_name] = {'ob': ec_org, 'mappings': {}}
+            for map_name, map_spec in ec_spec.mappings.items():
+                map = ec_org.instances._getOb(ec_org.prepId(map_name))
+                self.event_class_objects[ec_name]['mappings'][map_name] = map
+
+    def create_process_class_objects(self):
+        """Create DMD objects for process classes and templates"""
+        self.process_class_objects = {}
+        for pc_name, pc_spec in self.cfg.process_class_organizers.iteritems():
+            pc_org = pc_spec.create_organizer(self.dmd)
+            self.process_class_objects[pc_name] = {'ob': pc_org, 'classes': {}}
+            for map_name, map_spec in pc_spec.process_classes.items():
+                map = pc_org.osProcessClasses._getOb(pc_org.prepId(map_name))
+                self.process_class_objects[pc_name]['classes'][map_name] = map
+
     def create_device_class_objects(self):
         """Create DMD objects for device classes and templates"""
         self.device_class_objects = {}
@@ -188,8 +211,10 @@ class WarningLoader(WarningLoader):
     """Subclassing here to add logging capability"""
     LOG = LOG
 
+
 class LogCapture(object):
     """Class mixin to add log capture for unit test evaluation"""
+
     def start_capture(self):
         self.buffer = io.StringIO()
         WarningLoader.LOG.setLevel(logging.WARNING)
@@ -236,5 +261,4 @@ class CommandMixin(object):
         out, err = p.communicate()
         p.wait()
         return (cmd, p, out, err)
-
 

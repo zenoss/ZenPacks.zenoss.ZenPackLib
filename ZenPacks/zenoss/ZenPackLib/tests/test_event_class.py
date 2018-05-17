@@ -16,14 +16,18 @@
 from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.EventClasses
 event_classes:
   /Status/Test:
     remove: false
     description: Test event class
     transform: "from ZenPacks.zenoss.CiscoMonitor import transforms\\ntransforms.status_handler(device, component, evt)"
+    zProperties:
+      zFlappingThreshold: 6
     mappings:
       TestMapping:
+        zProperties:
+          zFlappingThreshold: 4
         eventClassKey: TestMapping
         sequence:  10
         example: Test Mapping example
@@ -40,9 +44,10 @@ class TestEventClass(ZPLBaseTestCase):
     """Test Event Classes
     """
     yaml_doc = YAML_DOC
+    build = True
 
     def test_event_classes(self):
-        config = self.configs.get('ZenPacks.zenoss.ZenPackLib')
+        config = self.configs.get('ZenPacks.zenoss.EventClasses')
         cfg = config.get('cfg')
         reloaded = config.get('yaml_map')
         self.assertEquals(len(reloaded['event_classes']), len(cfg.event_classes))
@@ -53,6 +58,22 @@ class TestEventClass(ZPLBaseTestCase):
                           len(cfg.event_classes['/Status/Test'].mappings))
         self.assertEquals(reloaded['event_classes']['/Status/Test']['mappings']['TestMapping']['sequence'],
                           cfg.event_classes['/Status/Test'].mappings['TestMapping'].sequence)
+
+    def test_event_class_org(self):
+        """Test that event class is created and properties are accurate"""
+        config = self.configs.get('ZenPacks.zenoss.EventClasses')
+        ec_objects = config.get('objects').event_class_objects
+        ec_ob = ec_objects['/Status/Test']['ob']
+        self.assertEquals(ec_ob.zFlappingThreshold, 6,
+            '{} zProperty was not set correctly'.format(ec_ob.id))
+
+    def test_event_class_mapping(self):
+        """Test that event class is created and properties are accurate"""
+        config = self.configs.get('ZenPacks.zenoss.EventClasses')
+        ec_objects = config.get('objects').event_class_objects
+        ec_ob = ec_objects['/Status/Test']['mappings']['TestMapping']
+        self.assertEquals(ec_ob.zFlappingThreshold, 4,
+            '{} zProperty was not set correctly'.format(ec_ob.id))
 
 
 def test_suite():

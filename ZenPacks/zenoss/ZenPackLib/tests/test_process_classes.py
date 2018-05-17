@@ -20,6 +20,8 @@ YAML_DOC = """name: ZenPacks.zenoss.Processes
 process_class_organizers:
   Test:
     description: Description of the Process Class Organizer
+    zProperties:
+      zMonitor: false
     process_classes:
       foo:
         description: Description of the foo Process Class
@@ -27,13 +29,14 @@ process_class_organizers:
         replaceRegex: ".*"
         replacement: Foo Process Class
         excludeRegex: \\b(vim|tail|grep|tar|cat|bash)\\b
+        zProperties:
+          zMonitor: true
       bar:
         description: Description of the bar Process Class
         includeRegex: sbin\/bar
         excludeRegex: "\\b(vim|tail|grep|tar|cat|bash)\\b"
         replaceRegex: .*
         replacement: Bar Process Class
-        monitor: true
         alert_on_restart: false
         fail_severity: 3
         modeler_lock: 0
@@ -45,6 +48,7 @@ class TestProcessClass(ZPLBaseTestCase):
     """Test Process Classes
     """
     yaml_doc = YAML_DOC
+    build = True
 
     def test_process_classes(self):
         config = self.configs.get('ZenPacks.zenoss.Processes')
@@ -66,11 +70,29 @@ class TestProcessClass(ZPLBaseTestCase):
         self.assertEquals(cfg_process_classes['foo'].replacement, 'Foo Process Class')
 
         self.assertEquals(cfg_process_classes['bar'].excludeRegex, "\x08(vim|tail|grep|tar|cat|bash)\x08")
-        self.assertTrue(cfg_process_classes['bar'].monitor)
         self.assertFalse(cfg_process_classes['bar'].alert_on_restart)
         self.assertTrue(cfg_process_classes['bar'].send_event_when_blocked)
         self.assertEquals(cfg_process_classes['bar'].fail_severity, 3)
         self.assertEquals(cfg_process_classes['bar'].modeler_lock, 0)
+
+    def test_process_class_org(self):
+        """Test that process class is created and properties are accurate"""
+        config = self.configs.get('ZenPacks.zenoss.Processes')
+        objects = config.get('objects').process_class_objects
+        ob = objects['Test']['ob']
+        self.assertEquals(ob.zMonitor, False,
+            '{} zProperty was not set correctly'.format(ob.id))
+
+    def test_process_class_mapping(self):
+        """Test that event process is created and properties are accurate"""
+        config = self.configs.get('ZenPacks.zenoss.Processes')
+        objects = config.get('objects').process_class_objects
+        foo_ob = objects['Test']['classes']['foo']
+        bar_ob = objects['Test']['classes']['bar']
+        self.assertEquals(foo_ob.zMonitor, True,
+            '{} zProperty was not set correctly'.format(foo_ob.id))
+        self.assertEquals(bar_ob.zMonitor, False,
+            '{} zProperty was not set correctly'.format(bar_ob.id))
 
 
 def test_suite():
