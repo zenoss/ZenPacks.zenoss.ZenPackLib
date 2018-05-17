@@ -123,6 +123,12 @@ name
   :Type: string
   :Default Value: None
 
+zProperties
+  :Description: zProperty values to set on the event class mapping.
+  :Required: No
+  :Type: map<name, value>
+  :Default Value: {} *(empty map)*
+
 eventClassKey
   :Description: Event class key
   :Required: No

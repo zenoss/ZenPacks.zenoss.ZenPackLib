@@ -12,6 +12,7 @@ Release 2.1.0
 
 Features
 
+* EventClassInstance, OSProcessClass now support zProperties (ZPS-3636)
 * EventClass, OSProcessOrganizer now support zProperties (ZPS-3189, ZPS-3190)
 * Add "optional" field for thresholds (ZPS-1666)
 * Add support for ZProperty "label" and "description" fields (ZPS-747)

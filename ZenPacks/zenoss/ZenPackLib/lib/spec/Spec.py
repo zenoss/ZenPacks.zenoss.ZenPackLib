@@ -12,6 +12,7 @@ import logging
 import itertools
 import operator
 from collections import OrderedDict
+from Acquisition import aq_base
 
 from Products import Zuul
 from Products.Zuul import marshal
@@ -426,3 +427,19 @@ class Spec(object):
             yield subclass
             for subsubclass in subclass.get_subclasses():
                 yield subsubclass
+
+    def set_zproperties(self, ob):
+        """Set zProperties on a given object according to the Spec"""
+        for zprop, value in getattr(self, 'zProperties', {}).iteritems():
+            if ob.getPropertyType(zprop) is None and ob.getProperty(zprop) is None:
+                self.LOG.error(
+                    "Unable to set zProperty %s on %s (undefined zProperty)",
+                    zprop, ob.id)
+            else:
+                self.LOG.debug(
+                    "Setting zProperty %s to %r on %s (was %r)",
+                    zprop, value, ob.id, getattr(ob, zprop, ''))
+
+                # We want to explicitly set the value even if it's the same as
+                # what's being acquired. This is why aq_base is required.
+                aq_base(ob).setZenProperty(zprop, value)
