@@ -456,6 +456,12 @@ name
   :Type: string
   :Default Value: *(implied from key in datapoints map)*
 
+type
+  :Description: Type of datapoint. See :ref:`datapoint-types`.
+  :Required: No
+  :Type: string *(must be a valid source type)*
+  :Default Value: None.
+
 description
   :Description: Description of the datapoint's purpose and function.
   :Required: No
@@ -497,6 +503,16 @@ notation follows a pattern of `RRDTYPE_MIN_X_MAX_X` where RRDTYPE is one of "GAU
 and the "MIN_X"/"MAX_X" parameters are optional.  
 
 For example, DERIVE, DERIVE_MIN_0, and DERIVE_MIN_0_MAX_100 are all valid shorthand notation.
+
+.. _datapoint-types:
+
+Datapoint Types
+----------------
+
+By default, datapoint types are determined by the datasource's source code.  To override this behaviour and use a custom datapoint type, 
+the "type" paramter can be set to the class name of any datapoint class available on the system.  This prevents the need to override 
+the "manage_addRRDDataPoint" method within a custom datasource class override.  If the datapoint class comes from a separate ZenPack, be sure to 
+set a dependency in setup.py. Otherwise, the default class (RRDDataPoint) will be used.∂
 
 .. _threshold-fields:
 
