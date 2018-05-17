@@ -16,6 +16,7 @@ class EventClassMappingSpec(Spec):
             self,
             eventclass_spec,
             name,
+            zProperties=None,
             eventClassKey='',
             sequence=None,
             rule='',
@@ -28,6 +29,9 @@ class EventClassMappingSpec(Spec):
             _source_location=None,
             zplog=None):
         """
+        
+          :param zProperties: zProperty values to set upon this Organizer
+          :type zProperties: dict(str)
           :param eventClassKey: Event Class Key ( whats the default key )
           :type eventClassKey: str
           :param sequence: Define the match priority. Lower is a higher priority
@@ -51,6 +55,10 @@ class EventClassMappingSpec(Spec):
         self.klass_string = 'EventClassInst'
         self.eventclass_spec = eventclass_spec
         self.name = name
+        if zProperties is None:
+            self.zProperties = {}
+        else:
+            self.zProperties = zProperties
         self.eventClassKey = eventClassKey or name
         self.sequence = sequence
         self.transform = multiline(transform)
@@ -72,6 +80,8 @@ class EventClassMappingSpec(Spec):
         for x in _properties:
             if getattr(mapping, x) != getattr(self, x):
                 setattr(mapping, x, getattr(self, x, None))
+
+        self.set_zproperties(mapping)
 
         mapping.zpl_managed = True
         mapping.index_object()

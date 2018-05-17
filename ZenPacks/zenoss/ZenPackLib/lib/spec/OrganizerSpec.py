@@ -8,7 +8,6 @@
 ##############################################################################
 from Acquisition import aq_base
 from .Spec import Spec
-from posix import remove
 
 RESERVED_CLASSES = set(['Status', 'App', 'Cmd', 'Perf',
                         'Heartbeat', 'Unknown', 'Change', 'Processes',
@@ -123,7 +122,7 @@ class OrganizerSpec(Spec):
         if zenpack:
             # Anything left in packables will be removed the platform.
             try:
-                zenpack.packables.removeRelation(organizer)
+                zenpack.packables.removeRelation(org_obj)
             except Exception:
                 # The organizer wasn't in packables.
                 pass

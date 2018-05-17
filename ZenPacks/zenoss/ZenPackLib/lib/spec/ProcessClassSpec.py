@@ -22,6 +22,7 @@ class ProcessClassSpec(Spec):
             zenpack_spec,
             name,
             description='',
+            zProperties=None,
             remove=False,
             includeRegex='',
             excludeRegex='',
@@ -37,6 +38,8 @@ class ProcessClassSpec(Spec):
         """
           :param description: Description of Process Class Set
           :type description: str
+          :param zProperties: zProperty values to set upon this Process Class
+          :type zProperties: dict(str)
           :param includeRegex: Processes to include
           :type includeRegex: str
           :param excludeRegex: Processes to exclude
@@ -63,6 +66,10 @@ class ProcessClassSpec(Spec):
         self.zenpack_spec = zenpack_spec
         self.name = name
         self.description = description
+        if zProperties is None:
+            self.zProperties = {}
+        else:
+            self.zProperties = zProperties
         self.remove = remove
         if zplog:
             self.LOG = zplog
@@ -137,6 +144,10 @@ class ProcessClassSpec(Spec):
                 replaceRegex=replaceRegex,
                 replacement=replacement,
                 description=description)
+
+        self.set_zproperties(process_class)
+
+        # setting zproperties will be overridden if the following parameters are used
         if self.monitor is not None:
             process_class.setZenProperty('zMonitor', self.monitor)
 
