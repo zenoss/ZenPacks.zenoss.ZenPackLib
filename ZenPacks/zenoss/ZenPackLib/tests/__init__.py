@@ -178,7 +178,8 @@ class ZPLBaseTestCase(BaseTestCase):
 
     def get_config(self, yaml_doc):
         """Load a YAML document and return a dictionary describing it"""
-        cfg = zenpacklib.load_yaml(yaml_doc)
+        cfg = zenpacklib.load_yaml(yaml_doc,
+            verbose=not self.disableLogging, level=10)
         cfg.test_setup()
         
         return {'cfg': cfg,

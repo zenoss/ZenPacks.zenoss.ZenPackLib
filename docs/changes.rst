@@ -12,6 +12,7 @@ Release 2.1.0
 
 Features
 
+* Support additional GraphPoint subclasses (ZPS-855)
 * EventClassInstance, OSProcessClass now support zProperties (ZPS-3636)
 * EventClass, OSProcessOrganizer now support zProperties (ZPS-3189, ZPS-3190)
 * Add "optional" field for thresholds (ZPS-1666)
