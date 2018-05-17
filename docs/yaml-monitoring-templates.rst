@@ -674,6 +674,12 @@ name
   :Type: string
   :Default Value: *(implied from key in templates map)*
 
+type
+  :Description: Type of graphpoint. See :ref:`GraphPoint Types <graphpoint-types>`.
+  :Required: No
+  :Type: string *(must be a valid graphpoint type)*
+  :Default Value: DataPointGraphPoint
+
 legend
   :Description: Label to be shown for this graphpoint in the legend. The name field will be used if legend is not set.
   :Required: No
@@ -753,3 +759,36 @@ thresholdLegends
   :Type: map
   :Default Value: None
   :Example: thresholdLegends: {threshold_id: {legend: Legend, color: OO1122}}
+
+
+  .. _graphpoint-types:
+
+Graphpoint Types
+---------------
+
+The following threshold types are valid on any Zenoss system. They are the
+default types that are part of the platform. This list is not exhaustive as
+additional threshold types can be added by ZenPacks.
+
+ThresholdGraphPoint:
+  :Description: Graphpoint that refers to a threshold associated with a datapoint
+  :Availability: Zenoss Platform
+  :Additional Fields:
+    threshId
+      :Description: Reference to the id of related threshold
+      :Required: Yes
+      :Type: string -- Must evaluate to a related threshold id
+      :Default Value: None
+
+CommentGraphPoint
+  :Description: Graphopints defining a comment
+  :Availability: Zenoss Platform
+  :Additional Fields:
+	text
+	  :Description: Contextual comments for CommentGraphPoint
+	  :Required: No
+	  :Type: string
+	  :Default Value: None
+
+.. _graph-fields:
+  
