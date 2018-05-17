@@ -107,6 +107,12 @@ description
   :Type: string
   :Default Value: None
 
+zProperties
+  :Description: zProperty values to set on the process class.
+  :Required: No
+  :Type: map<name, value>
+  :Default Value: {} *(empty map)*
+
 includeRegex
   :Description: Include processes matching this regular expression
   :Required: No
