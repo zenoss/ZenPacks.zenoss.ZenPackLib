@@ -120,9 +120,6 @@ class TestGraphPointTypes(ZPLBaseTestCase):
         gp_d = g.graphPoints.findObject('D')
         gp_d_spec = g_spec.graphpoints.get('D')
         self.is_equal(gp_d, gp_d_spec, 'limit')
-        self.assertEquals(gp_d.color, '0000ff',
-            'GraphPoint {} attribute {} expected: {}, got: {}'.format(
-            gp_d.id, 'color', '0000ff', gp_d.color))
 
     def is_equal(self, ob, spec, attribute):
         actual = getattr(ob, attribute)
