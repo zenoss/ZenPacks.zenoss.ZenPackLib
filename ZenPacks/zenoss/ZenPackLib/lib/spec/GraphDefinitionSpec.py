@@ -18,6 +18,7 @@ class GraphDefinitionSpec(Spec):
             self,
             template_spec,
             name,
+            description=None,
             height=None,
             width=None,
             units=None,
@@ -34,7 +35,9 @@ class GraphDefinitionSpec(Spec):
             ):
         """
         Create a GraphDefinition Specification
-
+        
+        :param description: TODO
+        :type description: str
         :param height TODO
         :type height: int
         :param width TODO
@@ -64,6 +67,7 @@ class GraphDefinitionSpec(Spec):
         self.template_spec = template_spec
         self.name = name
 
+        self.description = description
         self.height = height
         self.width = width
         self.units = units
@@ -85,6 +89,8 @@ class GraphDefinitionSpec(Spec):
 
         if sequence:
             graph.sequence = sequence
+        if self.description is not None:
+            graph.description = self.description
         if self.height is not None:
             graph.height = self.height
         if self.width is not None:

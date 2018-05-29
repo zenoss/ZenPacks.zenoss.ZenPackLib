@@ -20,6 +20,7 @@ Features
 
 Fixes
 
+* Support Graph "descripton" attribute (ZPS-3696) 
 * Support ABSOLUTE RRD type (ZPS-1733)
 * All organizer classes respect the "create", "remove", and "reset" attributes (ZPS-810)
 * Refactor unit tests to avoid build issues (ZPS-3035)

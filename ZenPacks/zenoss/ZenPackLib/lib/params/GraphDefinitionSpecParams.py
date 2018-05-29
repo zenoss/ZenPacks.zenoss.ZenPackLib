@@ -29,8 +29,9 @@ class GraphDefinitionSpecParams(SpecParams, GraphDefinitionSpec):
         graphdefinition = aq_base(graphdefinition)
         sample_gd = graphdefinition.__class__(graphdefinition.id)
 
-        for propname in ('height', 'width', 'units', 'log', 'base', 'miny',
-                         'maxy', 'custom', 'hasSummary', 'comments'):
+        for propname in ('description', 'height', 'width', 'units', 'log',
+                         'base', 'miny', 'maxy', 'custom', 'hasSummary',
+                         'comments'):
             if hasattr(sample_gd, propname):
                 setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gd, propname))
             if getattr(graphdefinition, propname, None) != getattr(sample_gd, propname, None):
