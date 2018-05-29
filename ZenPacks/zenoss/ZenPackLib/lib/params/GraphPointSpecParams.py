@@ -27,15 +27,16 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
         graphdefinition = aq_base(graphdefinition)
         sample_gp = graphpoint.__class__(graphpoint.id)
 
+        self.type_ = graphpoint.__class__.__name__
+
         self.extra_params = OrderedDict()
 
         ordered = ('lineType', 'lineWidth', 'stacked', 'format',
             'legend', 'limit', 'rpn', 'cFunc', 'color')
 
         for propname in ordered:
-            default_value = getattr(graphpoint, propname, None)
-            ob_value = getattr(sample_gp, propname, None)
-
+            default_value = getattr(sample_gp, propname, None)
+            ob_value = getattr(graphpoint, propname, None)
             if propname in self.init_params:
                 # set the default value for this spec attribute
                 if hasattr(sample_gp, propname):
@@ -43,7 +44,6 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
                 # set the value locally if different from class default
                 if ob_value != default_value:
                     setattr(self, propname, ob_value)
-
             # property must belong in extra_params
             else:
                 # set the value locally if different from class default
@@ -54,20 +54,9 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
         for propname in [x['id'] for x in graphpoint._properties if x['id'] not in ordered]:
             if propname in self.init_params:
                 continue
-            default_value = getattr(graphpoint, propname, None)
-            ob_value = getattr(sample_gp, propname, None)
+            default_value = getattr(sample_gp, propname, None)
+            ob_value = getattr(graphpoint, propname, None)
             if ob_value != default_value:
                 self.extra_params[propname] = ob_value
-
-        threshold_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, ThresholdGraphPoint)]
-
-        self.includeThresholds = False
-        if threshold_graphpoints:
-            thresholds = {x.id: x for x in graphpoint.graphDef().rrdTemplate().thresholds()}
-            for tgp in threshold_graphpoints:
-                threshold = thresholds.get(tgp.threshId, None)
-                if threshold:
-                    if graphpoint.dpName in threshold.dsnames:
-                        self.includeThresholds = True
 
         return self
