@@ -33,6 +33,7 @@ device_classes:
             dsnames: [A_A]
         graphs:
           Test:
+            description:  Test Template
             graphpoints:
               A:
                 dpName: A_A
@@ -63,7 +64,6 @@ class TestGraphPointTypes(ZPLBaseTestCase):
     """Test Threshold GraphPoint legend and coloring"""
 
     yaml_doc = YAML_DOC
-    disableLogging = False
     build = True
 
     def get_graph_and_spec(self):
@@ -75,6 +75,11 @@ class TestGraphPointTypes(ZPLBaseTestCase):
         g = template.graphDefs.findObject('Test')
         g_spec = template_spec.graphs.get('Test')
         return g, g_spec
+
+    def test_graph(self):
+        """Test Graph description (ZPS-3696"""
+        g, g_spec = self.get_graph_and_spec()
+        self.is_equal(g, g_spec, 'description')
 
     def test_graphpoints(self):
         """Test that created object attributes match their specs"""
@@ -123,8 +128,8 @@ class TestGraphPointTypes(ZPLBaseTestCase):
 
     def is_equal(self, ob, spec, attribute):
         actual = getattr(ob, attribute)
-        expected = getattr(spec, attribute, spec.extra_params.get(attribute))
-
+        expected = getattr(spec, attribute, 
+            getattr(spec, 'extra_params', {}).get(attribute))
         self.assertEquals(actual, expected,
             'GraphPoint {} attribute {} expected: {}, got: {}'.format(
             ob.id, attribute, expected, actual))
