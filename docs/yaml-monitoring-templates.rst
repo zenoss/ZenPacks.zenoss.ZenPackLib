@@ -601,6 +601,12 @@ name
   :Type: string
   :Default Value: *(implied from key in graphs map)*
 
+description
+  :Description: Description of the graph's purpose and function.
+  :Required: No
+  :Type: string
+  :Default Value: "" *(empty string)*
+
 units
   :Description: Units displayed on graph. Used as the y-axis label.
   :Required: No
