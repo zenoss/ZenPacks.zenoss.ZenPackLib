@@ -32,7 +32,7 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
         self.extra_params = OrderedDict()
 
         ordered = ('lineType', 'lineWidth', 'stacked', 'format',
-            'legend', 'limit', 'rpn', 'cFunc', 'color')
+            'legend', 'limit', 'rpn', 'cFunc', 'color', 'dpName')
 
         for propname in ordered:
             default_value = getattr(sample_gp, propname, None)
