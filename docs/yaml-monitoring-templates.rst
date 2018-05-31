@@ -766,9 +766,9 @@ thresholdLegends
 Graphpoint Types
 ---------------
 
-The following threshold types are valid on any Zenoss system. They are the
+The following graphpoint types are valid on any Zenoss system. They are the
 default types that are part of the platform. This list is not exhaustive as
-additional threshold types can be added by ZenPacks.
+additional graphpoint types can be added by ZenPacks.
 
 ThresholdGraphPoint:
   :Description: Graphpoint that refers to a threshold associated with a datapoint
