@@ -307,7 +307,7 @@ COMMAND
   :Additional Fields:
     commandTemplate
       :Description: The command to run.
-      :Required: Yes
+      :Required: No
       :Type: string
       :Default Value: "" *(empty string)*
 
@@ -321,7 +321,7 @@ COMMAND
       :Description: Parser used to parse output from command.
       :Required: No
       :Type: string *(must be a valid parser name)*
-      :Default Value: Nagios
+      :Default Value: Auto
 
 .. todo:: Document COMMAND datasource parsers.
 
@@ -647,7 +647,7 @@ height
   :Description: The graph's height in pixels.
   :Required: No
   :Type: integer
-  :Default Value: 100
+  :Default Value: 500
 
 width
   :Description: The graph's width in pixels.
