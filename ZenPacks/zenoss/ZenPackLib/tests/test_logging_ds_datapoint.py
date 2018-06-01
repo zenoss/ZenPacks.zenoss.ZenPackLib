@@ -87,6 +87,21 @@ device_classes:
                 dpName: null
 """
 
+BAD_THRESHOLD = """
+name: ZenPacks.zenoss.TestLogging
+
+device_classes:
+  /Server/Zenoss/GraphPoints:
+    templates:
+      GraphPoints:
+        graphs:
+          Health:
+            graphpoints:
+              NotExisting:
+                type: ThresholdGraphPoint
+                threshId: NotExisting
+"""
+
 
 class TestLoggingDatasourceDatapoint(ZPLBaseTestCase):
     disableLogging = False
@@ -108,6 +123,12 @@ class TestLoggingDatasourceDatapoint(ZPLBaseTestCase):
         '[WARNING] Graph Point ssCpuRawIdle has invalid datapoints: null_null\n'
         actual = self.capture.test_yaml(NO_VALID_POINTS)
         self.assertEquals(actual, expected, 'Datapoint validation failed:\n  {}'.format(actual))
+
+    def test_bad_threshold_yaml(self):
+        """Test logging of invalid Threshold Graphpoints (ZPS-3714)"""
+        expected = '[WARNING] ThresholdGraphPoint NotExisting has no associated threshold\n'
+        actual = self.capture.test_yaml(BAD_THRESHOLD)
+        self.assertEquals(actual, expected, 'Threshold graphpoint validation failed:\n  {}'.format(actual))
 
 
 def test_suite():
