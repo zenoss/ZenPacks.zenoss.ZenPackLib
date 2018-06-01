@@ -79,12 +79,15 @@ class RRDTemplateSpec(Spec):
         # check graph point references
         for g_name, g_spec in self.graphs.items():
             for gp_name, gp_spec in g_spec.graphpoints.items():
-                if gp_spec.type_ != 'DataPointGraphPoint':
-                    continue
-                self.check_ds_dp_names(gp_name,
-                                       'Graph Point',
-                                       set([gp_spec.dpName]),
-                                       ds_dp_names)
+                if gp_spec.type_ == 'DataPointGraphPoint':
+                    self.check_ds_dp_names(gp_name, 'Graph Point',
+                        set([gp_spec.dpName]), ds_dp_names)
+                if gp_spec.type_ == 'ThresholdGraphPoint':
+                    th_id = gp_spec.extra_params.get('threshId') or gp_spec.name
+                    th_ids = [th_spec.name for th_spec in self.thresholds.values()]
+                    if th_id not in th_ids:
+                        self.LOG.warn(
+                            'ThresholdGraphPoint {} has no associated threshold'.format(th_id))
 
     def get_ds_dp_names(self):
         """return set of dsname_dpname"""
