@@ -13,8 +13,9 @@ from ..spec.EventClassSpec import EventClassSpec
 
 
 class EventClassSpecParams(OrganizerSpecParams, EventClassSpec):
-    def __init__(self, zenpack_spec, path, description='', transform='', mappings=None, **kwargs):
-        OrganizerSpecParams.__init__(self, zenpack_spec, path, **kwargs)
+
+    def __init__(self, zenpack_spec, path, description='', transform='', zProperties=None, mappings=None, **kwargs):
+        OrganizerSpecParams.__init__(self, zenpack_spec, path, zProperties, **kwargs)
         self.description = description
         self.transform = multiline(transform)
         self.mappings = self.specs_from_param(

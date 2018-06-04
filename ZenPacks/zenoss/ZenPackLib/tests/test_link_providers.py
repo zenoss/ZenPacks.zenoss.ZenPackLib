@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,11 +12,10 @@
 """
     Test link providers
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
-
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.LinkProviders
 link_providers:
     Cluster Node:
         global_search: false
@@ -45,21 +44,24 @@ EXPECTED_YAML = {
             'queries': ['id:clusterhostdevices']
         }
     },
-    'name': 'ZenPacks.zenoss.ZenPackLib'
+    'name': 'ZenPacks.zenoss.LinkProviders'
 }
 
 
-
-class TestLinkProviders(ZPLTestBase):
+class TestLinkProviders(ZPLBaseTestCase):
     """Test Link Providers
     """
     yaml_doc = YAML_DOC
 
     def test_link_providers(self):
-        self.maxDiff = None
-        self.assertEquals(len(self.z.yaml['link_providers']), len(self.z.cfg.link_providers))
-        self.assertEquals(EXPECTED_YAML, self.z.yaml)
-        link_providers = self.z.cfg.link_providers
+        config = self.configs.get('ZenPacks.zenoss.LinkProviders')
+        cfg = config.get('cfg')
+        exported = config.get('yaml_map')
+
+        self.assertEquals(len(exported['link_providers']), len(cfg.link_providers))
+        self.assertEquals(EXPECTED_YAML, exported)
+
+        link_providers = cfg.link_providers
         self.assertFalse(link_providers['Cluster'].global_search)
         self.assertEquals(link_providers['Cluster'].link_class, 'ZenPacks.zenoss.Microsoft.Windows.Device.Device')
         self.assertEquals(link_providers['Cluster'].catalog, 'device')

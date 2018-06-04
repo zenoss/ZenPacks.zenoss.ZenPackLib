@@ -307,7 +307,7 @@ COMMAND
   :Additional Fields:
     commandTemplate
       :Description: The command to run.
-      :Required: Yes
+      :Required: No
       :Type: string
       :Default Value: "" *(empty string)*
 
@@ -321,7 +321,7 @@ COMMAND
       :Description: Parser used to parse output from command.
       :Required: No
       :Type: string *(must be a valid parser name)*
-      :Default Value: Nagios
+      :Default Value: Auto
 
 .. todo:: Document COMMAND datasource parsers.
 
@@ -460,7 +460,7 @@ description
   :Description: Description of the datapoint's purpose and function.
   :Required: No
   :Type: string
-  :Default Value: "" *(empty string)*
+  :Default Value: "" *(Inherited from Template description)*
 
 rrdtype
   :Description: Type of datapoint. Must be GAUGE or DERIVE.
@@ -493,7 +493,7 @@ above list. This is because datapoints are an extensible type in Zenoss, and
 depending on the value of the datasource's *type*, other fields may be valid.
 
 YAML datapoint specification also supports the use of an alternate "shorthand" notation for brevity.  Shorthand 
-notation follows a pattern of `RRDTYPE_MIN_X_MAX_X` where RRDTYPE is one of "GAUGE, DERIVE, COUNTER, RAW", 
+notation follows a pattern of `RRDTYPE_MIN_X_MAX_X` where RRDTYPE is one of "GAUGE, DERIVE, COUNTER, ABSOLUTE", 
 and the "MIN_X"/"MAX_X" parameters are optional.  
 
 For example, DERIVE, DERIVE_MIN_0, and DERIVE_MIN_0_MAX_100 are all valid shorthand notation.
@@ -548,6 +548,12 @@ escalateCount:
   :Type: int
   :Default Value: None
 
+optional:
+  :Description: The threshold will not be created if the threshold type is not available and *optional* is set to true. Installation will fail if the type is not available and *optional* is set to false.
+  :Required: No
+  :Type: boolean
+  :Default Value: False
+
 Thresholds also allow other ad-hoc options to be added not referenced in the
 above list. This is because thresholds are an extensible type in Zenoss, and
 depending on the value of the threshold's *type*, other fields may be valid.
@@ -595,6 +601,12 @@ name
   :Type: string
   :Default Value: *(implied from key in graphs map)*
 
+description
+  :Description: Description of the graph's purpose and function.
+  :Required: No
+  :Type: string
+  :Default Value: "" *(empty string)*
+
 units
   :Description: Units displayed on graph. Used as the y-axis label.
   :Required: No
@@ -635,7 +647,7 @@ height
   :Description: The graph's height in pixels.
   :Required: No
   :Type: integer
-  :Default Value: 100
+  :Default Value: 500
 
 width
   :Description: The graph's width in pixels.
@@ -667,6 +679,12 @@ name
   :Required: Yes
   :Type: string
   :Default Value: *(implied from key in templates map)*
+
+type
+  :Description: Type of graphpoint. See :ref:`GraphPoint Types <graphpoint-types>`.
+  :Required: No
+  :Type: string *(must be a valid graphpoint type)*
+  :Default Value: DataPointGraphPoint
 
 legend
   :Description: Label to be shown for this graphpoint in the legend. The name field will be used if legend is not set.
@@ -747,4 +765,36 @@ thresholdLegends
   :Type: map
   :Default Value: None
   :Example: thresholdLegends: {threshold_id: {legend: Legend, color: OO1122}}
+
+
+  .. _graphpoint-types:
+
+Graphpoint Types
+---------------
+
+The following graphpoint types are valid on any Zenoss system. They are the
+default types that are part of the platform. This list is not exhaustive as
+additional graphpoint types can be added by ZenPacks.
+
+ThresholdGraphPoint:
+  :Description: Graphpoint that refers to a threshold associated with a datapoint
+  :Availability: Zenoss Platform
+  :Additional Fields:
+    threshId
+      :Description: Reference to the id of related threshold
+      :Required: Yes
+      :Type: string -- Must evaluate to a related threshold id
+      :Default Value: None
+
+CommentGraphPoint
+  :Description: Graphopints defining a comment
+  :Availability: Zenoss Platform
+  :Additional Fields:
+	text
+	  :Description: Contextual comments for CommentGraphPoint
+	  :Required: No
+	  :Type: string
+	  :Default Value: None
+
+.. _graph-fields:
   

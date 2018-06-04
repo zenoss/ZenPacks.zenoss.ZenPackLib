@@ -226,9 +226,24 @@ class ZPLCommand(ZenScriptBase):
         except Exception, e:
             DEFAULTLOG.exception(e)
 
+    def validate_zenpack_name(self, zenpack_name):
+        """Ensure that ZenPack name conforms with convention"""
+        zenpack_name_parts = zenpack_name.split('.')
+
+        if len(zenpack_name_parts) < 3:
+            sys.exit('ZenPack name must conform to naming convention:\n\n    ZenPacks.<namespace.PackName>\n\n'\
+                     'where "namespace" can contain multiple dot-delimited segments.  For example:\n\n   '\
+                     ' ZenPacks.<namespace.subspace.PackName>\n\nis also a valid ZenPack name.')
+        if zenpack_name_parts[0] != 'ZenPacks':
+            suggested = "ZenPacks.{}".format('.'.join(zenpack_name_parts[1:]))
+            sys.exit('ZenPack name must begin with "ZenPacks", got {}.  Suggest using "{}" instead.'.format(
+                                                    zenpack_name_parts[0], suggested))
+
     def create_zenpack_srcdir(self, zenpack_name):
         """Create a new ZenPack source directory."""
         import errno
+
+        self.validate_zenpack_name(zenpack_name)
 
         if os.path.exists(zenpack_name):
             sys.exit("{} directory already exists.".format(zenpack_name))

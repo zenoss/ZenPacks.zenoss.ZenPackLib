@@ -6,6 +6,7 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
+from collections import OrderedDict
 from Acquisition import aq_base
 from Products.ZenModel.ThresholdGraphPoint import ThresholdGraphPoint
 from ..spec.GraphPointSpec import GraphPointSpec
@@ -13,9 +14,10 @@ from .SpecParams import SpecParams
 
 
 class GraphPointSpecParams(SpecParams, GraphPointSpec):
+
     def __init__(self, template_spec, name, **kwargs):
         SpecParams.__init__(self, **kwargs)
-        self.name = name
+        GraphPointSpec.__init__(self, template_spec, name, **kwargs)
 
     @classmethod
     def fromObject(cls, graphpoint, graphdefinition):
@@ -25,22 +27,36 @@ class GraphPointSpecParams(SpecParams, GraphPointSpec):
         graphdefinition = aq_base(graphdefinition)
         sample_gp = graphpoint.__class__(graphpoint.id)
 
-        for propname in ('lineType', 'lineWidth', 'stacked', 'format',
-                         'legend', 'limit', 'rpn', 'cFunc', 'color', 'dpName'):
-            if hasattr(sample_gp, propname):
-                setattr(self, '_%s_defaultvalue' % propname, getattr(sample_gp, propname))
-            if getattr(graphpoint, propname, None) != getattr(sample_gp, propname, None):
-                setattr(self, propname, getattr(graphpoint, propname, None))
+        self.type_ = graphpoint.__class__.__name__
 
-        threshold_graphpoints = [x for x in graphdefinition.graphPoints() if isinstance(x, ThresholdGraphPoint)]
+        self.extra_params = OrderedDict()
 
-        self.includeThresholds = False
-        if threshold_graphpoints:
-            thresholds = {x.id: x for x in graphpoint.graphDef().rrdTemplate().thresholds()}
-            for tgp in threshold_graphpoints:
-                threshold = thresholds.get(tgp.threshId, None)
-                if threshold:
-                    if graphpoint.dpName in threshold.dsnames:
-                        self.includeThresholds = True
+        ordered = ('lineType', 'lineWidth', 'stacked', 'format',
+            'legend', 'limit', 'rpn', 'cFunc', 'color', 'dpName')
+
+        for propname in ordered:
+            default_value = getattr(sample_gp, propname, None)
+            ob_value = getattr(graphpoint, propname, None)
+            if propname in self.init_params:
+                # set the default value for this spec attribute
+                if hasattr(sample_gp, propname):
+                    setattr(self, '_%s_defaultvalue' % propname, default_value)
+                # set the value locally if different from class default
+                if ob_value != default_value:
+                    setattr(self, propname, ob_value)
+            # property must belong in extra_params
+            else:
+                # set the value locally if different from class default
+                if ob_value != default_value:
+                    self.extra_params[propname] = ob_value
+
+        # now get other extra_params
+        for propname in [x['id'] for x in graphpoint._properties if x['id'] not in ordered]:
+            if propname in self.init_params:
+                continue
+            default_value = getattr(sample_gp, propname, None)
+            ob_value = getattr(graphpoint, propname, None)
+            if ob_value != default_value:
+                self.extra_params[propname] = ob_value
 
         return self

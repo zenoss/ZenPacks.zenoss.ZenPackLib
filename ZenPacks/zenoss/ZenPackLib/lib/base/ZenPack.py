@@ -79,11 +79,11 @@ class ZenPack(ZenPackBase):
 
         # Load event classes
         for ecname, ecspec in self.event_classes.iteritems():
-            ecspec.instantiate(app.zport.dmd)
+            ec_org = ecspec.create_organizer(app.zport.dmd)
 
         # Create Process Classes
         for psname, psspec in self.process_class_organizers.iteritems():
-            psspec.create(app.zport.dmd)
+            ps_org = psspec.create_organizer(app.zport.dmd)
 
     def remove(self, app, leaveObjects=False):
         if self._v_specparams is None:
@@ -152,19 +152,14 @@ class ZenPack(ZenPackBase):
                 self._buildDeviceRelations(app)
 
             for dcname, dcspec in self.device_classes.iteritems():
-                if dcspec.remove:
-                    self.remove_device_class(app, dcspec)
+                dcspec.remove_organizer(app.zport.dmd, self)
 
-            # Remove EventClasses with remove flag set
-            self.remove_organizer_or_subs(app.zport.dmd.Events,
-                                          self.event_classes,
-                                          'mappings',
-                                          'removeInstances')
-            # Remove Process Classes/Organizers with remove flag set
-            self.remove_organizer_or_subs(app.zport.dmd.Processes,
-                                          self.process_class_organizers,
-                                          'process_classes',
-                                          'removeOSProcessClasses')
+            for ecname, ecspec in self.event_classes.iteritems():
+                ecspec.remove_organizer(app.zport.dmd, self)
+
+            for pcname, pcspec in self.process_class_organizers.iteritems():
+                pcspec.remove_organizer_or_subs(
+                    app.zport.dmd, 'process_classes', 'removeOSProcessClasses', self)
 
         super(ZenPack, self).remove(app, leaveObjects=leaveObjects)
 
@@ -258,49 +253,6 @@ class ZenPack(ZenPackBase):
         if source_object:
             self.rename_object(parent, relname, source_id, dest_id)
 
-    def remove_organizer_or_subs(self, dmd_root, classes, sub_class, remove_name):
-        '''Remove the organizer or subclasses within an organizer
-        Used for event classes, process classes, windows services
-        The specs should use path to describe the organizer name/path
-        For subclasses, use klass_string for the class type name
-        Also be sure to set zpl_managed in the specs
-        '''
-        for cname, cspec in classes.iteritems():
-            organizerPath = cspec.path
-            try:
-                organizer = dmd_root.getOrganizer(organizerPath)
-            except KeyError:
-                self.LOG.warning('Unable to find {} {}'.format(dmd_root.__class__.__name__, cspec.path))
-                continue
-
-            # Anything left in packables will be removed the platform.
-            try:
-                self.packables.removeRelation(organizer)
-            except Exception:
-                # The organizer wasn't in packables.
-                pass
-
-            if cspec.remove and hasattr(organizer, 'zpl_managed') and organizer.zpl_managed:
-                # make sure the organizer is zpl_managed before we try and delete it
-                # also double-check that we do not remove anything important like /Status or Processes
-                if organizerPath in RESERVED_CLASSES:
-                    continue
-                self.LOG.info('Removing {} {}'.format(organizer.__class__.__name__, cspec.path))
-                dmd_root.manage_deleteOrganizer(organizer.getDmdKey())
-            else:
-                sub_classes = getattr(cspec, sub_class, {})
-                remove_func = getattr(organizer, remove_name, None)
-                if not remove_func:
-                    continue
-                for subclass_id, subclass_spec in sub_classes.items():
-                    if subclass_spec.remove:
-                        preppedId = organizer.prepId(subclass_id)
-                        # make sure object is zpl managed
-                        obj = organizer.findObject(preppedId)
-                        if getattr(obj, 'zpl_managed', False):
-                            self.LOG.info('Removing {} {} @ {}'.format(subclass_spec.klass_string, subclass_id, cspec.path))
-                            remove_func(preppedId)
-
     def object_changed(self, app, object, spec, specparam):
         """Compare new and old objects with prototype creation"""
         # get YAML representation of object
@@ -335,92 +287,18 @@ class ZenPack(ZenPackBase):
         return None
 
     def create_device_classes(self, app):
-        """Create device classes. Set their zProperties and devtypes."""
-        for dcname in sorted(self.device_classes):
-            # Device classes must be created in alphanumeric order to
-            # prevent children from implicitly creating their parents. When
-            # children implicitly create their parents, zProperty values
-            # won't get set on the parents.
-            dcspec = self.device_classes[dcname]
-
-            if dcspec.create:
-                self.create_device_class(app, dcspec)
-            else:
-                device_class = dcspec.get_organizer(app.zport.dmd)
-                if not device_class:
-                    self.LOG.warn(
-                        "Device Class (%s) not found",
-                        dcspec.path)
-
-    def create_device_class(self, app, dcspec):
-        """Create and return a DeviceClass. Set zProperties and devtypes.
-
-        zProperties and devtypes will only be set if the device class
-        doesn't already exist. This is done to prevent overwriting of user
-        customizations on upgrade.
-
         """
-        dcObject = dcspec.get_organizer(app.zport.dmd)
-        if dcObject:
-            self.LOG.debug(
-                "Existing %s device class - not overwriting properties",
-                dcspec.path)
-
-            return dcObject
-
-        self.LOG.debug("Creating %s device class", dcspec.path)
-        dcObject = app.zport.dmd.Devices.createOrganizer(dcspec.path)
-
-        # Set zProperties.
-        for zprop, value in dcspec.zProperties.iteritems():
-            if dcObject.getPropertyType(zprop) is None:
-                self.LOG.error(
-                    "Unable to set zProperty %s on %s (undefined zProperty)",
-                    zprop, dcspec.path)
-            else:
-                self.LOG.debug(
-                    "Setting zProperty %s to %r on %s",
-                    zprop, value, dcspec.path)
-
-                # We want to explicitly set the value even if it's the same as
-                # what's being acquired. This is why aq_base is required.
-                aq_base(dcObject).setZenProperty(zprop, value)
-
-        # Register devtype.
-        if dcObject and dcspec.description and dcspec.protocol:
-            self.LOG.debug(
-                "Registering devtype for %s: %s (%s)",
-                dcspec.path,
-                dcspec.protocol,
-                dcspec.description)
-
-            try:
-                # We want to explicitly set the value even if it's the same as
-                # what's being acquired. This is why aq_base is required.
-                aq_base(dcObject).register_devtype(
-                    dcspec.description,
-                    dcspec.protocol)
-            except Exception as e:
-                self.LOG.warn(
-                    "Error registering devtype for %s: %s (%s)",
-                    dcspec.path,
-                    dcspec.protocol,
-                    e)
-
-        return dcObject
-
-    def remove_device_class(self, app, dcspec):
-        """Remove a DeviceClass"""
-        path = [p for p in dcspec.path.lstrip('/').split('/') if p != 'Devices']
-        organizerPath = '/{}'.format('/'.join(['Devices'] + path))
-        try:
-            app.zport.dmd.Devices.getOrganizer(organizerPath)
-            try:
-                app.zport.dmd.Devices.manage_deleteOrganizer(organizerPath)
-            except Exception as e:
-                self.LOG.error('Unable to remove DeviceClass {} ({})'.format(dcspec.path, e))
-        except KeyError:
-            self.LOG.warning('Unable to remove DeviceClass {} (not found)'.format(dcspec.path))
+        Device classes must be created in alphanumeric order to
+        prevent children from implicitly creating their parents. When
+        children implicitly create their parents, zProperty values
+        won't get set on the parents.
+        """
+        for dcname in sorted(self.device_classes):
+            dcspec = self.device_classes[dcname]
+            device_class = dcspec.create_organizer(app.zport.dmd)
+            if not device_class:
+                self.LOG.warn("Device Class (%s) not found", dcspec.path)
+                continue
 
     def manage_exportPack(self, download="no", REQUEST=None):
         """Export ZenPack to $ZENHOME/export directory.

@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015-2017, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2015-2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -13,11 +13,11 @@
 import os
 import re
 
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 from ZenPacks.zenoss.ZenPackLib import zenpacklib
 
 
-class TestInstalledZenPackLibVersion(ZPLTestBase):
+class TestInstalledZenPackLibVersion(ZPLBaseTestCase):
     """Test this version of ZenPackLib against relevant installed ZenPacks"""
 
     def get_version(self):

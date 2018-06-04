@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,8 +12,7 @@
 """ 
     Test DataPointSpec shorthand handling
 """
-
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
@@ -78,17 +77,18 @@ device_classes:
             oid: 1.3.6.1.4.1.2021.10.1.5.2
 """
 
-class TestDatapointShorthand(ZPLTestBase):
+class TestDatapointShorthand(ZPLBaseTestCase):
     """Test DataPointSpec shorthand handling"""
 
     yaml_doc = YAML_DOC
 
     def test_datapoint_shorthand(self):
         ''''''
-        diff = self.z.get_diff(EXPECTED, self.z.exported_yaml)
-        self.assertEqual(self.z.exported_yaml,
-                         EXPECTED,
-                         'Datapoint shorthand unexpected difference between expected and actual:\n{}'.format(diff))
+        config = self.configs.get('ZenPacks.zenoss.ZenPackLib')
+        exported = config.get('yaml_dump')
+        diff = self.get_diff(EXPECTED, exported)
+        self.assertEqual(exported, EXPECTED,
+            'Datapoint shorthand unexpected difference between expected and actual:\n{}'.format(diff))
 
 
 def test_suite():

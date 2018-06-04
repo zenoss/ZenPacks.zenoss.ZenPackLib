@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,11 +12,11 @@
 """ Color format validation YAML dump/load
 
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
-
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
+from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.Color
 device_classes:
   /Server:
     templates:
@@ -33,6 +33,9 @@ device_classes:
               A:
                 dpName: test_a
                 color: 007700
+              A2:
+                dpName: test_a
+                color: '007700'
               B:
                 dpName: test_b
                 color: FF3300
@@ -49,7 +52,7 @@ device_classes:
                 dpName: test_c
 """
 
-EXPECTED = """name: ZenPacks.zenoss.ZenPackLib
+EXPECTED = """name: ZenPacks.zenoss.Color
 device_classes:
   /Server:
     templates:
@@ -64,6 +67,9 @@ device_classes:
           Graph:
             graphpoints:
               A:
+                dpName: test_a
+                color: '007700'
+              A2:
                 dpName: test_a
                 color: '007700'
               B:
@@ -83,15 +89,24 @@ device_classes:
 """
 
 
-class TestValidInput(ZPLTestBase):
+class TestValidInput(ZPLBaseTestCase):
     """Test color input validation"""
-
     yaml_doc = YAML_DOC
 
     def test_valid_color(self):
         ''''''
-        self.assertEquals(self.z.exported_yaml, EXPECTED,
-                        'YAML Color validation test failed')
+        config = self.configs.get('ZenPacks.zenoss.Color')
+        yaml_param = config.get('yaml_from_specparams')
+        yaml_spec = config.get('yaml_dump')
+
+        diff = ZenPack.get_yaml_diff(EXPECTED, yaml_spec)
+        self.assertEquals(yaml_spec, EXPECTED,
+                        'YAML Color validation test failed:\n{}'.format(diff))
+
+        diff = ZenPack.get_yaml_diff(yaml_param, yaml_spec)
+
+        self.assertEquals(yaml_spec, yaml_param,
+                        'YAML Color validation test failed:\n{}'.format(diff))
 
 
 def test_suite():
@@ -100,6 +115,7 @@ def test_suite():
     suite = TestSuite()
     suite.addTest(makeSuite(TestValidInput))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner

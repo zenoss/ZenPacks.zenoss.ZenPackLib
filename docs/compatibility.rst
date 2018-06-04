@@ -98,6 +98,15 @@ features to aid during development or troubleshooting.  Logging can now be contr
 a per-ZenPack basis by supplying additional paramters to the "load_yaml()" method call 
 in the ZenPack's __init__.py.file:
 
+The `verbose` parameter, if set to True, will enable logging for this particular ZenPack.  We recommend
+setting `verbose` to `True` during ZenPack development so that various error messages can be seen.  We 
+also recommend returning this value to `False` prior to release of your ZenPack as some warning messages
+may not be useful to the end user.
+
+The `level` paramter controls logging verbosity with the same numeric values used elsewhere in Zenoss.  The 
+default value is 30 (WARNING), but setting this to 20 (INFO) or 10 (DEBUG) may be useful during ZenPack 
+development.
+
 .. code-block:: python
 
    CFG = zenpacklib.load_yaml(verbose=True, level=10)

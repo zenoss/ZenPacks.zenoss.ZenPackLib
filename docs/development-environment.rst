@@ -91,6 +91,13 @@ groups respectively.
     usermod -a -G wheel zenoss
     usermod -a -G docker zenoss
 
+If running Zenoss 5.2 or later, we need to add the user to the *serviced* group
+as well, in order to interact with serviced containers.
+
+.. code-block:: bash
+
+    usermod -a -G serviced zenoss
+
 .. _helper-aliases-and-functions:
 
 Helper Aliases and Functions

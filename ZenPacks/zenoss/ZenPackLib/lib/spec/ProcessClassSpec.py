@@ -16,11 +16,13 @@ from ..base.types import Severity
 
 class ProcessClassSpec(Spec):
     """Initialize a Process Set via Python at install time."""
+
     def __init__(
             self,
             zenpack_spec,
             name,
             description='',
+            zProperties=None,
             remove=False,
             includeRegex='',
             excludeRegex='',
@@ -36,6 +38,8 @@ class ProcessClassSpec(Spec):
         """
           :param description: Description of Process Class Set
           :type description: str
+          :param zProperties: zProperty values to set upon this Process Class
+          :type zProperties: dict(str)
           :param includeRegex: Processes to include
           :type includeRegex: str
           :param excludeRegex: Processes to exclude
@@ -55,13 +59,17 @@ class ProcessClassSpec(Spec):
           :param send_event_when_blocked: Send and event when action is blocked?
           :type send_event_when_blocked: bool
           :param remove: Remove Organizer on ZenPack removal
-          :type remove: boolean
+          :type remove: bool
         """
         super(ProcessClassSpec, self).__init__(_source_location=_source_location)
         self.klass_string = 'OSProcessClass'
         self.zenpack_spec = zenpack_spec
         self.name = name
         self.description = description
+        if zProperties is None:
+            self.zProperties = {}
+        else:
+            self.zProperties = zProperties
         self.remove = remove
         if zplog:
             self.LOG = zplog
@@ -136,6 +144,10 @@ class ProcessClassSpec(Spec):
                 replaceRegex=replaceRegex,
                 replacement=replacement,
                 description=description)
+
+        self.set_zproperties(process_class)
+
+        # setting zproperties will be overridden if the following parameters are used
         if self.monitor is not None:
             process_class.setZenProperty('zMonitor', self.monitor)
 

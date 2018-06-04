@@ -44,6 +44,13 @@ is installed. The device classes will be created recursively if necessary.
 Meaning that if the /Server or /Server/ACME device classes don't already exist,
 they will be automatically created.
 
+Since this is a YAML "mapping", the minmal specification (name only) would look like:
+
+.. code-block:: yaml
+
+   device_classes:
+     /Server/ACME/Widgeter: {}
+ 
 .. _setting-zProperties:
 
 Setting zProperties
@@ -135,6 +142,12 @@ path
   :Type: string
   :Default Value: *(implied from key in device_classes map)*
 
+description
+  :Description: Description used for devtype entry in device multi-add dialog
+  :Required: No
+  :Type: string
+  :Default Value: None
+
 create
   :Description: Should the device class be created when the ZenPack is installed?
   :Required: No
@@ -143,6 +156,12 @@ create
 
 remove
   :Description: Should the device class be removed when the ZenPack is removed?
+  :Required: No
+  :Type: boolean
+  :Default Value: false
+
+reset
+  :Description: If true, any zProperties defined here will override those of the target device class, if it exists
   :Required: No
   :Type: boolean
   :Default Value: false
@@ -159,14 +178,17 @@ templates
   :Type: map<name, :ref:`Monitoring Template <monitoring-template-fields>`>
   :Default Value: {} *(empty map)*
 
-description
-  :Description: Description used for devtype entry in device multi-add dialog
-  :Required: No
-  :Type: string
-  :Default Value: None
-
 protocol
   :Description: Protocol used for devtype entry in device multi-add dialog
   :Required: No
   :Type: string
   :Default Value: None
+
+.. note::
+
+  The *reset* option is not the preferred way to handle migration or changes to zProperty values between ZenPack versions.  It is likely to cause heartache
+  in cases where the target Device Class is not supplied exclusively by the ZenPack, for instance, since there is no way to control which version of the
+  desired zProperty values would be authoritative or what the expected value should be if a single device class is targeted by multiple ZenPacks.  Several other
+  bad scenarios exist, so use this option with extreme caution and preferably use migration scripts to handle these types of changes.
+
+  

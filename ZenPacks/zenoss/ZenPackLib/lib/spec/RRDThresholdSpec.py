@@ -22,6 +22,7 @@ class RRDThresholdSpec(Spec):
             eventClass=None,
             severity=None,
             enabled=None,
+            optional=False,
             extra_params=None,
             _source_location=None,
             zplog=None
@@ -41,6 +42,8 @@ class RRDThresholdSpec(Spec):
             :param enabled: TODO
             :type enabled: bool
             :param extra_params: Additional parameters that may be used by subclasses of RRDDatasource
+            :param optional: is this threshold optional?
+            :type optional: bool
             :type extra_params: ExtraParams
 
         """
@@ -58,6 +61,7 @@ class RRDThresholdSpec(Spec):
         self.severity = Severity(severity)
         self.enabled = enabled
         self.type_ = type_
+        self.optional = optional
         if extra_params is None:
             self.extra_params = {}
         else:
@@ -74,9 +78,13 @@ class RRDThresholdSpec(Spec):
 
         threshold_types = dict((y, x) for x, y in template.getThresholdClasses())
         type_ = threshold_types.get(self.type_)
+
         if not type_:
-            raise ValueError("'%s' is an invalid threshold type. Valid types: %s" %
-                             (self.type_, ', '.join(threshold_types)))
+            if self.optional:
+                return
+            else:
+                raise ValueError("'%s' is an invalid threshold type. Valid types: %s" %
+                                 (self.type_, ', '.join(threshold_types)))
 
         threshold = template.manage_addRRDThreshold(self.name, self.type_)
         self.speclog.debug("adding threshold")

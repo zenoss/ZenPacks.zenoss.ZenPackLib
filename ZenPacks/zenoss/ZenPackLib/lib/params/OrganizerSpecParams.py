@@ -11,7 +11,9 @@ from ..spec.OrganizerSpec import OrganizerSpec
 
 
 class OrganizerSpecParams(SpecParams, OrganizerSpec):
-    def __init__(self, zenpack_spec=None, path='', **kwargs):
+
+    def __init__(self, zenpack_spec=None, path='', zProperties=None, **kwargs):
         SpecParams.__init__(self, **kwargs)
         self.zenpack_spec = zenpack_spec
         self.path = path.lstrip("/")
+        self.zProperties = zProperties

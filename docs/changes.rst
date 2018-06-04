@@ -4,6 +4,30 @@
 Changes
 #######
 
+Version 2.1
+===========
+
+Release 2.1.0
+-------------
+
+Features
+
+* Support additional GraphPoint subclasses (ZPS-855)
+* EventClassInstance, OSProcessClass now support zProperties (ZPS-3636)
+* EventClass, OSProcessOrganizer now support zProperties (ZPS-3189, ZPS-3190)
+* Add "optional" field for thresholds (ZPS-1666)
+* Add support for ZProperty "label" and "description" fields (ZPS-747)
+
+Fixes
+
+* Support Graph "descripton" attribute (ZPS-3696) 
+* Support ABSOLUTE RRD type (ZPS-1733)
+* All organizer classes respect the "create", "remove", and "reset" attributes (ZPS-810)
+* Refactor unit tests to avoid build issues (ZPS-3035)
+* Fix invalid RRD datapoint types (ZPS-1734)
+* Update documentation for datapoint description (ZPS-1971)
+
+
 Version 2.0
 ===========
 

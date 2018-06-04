@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -13,11 +13,10 @@
     ToMany-ToMany (M:M) non-containing relationships cause infinite recursion in get_facets
     ZEN-23840
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
-
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 YAML_DOC = """
-name: ZenPacks.zenoss.ZenPackLib
+name: ZenPacks.zenoss.GetFacets
 
 class_relationships:
   - UnivaGrid 1:MC UGEFilesystem
@@ -121,17 +120,21 @@ device_classes:
 """
 
 
-class TestGetFacets(ZPLTestBase):
+class TestGetFacets(ZPLBaseTestCase):
     """Test fix for ZEN-23840
 
        ToMany-ToMany (M:M) non-containing relationships cause infinite recursion in get_facets
     """
 
     yaml_doc = YAML_DOC
+    build = True
 
     def test_get_facets_recursion(self):
+        config = self.configs.get('ZenPacks.zenoss.GetFacets')
+        objects = config.get('objects').class_objects
         expected = 2
-        for ob in self.z.obs:
+        for name, data in objects.items():
+            ob = data.get('ob')
             if ob.meta_type == 'HPCNode':
                 facets = []
                 for f in ob.get_facets():
@@ -139,12 +142,14 @@ class TestGetFacets(ZPLTestBase):
                 actual = len(facets)
                 self.assertEquals(expected, actual, 'get_facets expected {}, got {} objects'.format(expected, actual))
 
+
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
     suite.addTest(makeSuite(TestGetFacets))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner

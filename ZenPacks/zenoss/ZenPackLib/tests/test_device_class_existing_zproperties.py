@@ -10,22 +10,23 @@
 ##############################################################################
 
 """
-    Test that device classes can be removed (ZEN-18134)
+    Test that device classes can optionally have their zProperties reset (ZPS-810)
 """
+
 from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 YAML_DOC = """
 name: ZenPacks.zenoss.DeviceClasses
 
 device_classes:
-  /Server/ZenPackLib:
+  /Server:
     zProperties:
       zSnmpMonitorIgnore: False
-    remove: true
+    reset: true
 """
 
 
-class TestDeviceClassRemoval(ZPLBaseTestCase):
+class TestZPropertyReset(ZPLBaseTestCase):
     """
     Test that device classes can be removed (ZEN-18134)
     """
@@ -36,34 +37,36 @@ class TestDeviceClassRemoval(ZPLBaseTestCase):
     def test_device_class(self):
         config = self.configs.get('ZenPacks.zenoss.DeviceClasses')
         cfg = config.get('cfg')
+        zenpack = cfg._zenpack_class(self.app)
 
         # create the device class
         for dcname, dcspec in cfg.device_classes.items():
             dcspec.create_organizer(self.dmd)
+            # zenpack.create_device_class(self.app, dcspec)
             # verify that it was created
-            self.assertTrue(self.device_class_exists(dcspec.path),
-                            'Device class {} was not created'.format(dcspec.path))
+            dc = self.device_class_exists(dcspec.path)
+            self.assertTrue(dc,
+                'Device class {} does not exist'.format(dcspec.path))
 
         for dcname, dcspec in cfg.device_classes.iteritems():
-            if dcspec.remove:
-                dcspec.remove_organizer(self.dmd)
-                # verify that it was removed
-                self.assertFalse(self.device_class_exists(dcspec.path),
-                                'Device class {} was not removed'.format(dcspec.path))
+            if dcspec.reset:
+                dcspec.set_zproperties(self.dmd)
+            self.assertFalse(getattr(dc, 'zSnmpMonitorIgnore'),
+                'Device class {} zProperty was not set correctly'.format(dcspec.path))
 
     def device_class_exists(self, path):
         try:
-            self.dmd.Devices.getOrganizer(path)
-            return True
+            ob = self.dmd.Devices.getOrganizer(path)
+            return ob
         except KeyError:
-            return False
+            return
 
 
 def test_suite():
     """Return test suite for this module."""
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestDeviceClassRemoval))
+    suite.addTest(makeSuite(TestZPropertyReset))
     return suite
 
 

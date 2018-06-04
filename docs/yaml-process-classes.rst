@@ -36,6 +36,13 @@ of a definition of a process class.
 
   When you define a process class organizer and/or class which already exists, any settings defined in your ZenPack will overwrite existing settings.
 
+Since this is a YAML "mapping", the minmal specification (name only) would look like:
+
+.. code-block:: yaml
+
+    process_class_organizers:
+      Widget: {}
+
 .. _process-class-organizer-fields:
 
 ******************************
@@ -51,10 +58,34 @@ name
   :Default Value: None
 
 description
-  :Description: Description of the Process Class Organizer
+  :Description: Description of the process class organizer
   :Required: No
   :Type: string
   :Default Value: None
+
+create
+  :Description: Should the process class organizer be created when the ZenPack is installed?
+  :Required: No
+  :Type: boolean
+  :Default Value: true
+
+remove
+  :Description: Should the process class organizer be removed when the ZenPack is removed?  This will only apply to a ZenPack that has created the process class organizer.  Any existing process class organizers not created by the ZenPack will not be removed.  Any process class organizer created by the platform will also never be removed.
+  :Required: No
+  :Type: boolean
+  :Default Value: false
+
+reset
+  :Description: If true, any zProperties defined here will override those of the target process class organizer, if it exists
+  :Required: No
+  :Type: boolean
+  :Default Value: false
+
+zProperties
+  :Description: zProperty values to set on the process class organizer.
+  :Required: No
+  :Type: map<name, value>
+  :Default Value: {} *(empty map)*
 
 .. _process-class-fields:
 
@@ -75,6 +106,12 @@ description
   :Required: No
   :Type: string
   :Default Value: None
+
+zProperties
+  :Description: zProperty values to set on the process class.
+  :Required: No
+  :Type: map<name, value>
+  :Default Value: {} *(empty map)*
 
 includeRegex
   :Description: Include processes matching this regular expression

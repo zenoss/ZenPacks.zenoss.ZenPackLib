@@ -13,8 +13,8 @@ from ..spec.DeviceClassSpec import DeviceClassSpec
 
 
 class DeviceClassSpecParams(OrganizerSpecParams, DeviceClassSpec):
+
     def __init__(self, zenpack_spec, path, zProperties=None, templates=None, **kwargs):
-        OrganizerSpecParams.__init__(self, zenpack_spec, path, **kwargs)
-        self.zProperties = zProperties
+        OrganizerSpecParams.__init__(self, zenpack_spec, path, zProperties, **kwargs)
         self.templates = self.specs_from_param(
             RRDTemplateSpecParams, 'templates', templates, zplog=self.LOG)

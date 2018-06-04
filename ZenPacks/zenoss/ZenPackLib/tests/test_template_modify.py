@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,8 +12,7 @@
 """
     Test accurate detection of template modifications
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase
-
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 YAML_DOC = """name: ZenPacks.zenoss.ZenPackLib
 device_classes:
@@ -276,29 +275,54 @@ device_classes:
                 rpn: 100,/
 """
 
-DIFF = "--- \n+++ \n@@ -4,8 +4,8 @@\n   CPU Utilization:\n     dsnames: [ssCpuRawIdle_ssCpuRawIdle]\n     eventClass: /Perf/CPU\n-    minval: '2'\n-    escalateCount: 5\n+    minval: '3'\n+    escalateCount: 7\n datasources:\n   memBuffer:\n     type: SNMP\n@@ -124,7 +124,6 @@\n     graphpoints:\n       laLoadInt5:\n         dpName: laLoadInt5_laLoadInt5\n-        lineType: AREA\n         format: '%0.2lf'\n         rpn: 100,/\n \n"
+DIFF = """--- 
++++ 
+@@ -4,8 +4,8 @@
+   CPU Utilization:
+     dsnames: [ssCpuRawIdle_ssCpuRawIdle]
+     eventClass: /Perf/CPU
+-    minval: '2'
+-    escalateCount: 5
++    minval: '3'
++    escalateCount: 7
+ datasources:
+   memBuffer:
+     type: SNMP
+@@ -133,7 +133,6 @@
+     graphpoints:
+       laLoadInt5:
+         dpName: laLoadInt5_laLoadInt5
+-        lineType: AREA
+         format: '%0.2lf'
+         rpn: 100,/
+         sequence: 1
+"""
 
 
-class TestTemplateModified(ZPLTestBase):
+class TestTemplateModified(ZPLBaseTestCase):
     """
     Test installed vs spec template changes
     """
-    yaml_doc = [YAML_DOC, YAML_CHANGED]
+    yaml_doc = [YAML_DOC]
 
     def test_modified(self):
-        self.get_result(self.z, self.z)
-        self.get_result(self.z, self.z_1, DIFF)
+        cfg_orig = self.configs.get('ZenPacks.zenoss.ZenPackLib')
+        cfg_new = self.get_config(YAML_CHANGED)
+        self.get_result(cfg_orig, cfg_orig)
+        self.get_result(cfg_orig, cfg_new, DIFF)
 
     def get_result(self, orig, new, expected=None):
+        orig_cfg = orig.get('cfg')
+        new_cfg = new.get('cfg')
         # original template spec
-        orig_tspec = orig.cfg.device_classes.get('/Server').templates.get('Device')
+        orig_tspec = orig_cfg.device_classes.get('/Server').templates.get('Device')
         # template based on original spec
         orig_template = orig_tspec.create(self.dmd, False)
 
-        zenpack = new.schema.ZenPack(self.dmd)
+        zenpack = new.get('schema').ZenPack(self.dmd)
         # new temlate spec
-        new_tspec = new.cfg.device_classes.get('/Server').templates.get('Device')
-        new_tspec_param = new.cfg.specparams.device_classes.get('/Server').templates.get('Device')
+        new_tspec = new_cfg.device_classes.get('/Server').templates.get('Device')
+        new_tspec_param = new_cfg.specparams.device_classes.get('/Server').templates.get('Device')
 
         diff = zenpack.object_changed(self.dmd, orig_template, new_tspec, new_tspec_param)
         self.assertEquals(diff, expected, 'Expected:\n{}\ngot:\n{}'.format(expected, diff))
@@ -310,6 +334,7 @@ def test_suite():
     suite = TestSuite()
     suite.addTest(makeSuite(TestTemplateModified))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner

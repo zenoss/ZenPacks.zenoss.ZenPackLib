@@ -2,7 +2,7 @@
 
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2015, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,8 +12,7 @@
 """Keyword Tests
 This test will use lint to load in example yaml with keywords used
 """
-from ZenPacks.zenoss.ZenPackLib.tests.ZPLTestBase import ZPLTestBase, LogCapture
-
+from ZenPacks.zenoss.ZenPackLib.tests import ZPLBaseTestCase
 
 RESERVED_YAML = """name: ZenPacks.zenoss.TestLogging
 classes:
@@ -105,9 +104,9 @@ EXPECTED = """[WARNING] <string>:7:13: ["Found reserved Zenoss keyword 'uuid' fr
 [ERROR] <string>:29:13: ["Found reserved keyword 'lambda' while processing RRDTemplateSpec"]
 """
 
-class TestLoggingKeywords(ZPLTestBase):
+
+class TestLoggingKeywords(ZPLBaseTestCase):
     disableLogging = False
-    capture = LogCapture()
 
     def test_reserved_keywords(self):
         actual = self.capture.test_yaml(RESERVED_YAML)
