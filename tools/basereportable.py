@@ -166,7 +166,6 @@ any need to subclass.
 import Globals
 
 import logging
-LOG = logging.getLogger('zenpack.reportable')
 
 import sys
 from zope.component import adapts, getGlobalSiteManager
@@ -188,8 +187,11 @@ from ZenPacks.zenoss.ZenETL.reportable import \
     DEFAULT_STRING_LENGTH, \
     BaseReportableFactory as ETLBaseReportableFactory, \
     BaseReportable as ETLBaseReportable, \
+    DeviceReportableFactory as ETLDeviceReportableFactory, \
+    DeviceReportable as ETLDeviceReportable, \
     Reportable
 
+LOG = logging.getLogger('zenpack.reportable')
 unused(Globals)
 
 
@@ -197,10 +199,10 @@ def un_camel(text):
     return zenetl_un_camel(text).replace(" ", "")
 
 
-def refValue(context, rel):
+def refValue(rel):
     # Given a ToOne relationship, return a proper value for reportProperties()
     if rel():
-        return IReportable(context, rel()).sid
+        return IReportable(rel()).sid
     else:
         return None
 
@@ -288,6 +290,22 @@ class BaseReportableFactory(ETLBaseReportableFactory):
                     factory.set_class_context(class_)
                     for export in factory.exports():
                         yield export
+                if reportable_factory_class == ETLDeviceReportableFactory:
+                    # special exception for DeviceReportableFactory.  It
+                    # is important enough that we want to still report it,
+                    # despite the fact that it doesn't support set_class_context.
+                    # as a result, it will potentially re-invoke the
+                    # customized reportable for any Device sub-classes, but
+                    # be missing the stock DeviceReportable.   So, we'll
+                    # work around that issue in particular.
+                    seen_ETLDeviceReportable = False
+                    for export in factory.exports():
+                        if type(export) == ETLDeviceReportable:
+                            seen_ETLDeviceReportable = True
+                        if export.sid != context_reportable.sid:
+                            yield export
+                    if not seen_ETLDeviceReportable:
+                        yield ETLDeviceReportable(self.context)
                 else:
                     yield reportable_class(self.context)
 
@@ -438,12 +456,23 @@ class BaseReportable(ETLBaseReportable):
         # Note that the default implementation of reportProperties already
         # handles the device_key property itself, so we don't worry about that.
         relations = getattr(self.context, '_relations', tuple())
+
+        # if export_as_bases is involved, we don't want to re-export a relation
+        # that would already have been processed by the parent class.
+        ignore_relations = set()
+        for base_class in self.export_as_bases:
+            for relName, relation in getattr(base_class, '_relations', tuple()):
+                ignore_relations.add(relName)
+
         for relName, relation in relations:
+            if relName in ignore_relations:
+                continue
+
             propname = self.rel_property_name[relName]
 
             if isinstance(relation, ToOne):
                 related = getattr(self.context, relName, None)
-                yield (propname + '_key', 'reference', refValue(self.context, related), MARKER_LENGTH)
+                yield (propname + '_key', 'reference', refValue(related), MARKER_LENGTH)
             else:
                 related = getattr(self.context, relName, None)
                 try:
@@ -481,7 +510,7 @@ class BaseManyToManyReportable(Reportable):
 
         return [
             (fromReportable.entity_class_name + "_key", 'reference', fromReportable.sid, MARKER_LENGTH),
-            (toReportable.entity_class_name + "_key",   'reference', toReportable.sid, MARKER_LENGTH),
+            (toReportable.entity_class_name + "_key", 'reference', toReportable.sid, MARKER_LENGTH),
         ]
 
 
@@ -500,8 +529,8 @@ class DumpReportables(ZenScriptBase):
         import ZenPacks.zenoss.ZenETL
         zcml.load_config('configure.zcml', ZenPacks.zenoss.ZenETL)
 
-        import ZenPacks.zenoss.vSphere
-        zcml.load_config('configure.zcml', ZenPacks.zenoss.vSphere)
+        import ZenPacks.zenoss.Microsoft.Windows
+        zcml.load_config('configure.zcml', ZenPacks.zenoss.Microsoft.Windows)
 
         self.connect()
 
