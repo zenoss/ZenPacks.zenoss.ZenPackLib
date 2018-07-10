@@ -7,6 +7,14 @@ Changes
 Version 2.1
 ===========
 
+Release 2.1.1
+-------------
+
+Fixes
+
+* Fix infinite recursion in yaml_load when no yaml files present (ZPS-3880)
+
+
 Release 2.1.0
 -------------
 

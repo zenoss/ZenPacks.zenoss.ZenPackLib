@@ -26,7 +26,7 @@ Installing ZenPackLib
 The latest version of ZenPackLib can be downloaded from
 `its entry <https://www.zenoss.com/product/zenpacks/zenpacklib>`_ in the
 `ZenPack Catalog`_. The following commands show how you would download and
-install version 2.1.0.
+install version 2.1.1.
 
 .. _ZenPack Catalog: https://www.zenoss.com/product/zenpacks
 
@@ -39,8 +39,8 @@ install version 2.1.0.
 .. code-block:: bash
 
     cd /tmp
-    wget http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.ZenPackLib/2.1.0/ZenPacks.zenoss.ZenPackLib-2.1.0.egg
-    serviced service run zope zenpack-manager install ZenPacks.zenoss.ZenPackLib-2.1.0.egg
+    wget http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.ZenPackLib/2.1.1/ZenPacks.zenoss.ZenPackLib-2.1.1.egg
+    serviced service run zope zenpack-manager install ZenPacks.zenoss.ZenPackLib-2.1.1.egg
 
 Executing *zenpacklib* requires a live Zenoss environment. Always executing it as the *zenoss* user in your Zope container is a good way to have the right environment setup. The following commands demonstrate how to do this.
 
