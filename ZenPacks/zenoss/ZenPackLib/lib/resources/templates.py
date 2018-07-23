@@ -32,7 +32,7 @@ Ext.apply(Zenoss.render, {
 
         if (isLink) {
             url = obj.uid
-            if (!url.startswith(Zenoss.env.CSE_VIRTUAL_ROOT)) {
+            if (Zenoss.env.CSE_VIRTUAL_ROOT && !url.startswith(Zenoss.env.CSE_VIRTUAL_ROOT)) {
                 url = Zenoss.env.CSE_VIRTUAL_ROOT + url.replace(/^\/+/g, '');
             }
             return '<a href="'+url+'"onClick="Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid +'\\', \\''+obj.meta_type+'\\');return false;">'+obj.title+'</a>';
@@ -65,7 +65,7 @@ Ext.apply(Zenoss.render, {
 
         if (isLink) {
             url = obj.uid
-            if (!url.startswith(Zenoss.env.CSE_VIRTUAL_ROOT)) {
+            if (Zenoss.env.CSE_VIRTUAL_ROOT && !url.startswith(Zenoss.env.CSE_VIRTUAL_ROOT)) {
                 url = Zenoss.env.CSE_VIRTUAL_ROOT + url.replace(/^\/+/g, '');
             }
             return '<a href="'+url+'"onClick="Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid +'\\', \\''+obj.meta_type+'\\');return false;">'+obj.title+'</a> (' + obj.class_label + ')';
