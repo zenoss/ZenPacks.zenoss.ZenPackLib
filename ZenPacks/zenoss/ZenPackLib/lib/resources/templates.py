@@ -31,7 +31,11 @@ Ext.apply(Zenoss.render, {
         }
 
         if (isLink) {
-            return '<a href="'+obj.uid+'"onClick="Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid +'\\', \\''+obj.meta_type+'\\');return false;">'+obj.title+'</a>';
+            url = obj.uid
+            if (!url.startswith(Zenoss.env.CSE_VIRTUAL_ROOT)) {
+                url = Zenoss.env.CSE_VIRTUAL_ROOT + url.replace(/^\/+/g, '');
+            }
+            return '<a href="'+url+'"onClick="Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid +'\\', \\''+obj.meta_type+'\\');return false;">'+obj.title+'</a>';
         } else {
             return obj.title;
         }
@@ -60,7 +64,11 @@ Ext.apply(Zenoss.render, {
         }
 
         if (isLink) {
-            return '<a href="javascript:Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid+'\\', \\''+obj.meta_type+'\\');">'+obj.title+'</a> (' + obj.class_label + ')';
+            url = obj.uid
+            if (!url.startswith(Zenoss.env.CSE_VIRTUAL_ROOT)) {
+                url = Zenoss.env.CSE_VIRTUAL_ROOT + url.replace(/^\/+/g, '');
+            }
+            return '<a href="'+url+'"onClick="Ext.getCmp(\\'component_card\\').componentgrid.jumpToEntity(\\''+obj.uid +'\\', \\''+obj.meta_type+'\\');return false;">'+obj.title+'</a> (' + obj.class_label + ')';
         } else {
             return obj.title;
         }
