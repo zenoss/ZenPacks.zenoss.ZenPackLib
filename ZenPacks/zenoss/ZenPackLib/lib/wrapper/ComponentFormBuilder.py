@@ -38,7 +38,7 @@ class ComponentFormBuilder(BaseComponentFormBuilder):
                 self.zpl_decorate(item)
             return
 
-        if 'xtype' in item and 'name' in item and item['xtype'] != 'linkfield':
+        if 'xtype' in item and 'name' in item:
             if item['name'] in self.renderer:
                 renderer = self.renderer[item['name']]
 
