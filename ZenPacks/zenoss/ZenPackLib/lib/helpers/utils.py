@@ -42,9 +42,15 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
     # determine caller directory and attempt to load from it
     if not yaml_doc:
         try:
-            return load_yaml(get_calling_dir(), verbose, level)
+            calling_dir = get_calling_dir()
+            if calling_dir is None:
+                raise RuntimeError('Unable to determine location of yaml files')
+
+            return load_yaml(calling_dir, verbose, level)
+
         except Exception as e:
-            DEFAULTLOG.error("YAML load error %s" % e)
+            DEFAULTLOG.error("YAML load error: %s" % e)
+            raise e
     # loading from multiple files
     if isinstance(yaml_doc, list):
         if len(yaml_doc) == 1:

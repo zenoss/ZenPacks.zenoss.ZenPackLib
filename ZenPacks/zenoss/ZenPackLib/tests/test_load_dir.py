@@ -22,14 +22,13 @@ from ZenPacks.zenoss.ZenPackLib import zenpacklib
 import yaml
 from ZenPacks.zenoss.ZenPackLib.lib.base.ZenPack import ZenPack
 from ZenPacks.zenoss.ZenPackLib.lib.helpers.Dumper import Dumper
-from ZenPacks.zenoss.ZenPackLib.lib.helpers.utils import compare_zenpackspecs
+from ZenPacks.zenoss.ZenPackLib.lib.helpers import utils
 
 # Zenoss Imports
 import Globals  # noqa
 from Products.ZenUtils.Utils import unused
 unused(Globals)
 from Products.ZenTestCase.BaseTestCase import BaseTestCase
-
 
 YAML_WHOLE = """
 name: ZenPacks.zenoss.Microsoft.Azure
@@ -712,10 +711,8 @@ device_classes:
 """
 
 
-
 class TestDirectoryLoad(BaseTestCase):
     """Test loading from directory"""
-
 
     def test_dir_load(self):
         ''''''
@@ -723,19 +720,32 @@ class TestDirectoryLoad(BaseTestCase):
         cfg_whole = zenpacklib.load_yaml(YAML_WHOLE)
 
         # reference yaml split across multiple files
-        fdir = '{}/data/yaml/test_dir_load'.format(os.path.abspath(os.path.dirname(__file__)))
+        fdir = '{}/data/yaml/test_dir_load'.format(
+            os.path.abspath(os.path.dirname(__file__)))
         cfg_dir = zenpacklib.load_yaml(fdir)
 
         # dump both back to YAML
         whole_yaml = yaml.dump(cfg_whole.specparams, Dumper=Dumper)
         dir_yaml = yaml.dump(cfg_dir.specparams, Dumper=Dumper)
 
-        compare_equals = compare_zenpackspecs(whole_yaml, dir_yaml)
+        compare_equals = utils.compare_zenpackspecs(whole_yaml, dir_yaml)
 
         diff = ZenPack.get_yaml_diff(whole_yaml, dir_yaml)
         self.assertTrue(compare_equals,
                         'YAML Multiple file test failed:\n{}'.format(diff))
 
+    def test_implicit_dir_load_fails_when_unable_to_find_calling_dir(self):
+
+        orig_get_calling_dir = utils.get_calling_dir
+        utils.get_calling_dir = lambda: None
+
+        with self.assertRaises(RuntimeError) as context_mgr:
+            zenpacklib.load_yaml()
+
+        self.assertIn('Unable to determine location',
+                      str(context_mgr.exception))
+
+        utils.get_calling_dir = orig_get_calling_dir
 
 
 def test_suite():
@@ -744,6 +754,7 @@ def test_suite():
     suite = TestSuite()
     suite.addTest(makeSuite(TestDirectoryLoad))
     return suite
+
 
 if __name__ == "__main__":
     from zope.testrunner.runner import Runner
