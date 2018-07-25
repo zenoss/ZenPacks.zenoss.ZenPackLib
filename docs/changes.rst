@@ -14,6 +14,7 @@ Fixes
 
 * Fix infinite recursion in yaml_load when no yaml files present (ZPS-3880)
 * Update default value of threshold's escalationCount in the documentation (ZPS-4031)
+* Correct links from ZPL-provided renderers to honor the CSE_VIRTUAL_ROOT (ZEN-30544)
 
 
 Release 2.1.0
