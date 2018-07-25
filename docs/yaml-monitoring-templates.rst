@@ -546,7 +546,7 @@ escalateCount:
   :Description: Event count after which severity increases
   :Required: No
   :Type: int
-  :Default Value: None
+  :Default Value: 0
 
 optional:
   :Description: The threshold will not be created if the threshold type is not available and *optional* is set to true. Installation will fail if the type is not available and *optional* is set to false.

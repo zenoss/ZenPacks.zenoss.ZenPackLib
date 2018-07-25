@@ -76,19 +76,27 @@ class OrganizerSpec(Spec):
             if organizer.getOrganizerName().lstrip("/") == self.path:
                 return organizer
 
+    def set_zpl_managed(self, dmd):
+        """
+        zpl_managed was not set on device classes prior to 2.1.0
+        so we set it now so that ZP uninstalls will work correctly
+        """
+        org_obj = self.get_organizer(dmd)
+        if org_obj:
+            if self.create and not hasattr(org_obj, 'zpl_managed'):
+                org_obj.zpl_managed = True
+
     def create_organizer(self, dmd):
         """Return organizer whether existing or new"""
         org_obj = self.get_organizer(dmd)
-
         if org_obj:
             if self.reset:
                 self.set_zproperties(dmd)
         else:
             if self.create:
                 org_obj = self.get_root(dmd).createOrganizer(self.path)
-                org_obj.zpl_managed = True
                 self.set_zproperties(dmd)
-
+        self.set_zpl_managed(dmd)
         return org_obj
 
     def set_zproperties(self, dmd):
@@ -127,6 +135,7 @@ class OrganizerSpec(Spec):
                 # The organizer wasn't in packables.
                 pass
 
+        self.set_zpl_managed(dmd)
         # make sure the organizer is zpl_managed before we try and delete it
         if self.remove and getattr(org_obj, 'zpl_managed', False):
             self.get_root(dmd).manage_deleteOrganizer(org_obj.getDmdKey())
