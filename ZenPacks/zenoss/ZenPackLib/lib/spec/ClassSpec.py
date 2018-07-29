@@ -1231,7 +1231,8 @@ class ClassSpec(Spec):
             "id: 'name',\n"
             "                       dataIndex: 'name',\n"
             "                       header: _t('Name'),\n"
-            "                       renderer: Zenoss.render.zenpacklib_" + self.zenpack.id_prefix + "_entityLinkFromGrid"
+            "                       renderer: Zenoss.render.zenpacklib_" + self.zenpack.id_prefix + "_entityLinkFromGrid,\n"
+            "                       width: 80"
             "}"
         )]
 
