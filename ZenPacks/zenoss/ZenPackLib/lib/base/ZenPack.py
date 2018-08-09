@@ -29,6 +29,8 @@ RESERVED_CLASSES = set(['/Status', '/App', '/Cmd', '/Perf',
                         '/Heartbeat', '/Unknown', '/Change', 'Processes',
                         'Services', 'WinService', 'IpService'])
 
+DIFF_DIR = '/home/zenoss/diff/'
+
 for x in dir(ZenEventClasses):
     y = getattr(ZenEventClasses, x)
     if isinstance(y, str):
@@ -67,6 +69,14 @@ class ZenPack(ZenPackBase):
         if self.NEW_COMPONENT_TYPES:
             self.LOG.info('Adding {} relationships to existing devices'.format(self.id))
             self._buildDeviceRelations(app)
+
+        self.zp_diff_dir = '{}{}/'.format(DIFF_DIR, self.id)
+        if os.path.isdir(self.zp_diff_dir):
+            old_diffs = os.listdir(self.zp_diff_dir)
+            for f in old_diffs:
+                os.remove('{}/{}'.format(self.zp_diff_dir, f))
+        else:
+            os.makedirs(self.zp_diff_dir)
 
         # load monitoring templates
         for dcname, dcspec in self.device_classes.iteritems():
@@ -199,12 +209,16 @@ class ZenPack(ZenPackBase):
         time_str = time.strftime("%Y%m%d%H%M", time.localtime())
         preupgrade_id = "{}-preupgrade-{}".format(object.id, time_str)
         self.move_object(parent, relname, object.id, preupgrade_id)
+        diff_file = '{}{}.diff'.format(self.zp_diff_dir, preupgrade_id)
         LOG.info("Existing object {}/{} differs from "
                  "the newer version included with the {} ZenPack.  "
                  "The existing object will be "
-                 "backed up to '{}'.  Please review and reconcile any "
-                 "local changes before deleting the backup: \n{}".format(
-                    parent.getDmdKey(), spec.name, self.id, preupgrade_id, diff))
+                 "backed up to '{}'. Please review and reconcile any "
+                 "local changes before deleting the backup".format(
+                 parent.getDmdKey(), spec.name, self.id, os.path.abspath(diff_file)))
+        f = open(diff_file, 'w')
+        f.write(diff)
+        f.close()
         return True
 
     def get_object(self, parent, relname, object_id):
