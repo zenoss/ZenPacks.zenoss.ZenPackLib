@@ -70,6 +70,7 @@ class ZenPack(ZenPackBase):
             self.LOG.info('Adding {} relationships to existing devices'.format(self.id))
             self._buildDeviceRelations(app)
 
+        # Create zp diff folder or clear it from old diff files
         self.zp_diff_dir = '{}{}/'.format(DIFF_DIR, self.id)
         if os.path.isdir(self.zp_diff_dir):
             old_diffs = os.listdir(self.zp_diff_dir)
@@ -78,7 +79,7 @@ class ZenPack(ZenPackBase):
         else:
             os.makedirs(self.zp_diff_dir)
 
-        # load monitoring templates
+        # Load monitoring templates
         for dcname, dcspec in self.device_classes.iteritems():
             dcspecparam = self._v_specparams.device_classes.get(dcname)
             deviceclass = dcspec.get_organizer(app.zport.dmd)
@@ -86,6 +87,10 @@ class ZenPack(ZenPackBase):
             for mtname, mtspec in dcspec.templates.iteritems():
                 mtspecparam = dcspecparam.templates.get(mtname)
                 self.update_object(app, deviceclass, 'rrdTemplates', mtname, mtspec, mtspecparam)
+
+        # Remove zp diff folder if it's empty
+        if not os.listdir(self.zp_diff_dir):
+            os.rmdir(self.zp_diff_dir)
 
         # Load event classes
         for ecname, ecspec in self.event_classes.iteritems():
