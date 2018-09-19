@@ -90,13 +90,17 @@ class CatalogBase(object):
     # Catalog Creation and Maintenance #######################################
 
     def create_device_catalog(self, name):
+        device = self.device()
+        if not device:
+            return
+
         indexes = self._device_catalogs.get(name)
         if indexes:
             # Create an id index in all device catalogs.
             expanded_indexes = {'id': 'field'}
             expanded_indexes.update(indexes)
             return self.create_catalog(
-                context=self.device(),
+                context=device,
                 name='{}Search'.format(name),
                 indexes=expanded_indexes,
                 classname='{0}.{1}.{1}'.format(self.zenpack_name, name))
