@@ -94,6 +94,7 @@ Class relationships need to be redefined when converting from prior ZP versions 
 Below is the old style of defining class relationships; Note that the relationship must be defined in both python classes.  For instance, class 'Lightsaber' has a definition for the relation to class 'KyberCrystal'. But you will also find the inverted relation defined in the class 'KyberCrystal' for class "Lightsaber'.
 
 .. code-block:: python
+
    from StarWars.weapons.Device import Saber as LightSaberDevice
 
    class Lightsaber (LightSaberDevice)
@@ -123,7 +124,8 @@ Below is the old style of defining class relationships; Note that the relationsh
 The syntax for defining relations is not pretty, but is redundent, inverted, and error prone.
 To resolve this, class relations are now defined just once in the ZP2 yaml file as seen below.
 
-.. code-block:: python
+.. code-block:: yaml
+
    Defining class_relationships in the yaml:
      - Lightsaber(crystal) 1:M KyberCrystal(saber)
      - Lightsaber(diatium) 1:1 DiatiumPowerCell(saber)
@@ -141,7 +143,8 @@ Any classes defined in the class_relationships section or has older zp1 style pr
 should be updated to ZP2.  To do this, we'll add a 'classes' section to the yaml.  The classes definition must have a 'DEFAULTS' section with a base that inherites from zenpacklib.Component.  From there, python classes can be defined in the yaml, as seen here.
 If the python class is derived from a parent object, be sure to define the parent as the base.
 
-.. code-block:: python
+.. code-block:: yaml
+
    classes:
      DEFAULTS:
        base: [zenpacklib.Component]
@@ -153,6 +156,7 @@ If the python class is derived from a parent object, be sure to define the paren
 Then, back in the python class def, we'll need to make a couple changes.  First, import the yaml defined schema.  Second, have the class now inherite from the schema class.
 
 .. code-block:: python
+
    import schema from .
    class Lightsaber (schema.LightSaber)
      ...
@@ -165,6 +169,7 @@ Then, back in the python class def, we'll need to make a couple changes.  First,
 In some cases, this inheritance pattern will do something a little different, essentially inheriting from zenpacklib. For example:
 
 .. code-block:: python
+
    from Products.ZenModel.DeviceComponent import DeviceComponent
    class RestrainingBolt (DeviceComponent)
      ...
@@ -172,6 +177,7 @@ In some cases, this inheritance pattern will do something a little different, es
 Will now resemble something closer to this:
 
 .. code-block:: python
+
    from schema import .
    class RestrainingBolt (schema.RestrainingBolt)
      ...
@@ -195,6 +201,7 @@ Class properties were originally defined in the class, and referenced the variab
 accessable; ie, they defined what was visible in the console.  Below is an old style of defining properties in python.
 
 .. code-block:: python
+
    class Lightsaber
        _properties = ManagedEntity._properties + LightsaberObject._properties + (
            {'id': 'owner', 'type': 'string', 'label': 'Jedi or Sith Owner'},
@@ -209,7 +216,8 @@ However, with ZP2 style zenpacks these properties have been moved to the yaml fi
 Hence the properties section can be commented out or removed from the class as well as any of the defined variables.
 Note that 'type: string' is not transcribed, this is becuse 'string' is the default value for the field 'type'.
 
-.. code-block:: python
+.. code-block:: yaml
+
    classes:
      ...
      Lightsaber:
@@ -233,12 +241,15 @@ Update Meta Types
 -----------------
 
 Some classes may have a meta type defined. You can find the meta type definition in the class for older zenpacks.
+
 .. code-block:: python
+
   portal_type = meta_type = 'SWLightSaber'
 
 To updated this to be ZP2 compatible, simple add a 'meta_type' line to the yaml, then comment out or remove the old code.
 
-.. code-block:: python
+.. code-block:: yaml
+
    classes:
      ...
      Lightsaber:
@@ -251,6 +262,7 @@ Debugging help and tools
 One of the most difficult and tedious pieces to converting a zenpack is getting all the relationships to load, build, and link correctly when modeling.  Especially when the ZenPack is inheriting from other zenpacks which are still using the older format.  If you cannot model the device without getting errors, first go into the console and disable all but one module.  It will be best to work through them one at a time.  In the associated source files to the active module, locate any of the following snipits of code and comment them out:
 
 .. code-block:: python
+
 	maps.Append( RelationshipMap( ... ) )
 	updateToOne( ... )
 	updateTOMany( ... )
@@ -259,17 +271,23 @@ One of the most difficult and tedious pieces to converting a zenpack is getting 
 Re-enable them one at a time, running the modeler, until errors are encountered.  There's no easy way to know exactly what is going wrong, however, most of the errors can be fixed by changing the relationship names in the yaml file. Check through the source code and any base classes for clues and hints as to what names should be set to.  
 
 To check whether or not the yaml files contain errors you can use the zendmd command to import/load the zenpack:
+
 .. code-block:: python
+
 	from ZenPacks.zenoss.Lightsaber import CFG,schema
 
 After the zenpack has been loaded you can check various aspects, such as the defined yaml relationships, use the following commands:
+
 .. code-block:: python
+
 	spec = CFG.classes.get("KyberCrystal")
 	ob = spec.model_class
 	ob._relations
 
 Once a device has been modeled, you can inspect the device, see a list of discovered components, view other properties such as the meta_type, and print any relationships that the component may retain:
+
 .. code-block:: python
+
 	dev=find('16.32.64.128')
 	dc_list=dev.getDeviceComponents()
 	comp=dc_list[0]
