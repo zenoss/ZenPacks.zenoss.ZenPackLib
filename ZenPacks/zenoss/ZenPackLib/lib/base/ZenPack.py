@@ -18,6 +18,7 @@ from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
 from ..helpers.ZenPackLibLog import ZenPackLibLog, new_log
 from Products.ZenEvents import ZenEventClasses
+from Products.Zuul.utils import getZProperties
 
 LOG = new_log('zpl.ZenPack')
 LOG.setLevel('INFO')
@@ -72,6 +73,15 @@ class ZenPack(ZenPackBase):
         for dcname, dcspec in self.device_classes.iteritems():
             dcspecparam = self._v_specparams.device_classes.get(dcname)
             deviceclass = dcspec.get_organizer(app.zport.dmd)
+            
+            # Check if all object properties are filled and fill it if not
+            for pschema in deviceclass._properties:
+                if (
+                    pschema.get('type') is None or
+                    pschema.get('label') is None or
+                    pschema.get('description') is None
+                ):
+                    getattr(deviceclass, pschema['id'])
 
             for mtname, mtspec in dcspec.templates.iteritems():
                 mtspecparam = dcspecparam.templates.get(mtname)
