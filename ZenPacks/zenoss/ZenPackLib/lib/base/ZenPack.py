@@ -18,7 +18,6 @@ from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
 from ..helpers.Dumper import Dumper
 from ..helpers.ZenPackLibLog import ZenPackLibLog, new_log
 from Products.ZenEvents import ZenEventClasses
-from Products.Zuul.utils import getZProperties
 
 LOG = new_log('zpl.ZenPack')
 LOG.setLevel('INFO')
