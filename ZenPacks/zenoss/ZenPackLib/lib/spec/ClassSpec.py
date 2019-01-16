@@ -1114,7 +1114,7 @@ class ClassSpec(Spec):
         faceting = {x.meta_type for x in self.faceting_components}
         hidden = {x.meta_type for x in self.filter_hide_from_class_specs}
 
-        return list(containing | faceting - hidden)
+        return list(containing.union(faceting).difference(hidden))
 
     @property
     def datapoints_to_fetch(self):

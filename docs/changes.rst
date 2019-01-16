@@ -7,6 +7,14 @@ Changes
 Version 2.1
 ===========
 
+Release 2.1.2
+-------------
+
+Fixes
+
+* Allow Class.filter_hide_from option to also work for contained components (ZPS-5107)
+
+
 Release 2.1.1
 -------------
 
