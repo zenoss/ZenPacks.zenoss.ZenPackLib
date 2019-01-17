@@ -73,6 +73,7 @@ classes:
         label: "Child vApps"
   ComputeResource:
     base: [BaseComponent]
+    filter_hide_from: [Datacenter]
     relationships:
       datacenter:
         order: 1.1
@@ -120,6 +121,7 @@ class TestSubComponentNavJS(ZPLBaseTestCase):
         ''''''
         self.get_test_result('ResourcePool', expected_rp)
         self.get_test_result('VirtualApp', expected_va)
+        self.get_test_result('ComputeResource', '')
 
     def get_test_result(self, name, expected_js):
         cls = self.objects.get(name).get('spec')
