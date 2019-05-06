@@ -317,7 +317,7 @@ class TestClassProxies(BaseTestCase):
                 len(results) == 1,
                 "{} not found in ComponentBaseSearch catalog".format(id_))
 
-    def test_subclass_catalogs(self):
+    def build_relationshipmap(self):
         rm = RelationshipMap(
             modname="ZenPacks.test.ClassProxies.MyComponent",
             relname="myComponents")
@@ -373,6 +373,9 @@ class TestClassProxies(BaseTestCase):
                     "idx_device_sub2": "myComponent2-2",
                     "idx_global_sub2": "myComponent2-2"})])
 
+        return rm
+
+    def test_subclass_catalogs(self):
         # Describe what all of the catalogs should look like.
         component_ids = [
             "myComponent-1", "myComponent1-1", "myComponent2-1",
@@ -413,7 +416,7 @@ class TestClassProxies(BaseTestCase):
                 self.dmd,
                 zPythonClass="ZenPacks.test.ClassProxies.MyDevice",
                 device_id="test-device{}".format(x),
-                datamaps=[rm])
+                datamaps=[self.build_relationshipmap()])
             for x in (1, 2)]
 
         # Verify that all catalogs are correct after initial modeling.
