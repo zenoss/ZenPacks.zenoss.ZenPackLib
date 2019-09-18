@@ -341,6 +341,8 @@ class ZPLTestCaseLayerBase(ZenossTestCaseLayer):
 
     @classmethod
     def tearDown(cls):
+        if hasattr(cls.tc, '_transaction_abort'):
+            Transaction.abort = cls.tc._transaction_abort
         if cls.device:
             cls.device.deleteDevice()
   
