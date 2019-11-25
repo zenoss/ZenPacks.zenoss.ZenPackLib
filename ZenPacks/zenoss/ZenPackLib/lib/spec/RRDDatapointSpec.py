@@ -27,6 +27,7 @@ class RRDDatapointSpec(Spec):
             description=None,
             aliases=None,
             shorthand=None,
+            unit=None,
             extra_params=None,
             _source_location=None,
             zplog=None
@@ -75,8 +76,8 @@ class RRDDatapointSpec(Spec):
             self.extra_params = extra_params
 
         self.aliases = aliases
-
         self.shorthand = shorthand
+        self.units = units
 
     def __eq__(self, other):
         if self.shorthand:
@@ -131,7 +132,23 @@ class RRDDatapointSpec(Spec):
                     self._shorthand += '_MAX_{}'.format(self.rrdmax)
                 if self.aliases:
                     self._shorthand += '_ALIAS'
+    
+    @property
+    def units(self):
+        return self._units
+    
+    @units.setter
+    def units(self, value):
+        if not hasattr(self, '_units'):
+            self._units = 'count'
+            # try to do better than count
+            # see if any local aliases have a units (legacy analytics), take into account any RPN
+            # if not, check for any related graphpoints->graph, take units from there
+            # then check graphpoint aliases for RPN that might change the units (converting to percent, for instance
+        if value is not None:
+            self._units = value
 
+            
     @property
     def aliases(self):
         return self._aliases
