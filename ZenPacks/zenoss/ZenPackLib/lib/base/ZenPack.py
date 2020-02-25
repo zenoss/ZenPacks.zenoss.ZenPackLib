@@ -256,13 +256,13 @@ class ZenPack(ZenPackBase):
     def object_changed(self, app, object, spec, specparam):
         """Compare new and old objects with prototype creation"""
         # get YAML representation of object
-        object_yaml = yaml.dump(specparam.fromObject(object), Dumper=Dumper)
+        object_yaml = yaml.dump(specparam.fromObject(object), Dumper=Dumper, default_flow_style=None)
 
         # get YAML representation of prototype
         proto_id = '{}-new'.format(spec.name)
         proto_object = spec.create(app.zport.dmd, False, proto_id)
         proto_object_param = specparam.fromObject(proto_object)
-        proto_object_yaml = yaml.dump(proto_object_param, Dumper=Dumper)
+        proto_object_yaml = yaml.dump(proto_object_param, Dumper=Dumper, default_flow_style=None)
         spec.remove(app.zport.dmd, proto_id)
 
         return self.get_yaml_diff(object_yaml, proto_object_yaml)

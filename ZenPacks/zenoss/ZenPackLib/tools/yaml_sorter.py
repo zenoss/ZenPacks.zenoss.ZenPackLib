@@ -29,13 +29,21 @@ import os
 import re
 from collections import OrderedDict
 
+# Version dependent import
+try:
+    # import for PyYAML >= 5.1
+    from yaml import FullLoader as YamlLoader
+except ImportError:
+    # import for the older version of PyYaml
+    from yaml import Loader as YamlLoader
+
 
 class MyDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super(MyDumper, self).increase_indent(flow, False)
 
 
-def ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict):
+def ordered_load(stream, Loader=YamlLoader, object_pairs_hook=OrderedDict):
     class OrderedLoader(Loader):
         pass
 
