@@ -186,7 +186,7 @@ class ZPLBaseTestCase(BaseTestCase):
                 'schema': cfg.zenpack_module.schema,
                 'yaml_map': load_yaml_single(
                     yaml_doc, loader=OrderedLoader),
-                'yaml_dump': yaml.dump(cfg, Dumper=Dumper),
+                'yaml_dump': yaml.dump(cfg, Dumper=Dumper, default_flow_style=None),
                 'yaml_from_specparams': yaml.dump(
                     cfg.specparams, Dumper=Dumper),
                 'zenpack_module': cfg.zenpack_module,
@@ -341,6 +341,8 @@ class ZPLTestCaseLayerBase(ZenossTestCaseLayer):
 
     @classmethod
     def tearDown(cls):
+        if hasattr(cls.tc, '_transaction_abort'):
+            Transaction.abort = cls.tc._transaction_abort
         if cls.device:
             cls.device.deleteDevice()
   
