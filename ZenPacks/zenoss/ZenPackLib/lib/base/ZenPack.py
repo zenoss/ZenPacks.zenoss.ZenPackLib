@@ -73,6 +73,15 @@ class ZenPack(ZenPackBase):
             dcspecparam = self._v_specparams.device_classes.get(dcname)
             deviceclass = dcspec.get_organizer(app.zport.dmd)
 
+            # Check if all object properties are filled and fill it if not
+            for pschema in deviceclass._properties:
+                if (
+                    pschema.get('type') is None or
+                    pschema.get('label') is None or
+                    pschema.get('description') is None
+                ):
+                    getattr(deviceclass, pschema['id'])
+
             for mtname, mtspec in dcspec.templates.iteritems():
                 mtspecparam = dcspecparam.templates.get(mtname)
                 self.update_object(app, deviceclass, 'rrdTemplates', mtname, mtspec, mtspecparam)
