@@ -87,6 +87,6 @@ class ModelContainmentTestCase(BaseTestCase):
         for rel in class_relationships:
             name = getattr(rel, 'left_relname', '')
             type = getattr(rel, 'left_type', '')
-            if type == 'ToManyCont':
+            if type == 'ToManyCont' or type == 'ToOneCont':
                 self.assertFalse(name in containment_list)
                 containment_list.append(name)
