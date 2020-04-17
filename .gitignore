@@ -1,6 +1,9 @@
 *.pyc
+*.pyo
+*.swp
 *~
-
+.DS_Store
+.idea
 /*.egg-info/
 /build/
 /dist/

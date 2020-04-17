@@ -17,8 +17,16 @@ from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
 from ..base.types import Severity, multiline
 
+# Version dependent import
+try:
+    # import for PyYAML >= 5.1
+    from yaml import FullLoader as YamlLoader
+except ImportError:
+    # import for the older version of PyYaml
+    from yaml import Loader as YamlLoader
 
-class OrderedLoader(yaml.Loader):
+
+class OrderedLoader(YamlLoader):
     """Basic ordered mapping YAML loader.
 
     This loader doesn't know about ZenPackSpec. It merely maintains the order
@@ -26,7 +34,7 @@ class OrderedLoader(yaml.Loader):
 
     """
     def __init__(self, *args, **kwargs):
-        yaml.Loader.__init__(self, *args, **kwargs)
+        YamlLoader.__init__(self, *args, **kwargs)
 
         self.add_constructor(
             u'tag:yaml.org,2002:map',

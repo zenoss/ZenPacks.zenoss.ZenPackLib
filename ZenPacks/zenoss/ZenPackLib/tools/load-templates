@@ -73,8 +73,16 @@ from Products.ZenModel.RRDDataSource import RRDDataSource
 from Products.ZenModel.RRDTemplate import RRDTemplate
 from Products.ZenModel.ThresholdClass import ThresholdClass
 
+# Version dependent import
+try:
+    # import for PyYAML >= 5.1
+    from yaml import FullLoader as YamlLoader
+except ImportError:
+    # import for the older version of PyYaml
+    from yaml import Loader as YamlLoader
 
-class OrderedDictYAMLLoader(yaml.Loader):
+
+class OrderedDictYAMLLoader(YamlLoader):
     """
     A YAML loader that loads mappings into ordered dictionaries.
 
@@ -83,7 +91,7 @@ class OrderedDictYAMLLoader(yaml.Loader):
     """
 
     def __init__(self, *args, **kwargs):
-        yaml.Loader.__init__(self, *args, **kwargs)
+        YamlLoader.__init__(self, *args, **kwargs)
 
         self.add_constructor(u'tag:yaml.org,2002:map', type(self).construct_yaml_map)
         self.add_constructor(u'tag:yaml.org,2002:omap', type(self).construct_yaml_map)

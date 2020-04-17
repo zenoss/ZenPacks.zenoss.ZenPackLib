@@ -102,3 +102,21 @@ class DeviceBase(ModelBase):
                     self.zDeviceTemplates + [addition.titleOrId()])
 
         return templates
+
+    def getAvailableTemplates(self):
+        """
+        Returns all available templates for this device
+        Support user-defined *-replacement monitoring templates
+        that can replace or augment the standard templates.
+        """
+        templates = super(ModelBase, self).getAvailableTemplates()
+        # Filter out any templates that have been 'replaced'
+        filteredTemplates = list(templates)
+        for t in templates:
+            tName = t.titleOrId()
+            if tName.endswith("-replacement"):
+                tReplacedName = tName.replace('-replacement', '')
+                tReplaced = self.getRRDTemplateByName(tReplacedName)
+                if tReplaced:
+                    filteredTemplates.remove(tReplaced)
+        return filteredTemplates
