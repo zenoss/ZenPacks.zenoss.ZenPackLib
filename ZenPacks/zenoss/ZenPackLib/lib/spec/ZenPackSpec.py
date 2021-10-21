@@ -12,7 +12,7 @@ import importlib
 import inspect
 import operator
 import types
-from Products.Five import zcml
+from Zope2.App import zcml
 from Products.ZenUtils.Utils import monkeypatch
 from Products.Zuul.routers.device import DeviceRouter
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
