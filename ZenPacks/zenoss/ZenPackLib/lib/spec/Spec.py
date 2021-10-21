@@ -391,8 +391,15 @@ class Spec(object):
             return schema_class
 
         class_factory = self.get_class_factory(bases[0])
-        schema_class = class_factory(classname, tuple(bases), attributes)
-        schema_class.__module__ = schema_module.__name__
+        if class_factory.__module__ == 'zope.interface.interface' and \
+            class_factory.__name__ == 'InterfaceClass':
+            # InterfaceClass __module__ can not be changed after it is created,
+            # but it can be passed into the factory method.
+            schema_class = class_factory(classname, tuple(bases), attributes, __module__=schema_module.__name__)
+        else:
+            schema_class = class_factory(classname, tuple(bases), attributes)
+            schema_class.__module__ = schema_module.__name__
+
         setattr(schema_module, classname, schema_class)
 
         return schema_class
@@ -407,8 +414,12 @@ class Spec(object):
             return concrete_class
 
         class_factory = self.get_class_factory(schema_class)
-        stub_class = class_factory(classname, (schema_class,), {})
-        stub_class.__module__ = module.__name__
+        if class_factory.__module__ == 'zope.interface.interface' and \
+            class_factory.__name__ == 'InterfaceClass':
+            stub_class = class_factory(classname, (schema_class,), {}, __module__=module.__name__)
+        else:
+            stub_class = class_factory(classname, (schema_class,), {})
+            stub_class.__module__ = module.__name__
         setattr(module, classname, stub_class)
 
         return stub_class
