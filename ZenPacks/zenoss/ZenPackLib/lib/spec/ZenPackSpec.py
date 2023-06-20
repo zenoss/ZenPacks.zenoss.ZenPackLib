@@ -265,6 +265,8 @@ class ZenPackSpec(Spec):
             except (ImportError, AttributeError, IndexError):
                 self.LOG.warn('Problem attempting to find and load link_class '
                               '{} for provider {}.'.format(provider.link_class, key))
+                continue
+
             if Device not in inspect.getmro(klass):
                 # if class is not derived from base Device, register it
                 GSM.registerSubscriptionAdapter(
