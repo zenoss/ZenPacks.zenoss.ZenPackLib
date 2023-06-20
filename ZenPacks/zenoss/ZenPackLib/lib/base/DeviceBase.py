@@ -79,28 +79,37 @@ class DeviceBase(ModelBase):
 
             if template_name.endswith('-replacement') or \
                     template_name.endswith('-addition'):
+                # adding here doesn't hurt since we check below, and allows RM
+                # code to already supply these for us
+                templates.append(template)
                 continue
 
             replacement = self.getRRDTemplateByName(
                 '{}-replacement'.format(template_name))
 
-            if replacement and replacement not in templates:
-                templates.append(replacement)
-                self.setZenProperty(
-                    'zDeviceTemplates',
-                    self.zDeviceTemplates + [replacement.titleOrId()])
+            if replacement:
+                if replacement not in templates:
+                    templates.append(replacement)
+                replacementName = replacement.titleOrId()
+                if replacementName not in self.zDeviceTemplates:
+                    self.setZenProperty(
+                        'zDeviceTemplates',
+                        self.zDeviceTemplates + [replacementName])
             else:
                 templates.append(template)
 
             addition = self.getRRDTemplateByName(
                 '{}-addition'.format(template_name))
 
-            if addition and addition not in templates:
-                templates.append(addition)
-                self.setZenProperty(
-                    'zDeviceTemplates',
-                    self.zDeviceTemplates + [addition.titleOrId()])
-
+            if addition:
+                if addition not in templates:
+                    templates.append(addition)
+                additionName = addition.titleOrId()
+                if additionName not in self.zDeviceTemplates:
+                    self.setZenProperty(
+                        'zDeviceTemplates',
+                        self.zDeviceTemplates + [additionName])
+                
         return templates
 
     def getAvailableTemplates(self):
