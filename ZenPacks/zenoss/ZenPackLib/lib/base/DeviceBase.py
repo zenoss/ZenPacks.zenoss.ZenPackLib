@@ -126,6 +126,6 @@ class DeviceBase(ModelBase):
             if tName.endswith("-replacement"):
                 tReplacedName = tName.replace('-replacement', '')
                 tReplaced = self.getRRDTemplateByName(tReplacedName)
-                if tReplaced:
+                if tReplaced and tReplaced in filteredTemplates:
                     filteredTemplates.remove(tReplaced)
         return filteredTemplates
