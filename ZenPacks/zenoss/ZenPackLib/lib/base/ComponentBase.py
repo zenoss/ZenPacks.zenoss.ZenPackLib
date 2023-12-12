@@ -383,15 +383,17 @@ class ComponentBase(ModelBase):
         templates = []
 
         for template_name in self._templates:
+            template = self.getRRDTemplateByName(template_name)
+            if not template:
+                continue
+
             replacement = self.getRRDTemplateByName(
                 '{}-replacement'.format(template_name))
 
             if replacement:
                 templates.append(replacement)
             else:
-                template = self.getRRDTemplateByName(template_name)
-                if template:
-                    templates.append(template)
+                templates.append(template)
 
             addition = self.getRRDTemplateByName(
                 '{}-addition'.format(template_name))
