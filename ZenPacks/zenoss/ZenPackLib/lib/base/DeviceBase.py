@@ -91,10 +91,6 @@ class DeviceBase(ModelBase):
                 if replacement not in templates:
                     templates.append(replacement)
                 replacementName = replacement.titleOrId()
-                if replacementName not in self.zDeviceTemplates:
-                    self.setZenProperty(
-                        'zDeviceTemplates',
-                        self.zDeviceTemplates + [replacementName])
             else:
                 templates.append(template)
 
@@ -105,10 +101,6 @@ class DeviceBase(ModelBase):
                 if addition not in templates:
                     templates.append(addition)
                 additionName = addition.titleOrId()
-                if additionName not in self.zDeviceTemplates:
-                    self.setZenProperty(
-                        'zDeviceTemplates',
-                        self.zDeviceTemplates + [additionName])
                 
         return templates
 
@@ -124,8 +116,5 @@ class DeviceBase(ModelBase):
         for t in templates:
             tName = t.titleOrId()
             if tName.endswith("-replacement"):
-                tReplacedName = tName.replace('-replacement', '')
-                tReplaced = self.getRRDTemplateByName(tReplacedName)
-                if tReplaced and tReplaced in filteredTemplates:
-                    filteredTemplates.remove(tReplaced)
+                filteredTemplates.remove(t)
         return filteredTemplates
