@@ -18,10 +18,11 @@ LOG = logging.getLogger('zen.ZenPackLib.migrate')
 
 class FixReplacementTemplates(ZenPackMigration):
     """
-    Change from AristaBgpPeer plugin to AristaVrfBgpMap plugin
+    Replace -replacement and -addition template names in zDeviceTemplates with
+    their Base template to match new behaviour in 7.2+ and 6.8+
     """
 
-    version = Version(1, 6, 0)
+    version = Version(2, 1, 3)
 
     def _migrateObject(self, obj):
             if obj.hasProperty('zDeviceTemplates'):
