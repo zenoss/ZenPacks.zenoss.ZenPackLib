@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2016-2024 all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -16,14 +16,17 @@ from collections import OrderedDict
 from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
 from ..base.types import Severity, multiline
+from .composer import ComposerFromDict
 
 # Version dependent import
 try:
     # import for PyYAML >= 5.1
     from yaml import FullLoader as YamlLoader
+    from yaml.constructor import FullConstructor as YamlConstructor
 except ImportError:
     # import for the older version of PyYaml
     from yaml import Loader as YamlLoader
+    from yaml.constructor import Constructor as YamlConstructor
 
 
 class OrderedLoader(YamlLoader):
@@ -52,28 +55,7 @@ class OrderedLoader(YamlLoader):
         return OrderedDict(self.construct_pairs(node))
 
 
-class ZenPackSpecLoader(OrderedLoader):
-    """
-        These subclasses exist so that each copy of zenpacklib installed on a
-        zenoss system provide their own loader (for add_constructor and yaml.load)
-        and its own dumper (for add_representer) so that the proper methods will
-        be used for this specific zenpacklib.
-    """
-
-    LOG = DEFAULTLOG
-    QUIET = False
-    LEVEL = 0
-
-    def __init__(self, *args, **kwargs):
-        OrderedLoader.__init__(self, *args, **kwargs)
-
-        self.add_constructor(
-            u'tag:yaml.org,2002:seq',
-            type(self).construct_sequence)
-
-        self.add_constructor(
-            u'!ZenPackSpec',
-            type(self).construct_zenpackspec)
+class ZenPackSpecMixin(object):
 
     def dict_constructor(self, node):
         """constructor for OrderedDict"""
@@ -208,6 +190,7 @@ class ZenPackSpecLoader(OrderedLoader):
             try:
                 # handle badly formatted things like unquoted hex strings
                 if expected_type == 'str' and not isinstance(yaml_value, str):
+                    value_node.value = str(value_node.value)
                     yaml_value = self.construct_python_str(value_node)
                 elif expected_type == 'float' and not isinstance(yaml_value, float):
                     yaml_value = self.construct_yaml_float(value_node)
@@ -506,6 +489,62 @@ class ZenPackSpecLoader(OrderedLoader):
                     if key == 'name':
                         return value
         return None
+
+
+class ZenPackSpecLoader(ZenPackSpecMixin, OrderedLoader):
+    """
+        These subclasses exist so that each copy of zenpacklib installed on a
+        zenoss system provide their own loader (for add_constructor and yaml.load)
+        and its own dumper (for add_representer) so that the proper methods will
+        be used for this specific zenpacklib.
+    """
+
+    LOG = DEFAULTLOG
+    QUIET = False
+    LEVEL = 0
+
+    def __init__(self, *args, **kwargs):
+        OrderedLoader.__init__(self, *args, **kwargs)
+
+        self.add_constructor(
+            u'tag:yaml.org,2002:seq',
+            type(self).construct_sequence)
+
+        self.add_constructor(
+            u'!ZenPackSpec',
+            type(self).construct_zenpackspec)
+
+
+class FromDictLoader(ComposerFromDict, YamlConstructor):
+
+    def __init__(self, dataDict, tag):
+        ComposerFromDict.__init__(self, dataDict, tag)
+        YamlConstructor.__init__(self)
+
+
+class ZenPackSpecFromDictLoader(ZenPackSpecMixin, FromDictLoader):
+    LOG = DEFAULTLOG
+    QUIET = False
+    LEVEL = 0
+
+    def __init__(self, *args, **kwargs):
+        kwargs['tag'] = u'!ZenPackSpec'
+        FromDictLoader.__init__(self, *args, **kwargs)
+
+        self.add_constructor(
+            u'tag:yaml.org,2002:seq',
+            type(self).construct_sequence)
+
+        self.add_constructor(
+            u'!ZenPackSpec',
+            type(self).construct_zenpackspec)
+
+        self.add_constructor(
+            u'tag:yaml.org,2002:bool',
+            type(self).construct_bool)
+
+    def construct_bool(self, node):
+        return node.value
 
 
 class WarningLoader(ZenPackSpecLoader):

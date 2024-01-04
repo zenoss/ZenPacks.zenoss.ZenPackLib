@@ -214,7 +214,7 @@ graphs
 
 .. note::
 
-  ZenPackLib also allows for defining a replacement or additional template by adding "-replacement" or "-addition" to the end of the template name.  For example, a defined *Device-replacement* template will replace the existing Device template on a device class.  A defined *Device-addition* template will be applied in addition to the existing Device template on a device class.
+  ZenPackLib also allows for defining a replacement or additional template by adding "-replacement" or "-addition" to the end of the template name.  For example, a defined *Device-replacement* template will replace the existing Device template on a device class.  A defined *Device-addition* template will be applied in addition to the existing Device (or Device-replacement) template on a device class.
 
 
 .. _datasource-fields:

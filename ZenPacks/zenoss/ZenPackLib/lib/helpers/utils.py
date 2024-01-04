@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2016-2024 all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,10 +12,9 @@ import yaml
 import time
 from .ZenPackLibLog import DEFAULTLOG
 from .Dumper import Dumper
-from .loaders import OrderedLoader, ZenPackSpecLoader
+from .loaders import OrderedLoader, ZenPackSpecLoader, ZenPackSpecFromDictLoader
 from ..base.ZenPack import ZenPack
 import inspect
-
 
 # list of yaml sections with DEFAULTS capability
 YAML_HAS_DEFAULTS = ['classes', 'properties', 'thresholds', 'datasources',
@@ -38,7 +37,10 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
     ''''''
     ZenPackSpecLoader.QUIET = not verbose
     ZenPackSpecLoader.LEVEL = level
+    ZenPackSpecFromDictLoader.QUIET = not verbose
+    ZenPackSpecFromDictLoader.LEVEL = level
 
+    loader = ZenPackSpecLoader
     # determine caller directory and attempt to load from it
     if not yaml_doc:
         try:
@@ -56,12 +58,8 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
         if len(yaml_doc) == 1:
             return load_yaml(yaml_doc[0], verbose, level)
         # build python dict of merged YAML data
-        cfg_data = get_merged_docs(yaml_doc)
-        # once loaded, optimize
-        optimized_yaml = get_optimized_yaml(cfg_data)
-        # resubmit merged YAML
-        return load_yaml(optimized_yaml, verbose, level)
-
+        yaml_doc = get_merged_docs(yaml_doc)
+        loader = ZenPackSpecFromDictLoader
     else:
         # load all YAML files in a directory
         if os.path.isdir(yaml_doc):
@@ -78,9 +76,9 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
     CFG = None
 
     try:
-        if os.path.isfile(yaml_doc):
+        if isinstance(yaml_doc, str) and os.path.isfile(yaml_doc):
             DEFAULTLOG.debug("Loading YAML from {}".format(yaml_doc))
-        CFG = load_yaml_single(yaml_doc)
+        CFG = load_yaml_single(yaml_doc, loader=loader)
     except Exception as e:
         DEFAULTLOG.error(e)
 
@@ -96,7 +94,7 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
 def load_yaml_single(yaml_doc, loader=ZenPackSpecLoader):
     '''return YAML loaded from string or file with given loader.'''
     # if it's a string
-    if os.path.isfile(yaml_doc):
+    if isinstance(yaml_doc, str) and os.path.isfile(yaml_doc):
         return yaml.load(file(yaml_doc, 'r'), Loader=loader)
     else:
         return yaml.load(yaml_doc, Loader=loader)
@@ -128,6 +126,7 @@ def get_merged_docs(docs=None):
                     'found: {} vs {}'.format(doc, zp_id, name))
                 continue
         merge_dict(new, cfg)
+        del cfg
     return new
 
 
