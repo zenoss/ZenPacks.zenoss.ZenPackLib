@@ -31,7 +31,7 @@ class FixReplacementTemplates(ZenPackMigration):
                 templs = obj.zDeviceTemplates
                 for templ in list(templs):
                     if templ.endswith('-replacement') or templ.endswith('-addition'):
-                        if availtempls = None:
+                        if availtempls is None:
                             availtempls = [t.id for t in obj.getAvailableTemplates()]
                         base = templ.rsplit('-',1)[0]
                         if base in availtempls:
