@@ -50,7 +50,7 @@ class ComposerFromDict(Composer):
     def compose_scalar_node(self, obj):
         if isinstance(obj, (bool,)):
             tag = u'tag:yaml.org,2002:bool'
-        elif isinstance(obj, (str, unicide)):
+        elif isinstance(obj, (str, unicode)):
             tag = u'tag:yaml.org,2002:str'
         elif isinstance(obj, (float,)):
             tag = u'tag:yaml.org,2002:float'

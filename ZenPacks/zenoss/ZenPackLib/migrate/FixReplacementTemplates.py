@@ -49,8 +49,6 @@ class FixReplacementTemplates(ZenPackMigration):
 
     def migrate(self, pack):
         LOG.info("fix zDeviceTemplates on /Devices and subclasses")
-
-        )
         deviceClass = pack.dmd.Devices
 
         # Migrate zDeviceTemplates on Device Classes
