@@ -7,6 +7,7 @@
 #
 ##############################################################################
 import os
+import sys
 from collections import OrderedDict, Mapping
 import yaml
 import time
@@ -15,6 +16,8 @@ from .Dumper import Dumper
 from .loaders import OrderedLoader, ZenPackSpecLoader, ZenPackSpecFromDictLoader
 from ..base.ZenPack import ZenPack
 import inspect
+import re
+from StringIO import StringIO
 
 # list of yaml sections with DEFAULTS capability
 YAML_HAS_DEFAULTS = ['classes', 'properties', 'thresholds', 'datasources',
@@ -76,8 +79,6 @@ def load_yaml(yaml_doc=None, verbose=False, level=0):
     CFG = None
 
     try:
-        if isinstance(yaml_doc, str) and os.path.isfile(yaml_doc):
-            DEFAULTLOG.debug("Loading YAML from {}".format(yaml_doc))
         CFG = load_yaml_single(yaml_doc, loader=loader)
     except Exception as e:
         DEFAULTLOG.error(e)
@@ -95,7 +96,30 @@ def load_yaml_single(yaml_doc, loader=ZenPackSpecLoader):
     '''return YAML loaded from string or file with given loader.'''
     # if it's a string
     if isinstance(yaml_doc, str) and os.path.isfile(yaml_doc):
-        return yaml.load(file(yaml_doc, 'r'), Loader=loader)
+        DEFAULTLOG.debug("Loading YAML from {}".format(yaml_doc))
+        yaml_file = file(yaml_doc, 'r')
+        # only certain yaml needs to be loaded when not during ZP install
+        if not sys.argv[0].endswith('zenpack.py'):
+            must_load = False
+            name_line = ''
+            for line in yaml_file:
+                # top level of yaml can be indented, but we'll only account for 2 spaces to avoid
+                # picking up a similar attribute at another indent level
+                if re.search(r'^\s{0,2}name: ZenPacks', line):
+                    name_line = line
+                    continue
+                # zProperties can occur at top level or within event classes, so only match them
+                # with up to a 2-space indentation to avoid the event class ones 
+                if re.search(r'^\s*classes:|^\s*class_relationships:|^\s{0,2}zProperties:|^\s*link_providers:', line):
+                    must_load = True
+                    break
+            if must_load:
+                yaml_file.seek(0)
+            else:
+                DEFAULTLOG.debug("Not doing a ZP install so not loading %s", yaml_doc)
+                yaml_file.close()
+                yaml_file = StringIO(name_line)
+        return yaml.load(yaml_file, Loader=loader)
     else:
         return yaml.load(yaml_doc, Loader=loader)
 
@@ -118,15 +142,18 @@ def get_merged_docs(docs=None):
     for doc in docs:
         zp_id = new.get('name')
         cfg = load_yaml_single(doc, loader=OrderedLoader)
-        # check for conflicting zenpack ids
-        if zp_id:
-            name = cfg.get('name')
-            if name and name != zp_id:
-                DEFAULTLOG.error('Skipping {} since conflicting ZenPack names '\
-                    'found: {} vs {}'.format(doc, zp_id, name))
-                continue
-        merge_dict(new, cfg)
-        del cfg
+        # if yaml has no "name:" line and will not be loaded because we aren't doing
+        # a ZP install, load_yaml_single will return a None, so don't try to merge
+        if cfg:
+            # check for conflicting zenpack ids
+            if zp_id:
+                name = cfg.get('name')
+                if name and name != zp_id:
+                    DEFAULTLOG.error('Skipping {} since conflicting ZenPack names '\
+                        'found: {} vs {}'.format(doc, zp_id, name))
+                    continue
+            merge_dict(new, cfg)
+            del cfg
     return new
 
 
