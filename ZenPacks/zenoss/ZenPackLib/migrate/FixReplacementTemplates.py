@@ -45,7 +45,7 @@ class FixReplacementTemplates(ZenPackMigration):
                             continue
                         objchanged = True
                 if objchanged:
-                    obj.setZenProperty('zCollectorPlugins', templs)
+                    obj.setZenProperty('zDeviceTemplates', templs)
 
     def migrate(self, pack):
         LOG.info("fix zDeviceTemplates on /Devices and subclasses")

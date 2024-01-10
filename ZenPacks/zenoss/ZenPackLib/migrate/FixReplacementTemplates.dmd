@@ -21,7 +21,7 @@ def _migrateObject(obj):
                         continue
                     objchanged = True
             if objchanged:
-                obj.setZenProperty('zCollectorPlugins', templs)
+                obj.setZenProperty('zDeviceTemplates', templs)
 
 def migrate():
     LOG.info("fix zDeviceTempaltes on /Devices and subclasses")
