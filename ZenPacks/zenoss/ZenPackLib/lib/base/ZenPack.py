@@ -15,11 +15,13 @@ import sys
 
 from Acquisition import aq_base
 from Products.ZenModel.ZenPack import ZenPack as ZenPackBase
+from .DiffSaver import DiffSaver
 from ..helpers.Dumper import Dumper
 from ..helpers.ZenPackLibLog import ZenPackLibLog, new_log
 from Products.ZenEvents import ZenEventClasses
 
 LOG = new_log('zpl.ZenPack')
+DiffSaver = DiffSaver(LOG)
 LOG.setLevel('INFO')
 ZenPackLibLog.enable_log_stderr(LOG)
 
@@ -61,6 +63,7 @@ class ZenPack(ZenPackBase):
     def install(self, app):
         self.createZProperties(app)
         self.create_device_classes(app)
+        DiffSaver.initZPDiffDir(self)
 
         # Load objects.xml now
         super(ZenPack, self).install(app)
@@ -68,7 +71,7 @@ class ZenPack(ZenPackBase):
             self.LOG.info('Adding {} relationships to existing devices'.format(self.id))
             self._buildDeviceRelations(app)
 
-        # load monitoring templates
+        # Load monitoring templates
         for dcname, dcspec in self.device_classes.iteritems():
             dcspecparam = self._v_specparams.device_classes.get(dcname)
             deviceclass = dcspec.get_organizer(app.zport.dmd)
@@ -94,6 +97,9 @@ class ZenPack(ZenPackBase):
             for mtname, mtspec in dcspec.templates.iteritems():
                 mtspecparam = dcspecparam.templates.get(mtname)
                 self.update_object(app, deviceclass, 'rrdTemplates', mtname, mtspec, mtspecparam)
+
+        # Remove ZP diff folder if it's empty
+        DiffSaver.remEmptyDir()
 
         # Load event classes
         for ecname, ecspec in self.event_classes.iteritems():
@@ -217,12 +223,7 @@ class ZenPack(ZenPackBase):
         time_str = time.strftime("%Y%m%d%H%M", time.localtime())
         preupgrade_id = "{}-preupgrade-{}".format(object.id, time_str)
         self.move_object(parent, relname, object.id, preupgrade_id)
-        LOG.info("Existing object {}/{} differs from "
-                 "the newer version included with the {} ZenPack.  "
-                 "The existing object will be "
-                 "backed up to '{}'.  Please review and reconcile any "
-                 "local changes before deleting the backup: \n{}".format(
-                    parent.getDmdKey(), spec.name, self.id, preupgrade_id, diff))
+        DiffSaver.saveDiff(self, parent, spec, preupgrade_id, diff)
         return True
 
     def get_object(self, parent, relname, object_id):
