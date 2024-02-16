@@ -27,7 +27,7 @@ This module provides a single integration point for common ZenPacks.
 """
 
 # PEP-396 version. (https://www.python.org/dev/peps/pep-0396/)
-__version__ = "2.1.2"
+__version__ = "2.1.3"
 
 # Must defer definition of TestCase. Otherwise it imports
 # BaseTestCase which puts Zope into testing mode.

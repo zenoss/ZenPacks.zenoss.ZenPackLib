@@ -72,6 +72,15 @@ class ZenPack(ZenPackBase):
         for dcname, dcspec in self.device_classes.iteritems():
             dcspecparam = self._v_specparams.device_classes.get(dcname)
             deviceclass = dcspec.get_organizer(app.zport.dmd)
+            
+            # Check if all object properties are filled and fill it if not
+            for pschema in deviceclass._properties:
+                if (
+                    pschema.get('type') is None or
+                    pschema.get('label') is None or
+                    pschema.get('description') is None
+                ):
+                    getattr(deviceclass, pschema['id'])
 
             # Check if all object properties are filled and fill it if not
             for pschema in deviceclass._properties:

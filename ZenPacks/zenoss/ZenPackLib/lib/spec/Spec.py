@@ -140,6 +140,11 @@ def RelationshipLengthProperty(relationship_name):
     return property(getter)
 
 
+class LogAdapter(logging.LoggerAdapter):
+    def process(self, msg, kwargs):
+        return '{} {}'.format(self.extra['context'], msg), kwargs
+
+
 class Spec(object):
     """Abstract base class for specifications."""
 
@@ -152,10 +157,6 @@ class Spec(object):
     def __init__(self, _source_location=None, zplog=None):
         if zplog:
             self.LOG = zplog
-
-        class LogAdapter(logging.LoggerAdapter):
-            def process(self, msg, kwargs):
-                return '{} {}'.format(self.extra['context'], msg), kwargs
 
         self.source_location = _source_location
         self.speclog = LogAdapter(self.LOG, {'context': self})

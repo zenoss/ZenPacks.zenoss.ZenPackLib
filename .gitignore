@@ -2,10 +2,8 @@
 *.pyo
 *.swp
 *~
-
 .DS_Store
 .idea
-
-/*.egg-info
-/build
-/dist
+/*.egg-info/
+/build/
+/dist/

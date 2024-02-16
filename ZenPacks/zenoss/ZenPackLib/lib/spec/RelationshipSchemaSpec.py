@@ -76,6 +76,7 @@ class RelationshipSchemaSpec(Spec):
             self.get_imported_class(self.right_class)
 
         # update ClassRelationshipSpec or imported class
+        #                                   spec,           remote_spec,     relname,           schema,           classname
         self.update_class_relationship_spec(self.left_spec, self.right_spec, self.left_relname, self.left_schema, self.left_class)
         self.update_class_relationship_spec(self.right_spec, self.left_spec, self.right_relname, self.right_schema, self.right_class)
 

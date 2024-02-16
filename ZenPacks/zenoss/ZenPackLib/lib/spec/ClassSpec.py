@@ -943,14 +943,18 @@ class ClassSpec(Spec):
         attributes = {}
         renderer = {}
 
-        # Find renderers for our properties:
+        # Find renderers for our properties and relationships:
         for propname, spec in self.properties.iteritems():
-            renderer[propname] = spec.renderer
+            renderer.setdefault(propname, spec.renderer)
+        for relname, spec in self.relationships.iteritems():
+            renderer.setdefault(relname, spec.renderer)
 
-        # Find renderers for inherited properties
+        # Find renderers for inherited properties and relationships
         for class_spec in self.base_class_specs(recursive=True):
             for propname, spec in class_spec.properties.iteritems():
-                renderer[propname] = spec.renderer
+                renderer.setdefault(propname, spec.renderer)
+            for relname, spec in class_spec.relationships.iteritems():
+                renderer.setdefault(relname, spec.renderer)
 
         attributes['renderer'] = renderer
         attributes['zenpack_id_prefix'] = self.zenpack.id_prefix
@@ -1170,8 +1174,12 @@ class ClassSpec(Spec):
                 header = relspec.short_label or spec.short_label
 
             width = max(spec.content_width + 14, spec.label_width + 20)
-            renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'.format(
-                zenpack_id_prefix=self.zenpack.id_prefix)
+
+            if relspec and relspec.render_with_type:
+                renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityTypeLinkFromGrid'
+            else:
+                renderer = 'Zenoss.render.zenpacklib_{zenpack_id_prefix}_entityLinkFromGrid'
+            renderer = renderer.format(zenpack_id_prefix=self.zenpack.id_prefix)
 
             column_fields = [
                 "id: '{}'".format(spec.name),
