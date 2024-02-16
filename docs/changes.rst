@@ -7,6 +7,15 @@ Changes
 Version 2.1
 ===========
 
+Release 2.1.3
+-------------
+
+Fixes
+
+* Improve and correct ZenPackLib the -replacement and -addition templates handling (ZPS-8617)
+* Improve ZenPackLib efficiency during loading multiple YAML files (ZPS-8777)
+
+
 Release 2.1.2
 -------------
 
