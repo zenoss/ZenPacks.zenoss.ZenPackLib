@@ -1,0 +1,38 @@
+# paste into zendmd and run "migrate()" if you want to pre-migrate to avoid potential
+# conflicts for lots of changes during ZP install
+def _migrateObject(obj):
+        if obj.hasProperty('zDeviceTemplates'):
+            objchanged = False
+            availtempls = None
+            templs = obj.zDeviceTemplates
+            for templ in list(templs):
+                if templ.endswith('-replacement') or templ.endswith('-addition'):
+                    if availtempls is None:
+                        availtempls = [t.id for t in obj.getAvailableTemplates()]
+                    base = templ.rsplit('-',1)[0]
+                    if base in availtempls:
+                        LOG.info("Removing template %s from %s.zDeviceTemplates", templ, obj.id)
+                        templs.remove(templ)
+                        if base not in templs:
+                            LOG.info("Adding base template %s to %s.zDeviceTemplates", base, obj.id)
+                            templs.append(base)
+                    else:
+                        LOG.warning("base template %s for template %s was not found, not migrating.", base, templ)
+                        continue
+                    objchanged = True
+            if objchanged:
+                obj.setZenProperty('zDeviceTemplates', templs)
+
+def migrate():
+    LOG.info("fix zDeviceTempaltes on /Devices and subclasses")
+
+    deviceClass = dmd.Devices
+
+    # Migrate zDeviceTemplates on Device Classes
+    deviceClasses = [deviceClass]
+    deviceClasses.extend(deviceClass.getSubOrganizers())
+    for dc in deviceClasses:
+        _migrateObject(dc)
+        for device in dc.devices():
+            _migrateObject(device)
+
