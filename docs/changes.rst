@@ -7,6 +7,13 @@ Changes
 Version 2.1
 ===========
 
+Release 2.1.4
+-------------
+
+Fixes
+
+* Fix dependencies, dynamic view and impact relations for multi-YAML ZenPacks (ZPS-8835)
+
 Release 2.1.3
 -------------
 
