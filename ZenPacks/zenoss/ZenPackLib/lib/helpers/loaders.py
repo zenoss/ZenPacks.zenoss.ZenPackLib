@@ -546,6 +546,9 @@ class ZenPackSpecFromDictLoader(ZenPackSpecMixin, FromDictLoader):
     def construct_bool(self, node):
         return node.value
 
+    def construct_document(self, node):
+        return self.construct_object(node, deep=True)
+
 
 class WarningLoader(ZenPackSpecLoader):
     """
