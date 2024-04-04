@@ -62,13 +62,13 @@ class TestTemplateReplacement(ZPLLayeredTestCase):
             ['TestTemplate-replacement', 'TestTemplate-addition'],
             [tpl.titleOrId() for tpl in obj.getRRDTemplates()])
 
-        del templates['TestTemplate-replacement']
+        del templates['TestTemplate-addition']
 
         self.assertListEqual(
-            ['TestTemplate', 'TestTemplate-addition'],
+            ['TestTemplate-replacement'],
             [tpl.titleOrId() for tpl in obj.getRRDTemplates()])
 
-        del templates['TestTemplate-addition']
+        del templates['TestTemplate-replacement']
 
         self.assertListEqual(
             ['TestTemplate'],
