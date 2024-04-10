@@ -163,7 +163,12 @@ class OrganizerSpec(Spec):
 
             preppedId = org_obj.prepId(name)
             # make sure object is zpl managed
-            obj = org_obj.findObject(preppedId)
+            try:
+                obj = org_obj.findObject(preppedId)
+            # skip this suborganizer as it has been removed previously
+            except AttributeError:
+                self.LOG.info('Skipping {} suborganizer remove as it has been removed previously.'.format(name))
+                continue
 
             if getattr(obj, 'zpl_managed', False):
                 self.LOG.info('Removing {} {} @ {}'.format(spec.klass_string, name, self.path))
