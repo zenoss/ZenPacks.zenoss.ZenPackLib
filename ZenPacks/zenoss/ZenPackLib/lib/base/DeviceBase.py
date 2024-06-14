@@ -81,7 +81,8 @@ class DeviceBase(ModelBase):
                     template_name.endswith('-addition'):
                 # adding here doesn't hurt since we check below, and allows RM
                 # code to already supply these for us
-                templates.append(template)
+                if template not in templates:
+                    templates.append(template)
                 continue
 
             replacement = self.getRRDTemplateByName(
@@ -100,7 +101,6 @@ class DeviceBase(ModelBase):
             if addition:
                 if addition not in templates:
                     templates.append(addition)
-                additionName = addition.titleOrId()
                 
         return templates
 
