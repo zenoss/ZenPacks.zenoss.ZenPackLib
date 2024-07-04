@@ -7,6 +7,14 @@ Changes
 Version 2.1
 ===========
 
+Release 2.1.5
+-------------
+
+Fixes
+
+* Fix monitoring templates representation in infrastructure view for devices created via ZPL that have -addition templates (ZPS-8945)
+* Fix ZenPackLib-based ZenPack removal if the expected suborganizer does not exist (ZPS-8863)
+
 Release 2.1.4
 -------------
 
